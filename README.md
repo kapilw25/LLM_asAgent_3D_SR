@@ -9,7 +9,7 @@ We're building a **sandbox for AI agents** — where they learn to move, navigat
 This is where we stress-test the real questions:
 - 🔀 **How** do agents move, talk, negotiate, and adapt when the world is messy?
 - 🌐 **What** emerges when agents share the same streets—cooperate, compete, or collide?
-- 🛡️ **How** do we keep them safe, aligned, and socially aware while they learn?
+- 🛡️ **How** Do we keep them safe, aligned, and socially aware while they learn?
 
 ---
 
