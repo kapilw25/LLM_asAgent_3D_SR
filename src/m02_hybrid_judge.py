@@ -1,12 +1,11 @@
 """
 Hybrid Judge: Algorithms + LLM
-==============================
-Combines algorithmic path evaluation (BFS/Dijkstra/A*) with optional LLM explanations.
 
 Usage:
-    python src/m02_hybrid_judge.py --test      # Test algorithmic judge
-    python src/m02_hybrid_judge.py --compare   # Compare algo vs LLM
-    python src/m02_hybrid_judge.py --demo      # Run demo evaluation
+    python src/m02_hybrid_judge.py --demo           # Demo (algo only)
+    python src/m02_hybrid_judge.py --demo --llm     # Demo with LLM explanations
+    python src/m02_hybrid_judge.py --test           # Run tests
+    python src/m02_hybrid_judge.py --compare        # Compare algo vs expected
 """
 
 import os
@@ -27,6 +26,15 @@ PROJECT_ROOT = Path(__file__).parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 OPENAI_API_KEY = os.getenv("OPEN_API_KEY")
+PROMPTS_FILE = PROJECT_ROOT / "data" / "step0" / "prompts.json"
+
+
+def load_prompts() -> dict:
+    """Load prompt templates from prompts.json."""
+    if PROMPTS_FILE.exists():
+        with open(PROMPTS_FILE) as f:
+            return json.load(f)
+    return {}
 
 
 @dataclass
@@ -185,6 +193,7 @@ class HybridJudge:
         self.grid = grid
         self.algo_judge = AlgorithmicJudge(grid)
         self.use_llm = use_llm and OPENAI_API_KEY is not None
+        self.prompts = load_prompts() if self.use_llm else {}
 
     def evaluate(
         self,
@@ -210,24 +219,30 @@ class HybridJudge:
         eval_result: PathEvaluation,
         start: Tuple[int, int],
         goal: Tuple[int, int],
-        task_description: Optional[str]
+        task_description: Optional[str],
+        prompt_key: str = "point_based_judge"
     ) -> str:
-        """Generate LLM explanation for the evaluation."""
+        """Generate LLM explanation using template from prompts.json."""
         import requests
 
-        prompt = f"""Evaluate this navigation path:
+        # Try to get template from prompts.json
+        template = self.prompts.get("prompts", {}).get(prompt_key, {}).get("template")
 
-Task: {task_description or f"Navigate from {start} to {goal}"}
-
-Agent's Path: {eval_result.path}
-Agent Path Length: {eval_result.path_length}
-Optimal Path: {eval_result.optimal_path}
-Optimal Length: {eval_result.optimal_length}
-Reached Goal: {eval_result.reached_goal}
-Efficiency Score: {eval_result.efficiency_score}/10
-
-Provide a brief (2-3 sentences) explanation of why this path received this score.
-Focus on what the agent did well or poorly."""
+        if template:
+            # Format template with actual values
+            try:
+                prompt = template.format(
+                    task=task_description or f"Navigate from {start} to {goal}",
+                    path_actions=" -> ".join(eval_result.path),
+                    path_length=eval_result.path_length,
+                    optimal_length=eval_result.optimal_length
+                )
+            except KeyError:
+                # Template has different variables, use fallback
+                prompt = self._fallback_prompt(eval_result, start, goal, task_description)
+        else:
+            # No template found, use fallback
+            prompt = self._fallback_prompt(eval_result, start, goal, task_description)
 
         try:
             response = requests.post(
@@ -246,6 +261,28 @@ Focus on what the agent did well or poorly."""
             return response.json()["choices"][0]["message"]["content"]
         except Exception as e:
             return f"[LLM explanation unavailable: {e}]"
+
+    def _fallback_prompt(
+        self,
+        eval_result: PathEvaluation,
+        start: Tuple[int, int],
+        goal: Tuple[int, int],
+        task_description: Optional[str]
+    ) -> str:
+        """Fallback prompt if template not found."""
+        return f"""Evaluate this navigation path:
+
+Task: {task_description or f"Navigate from {start} to {goal}"}
+
+Agent's Path: {eval_result.path}
+Agent Path Length: {eval_result.path_length}
+Optimal Path: {eval_result.optimal_path}
+Optimal Length: {eval_result.optimal_length}
+Reached Goal: {eval_result.reached_goal}
+Efficiency Score: {eval_result.efficiency_score}/10
+
+Provide a brief (2-3 sentences) explanation of why this path received this score.
+Focus on what the agent did well or poorly."""
 
 
 # =============================================================================
@@ -449,10 +486,10 @@ def run_compare():
         print("\nNo test cases found. Run with --test for basic tests.")
 
 
-def run_demo():
+def run_demo(use_llm: bool = False):
     """Run demo evaluation with multiple paths."""
     print("=" * 60)
-    print("HYBRID JUDGE DEMO")
+    print("HYBRID JUDGE DEMO" + (" (LLM Enabled)" if use_llm else ""))
     print("=" * 60)
     print("\nLegend: S=Start, G=Goal, #=Obstacle, *=Path\n")
 
@@ -462,9 +499,11 @@ def run_demo():
 
     print(f"Task: Navigate from bed {start} to lamp {goal}")
     print(f"Grid: 5x5 bedroom with obstacles at (2,2) and (2,3)")
+    if use_llm:
+        print(f"LLM: Enabled (using OpenAI API)")
 
     # Create judge
-    hybrid_judge = HybridJudge(grid, use_llm=False)
+    hybrid_judge = HybridJudge(grid, use_llm=use_llm)
 
     # Demo paths
     demo_paths = [
@@ -502,6 +541,10 @@ def run_demo():
         print(f"Efficiency: {result.efficiency_score}/10")
         print(f"Reached Goal: {result.reached_goal}")
 
+        if result.explanation:
+            print(f"\nLLM Explanation:")
+            print(f"  {result.explanation}")
+
         print(f"\nVisualization:")
         print(visualize_path(grid, start, goal, demo["path"]))
 
@@ -519,6 +562,7 @@ def main():
     parser.add_argument("--test", action="store_true", help="Run tests")
     parser.add_argument("--compare", action="store_true", help="Compare algo vs LLM")
     parser.add_argument("--demo", action="store_true", help="Run demo")
+    parser.add_argument("--llm", action="store_true", help="Enable LLM explanations")
 
     args = parser.parse_args()
 
@@ -527,11 +571,11 @@ def main():
     elif args.compare:
         run_compare()
     elif args.demo:
-        run_demo()
+        run_demo(use_llm=args.llm)
     else:
         parser.print_help()
         print("\n--- Quick Demo ---")
-        run_demo()
+        run_demo(use_llm=False)
 
 
 if __name__ == "__main__":
