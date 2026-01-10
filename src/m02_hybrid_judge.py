@@ -6,6 +6,7 @@ Usage:
     python src/m02_hybrid_judge.py --demo --llm     # Demo with LLM explanations
     python src/m02_hybrid_judge.py --test           # Run tests
     python src/m02_hybrid_judge.py --compare        # Compare algo vs expected
+    python src/m02_hybrid_judge.py --vlm --image data/images/ai2thor/FloorPlan1/
 """
 
 import os
@@ -554,6 +555,71 @@ def run_demo(use_llm: bool = False):
 
 
 # =============================================================================
+# VLM MODE
+# =============================================================================
+
+def run_vlm(image_path: str, task: str = None, use_llm: bool = False):
+    """Run VLM-based evaluation on AI2-THOR scene."""
+    from pathlib import Path
+
+    scene_dir = Path(image_path)
+    if not scene_dir.exists():
+        print(f"Error: Path not found: {scene_dir}")
+        return
+
+    # Import VLM pipeline
+    try:
+        from m05_vlm_pipeline import compare_views, load_scene_metadata
+    except ImportError as e:
+        print(f"Error importing VLM pipeline: {e}")
+        return
+
+    print("=" * 60)
+    print("VLM EVALUATION MODE")
+    print("=" * 60)
+
+    # Parse task or use defaults from metadata
+    if task:
+        parts = task.lower().split(" to ")
+        if len(parts) == 2:
+            start_object = parts[0].strip()
+            goal_object = parts[1].strip()
+        else:
+            start_object, goal_object = "start", "goal"
+    else:
+        # Load from metadata
+        metadata = load_scene_metadata(scene_dir)
+        if metadata and metadata.get("objects"):
+            objects = metadata["objects"][:2]
+            start_object = objects[0]["type"] if objects else "start"
+            goal_object = objects[1]["type"] if len(objects) > 1 else "goal"
+        else:
+            start_object, goal_object = "start", "goal"
+
+    print(f"\nScene: {scene_dir.name}")
+    print(f"Task: {start_object} -> {goal_object}")
+    print(f"LLM: {'Enabled' if use_llm else 'Disabled'}")
+
+    # Run comparison
+    results = compare_views(scene_dir, start_object, goal_object, use_llm)
+
+    for view in ["top_down", "first_person"]:
+        r = results[view]
+        print(f"\n[{view.replace('_', ' ').title()}]")
+        if r.vlm_success:
+            print(f"  VLM Path: {r.vlm_path}")
+            print(f"  Length: {r.path_length} (optimal: {r.optimal_length})")
+            print(f"  Efficiency: {r.efficiency_score}/10")
+            if r.explanation:
+                print(f"  Explanation: {r.explanation}")
+        else:
+            print(f"  Error: {r.error}")
+
+    print(f"\nWinner: {results['winner'].replace('_', ' ').title()}")
+    print("\n" + "=" * 60)
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -563,6 +629,9 @@ def main():
     parser.add_argument("--compare", action="store_true", help="Compare algo vs LLM")
     parser.add_argument("--demo", action="store_true", help="Run demo")
     parser.add_argument("--llm", action="store_true", help="Enable LLM explanations")
+    parser.add_argument("--vlm", action="store_true", help="Run VLM-based evaluation")
+    parser.add_argument("--image", type=str, help="Path to scene directory for VLM mode")
+    parser.add_argument("--task", type=str, help="Task description (e.g., 'bed to lamp')")
 
     args = parser.parse_args()
 
@@ -570,6 +639,11 @@ def main():
         run_tests()
     elif args.compare:
         run_compare()
+    elif args.vlm:
+        if not args.image:
+            print("Error: --vlm requires --image <scene_directory>")
+            return
+        run_vlm(args.image, args.task, use_llm=args.llm)
     elif args.demo:
         run_demo(use_llm=args.llm)
     else:

@@ -164,7 +164,7 @@ data/images/ai2thor/
 
 #### Step 1.2: Create VLM Agent
 
-**File**: `src/m03_vlm_agent.py`
+**File**: `src/m04_vlm_agent.py`
 
 | Task | Description |
 |------|-------------|
@@ -184,10 +184,10 @@ python src/m02_hybrid_judge.py --vlm --image data/images/ai2thor/FloorPlan1/
 
 #### Step 1.4: End-to-End Pipeline
 
-**File**: `src/m04_vlm_pipeline.py`
+**File**: `src/m05_vlm_pipeline.py`
 
 ```bash
-python src/m04_vlm_pipeline.py --scene FloorPlan1 --task "bed to lamp" --llm
+python src/m05_vlm_pipeline.py --scene FloorPlan1 --task "bed to lamp" --llm
 ```
 
 ---
@@ -197,8 +197,8 @@ python src/m04_vlm_pipeline.py --scene FloorPlan1 --task "bed to lamp" --llm
 | File | Purpose | Location |
 |------|---------|----------|
 | `m03_ai2thor_capture.py` | Capture images from AI2-THOR | GPU Server |
-| `m03_vlm_agent.py` | GPT-4V agent for path generation | M1 Mac |
-| `m04_vlm_pipeline.py` | End-to-end pipeline | M1 Mac |
+| `m04_vlm_agent.py` | GPT-4V agent for path generation | M1 Mac |
+| `m05_vlm_pipeline.py` | End-to-end pipeline | M1 Mac |
 | `data/images/ai2thor/` | Stored room images | Both |
 
 ### Dependencies (Phase 1)
@@ -317,7 +317,7 @@ data/
 | Phase | Status | Completion |
 |-------|--------|------------|
 | Phase 0: Algo + LLM Ground Truth | **Complete** | 100% |
-| Phase 1: VLM + AI2-THOR Images | **In Progress** | 0% |
+| Phase 1: VLM + AI2-THOR Images | **In Progress** | 50% |
 | Phase 2: Full Pipeline (3DGS + Ranking) | Not Started | 0% |
 
 ### Phase 0 Checklist (Algo + LLM)
@@ -333,12 +333,12 @@ data/
 
 ### Phase 1 Checklist (VLM + AI2-THOR)
 - [ ] Install AI2-THOR on GPU server
-- [ ] Create `m03_ai2thor_capture.py` for image capture
+- [x] Create `m03_ai2thor_capture.py` for image capture
 - [ ] Capture **5 sample scenes** only (POC, not full dataset)
-- [ ] Create `m03_vlm_agent.py` for GPT-4V calls
-- [ ] Create `m04_vlm_pipeline.py` for end-to-end
-- [ ] Add `--vlm` flag to `m02_hybrid_judge.py`
-- [ ] Test with `python src/m04_vlm_pipeline.py --scene FloorPlan1`
+- [x] Create `m04_vlm_agent.py` for GPT-4V calls
+- [x] Create `m05_vlm_pipeline.py` for end-to-end
+- [x] Add `--vlm` flag to `m02_hybrid_judge.py`
+- [ ] Test with `python src/m05_vlm_pipeline.py --scene FloorPlan1`
 - [ ] Compare top-down vs first-person VLM accuracy
 
 ### Phase 2 Checklist (Full Pipeline)
