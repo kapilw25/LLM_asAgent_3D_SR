@@ -2,7 +2,7 @@
 
 > **Goal**: Build a Judge Model that evaluates how well AI agents navigate in 3D environments
 > **Approach**: Algorithms for ground truth + LLM for explanations
-> **Status**: Phase 0 - In Progress
+> **Status**: Phase 1 - Starting
 > **Created**: Jan 2026
 
 ---
@@ -64,12 +64,12 @@
 │ Ground  │     │  Test   │     │  Judge  │     │ Pipeline│
 │  Truth  │     │         │     │         │     │         │
 └─────────┘     └─────────┘     └─────────┘     └─────────┘
-  Current
+    ✓            Current
 ```
 
 ---
 
-## Phase 0: Algorithmic Ground Truth Generator (Current)
+## Phase 0: Algorithmic Ground Truth Generator (Complete)
 
 **Goal**: Build shortest path calculator with obstacles & weighted edges
 
@@ -100,36 +100,66 @@ python src/m02_hybrid_judge.py --compare   # Compare algo vs LLM
 
 ---
 
-## Phase 1: MVP Test
+## Phase 1: MVP Test (Current)
 
-**Goal**: VLM navigates, Algorithm judges
+**Goal**: VLM navigates, Algorithm judges + LLM explains
 
 ```
-┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Room    │────►│   VLM    │────►│ Algorithm│
-│  Image   │     │  Agent   │     │  Judge   │
-└──────────┘     └──────────┘     └──────────┘
-                      │                │
-                 Agent Path      Optimal Path
-                      │                │
-                      └───────┬────────┘
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Room    │────►│   VLM    │────►│ Algorithm│────►│   LLM    │
+│  Image   │     │  Agent   │     │  Judge   │     │ Explain  │
+└──────────┘     └──────────┘     └──────────┘     └──────────┘
+                      │                │                │
+                 Agent Path      Optimal Path     Explanation
+                      │                │                │
+                      └───────┬────────┴────────────────┘
                               ▼
-                    Efficiency = agent/optimal
+                    Efficiency % + "Why path is bad"
 ```
 
 ### Tasks
 | # | Task | Output |
 |---|------|--------|
-| 1.1 | Get room images (AI2-THOR/Matterport3D) | Dataset |
-| 1.2 | Define navigation tasks | Task list |
-| 1.3 | VLM generates path from image | Agent path |
-| 1.4 | Algorithm computes optimal + scores | Efficiency % |
+| 1.1 | Enable LLM in `m02_hybrid_judge.py` | `use_llm=True` |
+| 1.2 | Load prompts from `data/step0/prompts.json` | Prompt templates |
+| 1.3 | Get room images (AI2-THOR or synthetic) | Dataset |
+| 1.4 | VLM generates path from image | Agent path |
+| 1.5 | Algorithm computes optimal + scores | Efficiency % |
+| 1.6 | LLM explains path errors | Natural language feedback |
+
+### Files to Modify
+```
+src/
+├── m02_hybrid_judge.py    # Enable use_llm=True, load prompts
+data/
+├── step0/
+│   ├── prompts.json       # Use existing prompt templates
+│   └── test_cases.json    # Add image paths to test cases
+└── images/                # Room images (new)
+    └── room_001.png
+```
 
 ---
 
 ## Phase 2: Hybrid Judge
 
-**Goal**: Add LLM for explanations + ranking
+**Goal**: Full hybrid evaluation with pairwise/listwise ranking
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    LEARNING TO RANK                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  POINT-BASED          PAIR-BASED          LIST-BASED        │
+│  ┌───────────┐       ┌───────────┐       ┌───────────┐      │
+│  │ Score each│       │ Compare   │       │ Rank all  │      │
+│  │ path 1-10 │       │ A vs B    │       │ paths     │      │
+│  └───────────┘       └───────────┘       └───────────┘      │
+│       ↓                   ↓                   ↓              │
+│   [8, 5, 3]          A > B > C           [A, B, C]          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
 
 | Task | Method |
 |------|--------|
@@ -137,7 +167,18 @@ python src/m02_hybrid_judge.py --compare   # Compare algo vs LLM
 | Score efficiency | `optimal_len / agent_len * 10` |
 | Detect collisions | Grid boundary check |
 | Explain errors | LLM ("Path went South unnecessarily") |
-| Rank multiple paths | LLM (pairwise comparison) |
+| Pairwise ranking | LLM (`pairwise_judge` prompt) |
+| Listwise ranking | LLM (rank N paths at once) |
+
+### Files to Modify
+```
+src/
+├── m02_hybrid_judge.py    # Add pairwise/listwise ranking
+├── m03_ranking.py         # Learning to Rank module (new)
+data/
+└── step0/
+    └── prompts.json       # Already has pairwise_judge prompt
+```
 
 ---
 
@@ -197,16 +238,32 @@ python src/m02_hybrid_judge.py --compare   # Compare algo vs LLM
 | Phase | Status | Completion |
 |-------|--------|------------|
 | Phase 0: Algorithmic Ground Truth | **Complete** | 100% |
-| Phase 1: MVP Test (VLM + Algo Judge) | Not Started | 0% |
-| Phase 2: Hybrid Judge (Algo + LLM) | Not Started | 0% |
+| Phase 1: MVP Test (VLM + Algo + LLM) | **In Progress** | 0% |
+| Phase 2: Hybrid Judge (Ranking) | Not Started | 0% |
 | Phase 3: Full Pipeline (3DGS + Red-Blue) | Not Started | 0% |
 
 ### Phase 0 Checklist
 - [x] `src/m01_shortest_path.py` - BFS, Dijkstra, A* algorithms
 - [x] `src/utils/grid.py` - Grid/graph utilities
-- [x] `src/m02_hybrid_judge.py` - Combined algo + LLM judge
+- [x] `src/m02_hybrid_judge.py` - Combined algo + LLM judge (LLM disabled)
+- [x] `data/step0/test_cases.json` - Test cases for path comparison
+- [x] `data/step0/prompts.json` - Prompt templates for LLM judge (Phase 1+)
 - [x] Move `m01_llm_judge_validation.py` to `src/legacy/`
+
+### Phase 1 Checklist
+- [ ] Enable LLM in `m02_hybrid_judge.py` (`use_llm=True`)
+- [ ] Use prompts from `data/step0/prompts.json`
+- [ ] Add VLM image input support
+- [ ] Get room images (AI2-THOR or synthetic)
+- [ ] VLM generates path from image
+- [ ] Algorithm scores VLM output
+
+### Phase 2 Checklist
+- [ ] LLM explains path errors ("Path went South unnecessarily")
+- [ ] Pairwise ranking with LLM
+- [ ] Listwise ranking for multiple paths
+- [ ] Combine algo scores + LLM explanations
 
 ---
 
-*Last Updated: Jan 2026*
+*Last Updated: Jan 9, 2026*
