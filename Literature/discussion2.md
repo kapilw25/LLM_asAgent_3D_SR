@@ -1,9 +1,25 @@
 # Date: Jan 06, 2026
+
+---
+
+## Original Notes
+
+> **Goal**: Development of a judge model framework for evaluating predicted paths using Learning to Rank techniques: point-based, list-based, and pair-based.
+>
+> - Use [LLM/VLM] judge models, focusing on metrics (path start and end points, detours, and collisions).
+> - Generating prompt-based 3D environments.
+> - Generate 3D meshes from 3DGS (3D Gaussian Splatting) and judge models.
+>
+> **Note 1**: Everything we have to build from scratch.
+> **Note 2**: No external dependencies - self-contained project.
+
+---
+
 # Discussion Summary: Judge Model Framework for Path Evaluation
 
 ## Overview
 
-We discussed building a **Judge Model** - a system that evaluates how well an AI agent navigates through 3D environments.
+Build a **Judge Model** from scratch - a system that evaluates how well an AI agent navigates through 3D environments.
 
 ---
 
@@ -17,9 +33,9 @@ We discussed building a **Judge Model** - a system that evaluates how well an AI
 │   ┌──────────────┐      ┌──────────────┐      ┌──────────────┐ │
 │   │   INPUT      │      │   JUDGE      │      │   OUTPUT     │ │
 │   │              │ ──── │   MODEL      │ ──── │              │ │
-│   │ Predicted    │      │              │      │  Score /     │ │
-│   │ Path from    │      │ Evaluates    │      │  Ranking     │ │
-│   │ LLM Agent    │      │ Quality      │      │              │ │
+│   │ Predicted    │      │ (LLM/VLM)    │      │  Score /     │ │
+│   │ Path from    │      │              │      │  Ranking     │ │
+│   │ Agent        │      │ Evaluates    │      │              │ │
 │   └──────────────┘      └──────────────┘      └──────────────┘ │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -61,12 +77,12 @@ The Judge Model uses **Learning to Rank** methods to score paths:
 
 ---
 
-## 3D Environment Generation Pipeline
+## 3D Environment Generation Pipeline (Build from Scratch)
 
 ```
 ┌────────────────┐    ┌────────────────┐    ┌────────────────┐
 │  Text Prompts  │───▶│  3D Generator  │───▶│  3D Environments│
-│  (4,000 total) │    │                │    │  (3,800 usable) │
+│                │    │  (to build)    │    │                 │
 └────────────────┘    └────────────────┘    └────────────────┘
                                                     │
                                                     ▼
@@ -76,16 +92,39 @@ The Judge Model uses **Learning to Rank** methods to score paths:
                                            └────────────────┘
 ```
 
-- **Generated**: 4,000 prompt-based 3D environments
-- **Usable**: 3,800 (after removing ~200 with errors)
-- **Resources shared**: Tools to convert 3D Gaussian Splatting (3DGS) to meshes
+---
+
+## What is 3DGS (3D Gaussian Splatting)?
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  3DGS = 3D GAUSSIAN SPLATTING                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  A technique to create 3D scenes from 2D images/videos         │
+│                                                                 │
+│  INPUT           PROCESS              OUTPUT                    │
+│  ┌─────┐        ┌─────────┐          ┌─────────┐               │
+│  │ 2D  │  ───►  │ Gaussian│   ───►   │ 3D Scene│               │
+│  │Images│       │ Splats  │          │ (Mesh)  │               │
+│  └─────┘        └─────────┘          └─────────┘               │
+│                                                                 │
+│  Application in this project:                                   │
+│  • Convert real videos/images → 3D navigable environments      │
+│  • Create mesh for collision detection                         │
+│  • Enable agent to "walk through" the scene                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Team Contributions
+## Components to Build (From Scratch)
 
-| Member | Contribution |
-|--------|--------------|
-| **Sushant** | Judge model design, evaluation metrics definition |
-| **Alam** | 3D environment generation (4,000 prompts) |
-| **Kapil** | 3DGS-to-mesh resources, judge model references | 
+| Component | Status | Description |
+|-----------|--------|-------------|
+| 3D Environment Generator | To Build | Text/Video → 3D scene |
+| 3DGS to Mesh Converter | To Build | Gaussian splats → navigable mesh |
+| Navigation Agent | To Build | LLM/VLM that outputs paths |
+| Judge Model | To Build | Evaluates path quality |
+| Metrics Calculator | To Build | Start/end, detours, collisions |

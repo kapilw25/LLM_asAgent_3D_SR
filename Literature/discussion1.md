@@ -1,4 +1,21 @@
 # Date: Dec 16, 2025
+
+---
+
+## Original Notes
+
+> **Aim**: to generate 3D view / drone simulation video/view of famous spot
+> 1) Gateway Of India Mumbai
+> 2) crowded bangalore traffic of banagalore
+>
+> **step1)** collecting their real videos
+> **step2)** give those real videos to agents [not Veo3 (too realistic)] using Llava, etc or use VideoGrammetry for depth estimation etc
+> **step3)** simulation videos, where multiple (red and blue) agents are talking / interacting with each other
+> **PS:** need all 4 views
+> Every step of script is hardcoded. put XML file for rendering video.
+
+---
+
 # Discussion Summary: 3D Drone Simulation & Agent Strategy Evolution
 
 ## Objective

@@ -1,0 +1,5 @@
+# Step 0: LLM-as-Judge Validation
+# Install with: pip install -r requirements.txt
+
+python-dotenv>=1.0.0
+requests>=2.31.0
