@@ -256,24 +256,38 @@ python src/m05_vlm_pipeline.py --scene FloorPlan1 --task "bed to lamp" --llm
 ### Full System Pipeline
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                    FULL SYSTEM PIPELINE                      │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐  │
-│  │  3D     │    │ Nav     │    │ Hybrid  │    │ Metrics │  │
-│  │  Env    │───►│ Agent   │───►│ Judge   │───►│ Output  │  │
-│  │ (3DGS)  │    │ (VLM)   │    │(Algo+LLM│    │         │  │
-│  └─────────┘    └─────────┘    └─────────┘    └─────────┘  │
-│                      │                                       │
-│                      ▼                                       │
-│               ┌─────────────┐                                │
-│               │  Red-Blue   │                                │
-│               │ Interaction │                                │
-│               └─────────────┘                                │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         FULL SYSTEM PIPELINE                              │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────┐  │
+│  │   3D Env    │    │  Nav Agent  │    │Hybrid Judge │    │  Metrics  │  │
+│  │   AI2-THOR  │───►│   GPT-4V    │───►│  Algo + LLM │───►│  Output   │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘    └───────────┘  │
+│        │                  │                   │                  │        │
+│        ▼                  ▼                   ▼                  ▼        │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────┐  │
+│  │     m03_    │    │    m04_     │    │ m01_ + m02_ │    │   m05_    │  │
+│  │   ai2thor   │    │  vlm_agent  │    │shortest_path│    │   vlm     │  │
+│  │  capture.py │    │     .py     │    │hybrid_judge │    │pipeline.py│  │
+│  └─────────────┘    └─────────────┘    └─────────────┘    └───────────┘  │
+│                           │                                               │
+│                           ▼                                               │
+│                    ┌─────────────┐                                        │
+│                    │  Red-Blue   │                                        │
+│                    │ Interaction │                                        │
+│                    └─────────────┘                                        │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
+
+| Script | Role | Input | Output |
+|--------|------|-------|--------|
+| `m01_shortest_path.py` | Compute optimal | Grid + start/goal | Optimal path (BFS/Dijkstra/A*) |
+| `m02_hybrid_judge.py` | Evaluate + explain | Agent path + optimal | Efficiency score + LLM explanation |
+| `m03_ai2thor_capture.py` | Capture 3D scenes | Scene name | Images + metadata (GPU) |
+| `m04_vlm_agent.py` | Generate nav path | Image + task | Path directions `["N","E",...]` |
+| `m05_vlm_pipeline.py` | **Orchestrator** | Scene + task | Full evaluation results |
 
 ### Files to Create
 ```

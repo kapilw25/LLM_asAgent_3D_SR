@@ -1,0 +1,9 @@
+# Phase 1+ (GPU Server only): AI2-THOR + Local LLM/VLM
+# Install with: pip install -r requirements_gpu.txt
+# Requires: Linux + Nvidia GPU + X11 display
+
+# Base requirements
+-r requirements.txt
+
+# AI2-THOR (3D simulation)
+ai2thor>=5.0.0
