@@ -141,25 +141,39 @@ python src/m02_hybrid_judge.py --demo --llm # Demo with LLM explanations
 
 **File**: `src/m03_ai2thor_capture.py`
 
+**Commands (GPU Server):**
+```bash
+python src/m03_ai2thor_capture.py --metadata-only   # 120 metadata.json (fast)
+python src/m03_ai2thor_capture.py --scenes 5        # 5 images (POC)
+```
+
+**Workflow:**
+```
+GPU Server                          M1 Mac
+-----------                         ------
+--metadata-only (120 JSON)  ──scp──►  Develop with metadata
+--scenes 5 (5 images)       ──scp──►  Test VLM pipeline
+```
+
 | Task | Description |
 |------|-------------|
-| Install AI2-THOR | `pip install ai2thor` on GPU server |
-| Capture **5 sample scenes** | FloorPlan1-5 only (POC, not full dataset) |
-| Capture top-down | Bird's eye view matching grid representation |
-| Capture first-person | Agent POV for realistic navigation |
-| Save with metadata | JSON with grid size, object positions, obstacles |
+| Install AI2-THOR | `./setup_env.sh --gpu` on GPU server |
+| Capture **120 metadata** | All iTHOR scenes (metadata only, fast) |
+| Capture **5 images** | POC scenes with top_down + first_person |
+| Transfer to M1 Mac | `scp -r gpu:data/images/ai2thor/ ./data/images/` |
 
-**Output** (5 scenes only for POC):
+**Output:**
 ```
 data/images/ai2thor/
 ├── FloorPlan1/
-│   ├── top_down.png
-│   ├── first_person.png
-│   └── metadata.json    # {grid_size, objects, obstacles}
+│   ├── top_down.png       # Only for 5 POC scenes
+│   ├── first_person.png   # Only for 5 POC scenes
+│   └── metadata.json      # All 120 scenes
 ├── FloorPlan2/
-├── FloorPlan3/
-├── FloorPlan4/
-└── FloorPlan5/
+│   └── metadata.json
+...
+└── FloorPlan430/
+    └── metadata.json
 ```
 
 #### Step 1.2: Create VLM Agent
