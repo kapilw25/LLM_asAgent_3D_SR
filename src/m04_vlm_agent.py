@@ -1,13 +1,10 @@
 """
-VLM Agent for Navigation Path Generation
-
-Uses GPT-4V to generate navigation paths from room images.
-Run on M1 Mac (API-based, no GPU required).
+VLM Agent for Navigation (Top-Down Only)
 
 Usage:
-    python src/m04_vlm_agent.py --image data/images/ai2thor/FloorPlan1/top_down.png
-    python src/m04_vlm_agent.py --image data/images/ai2thor/FloorPlan1/ --task "bed to lamp"
-    python src/m04_vlm_agent.py --test  # Run with sample image
+    python -u src/m04_vlm_agent.py --image data/images/ai2thor/FloorPlan1/ | tee logs/log1.log
+    python -u src/m04_vlm_agent.py --image data/images/ai2thor/FloorPlan1/ --task "refrigerator to stove" | tee logs/log2.log
+    python -u src/m04_vlm_agent.py --image data/images/ai2thor/FloorPlan301/ --task "bed to desk" | tee logs/log3.log
 """
 
 import os
@@ -36,6 +33,15 @@ class VLMResponse:
     error: Optional[str] = None
 
 
+@dataclass
+class ObjectIdentificationResponse:
+    """Response from VLM object identification."""
+    objects: List[Dict]
+    raw_response: str
+    success: bool
+    error: Optional[str] = None
+
+
 class VLMAgent:
     """
     Vision-Language Model agent for navigation.
@@ -55,17 +61,15 @@ class VLMAgent:
         self,
         image_path: Path,
         start_object: str,
-        goal_object: str,
-        view_type: str = "top_down"
+        goal_object: str
     ) -> VLMResponse:
         """
-        Generate navigation path from image.
+        Generate navigation path from top-down image.
 
         Args:
             image_path: Path to room image (PNG)
             start_object: Starting object name (e.g., "bed")
             goal_object: Goal object name (e.g., "lamp")
-            view_type: "top_down" or "first_person"
 
         Returns:
             VLMResponse with path and metadata
@@ -73,8 +77,8 @@ class VLMAgent:
         # Encode image
         base64_image = self._encode_image(image_path)
 
-        # Build prompt
-        prompt = self._build_prompt(start_object, goal_object, view_type)
+        # Build prompt (top-down only)
+        prompt = self._build_prompt(start_object, goal_object)
 
         # Call GPT-4V
         try:
@@ -95,40 +99,107 @@ class VLMAgent:
                 error=str(e)
             )
 
+    def identify_objects(self, image_path: Path) -> ObjectIdentificationResponse:
+        """
+        Identify all objects visible in the top-down image.
+
+        Args:
+            image_path: Path to room image (PNG)
+
+        Returns:
+            ObjectIdentificationResponse with list of objects
+        """
+        base64_image = self._encode_image(image_path)
+
+        prompt = """Analyze this top-down (bird's eye) view of a room.
+
+TASK: List ALL objects/furniture you can identify in this image.
+
+OUTPUT FORMAT (JSON only):
+{
+    "room_type": "kitchen/bedroom/bathroom/living_room",
+    "objects": [
+        {"name": "object_name", "position": "brief location description"},
+        {"name": "object_name", "position": "brief location description"}
+    ]
+}
+
+List every distinct object you can see:"""
+
+        try:
+            response = self._call_gpt4v(base64_image, prompt)
+            objects = self._parse_objects(response)
+
+            return ObjectIdentificationResponse(
+                objects=objects,
+                raw_response=response,
+                success=True
+            )
+
+        except Exception as e:
+            return ObjectIdentificationResponse(
+                objects=[],
+                raw_response="",
+                success=False,
+                error=str(e)
+            )
+
+    def _parse_objects(self, response: str) -> List[Dict]:
+        """Parse object list from VLM response."""
+        response = response.strip()
+
+        # Handle markdown code blocks
+        if "```" in response:
+            parts = response.split("```")
+            for part in parts:
+                part = part.strip()
+                if part.startswith("json"):
+                    part = part[4:].strip()
+                if part.startswith("{"):
+                    response = part
+                    break
+
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict):
+                return data.get("objects", [])
+            elif isinstance(data, list):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        return []
+
     def _encode_image(self, image_path: Path) -> str:
         """Encode image to base64."""
         with open(image_path, "rb") as f:
             return base64.standard_b64encode(f.read()).decode("utf-8")
 
-    def _build_prompt(
-        self,
-        start_object: str,
-        goal_object: str,
-        view_type: str
-    ) -> str:
-        """Build VLM prompt for navigation."""
-        view_context = {
-            "top_down": "This is a top-down (bird's eye) view of a room. North is up, South is down, East is right, West is left.",
-            "first_person": "This is a first-person view from an agent in the room. Forward is North, backward is South, right is East, left is West."
-        }
+    def _build_prompt(self, start_object: str, goal_object: str) -> str:
+        """Build VLM prompt for top-down navigation."""
+        return f"""Analyze this top-down (bird's eye) view of a room.
 
-        return f"""You are a navigation agent. Analyze this room image and generate a navigation path.
+TASK: Generate step-by-step navigation directions from the {start_object} to the {goal_object}.
 
-{view_context.get(view_type, view_context["top_down"])}
+COORDINATE SYSTEM:
+- North = moving UP in the image
+- South = moving DOWN in the image
+- East = moving RIGHT in the image
+- West = moving LEFT in the image
 
-TASK: Navigate from {start_object} to {goal_object}
+First, locate both objects in the image. Then determine the path between them.
 
-RULES:
-1. Output ONLY a JSON array of directions
-2. Valid directions: "North", "South", "East", "West"
-3. Each step moves one grid cell in that direction
-4. Avoid obstacles (furniture, walls)
-5. Find the shortest path possible
+OUTPUT FORMAT (JSON only):
+{{
+    "start_location": "describe where {start_object} is",
+    "goal_location": "describe where {goal_object} is",
+    "path": ["direction1", "direction2", "direction3"],
+    "reasoning": "brief explanation"
+}}
 
-OUTPUT FORMAT (JSON array only, no explanation):
-["North", "East", "North", "East"]
+Valid directions in path array: "North", "South", "East", "West"
 
-Generate the navigation path:"""
+Generate the navigation:"""
 
     def _call_gpt4v(self, base64_image: str, prompt: str) -> str:
         """Call GPT-4V API with image."""
@@ -173,40 +244,46 @@ Generate the navigation path:"""
 
     def _parse_path(self, response: str) -> List[str]:
         """Parse path from VLM response."""
-        # Try to extract JSON array from response
         response = response.strip()
 
         # Handle markdown code blocks
         if "```" in response:
-            # Extract content between code blocks
             parts = response.split("```")
             for part in parts:
                 part = part.strip()
                 if part.startswith("json"):
                     part = part[4:].strip()
-                if part.startswith("["):
+                if part.startswith("{") or part.startswith("["):
                     response = part
                     break
 
         # Try to parse as JSON
         try:
-            path = json.loads(response)
-            if isinstance(path, list):
-                # Validate directions
-                valid_path = []
-                for direction in path:
-                    if direction in self.VALID_DIRECTIONS:
-                        valid_path.append(direction)
-                    else:
-                        print(f"Warning: Invalid direction '{direction}' ignored")
-                return valid_path
+            data = json.loads(response)
+
+            # Handle object with "path" key
+            if isinstance(data, dict):
+                path = data.get("path", [])
+            elif isinstance(data, list):
+                path = data
+            else:
+                path = []
+
+            # Validate directions
+            valid_path = []
+            for direction in path:
+                if direction in self.VALID_DIRECTIONS:
+                    valid_path.append(direction)
+                else:
+                    print(f"Warning: Invalid direction '{direction}' ignored")
+            return valid_path
+
         except json.JSONDecodeError:
             pass
 
         # Fallback: try to extract directions from text
         path = []
         for direction in self.VALID_DIRECTIONS:
-            # Count occurrences in order
             idx = 0
             while True:
                 found = response.find(direction, idx)
@@ -215,7 +292,6 @@ Generate the navigation path:"""
                 path.append((found, direction))
                 idx = found + len(direction)
 
-        # Sort by position and extract directions
         path.sort(key=lambda x: x[0])
         return [d for _, d in path]
 
@@ -262,7 +338,7 @@ def run_demo():
             print(f"\nTask: Navigate from {start} to {goal}")
             print(f"Image: {top_down}")
 
-            result = agent.generate_path(top_down, start, goal, "top_down")
+            result = agent.generate_path(top_down, start, goal)
 
             print(f"\nResult:")
             print(f"  Success: {result.success}")
@@ -300,17 +376,16 @@ def main():
         help="Task description (e.g., 'bed to lamp')"
     )
     parser.add_argument(
-        "--view", type=str, default="top_down",
-        choices=["top_down", "first_person"],
-        help="View type (default: top_down)"
-    )
-    parser.add_argument(
         "--model", type=str, default="gpt-4o",
         help="OpenAI model (default: gpt-4o)"
     )
     parser.add_argument(
         "--test", action="store_true",
         help="Run demo with sample image"
+    )
+    parser.add_argument(
+        "--identify", action="store_true",
+        help="Identify objects in image (run before navigation)"
     )
 
     args = parser.parse_args()
@@ -325,6 +400,39 @@ def main():
         run_demo()
         return
 
+    # Handle image path
+    image_path = Path(args.image)
+    if image_path.is_dir():
+        image_path = image_path / "top_down.png"
+
+    if not image_path.exists():
+        print(f"Error: Image not found: {image_path}")
+        return
+
+    # Object identification mode
+    if args.identify:
+        print(f"\nVLM Object Identification")
+        print(f"  Image: {image_path}")
+        print(f"  Model: {args.model}")
+
+        agent = VLMAgent(model=args.model)
+        result = agent.identify_objects(image_path)
+
+        print(f"\nResult:")
+        print(f"  Success: {result.success}")
+
+        if result.success:
+            print(f"\nVLM Raw Response:\n{result.raw_response}")
+            print(f"\nParsed Objects ({len(result.objects)}):")
+            for obj in result.objects:
+                name = obj.get("name", "unknown")
+                pos = obj.get("position", "")
+                print(f"  - {name}: {pos}")
+        else:
+            print(f"  Error: {result.error}")
+
+        return
+
     # Parse task if provided
     if args.task:
         parts = args.task.lower().split(" to ")
@@ -332,37 +440,50 @@ def main():
             args.start = parts[0].strip()
             args.goal = parts[1].strip()
 
-    # Handle image path
-    image_path = Path(args.image)
+    agent = VLMAgent(model=args.model)
 
-    if image_path.is_dir():
-        # Scene directory - use top_down or first_person based on view type
-        image_file = f"{args.view}.png"
-        image_path = image_path / image_file
-
-    if not image_path.exists():
-        print(f"Error: Image not found: {image_path}")
-        return
-
-    print(f"\nVLM Agent")
+    # Step 1: Always identify objects first
+    print(f"\n{'='*60}")
+    print(f"STEP 1: Object Identification")
+    print(f"{'='*60}")
     print(f"  Image: {image_path}")
-    print(f"  Task: {args.start} -> {args.goal}")
-    print(f"  View: {args.view}")
     print(f"  Model: {args.model}")
 
-    agent = VLMAgent(model=args.model)
-    result = agent.generate_path(image_path, args.start, args.goal, args.view)
+    id_result = agent.identify_objects(image_path)
+
+    if id_result.success:
+        print(f"\nVLM Response:\n{id_result.raw_response}")
+        print(f"\nParsed Objects ({len(id_result.objects)}):")
+        for obj in id_result.objects:
+            name = obj.get("name", "unknown")
+            pos = obj.get("position", "")
+            print(f"  - {name}: {pos}")
+    else:
+        print(f"  Error: {id_result.error}")
+
+    # Step 2: Navigation (if task provided)
+    if not args.task:
+        print(f"\n{'='*60}")
+        print(f"No --task provided. Use --task 'object1 to object2' for navigation.")
+        return
+
+    print(f"\n{'='*60}")
+    print(f"STEP 2: Navigation")
+    print(f"{'='*60}")
+    print(f"  Task: {args.start} -> {args.goal}")
+
+    result = agent.generate_path(image_path, args.start, args.goal)
 
     print(f"\nResult:")
     print(f"  Success: {result.success}")
     print(f"  Path: {result.path}")
     print(f"  Path Length: {len(result.path)}")
 
+    # Always print raw response for debugging
+    print(f"\nRaw VLM Response:\n{result.raw_response}")
+
     if result.error:
         print(f"  Error: {result.error}")
-
-    if result.raw_response and not result.success:
-        print(f"\nRaw Response:\n{result.raw_response}")
 
 
 if __name__ == "__main__":

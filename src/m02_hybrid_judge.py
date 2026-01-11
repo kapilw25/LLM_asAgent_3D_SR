@@ -555,11 +555,11 @@ def run_demo(use_llm: bool = False):
 
 
 # =============================================================================
-# VLM MODE
+# VLM MODE (Top-Down Only)
 # =============================================================================
 
 def run_vlm(image_path: str, task: str = None, use_llm: bool = False):
-    """Run VLM-based evaluation on AI2-THOR scene."""
+    """Run VLM-based evaluation on AI2-THOR scene (top-down only)."""
     from pathlib import Path
 
     scene_dir = Path(image_path)
@@ -569,13 +569,13 @@ def run_vlm(image_path: str, task: str = None, use_llm: bool = False):
 
     # Import VLM pipeline
     try:
-        from m05_vlm_pipeline import compare_views, load_scene_metadata
+        from m05_vlm_pipeline import run_vlm_evaluation, load_scene_metadata
     except ImportError as e:
         print(f"Error importing VLM pipeline: {e}")
         return
 
     print("=" * 60)
-    print("VLM EVALUATION MODE")
+    print("VLM EVALUATION (Top-Down Only)")
     print("=" * 60)
 
     # Parse task or use defaults from metadata
@@ -600,22 +600,19 @@ def run_vlm(image_path: str, task: str = None, use_llm: bool = False):
     print(f"Task: {start_object} -> {goal_object}")
     print(f"LLM: {'Enabled' if use_llm else 'Disabled'}")
 
-    # Run comparison
-    results = compare_views(scene_dir, start_object, goal_object, use_llm)
+    # Run evaluation (top-down only)
+    result = run_vlm_evaluation(scene_dir, start_object, goal_object, use_llm)
 
-    for view in ["top_down", "first_person"]:
-        r = results[view]
-        print(f"\n[{view.replace('_', ' ').title()}]")
-        if r.vlm_success:
-            print(f"  VLM Path: {r.vlm_path}")
-            print(f"  Length: {r.path_length} (optimal: {r.optimal_length})")
-            print(f"  Efficiency: {r.efficiency_score}/10")
-            if r.explanation:
-                print(f"  Explanation: {r.explanation}")
-        else:
-            print(f"  Error: {r.error}")
+    if result.vlm_success:
+        print(f"\nResult:")
+        print(f"  VLM Path: {result.vlm_path}")
+        print(f"  Length: {result.path_length} (optimal: {result.optimal_length})")
+        print(f"  Efficiency: {result.efficiency_score}/10")
+        if result.explanation:
+            print(f"  Explanation: {result.explanation}")
+    else:
+        print(f"\nError: {result.error}")
 
-    print(f"\nWinner: {results['winner'].replace('_', ' ').title()}")
     print("\n" + "=" * 60)
 
 

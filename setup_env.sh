@@ -99,9 +99,10 @@ if [ "$1" = "--gpu" ]; then
     # 0. Install system dependencies (including X server for AI2-THOR)
     echo ""
     echo "[0/6] Installing system dependencies..."
+    # libgl1: Ubuntu 24.04+ replacement for deprecated libgl1-mesa-glx
     sudo apt update && sudo apt install -y \
         xvfb \
-        libgl1-mesa-glx \
+        libgl1 \
         libglu1-mesa \
         texlive-latex-base \
         texlive-latex-extra \

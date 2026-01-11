@@ -1,9 +1,9 @@
 """
-VLM End-to-End Pipeline for Navigation Evaluation
+VLM End-to-End Pipeline (Top-Down Only - first-person removed, unsuitable for VLM navigation)
 
 Usage:
-    python src/m05_vlm_pipeline.py --scene FloorPlan1 --task "bed to lamp"
-    python src/m05_vlm_pipeline.py --scene FloorPlan1 --task "bed to lamp" --llm
+    python src/m05_vlm_pipeline.py --scene FloorPlan301 --task "bed to lamp"
+    python src/m05_vlm_pipeline.py --scene FloorPlan301 --task "bed to lamp" --llm
     python src/m05_vlm_pipeline.py --demo
 """
 
@@ -24,9 +24,8 @@ DATA_DIR = PROJECT_ROOT / "data" / "images" / "ai2thor"
 
 @dataclass
 class VLMEvaluationResult:
-    """Result from VLM pipeline evaluation."""
+    """Result from VLM pipeline evaluation (top-down only)."""
     scene_name: str
-    view_type: str
     task: str
     vlm_path: List[str]
     path_length: int
@@ -86,18 +85,16 @@ def run_vlm_evaluation(
     scene_dir: Path,
     start_object: str,
     goal_object: str,
-    view_type: str = "top_down",
     use_llm: bool = False,
     vlm_model: str = "gpt-4o"
 ) -> VLMEvaluationResult:
     """
-    Run full VLM evaluation pipeline for a scene.
+    Run full VLM evaluation pipeline for a scene (top-down only).
 
     Args:
-        scene_dir: Path to scene directory (e.g., data/images/ai2thor/FloorPlan1)
+        scene_dir: Path to scene directory (e.g., data/images/ai2thor/FloorPlan301)
         start_object: Starting object name
         goal_object: Goal object name
-        view_type: "top_down" or "first_person"
         use_llm: Enable LLM explanations
         vlm_model: OpenAI model for VLM
 
@@ -111,7 +108,6 @@ def run_vlm_evaluation(
     if not metadata:
         return VLMEvaluationResult(
             scene_name=scene_name,
-            view_type=view_type,
             task=f"{start_object} to {goal_object}",
             vlm_path=[],
             path_length=0,
@@ -129,25 +125,32 @@ def run_vlm_evaluation(
     start_pos = object_positions.get(start_object.lower())
     goal_pos = object_positions.get(goal_object.lower())
 
-    # If objects not found, use first two objects
-    if not start_pos or not goal_pos:
-        obj_list = list(object_positions.items())
-        if len(obj_list) >= 2:
-            start_object = obj_list[0][0]
-            start_pos = obj_list[0][1]
-            goal_object = obj_list[1][0]
-            goal_pos = obj_list[1][1]
-        else:
-            # Fallback to grid corners
-            start_pos = (0, 0)
-            goal_pos = (grid.rows - 1, grid.cols - 1)
+    # Warn if objects not found in AI2-THOR metadata
+    if not start_pos:
+        print(f"  Warning: '{start_object}' not in AI2-THOR metadata")
+    if not goal_pos:
+        print(f"  Warning: '{goal_object}' not in AI2-THOR metadata")
+        print(f"  Available objects: {list(object_positions.keys())[:10]}...")
 
-    # Get image path
-    image_path = scene_dir / f"{view_type}.png"
+    # If objects not found, cannot evaluate properly
+    if not start_pos or not goal_pos:
+        return VLMEvaluationResult(
+            scene_name=scene_name,
+            task=f"{start_object} to {goal_object}",
+            vlm_path=[],
+            path_length=0,
+            optimal_length=0,
+            efficiency_score=0.0,
+            reached_goal=False,
+            vlm_success=False,
+            error=f"Object not found in metadata: start={start_object}({start_pos}), goal={goal_object}({goal_pos})"
+        )
+
+    # Get image path (top-down only)
+    image_path = scene_dir / "top_down.png"
     if not image_path.exists():
         return VLMEvaluationResult(
             scene_name=scene_name,
-            view_type=view_type,
             task=f"{start_object} to {goal_object}",
             vlm_path=[],
             path_length=0,
@@ -163,14 +166,12 @@ def run_vlm_evaluation(
     vlm_response = vlm_agent.generate_path(
         image_path=image_path,
         start_object=start_object,
-        goal_object=goal_object,
-        view_type=view_type
+        goal_object=goal_object
     )
 
     if not vlm_response.success:
         return VLMEvaluationResult(
             scene_name=scene_name,
-            view_type=view_type,
             task=f"{start_object} to {goal_object}",
             vlm_path=[],
             path_length=0,
@@ -192,7 +193,6 @@ def run_vlm_evaluation(
 
     return VLMEvaluationResult(
         scene_name=scene_name,
-        view_type=view_type,
         task=f"{start_object} to {goal_object}",
         vlm_path=vlm_response.path,
         path_length=evaluation.path_length,
@@ -204,47 +204,10 @@ def run_vlm_evaluation(
     )
 
 
-def compare_views(
-    scene_dir: Path,
-    start_object: str,
-    goal_object: str,
-    use_llm: bool = False
-) -> Dict:
-    """Compare top-down vs first-person VLM accuracy for a scene."""
-    results = {}
-
-    for view in ["top_down", "first_person"]:
-        result = run_vlm_evaluation(
-            scene_dir=scene_dir,
-            start_object=start_object,
-            goal_object=goal_object,
-            view_type=view,
-            use_llm=use_llm
-        )
-        results[view] = result
-
-    # Determine winner
-    td = results["top_down"]
-    fp = results["first_person"]
-
-    if td.efficiency_score > fp.efficiency_score:
-        winner = "top_down"
-    elif fp.efficiency_score > td.efficiency_score:
-        winner = "first_person"
-    else:
-        winner = "tie"
-
-    return {
-        "top_down": results["top_down"],
-        "first_person": results["first_person"],
-        "winner": winner
-    }
-
-
 def run_demo():
-    """Run demo with available AI2-THOR scenes."""
+    """Run demo with available AI2-THOR scenes (top-down only)."""
     print("=" * 60)
-    print("VLM PIPELINE DEMO")
+    print("VLM PIPELINE DEMO (Top-Down Only)")
     print("=" * 60)
 
     if not DATA_DIR.exists():
@@ -278,20 +241,15 @@ def run_demo():
 
         print(f"Task: {start} -> {goal}")
 
-        # Run comparison
-        results = compare_views(scene_dir, start, goal, use_llm=False)
+        # Run evaluation (top-down only)
+        result = run_vlm_evaluation(scene_dir, start, goal, use_llm=False)
 
-        for view in ["top_down", "first_person"]:
-            r = results[view]
-            print(f"\n[{view.replace('_', ' ').title()}]")
-            if r.vlm_success:
-                print(f"  VLM Path: {r.vlm_path}")
-                print(f"  Length: {r.path_length} (optimal: {r.optimal_length})")
-                print(f"  Efficiency: {r.efficiency_score}/10")
-            else:
-                print(f"  Error: {r.error}")
-
-        print(f"\nWinner: {results['winner'].replace('_', ' ').title()}")
+        if result.vlm_success:
+            print(f"  VLM Path: {result.vlm_path}")
+            print(f"  Length: {result.path_length} (optimal: {result.optimal_length})")
+            print(f"  Efficiency: {result.efficiency_score}/10")
+        else:
+            print(f"  Error: {result.error}")
 
     print("\n" + "=" * 60)
     print("DEMO COMPLETE")
@@ -300,20 +258,15 @@ def run_demo():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="VLM End-to-End Pipeline for Navigation Evaluation"
+        description="VLM End-to-End Pipeline (Top-Down Only)"
     )
     parser.add_argument(
         "--scene", type=str,
-        help="Scene name (e.g., FloorPlan1)"
+        help="Scene name (e.g., FloorPlan301)"
     )
     parser.add_argument(
         "--task", type=str,
         help="Navigation task (e.g., 'bed to lamp')"
-    )
-    parser.add_argument(
-        "--view", type=str, default="both",
-        choices=["top_down", "first_person", "both"],
-        help="View type to evaluate (default: both)"
     )
     parser.add_argument(
         "--llm", action="store_true",
@@ -357,51 +310,30 @@ def main():
         print(f"Error: Scene not found: {scene_dir}")
         return
 
-    print(f"\nVLM Pipeline")
+    print(f"\nVLM Pipeline (Top-Down)")
     print(f"  Scene: {args.scene}")
     print(f"  Task: {start_object} -> {goal_object}")
-    print(f"  View: {args.view}")
     print(f"  LLM: {'Enabled' if args.llm else 'Disabled'}")
 
-    if args.view == "both":
-        # Compare both views
-        results = compare_views(scene_dir, start_object, goal_object, args.llm)
+    # Run evaluation
+    result = run_vlm_evaluation(
+        scene_dir=scene_dir,
+        start_object=start_object,
+        goal_object=goal_object,
+        use_llm=args.llm,
+        vlm_model=args.model
+    )
 
-        for view in ["top_down", "first_person"]:
-            r = results[view]
-            print(f"\n[{view.replace('_', ' ').title()}]")
-            if r.vlm_success:
-                print(f"  VLM Path: {r.vlm_path}")
-                print(f"  Length: {r.path_length} (optimal: {r.optimal_length})")
-                print(f"  Efficiency: {r.efficiency_score}/10")
-                print(f"  Reached Goal: {r.reached_goal}")
-                if r.explanation:
-                    print(f"  Explanation: {r.explanation}")
-            else:
-                print(f"  Error: {r.error}")
-
-        print(f"\nWinner: {results['winner'].replace('_', ' ').title()}")
+    if result.vlm_success:
+        print(f"\nResult:")
+        print(f"  VLM Path: {result.vlm_path}")
+        print(f"  Length: {result.path_length} (optimal: {result.optimal_length})")
+        print(f"  Efficiency: {result.efficiency_score}/10")
+        print(f"  Reached Goal: {result.reached_goal}")
+        if result.explanation:
+            print(f"  Explanation: {result.explanation}")
     else:
-        # Single view evaluation
-        result = run_vlm_evaluation(
-            scene_dir=scene_dir,
-            start_object=start_object,
-            goal_object=goal_object,
-            view_type=args.view,
-            use_llm=args.llm,
-            vlm_model=args.model
-        )
-
-        print(f"\n[{args.view.replace('_', ' ').title()}]")
-        if result.vlm_success:
-            print(f"  VLM Path: {result.vlm_path}")
-            print(f"  Length: {result.path_length} (optimal: {result.optimal_length})")
-            print(f"  Efficiency: {result.efficiency_score}/10")
-            print(f"  Reached Goal: {result.reached_goal}")
-            if result.explanation:
-                print(f"  Explanation: {result.explanation}")
-        else:
-            print(f"  Error: {result.error}")
+        print(f"\nError: {result.error}")
 
 
 if __name__ == "__main__":
