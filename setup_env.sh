@@ -96,10 +96,13 @@ if [ "$1" = "--gpu" ]; then
     echo "GPU Setup (Linux + Nvidia)"
     echo "============================================"
 
-    # 0. Install system dependencies
+    # 0. Install system dependencies (including X server for AI2-THOR)
     echo ""
     echo "[0/6] Installing system dependencies..."
     sudo apt update && sudo apt install -y \
+        xvfb \
+        libgl1-mesa-glx \
+        libglu1-mesa \
         texlive-latex-base \
         texlive-latex-extra \
         texlive-fonts-recommended \
@@ -108,6 +111,11 @@ if [ "$1" = "--gpu" ]; then
         texlive-science \
         biber \
         tree
+
+    # Start virtual X server for headless AI2-THOR
+    echo "Starting Xvfb for AI2-THOR..."
+    Xvfb :99 -screen 0 1024x768x24 &
+    export DISPLAY=:99
 
     # 1. Install Python 3.12
     echo ""

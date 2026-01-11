@@ -1,6 +1,16 @@
 # Phase 1+ (GPU Server only): AI2-THOR + Local LLM/VLM
 # Install with: pip install -r requirements_gpu.txt
-# Requires: Linux + Nvidia GPU + X11 display
+#
+# Requirements:
+#   - Linux (Ubuntu 14.04+)
+#   - Nvidia GPU with OpenGL support
+#   - X server with GLX module enabled
+#   - ~500MB disk space for AI2-THOR assets (auto-downloaded to ~/.ai2thor)
+#
+# For headless servers, start X server before running:
+#   sudo apt install xvfb
+#   Xvfb :99 -screen 0 1024x768x24 &
+#   export DISPLAY=:99
 
 # Base requirements
 -r requirements.txt

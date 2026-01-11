@@ -2,19 +2,22 @@
 AI2-THOR Image Capture for VLM Navigation
 
 Run on GPU Server to capture room images for VLM evaluation.
-Captures 5 sample scenes (POC) with top-down and first-person views.
+
+Requirements:
+    - Linux (Ubuntu 14.04+) + Nvidia GPU
+    - X server with GLX (for headless: Xvfb :99 & export DISPLAY=:99)
 
 Usage (on GPU Server):
-    python src/m03_ai2thor_capture.py --scenes 5     # Capture 5 scenes
-    python src/m03_ai2thor_capture.py --list         # List available scenes
-    python src/m03_ai2thor_capture.py --scene FloorPlan1  # Capture single scene
+    python src/m03_ai2thor_capture.py --metadata-only    # All 120 iTHOR metadata (no images)
+    python src/m03_ai2thor_capture.py --scenes 5         # 5 POC scenes with images
+    python src/m03_ai2thor_capture.py --list             # List available scenes
+    python src/m03_ai2thor_capture.py --scene FloorPlan1 # Single scene with images
 """
 
-import os
 import json
 import argparse
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 
 # AI2-THOR import (only available on GPU server)
 try:
@@ -31,11 +34,23 @@ OUTPUT_DIR = PROJECT_ROOT / "data" / "images" / "ai2thor"
 def get_available_scenes() -> Dict[str, List[str]]:
     """Get available AI2-THOR scene categories."""
     return {
+        # iTHOR (120 scenes)
         "kitchens": [f"FloorPlan{i}" for i in range(1, 31)],
         "living_rooms": [f"FloorPlan{i}" for i in range(201, 231)],
         "bedrooms": [f"FloorPlan{i}" for i in range(301, 331)],
         "bathrooms": [f"FloorPlan{i}" for i in range(401, 431)],
+        # RoboTHOR (89 apartments) - uses different naming
+        # "robothor": [f"FloorPlan_Train{i}_{j}" for i in range(1, 13) for j in range(1, 6)],
     }
+
+
+def get_all_ithor_scenes() -> List[str]:
+    """Get all 120 iTHOR scenes."""
+    scenes = get_available_scenes()
+    all_scenes = []
+    for category in ["kitchens", "living_rooms", "bedrooms", "bathrooms"]:
+        all_scenes.extend(scenes[category])
+    return all_scenes
 
 
 def get_poc_scenes(n: int = 5) -> List[str]:
@@ -84,9 +99,14 @@ class AI2THORCapture:
             self.controller.stop()
             print("AI2-THOR controller stopped")
 
-    def capture_scene(self, scene_name: str, output_dir: Path) -> Dict:
+    def capture_scene(self, scene_name: str, output_dir: Path, metadata_only: bool = False) -> Dict:
         """
         Capture images and metadata for a single scene.
+
+        Args:
+            scene_name: Scene name (e.g., FloorPlan1)
+            output_dir: Output directory
+            metadata_only: If True, skip image capture (faster)
 
         Returns:
             Dict with scene metadata
@@ -104,22 +124,9 @@ class AI2THORCapture:
         # Calculate grid bounds
         grid_info = self._calculate_grid_info(reachable_positions)
 
-        # Capture first-person view (agent POV)
-        first_person_img = self._capture_first_person()
-
-        # Capture top-down view
-        top_down_img = self._capture_top_down()
-
         # Create output directory
         scene_dir = output_dir / scene_name
         scene_dir.mkdir(parents=True, exist_ok=True)
-
-        # Save images
-        first_person_path = scene_dir / "first_person.png"
-        top_down_path = scene_dir / "top_down.png"
-
-        self._save_image(first_person_img, first_person_path)
-        self._save_image(top_down_img, top_down_path)
 
         # Create metadata
         metadata = {
@@ -128,21 +135,32 @@ class AI2THORCapture:
             "grid_bounds": grid_info["bounds"],
             "reachable_count": len(reachable_positions),
             "objects": objects,
-            "images": {
+            "images": {}
+        }
+
+        # Capture images only if not metadata_only
+        if not metadata_only:
+            first_person_img = self._capture_first_person()
+            top_down_img = self._capture_top_down()
+
+            first_person_path = scene_dir / "first_person.png"
+            top_down_path = scene_dir / "top_down.png"
+
+            self._save_image(first_person_img, first_person_path)
+            self._save_image(top_down_img, top_down_path)
+
+            metadata["images"] = {
                 "first_person": str(first_person_path.relative_to(PROJECT_ROOT)),
                 "top_down": str(top_down_path.relative_to(PROJECT_ROOT)),
             }
-        }
 
         # Save metadata
         metadata_path = scene_dir / "metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
 
-        print(f"  Captured: {scene_name}")
-        print(f"    - Grid: {grid_info['grid_size']}")
-        print(f"    - Objects: {len(objects)}")
-        print(f"    - Saved to: {scene_dir}")
+        mode = "metadata" if metadata_only else "full"
+        print(f"  [{mode}] {scene_name}: grid={grid_info['grid_size']}, objects={len(objects)}")
 
         return metadata
 
@@ -197,14 +215,9 @@ class AI2THORCapture:
 
     def _capture_top_down(self):
         """Capture top-down (bird's eye) view."""
-        # Move camera to top-down position
-        event = self.controller.step(
-            action="ToggleMapView"
-        )
+        event = self.controller.step(action="ToggleMapView")
         if event.metadata["lastActionSuccess"]:
             return event.frame
-
-        # Fallback: use regular view if map view not available
         return self._capture_first_person()
 
     def _save_image(self, frame, path: Path):
@@ -217,9 +230,10 @@ class AI2THORCapture:
             print("Warning: Pillow not installed. Cannot save images.")
 
 
-def capture_scenes(scene_names: List[str], output_dir: Path):
+def capture_scenes(scene_names: List[str], output_dir: Path, metadata_only: bool = False):
     """Capture multiple scenes."""
-    print(f"\nCapturing {len(scene_names)} scenes...")
+    mode = "metadata only" if metadata_only else "full (images + metadata)"
+    print(f"\nCapturing {len(scene_names)} scenes [{mode}]...")
     print(f"Output directory: {output_dir}\n")
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -228,12 +242,16 @@ def capture_scenes(scene_names: List[str], output_dir: Path):
     capture.start()
 
     results = []
-    for scene in scene_names:
+    for i, scene in enumerate(scene_names):
         try:
-            metadata = capture.capture_scene(scene, output_dir)
+            metadata = capture.capture_scene(scene, output_dir, metadata_only)
             results.append(metadata)
         except Exception as e:
             print(f"  Error capturing {scene}: {e}")
+
+        # Progress for large batches
+        if (i + 1) % 10 == 0:
+            print(f"  Progress: {i + 1}/{len(scene_names)}")
 
     capture.stop()
 
@@ -242,6 +260,7 @@ def capture_scenes(scene_names: List[str], output_dir: Path):
     with open(summary_path, "w") as f:
         json.dump({
             "scenes_captured": len(results),
+            "metadata_only": metadata_only,
             "scenes": [r["scene_name"] for r in results],
         }, f, indent=2)
 
@@ -254,14 +273,18 @@ def capture_scenes(scene_names: List[str], output_dir: Path):
 def list_scenes():
     """List all available AI2-THOR scenes."""
     scenes = get_available_scenes()
-    print("\nAvailable AI2-THOR Scenes:")
+    print("\nAvailable AI2-THOR Scenes (iTHOR):")
     print("-" * 40)
+
+    total = 0
     for category, scene_list in scenes.items():
         print(f"\n{category.upper()} ({len(scene_list)} scenes):")
         print(f"  {scene_list[0]} - {scene_list[-1]}")
+        total += len(scene_list)
 
     print("\n" + "-" * 40)
-    print("POC Scenes (recommended for testing):")
+    print(f"Total iTHOR scenes: {total}")
+    print("\nPOC Scenes (5 images):")
     for scene in get_poc_scenes(5):
         print(f"  - {scene}")
 
@@ -272,11 +295,15 @@ def main():
     )
     parser.add_argument(
         "--scenes", type=int, default=5,
-        help="Number of POC scenes to capture (default: 5)"
+        help="Number of POC scenes to capture with images (default: 5)"
     )
     parser.add_argument(
         "--scene", type=str,
         help="Capture a single specific scene (e.g., FloorPlan1)"
+    )
+    parser.add_argument(
+        "--metadata-only", action="store_true",
+        help="Capture metadata for all 120 iTHOR scenes (no images)"
     )
     parser.add_argument(
         "--list", action="store_true",
@@ -301,13 +328,17 @@ def main():
 
     output_dir = Path(args.output)
 
-    if args.scene:
-        # Capture single scene
-        capture_scenes([args.scene], output_dir)
+    if args.metadata_only:
+        # Capture metadata for all 120 iTHOR scenes
+        scenes = get_all_ithor_scenes()
+        capture_scenes(scenes, output_dir, metadata_only=True)
+    elif args.scene:
+        # Capture single scene with images
+        capture_scenes([args.scene], output_dir, metadata_only=False)
     else:
-        # Capture POC scenes
+        # Capture POC scenes with images
         scenes = get_poc_scenes(args.scenes)
-        capture_scenes(scenes, output_dir)
+        capture_scenes(scenes, output_dir, metadata_only=False)
 
 
 if __name__ == "__main__":
