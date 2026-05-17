@@ -27,6 +27,16 @@ encoders:
     crop: 384
     embed_dim: 1664
 
+  # iter14 arm C / iter15 Δ3 control — m09a continual SSL pretrain with 2X epoch
+  # budget (POC=4ep, FULL=10ep). Compute-matched against surgery_3stage_DI's
+  # 4ep-equivalent so Δ3 = surgery − pretrain_2X isolates the surgery method, not
+  # just extra compute. Same arch/crop/embed_dim as pretrain_encoder.
+  vjepa_2_1_pretrain_2X_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
   # P3 variant A — m09c 3-stage surgery (D_L → D_A → D_I, 40/30/30 epoch split).
   # Uses interaction tubes (D_I); iter9 v15c showed BWT=-0.33 here vs noDI variant.
   vjepa_2_1_surgical_3stage_DI_encoder:

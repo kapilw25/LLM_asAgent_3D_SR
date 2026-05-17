@@ -67,6 +67,7 @@ from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config
 from utils.data_download import ensure_local_data, iter_clips_parallel
 from utils.frozen_features import (
+    ENCODERS,
     decode_to_tensor, load_vjepa_2_1_frozen,
 )
 from utils.gpu_batch import cleanup_temp, cuda_cleanup
@@ -89,15 +90,16 @@ REGRESSOR_MLP_HIDDEN = 4096
 # Variants understood by paired_per_variant. iter15 adds 4 head-only variants
 # alongside iter14's 4 encoder-update variants. Stage `forward` runs ONE variant
 # at a time (the user picks via --variant).
-KNOWN_VARIANTS = (
-    "vjepa_2_1_frozen",
-    "vjepa_2_1_pretrain_encoder",                       # iter14 m09a1 continual SSL (5 epochs)
-    "vjepa_2_1_pretrain_2X_encoder",                    # iter14 arm C — m09a1 at 10 epochs (Δ3 control)
-    "vjepa_2_1_surgical_3stage_DI_encoder",             # iter14 m09c1 D_I surgery
-    "vjepa_2_1_surgical_noDI_encoder",                  # iter14 m09c1 noDI surgery
-    "vjepa_2_1_pretrain_head",                  # iter15 m09a2 head-only pretrain
-    "vjepa_2_1_surgical_3stage_DI_head",        # iter15 m09c2 D_I head-only surgery
-    "vjepa_2_1_surgical_noDI_head",             # iter15 m09c2 noDI head-only surgery
+# iter15 Phase 8 (2026-05-17): runtime-discovered V-JEPA variant list. Single
+# source of truth is configs/eval/probe_encoders.yaml (loaded by
+# utils.frozen_features._load_encoders_registry → ENCODERS dict). Filtered to
+# kind=="vjepa" because future_regress operates on JEPA forward features
+# (dinov2 has no comparable temporal-predictor setup). Per src/CLAUDE.md
+# "No hardcoded values in Python — YAML or runtime discovery only". Symmetric
+# with probe_future_mse.py's KNOWN_VARIANTS — both must derive from the same
+# registry to avoid silent skips when a new variant is added to the YAML.
+KNOWN_VARIANTS = tuple(
+    name for name, spec in ENCODERS.items() if spec.get("kind") == "vjepa"
 )
 DATA_SOURCES = ("raw", "factor_aug")
 REGRESSOR_ARCHS = ("linear", "mlp_d1", "mlp_d2")

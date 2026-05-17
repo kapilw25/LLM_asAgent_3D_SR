@@ -51,6 +51,7 @@ from utils.checkpoint import save_array_checkpoint, save_json_checkpoint
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config
 from utils.data_download import ensure_local_data, iter_clips_parallel
 from utils.frozen_features import (
+    ENCODERS,
     decode_to_tensor,
     resolve_encoder_state_dict,
     resolve_predictor_state_dict,
@@ -93,17 +94,18 @@ DEFAULT_NUM_BLOCKS = 8
 # Variants understood by --paired_per_variant. P1 ships frozen only; P2 adds the
 # m09a continual-pretrain output; P3 adds the m09c factor-surgery output. m09b
 # ExPLoRA was dropped per iter13 pivot — see plan_code_dev.md §"P2 + P3 Coding plan".
-KNOWN_VARIANTS = (
-    "vjepa_2_1_frozen",
-    "vjepa_2_1_pretrain_encoder",                       # P2 — m09a1 continual SSL pretrain
-    "vjepa_2_1_surgical_3stage_DI_encoder",             # P3-A — m09c1 3-stage WITH interaction tubes (D_I)
-    "vjepa_2_1_surgical_noDI_encoder",                  # P3-B — m09c1 2-stage WITHOUT D_I (skepticism test)
-    # iter15 Phase 2 (2026-05-14) — head-only siblings: encoder bit-identical to
-    # Meta init; only the ~432K motion_aux head trains. Used by Stage 8 future_mse
-    # alongside their encoder-update counterparts for the Δ4-Δ7 paired-BCa deltas.
-    "vjepa_2_1_pretrain_head",                  # iter15 m09a2 head-only pretrain
-    "vjepa_2_1_surgical_3stage_DI_head",        # iter15 m09c2 D_I head-only surgery
-    "vjepa_2_1_surgical_noDI_head",             # iter15 m09c2 noDI head-only surgery
+# iter15 Phase 8 (2026-05-17): runtime-discovered V-JEPA variant list. Single
+# source of truth is configs/eval/probe_encoders.yaml (loaded by
+# utils.frozen_features._load_encoders_registry → ENCODERS dict). Filtered to
+# kind=="vjepa" because Stage 9 future_mse requires a JEPA predictor (dinov2
+# has none). Per src/CLAUDE.md "No hardcoded values in Python — YAML or
+# runtime discovery only" — replaces the prior hardcoded tuple that silently
+# dropped vjepa_2_1_pretrain_2X_encoder from Δ3 paired-Δ aggregation when the
+# variant was added to the YAML registry but the tuple was not updated.
+# Adding a new variant: edit configs/eval/probe_encoders.yaml — this list
+# and the argparse --variant choices below pick it up automatically.
+KNOWN_VARIANTS = tuple(
+    name for name, spec in ENCODERS.items() if spec.get("kind") == "vjepa"
 )
 
 

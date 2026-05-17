@@ -271,6 +271,21 @@ def run_train_stage(args, wb) -> None:
         sys.exit("FATAL: --stage train requires --encoder")
     if args.features_root is None:
         sys.exit("FATAL: --stage train requires --features-root (probe_action's per-encoder cache)")
+
+    # iter15 Phase 8 (2026-05-17): full-stage cache short-circuit.
+    # Without this, a rerun re-trains all 15 per-dim taxonomy probes (~5 min
+    # ViT-G + 15 dims POC) even though test_metrics.json is already on disk.
+    # test_metrics.json is written ONCE at end of Stage 3.5 (L423) — its presence
+    # implies all dims processed. Mirrors L148 labels pattern + Stage 3 fix in
+    # probe_action.py. Skip happens BEFORE check_gpu(). Escape hatch:
+    # --cache-policy 2.
+    out_dir_pre = args.output_root / args.encoder
+    test_metrics_pre = out_dir_pre / "test_metrics.json"
+    if args.cache_policy == "1" and test_metrics_pre.exists():
+        print(f"  [keep] Stage 3.5 cached for {args.encoder}: {test_metrics_pre.name} "
+              f"present in {out_dir_pre} — skipping (--cache-policy 2 to redo)")
+        return
+
     check_gpu()
     cleanup_temp()
 
@@ -575,7 +590,7 @@ def build_parser():
     p.add_argument("--stage", required=True,
                    choices=["labels", "train", "paired_delta", "plot"])
     p.add_argument("--encoder", type=str, default=None,
-                   help="Encoder name (must match a probe_encoders.yaml key + features-root subdir)")
+                   help="Encoder name (must match a configs/eval/probe_encoders.yaml key + features-root subdir)")
     p.add_argument("--features-root", type=Path, default=None,
                    help="probe_action output root (per-encoder features_*.npy + clip_keys_*.npy)")
     p.add_argument("--tags-json", type=Path, default=None)

@@ -72,6 +72,7 @@ from utils.checkpoint import (
 from utils.config import (
     add_local_data_arg,
     check_gpu,
+    get_paired_deltas,
 )
 from utils.data_download import ensure_local_data
 from utils.frozen_features import (
@@ -413,6 +414,27 @@ def run_train_stage(args, wb) -> None:
         sys.exit("FATAL: V-JEPA encoder requires --encoder-ckpt (lazy extract needs the model)")
     if args.local_data is None:
         sys.exit("FATAL: --stage train requires --local-data (lazy extract reads the TARs)")
+
+    # iter15 Phase 8 (2026-05-17): full-stage cache short-circuit.
+    # Without this, a rerun re-trains the probe (~13 min ViT-G + 14-class POC)
+    # even though probe.pt + test_metrics.json + test_predictions.npy +
+    # test_clip_keys.npy are all already on disk. Mirrors the existing patterns
+    # at L268 (labels) and L343 (features). Skip happens BEFORE check_gpu() so
+    # cached encoders incur zero CUDA spinup. Escape hatch: --cache-policy 2.
+    enc_dir_pre = args.output_root / args.encoder
+    out_dir_pre = enc_dir_pre / args.output_subdir if args.output_subdir else enc_dir_pre
+    required_outputs = [
+        out_dir_pre / "probe.pt",
+        out_dir_pre / "test_predictions.npy",
+        out_dir_pre / "test_clip_keys.npy",
+        out_dir_pre / "test_metrics.json",
+    ]
+    if args.cache_policy == "1" and all(p.exists() for p in required_outputs):
+        present = ", ".join(p.name for p in required_outputs)
+        print(f"  [keep] Stage 3 cached for {args.encoder}: {present} all present "
+              f"in {out_dir_pre} — skipping (--cache-policy 2 to redo)")
+        return
+
     check_gpu()
     # iter15 (2026-05-14): cgroup envelope + OOM watchdog (utils/cgroup_monitor.py)
     print_cgroup_header(prefix="[probe_action]")
@@ -748,49 +770,13 @@ def run_paired_delta_stage(args, wb) -> None:
                 "interpretation": f"{a} - {b} > 0 means {a} more accurate than {b}",
             }
 
-    # iter14 paper deltas (2026-05-08) + iter15 Phase 4 extensions (2026-05-14):
-    # iter/iter14_surgery_on_pretrain/plan_surgery_on_pretrain.md § Q3 + iter15 head-only:
-    #   Δ1 = pretrain − frozen                    → continual SSL > frozen
-    #   Δ2 = surgical_3stage_DI − pretrain        → factor patching adds value (surgery claim)
-    #   Δ3 = surgical_3stage_DI − pretrain_2X     → CAUSAL: gain from factor patching, not steps
-    #   Δ4 = pretrain − pretrain_head             → encoder-update > head-only on pretrain track
-    #                                                (does moving the encoder add anything beyond
-    #                                                 a trained head?)
-    #   Δ5 = surgical_3stage_DI − surgical_3stage_DI_head  ⭐ KEY iter15 PAPER CLAIM ⭐
-    #                                                 head-only matches surgery → 1/40× GPU bill
-    #                                                 unlocks. If |Δ5| < 0.01 → head-only WINS.
-    #   Δ6 = surgical_3stage_DI_head − pretrain_head      → factor data helps even at head-only
-    #                                                 (validates D_L/D_A/D_I curriculum)
-    #   Δ7 = surgical_3stage_DI_head − surgical_noDI_head → D_I tubes carry signal beyond D_L+D_A
-    #                                                 (only meaningful at head-only — encoder-side
-    #                                                 already tested in iter14 R-cell sweep)
-    # Each delta uses the same (intersect → align → paired_bca) pattern. Skipped with
-    # `skipped: true` if either encoder lacks probe outputs.
-    ITER14_DELTAS = [
-        ("delta_1_pretrain_vs_frozen",
-         "vjepa_2_1_pretrain_encoder", "vjepa_2_1_frozen",
-         "Δ1: pretrain > frozen (continual SSL beats frozen baseline)"),
-        ("delta_2_surgical_vs_pretrain",
-         "vjepa_2_1_surgical_3stage_DI_encoder", "vjepa_2_1_pretrain_encoder",
-         "Δ2: surgery > pretrain (factor patching adds value)"),
-        ("delta_3_surgical_vs_pretrain_2X",
-         "vjepa_2_1_surgical_3stage_DI_encoder", "vjepa_2_1_pretrain_2X_encoder",
-         "Δ3: surgery > pretrain_2X (CAUSAL — gain is factor patching, not extra steps)"),
-        ("delta_4_pretrain_vs_pretrain_head",
-         "vjepa_2_1_pretrain_encoder", "vjepa_2_1_pretrain_head",
-         "Δ4: pretrain > pretrain_head (does encoder-update add value beyond a trained head?)"),
-        ("delta_5_surgical_vs_surgical_head",
-         "vjepa_2_1_surgical_3stage_DI_encoder", "vjepa_2_1_surgical_3stage_DI_head",
-         "Δ5: surgery > surgery_head (KEY iter15 paper claim — if |Δ5|<0.01, head-only WINS)"),
-        ("delta_6_surgical_head_vs_pretrain_head",
-         "vjepa_2_1_surgical_3stage_DI_head", "vjepa_2_1_pretrain_head",
-         "Δ6: surgery_head > pretrain_head (factor data helps even when encoder is frozen)"),
-        ("delta_7_DI_head_vs_noDI_head",
-         "vjepa_2_1_surgical_3stage_DI_head", "vjepa_2_1_surgical_noDI_head",
-         "Δ7: 3stage_DI_head > noDI_head (D_I tubes carry signal beyond D_L+D_A)"),
-    ]
+    # iter15 Phase 8 (2026-05-17): paper-Δ definitions moved from hardcoded
+    # ITER14_DELTAS list to configs/eval/paired_deltas.yaml. Single source of
+    # truth — see that YAML's header for full schema + per-Δ interpretation
+    # rationale (Δ1..Δ7). Per src/CLAUDE.md "No hardcoded values in Python".
     iter14_paper_deltas = {}
-    for key, a_name, b_name, desc in ITER14_DELTAS:
+    for entry in get_paired_deltas():
+        key, a_name, b_name, desc = entry["key"], entry["a"], entry["b"], entry["interpretation"]
         if a_name not in enc_data or b_name not in enc_data:
             iter14_paper_deltas[key] = {
                 "skipped":        True,

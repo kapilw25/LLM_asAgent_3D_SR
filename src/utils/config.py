@@ -116,6 +116,41 @@ def get_pipeline_config() -> dict:
     return _pipeline_cfg
 
 
+# ── Paired-Δ definitions (paper hypothesis tests, loaded from YAML) ──
+# iter15 Phase 8 (2026-05-17): the 7 iter14/iter15 paper Δ tests
+# (Δ1..Δ7) used to live as a hardcoded list inside
+# probe_action.run_paired_delta_stage. Moved to YAML per src/CLAUDE.md
+# "No hardcoded values in Python — YAML or runtime discovery only".
+# Single source of truth: configs/eval/paired_deltas.yaml.
+PAIRED_DELTAS_PATH = PROJECT_ROOT / "configs" / "eval" / "paired_deltas.yaml"
+_paired_deltas_cfg = None
+
+def get_paired_deltas() -> list:
+    """Load configs/eval/paired_deltas.yaml (cached) — paper paired-Δ tests.
+
+    Returns a list of dicts; each dict has 'key' / 'a' / 'b' /
+    'interpretation' (schema documented in the YAML header). FAIL LOUD if
+    the file is missing or malformed (silent skip would corrupt paper
+    metrics). Adding a Δ_N means editing the YAML, not this file.
+    """
+    global _paired_deltas_cfg
+    if _paired_deltas_cfg is None:
+        import yaml
+        if not PAIRED_DELTAS_PATH.exists():
+            sys.exit(f"FATAL: paired-deltas config missing: {PAIRED_DELTAS_PATH}")
+        with open(PAIRED_DELTAS_PATH) as f:
+            data = yaml.safe_load(f)
+        if "paired_deltas" not in data:
+            sys.exit(f"FATAL: {PAIRED_DELTAS_PATH} missing top-level 'paired_deltas' key")
+        entries = data["paired_deltas"]
+        for i, entry in enumerate(entries):
+            for required in ("key", "a", "b", "interpretation"):
+                if required not in entry:
+                    sys.exit(f"FATAL: {PAIRED_DELTAS_PATH} paired_deltas[{i}] missing '{required}' key")
+        _paired_deltas_cfg = entries
+    return _paired_deltas_cfg
+
+
 def _deep_merge(base: dict, overlay: dict) -> dict:
     """Recursively merge overlay into base. Overlay values win on conflict."""
     merged = base.copy()

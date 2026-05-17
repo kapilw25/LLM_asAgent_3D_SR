@@ -62,13 +62,17 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD  = (0.229, 0.224, 0.225)
 
 def _load_encoders_registry() -> dict:
-    """Load the probe encoder registry from configs/probe_encoders.yaml.
+    """Load the probe encoder registry from configs/eval/probe_encoders.yaml.
 
     Single source of truth — adding a new V-JEPA variant means editing the YAML,
     not this Python file. Schema documented in that YAML's header.
+
+    iter15 Phase 8 (2026-05-17): moved configs/probe_encoders.yaml →
+    configs/eval/probe_encoders.yaml to mirror configs/{model,train,legacy2}/
+    subdir layout for clarity.
     """
     import yaml
-    cfg_path = Path(__file__).resolve().parents[2] / "configs" / "probe_encoders.yaml"
+    cfg_path = Path(__file__).resolve().parents[2] / "configs" / "eval" / "probe_encoders.yaml"
     if not cfg_path.exists():
         sys.exit(f"FATAL: encoder registry config missing: {cfg_path}")
     with open(cfg_path) as f:
