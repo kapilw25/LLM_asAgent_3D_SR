@@ -24,8 +24,23 @@ from pathlib import Path
 import numpy as np
 import yaml
 import torch
+import torch.multiprocessing as _torch_mp
 import torch.nn.functional as F
 from tqdm import tqdm  # noqa: F401 — re-exported for caller convenience
+
+# iter15 D18 (2026-05-17): switch CPU-tensor sharing strategy from default
+# 'file_descriptor' to 'file_system'. Fixes "RuntimeError: received 0 items of
+# ancdata" → BrokenProcessPool that crashed m09a2 probe_decode at ~96% when 3
+# concurrent iter15 runs (m09a2 + 2 surgery) saturated the OS file-descriptor
+# table via 24+ multiprocessing worker procs all sharing tensors through Unix
+# FD ancillary-data passing. file_system strategy uses /tmp shared-memory files
+# instead of FD passing — no FD-limit dependency. Per-tensor in-flight footprint
+# is ~7 MB (16×3×384²×4) — /tmp easily handles the streaming throughput.
+# Canonical PyTorch fix for this exact symptom: github.com/pytorch/pytorch#973
+# Must be set in MAIN process BEFORE any ProcessPoolExecutor fork so children
+# inherit. Also set in the worker (_decode_probe_clip_worker) for spawn-mode
+# robustness.
+_torch_mp.set_sharing_strategy("file_system")
 
 # Absolute imports (work because callers insert src/ on sys.path at import time,
 # matching m09_pretrain.py:53 pattern).
@@ -1972,6 +1987,8 @@ def _decode_probe_clip_worker(args):
     _os.environ.setdefault("OMP_NUM_THREADS", "1")
     _os.environ.setdefault("MKL_NUM_THREADS", "1")
     import torch as _torch
+    import torch.multiprocessing as _torch_mp_worker
+    _torch_mp_worker.set_sharing_strategy("file_system")  # iter15 D18 — see module-top
     _torch.set_num_threads(1)
     from utils.video_io import decode_video_bytes as _decode
     clip_key, mp4_bytes, tag, num_frames, crop_size, tmp_dir = args

@@ -121,6 +121,14 @@ def _encoder_signature(encoder) -> tuple:
     )
 
 
+# iter15 D15-followup (2026-05-16): D15 accidentally moved @torch.no_grad() from
+# compute_metric_trio onto the new _encoder_signature helper when inserting it
+# above. Restoring decorator here. Without it, ViT-G forward with
+# return_hierarchical=True keeps 4-layer-concat activations alive for backward →
+# probe-trio OOMs at sub-batch=1 immediately after training step 16 leaves VRAM
+# at 90%. Symptom: 500+ "AdaptiveBatch: OOM at min sub-batch=1 — giving up"
+# lines in logs/iter15_poc_m09a1_pretrain_encoder_20260516_231419.log.
+@torch.no_grad()
 def compute_metric_trio(
     student,
     predictor,

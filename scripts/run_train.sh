@@ -166,17 +166,22 @@ LOCAL_DATA="data/eval_10k_local"
 MODEL_CFG="configs/model/vjepa2_1.yaml"
 P_M09="${CACHE_POLICY_ALL:-1}"
 
-# iter14 (2026-05-08): canonical HF endpoint for surgery init. Single source of
-# truth — m09c surgery requires --init-from-ckpt with this URI (FAIL LOUD per
-# CLAUDE.md). Hardcoded here per "shells ARE the layer that pin canonical paths".
-# HF_TOKEN must be in .env (project root); m09c calls hf_hub_download with it.
+# iter15 (2026-05-17): surgery init source — accepts ANY path or URI for ANY mode.
+# Override via env var SURGERY_INIT, e.g.:
+#   SURGERY_INIT=outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
+#     bash scripts/run_train.sh surgery_3stage_DI_encoder --POC
+#   SURGERY_INIT=hf://owner/repo/file.pt \
+#     bash scripts/run_train.sh surgery_3stage_DI_encoder --FULL
+# Default = HF FULL 5-ep anchor (iter14 reproducibility baseline). The m09c1
+# dispatcher (src/m09c1_surgery_encoder.py) handles both hf:// URIs and local
+# filesystem paths transparently — mode-agnostic.
 #
 # Why m09a_ckpt_best.pt (14 GB) NOT student_encoder.pt (7 GB):
 # m09c needs BOTH student weights (key="student", 588 dims) AND predictor weights
 # (key="predictor", 300 dims). student_encoder.pt has only encoder
 # (schema="student_state_dict"); m09a_ckpt_best.pt has student + predictor +
-# teacher in one bundle (schema="student") — single download covers full init.
-PRETRAIN_HF_URI="hf://anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep/m09a_ckpt_best.pt"
+# teacher in one bundle (schema="student") — single artifact covers full init.
+SURGERY_INIT="${SURGERY_INIT:-hf://anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep/m09a_ckpt_best.pt}"
 
 # ── Multi-task probe-loss labels (iter13) ────────────────────────────────
 # When base_optimization.yaml `multi_task_probe.enabled` is true for this
@@ -231,19 +236,24 @@ case "$SUBCMD" in
         # independent"). Mirror rename in run_eval.sh + yaml output_dir.
         # iter14 (2026-05-08): pretrain_2X_encoder shares pretrain_encoder.yaml (no new
         # yamls) but writes to m09a_pretrain_2X_encoder/ + passes --max-epochs 10 for
-        # FULL only (G1=🅰️ "5+5 vs 10"). Arm A = 5 ep (yaml's max_epochs.full);
-        # Arm C = 10 ep via CLI override.
+        # FULL only (G1=🅰️ "5+5 vs 10").
+        # iter15 (2026-05-17): extend 2X to POC mode so Δ3 (factor-patching causal,
+        # surg vs compute-matched pretrain) is POC-testable. POC was previously dropped
+        # by run_eval.sh preflight ("pretrain_2X_encoder ... not found"). Both POC + FULL
+        # now compute 2X from yaml's max_epochs (single source of truth — no hardcoded
+        # 4/10). SANITY left at single-epoch since it's a code-path validator.
+        TRAIN_CFG="configs/train/pretrain_encoder.yaml"
         if [ "$SUBCMD" = "pretrain_2X_encoder" ]; then
             OUT_DIR="outputs/${mode_dir}/m09a_pretrain_2X_encoder"
             EPOCHS_OVERRIDE_FLAG=""
-            if [ "$MODE" = "FULL" ]; then
-                EPOCHS_OVERRIDE_FLAG="--max-epochs 10"   # iter14 G1=🅰️
+            if [ "$MODE" = "POC" ] || [ "$MODE" = "FULL" ]; then
+                _BASE_EP=$(scripts/lib/yaml_extract.py "$TRAIN_CFG" "optimization.max_epochs.${mode_dir}")
+                EPOCHS_OVERRIDE_FLAG="--max-epochs $((_BASE_EP * 2))"
             fi
         else
             OUT_DIR="outputs/${mode_dir}/m09a_pretrain_encoder"
             EPOCHS_OVERRIDE_FLAG=""
         fi
-        TRAIN_CFG="configs/train/pretrain_encoder.yaml"
         # Read lambda_reg from YAML so it stays the single source of truth.
         # Passing it explicitly to m09a bypasses the legacy auto-ablation gate
         # (m09a1_pretrain_encoder.py:1187 enters EWC sweep when --lambda-reg is unset;
@@ -402,7 +412,7 @@ case "$SUBCMD" in
         echo "  subset:    $TRAIN_SPLIT"
         echo "  factor:    $FACTOR_DIR"
         echo "  output:    $OUT_DIR"
-        echo "  init:      $PRETRAIN_HF_URI (iter14 — m09c hf_hub_download via HF_TOKEN from .env)"
+        echo "  init:      $SURGERY_INIT (iter15 — accepts hf:// URI or local path; m09c1 dispatches by prefix)"
         if [ ${#RECIPE_V2_ARGS[@]} -gt 0 ]; then
             echo "  recipe-v2/v3 overrides: ${RECIPE_V2_ARGS[*]}"
             echo "    (env vars: TEACHER_MODE_OVERRIDE / LP_FT_OVERRIDE / SUBSET_OVERRIDE /"
@@ -425,7 +435,7 @@ case "$SUBCMD" in
             --probe-tags "$VAL_TAGS" \
             --output-dir "$OUT_DIR" \
             --cache-policy "$P_M09" \
-            --init-from-ckpt "$PRETRAIN_HF_URI" \
+            --init-from-ckpt "$SURGERY_INIT" \
             --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
             --motion-features-path "${LOCAL_DATA}/m04d_motion_features/motion_features.npy" \
             "${TAXONOMY_ARGS[@]}" \
@@ -488,6 +498,7 @@ case "$SUBCMD" in
         echo "  subset:    $TRAIN_SPLIT"
         echo "  factor:    $FACTOR_DIR"
         echo "  output:    $OUT_DIR"
+        echo "  init:      $SURGERY_INIT (iter15 — paired-Δ parity with m09c1; accepts hf:// or local path)"
         echo "  contract:  all 48 ViT-G blocks + predictor FROZEN; trainable = motion_aux head"
         mkdir -p "$OUT_DIR"
         # m09c2 derives factor_manifest from --local-data internally (see m09c2.py:284
@@ -500,6 +511,7 @@ case "$SUBCMD" in
             --val-subset "$VAL_SPLIT" --val-local-data "$LOCAL_DATA" \
             --output-dir "$OUT_DIR" \
             --cache-policy "$P_M09" \
+            --init-from-ckpt "$SURGERY_INIT" \
             --probe-subset "outputs/${mode_dir}/probe_action/action_labels.json" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "$VAL_TAGS" \

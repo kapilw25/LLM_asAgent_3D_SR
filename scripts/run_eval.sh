@@ -371,23 +371,37 @@ echo "────────────────────────�
 NEW_ENCODERS=""
 for ENC in $ENCODERS; do
     case "$ENC" in
-        vjepa_2_1_pretrain_encoder|vjepa_2_1_pretrain_2X_encoder|vjepa_2_1_surgical_3stage_DI_encoder|vjepa_2_1_surgical_noDI_encoder)
+        # iter15 Phase 7 (2026-05-17): head variants added so a missing
+        # student_encoder.pt (e.g. swept by an accidental find -size +50M -delete)
+        # drops the variant cleanly here instead of FATAL'ing inside the per-
+        # encoder loop at L616. Head variants ship student_encoder.pt as a COPY
+        # of Meta init (assert_encoder_frozen guarantees bit-identity), so the
+        # file's presence still gates "is this variant trainable artifact set
+        # complete on disk?".
+        vjepa_2_1_pretrain_encoder|vjepa_2_1_pretrain_2X_encoder|vjepa_2_1_surgical_3stage_DI_encoder|vjepa_2_1_surgical_noDI_encoder|vjepa_2_1_pretrain_head|vjepa_2_1_surgical_3stage_DI_head|vjepa_2_1_surgical_noDI_head)
             CKPT="$(encoder_ckpt_for "$ENC")"
             if [ ! -e "$CKPT" ]; then
                 echo "  ⚠️  $ENC: $CKPT not found — train via:"
                 case "$ENC" in
-                    vjepa_2_1_pretrain_encoder)            echo "       ./scripts/run_train.sh pretrain_encoder          --$MODE" ;;
-                    vjepa_2_1_pretrain_2X_encoder)       echo "       ./scripts/run_train.sh pretrain_2X_encoder     --$MODE" ;;
-                    vjepa_2_1_surgical_3stage_DI_encoder)  echo "       ./scripts/run_train.sh surgery_3stage_DI_encoder --$MODE" ;;
-                    vjepa_2_1_surgical_noDI_encoder)       echo "       ./scripts/run_train.sh surgery_noDI_encoder      --$MODE" ;;
+                    vjepa_2_1_pretrain_encoder)            echo "       ./scripts/run_train.sh pretrain_encoder            --$MODE" ;;
+                    vjepa_2_1_pretrain_2X_encoder)         echo "       ./scripts/run_train.sh pretrain_2X_encoder         --$MODE" ;;
+                    vjepa_2_1_surgical_3stage_DI_encoder)  echo "       ./scripts/run_train.sh surgery_3stage_DI_encoder   --$MODE" ;;
+                    vjepa_2_1_surgical_noDI_encoder)       echo "       ./scripts/run_train.sh surgery_noDI_encoder        --$MODE" ;;
+                    vjepa_2_1_pretrain_head)               echo "       ./scripts/run_train.sh pretrain_head                --$MODE" ;;
+                    vjepa_2_1_surgical_3stage_DI_head)     echo "       ./scripts/run_train.sh surgery_3stage_DI_head      --$MODE" ;;
+                    vjepa_2_1_surgical_noDI_head)          echo "       ./scripts/run_train.sh surgery_noDI_head           --$MODE" ;;
                 esac
                 echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
                 continue
             fi
             echo "  ✓ $ENC: $CKPT"
             ;;
+        vjepa_2_1_frozen)
+            echo "  ✓ $ENC: external Meta ckpt (no trainer needed)"
+            ;;
         *)
-            echo "  ✓ $ENC: external (no trainer needed)"
+            echo "  ⚠️  $ENC: unrecognized variant — dropping (add to encoder_ckpt_for resolver if intentional)"
+            continue
             ;;
     esac
     NEW_ENCODERS="$NEW_ENCODERS $ENC"
@@ -448,23 +462,59 @@ fi
 # Mirrors the Stage 8 predictor-ckpt pre-flight. Reports which encoders have
 # their motion_aux head present on disk (= will use augmented features for
 # probe_action / probe_motion_cos paired-Δ). Frozen baseline correctly absent.
+#
+# iter15 Phase 7 (2026-05-17): split asymmetric handling for the two variant
+# families:
+#   - HEAD variants (*_head): motion_aux_head IS the sole trained artifact
+#     (encoder is bit-identical Meta init). Missing head ⇒ variant is
+#     meaningless to evaluate ⇒ DROP from ENCODERS (fail loud, no silent
+#     fallback that would contaminate Δ5/Δ6/Δ7 paired tests with encoder-
+#     only data masquerading as head-augmented).
+#   - ENCODER variants (*_encoder): motion_aux_head is supplementary; the
+#     encoder itself carries the trained signal. Missing head ⇒ WARN +
+#     encoder-only fallback (preserves iter14 reproducibility).
 echo ""
 echo "──────────────────────────────────────────────"
 echo "motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)"
 echo "──────────────────────────────────────────────"
 HEAD_AWARE_ENCODERS=""
+NEW_ENCODERS=""
 for ENC in $ENCODERS; do
-    case "$ENC" in vjepa_2_1_frozen) echo "  ✓ $ENC: external frozen (no head — encoder-only path)" ; continue ;; esac
+    case "$ENC" in
+        vjepa_2_1_frozen)
+            echo "  ✓ $ENC: external frozen (no head — encoder-only path)"
+            NEW_ENCODERS="$NEW_ENCODERS $ENC"
+            continue
+            ;;
+    esac
     MA="$(motion_aux_head_for "$ENC")"
     if [ -e "$MA" ]; then
         echo "  ✓ $ENC: $MA"
         HEAD_AWARE_ENCODERS="$HEAD_AWARE_ENCODERS $ENC"
+        NEW_ENCODERS="$NEW_ENCODERS $ENC"
     else
-        echo "  ⚠️  $ENC: $MA not found — eval falls back to encoder-only for this variant"
+        case "$ENC" in
+            vjepa_2_1_pretrain_head|vjepa_2_1_surgical_3stage_DI_head|vjepa_2_1_surgical_noDI_head)
+                echo "  ❌ $ENC: $MA not found — head IS the trained artifact for *_head variants"
+                echo "       → dropping $ENC (encoder-only fallback would contaminate Δ5/Δ6/Δ7 paired tests)"
+                echo "       Re-train via: ./scripts/run_train.sh ${ENC#vjepa_2_1_} --$MODE"
+                continue
+                ;;
+            *)
+                echo "  ⚠️  $ENC: $MA not found — eval falls back to encoder-only for this variant"
+                NEW_ENCODERS="$NEW_ENCODERS $ENC"
+                ;;
+        esac
     fi
 done
+ENCODERS="$(echo "$NEW_ENCODERS" | xargs)"
 HEAD_AWARE_ENCODERS="$(echo "$HEAD_AWARE_ENCODERS" | xargs)"
+if [ -z "$ENCODERS" ]; then
+    echo "FATAL: ENCODERS list is empty after motion_aux_head pre-flight — nothing to evaluate"
+    exit 3
+fi
 echo "  → head-augmented eval ENCODERS: ${HEAD_AWARE_ENCODERS:-<none>}"
+echo "  → final ENCODERS after head preflight: $ENCODERS"
 
 # ── Pre-eval pretrain_encoder-cleanup (iter13, 2026-05-05) ──────────────────────
 # `m09a_ckpt_latest.pt` (~29 GB on ViT-G full=True) is a RESUME anchor for
@@ -842,16 +892,30 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         # Stage 8 crash leaves features_test.npy on disk → resume skips Stage 2
         # re-extract. Critical for FULL mode (~16 GB features_test.npy/encoder,
         # ~30 sec re-extract waste per encoder × N completed encoders).
-        FEATS_TEST="${OUTPUT_ACTION}/${ENC}/features_test.npy"
-        KEYS_TEST="${OUTPUT_ACTION}/${ENC}/clip_keys_test.npy"
-        CKPT_TEST="${OUTPUT_ACTION}/${ENC}/.probe_features_test_ckpt.npz"
-        for f in "$FEATS_TEST" "$KEYS_TEST" "$CKPT_TEST"; do
-            if [ -f "$f" ]; then
-                sz=$(du -h "$f" 2>/dev/null | awk '{print $1}')
-                rm -f "$f"
-                echo "  [post-stage8-cleanup] removed $f ($sz)"
-            fi
-        done
+        #
+        # iter15 Phase 8 (2026-05-17): mode-gated cleanup. The cleanup was
+        # designed for FULL (16 GB × 8 enc = 128 GB would overflow the 199 GB
+        # partition during Stage 3's transient 73 GB train+val cache). At POC
+        # the file is 12 MB and at SANITY <1 MB — wiping it forces a useless
+        # ~2 min Stage 2 re-extract per encoder on every rerun, making
+        # cache_policy=1 nearly worthless. So:
+        #   FULL                  → DELETE (disk-safety dominant)
+        #   POC / SANITY          → KEEP   (negligible disk cost, ~12 min saved on rerun)
+        #   cache_policy=2 (any)  → DELETE (user explicitly asked to recompute)
+        if [ "$MODE" = "FULL" ] || [ "$P_ACTION" = "2" ]; then
+            FEATS_TEST="${OUTPUT_ACTION}/${ENC}/features_test.npy"
+            KEYS_TEST="${OUTPUT_ACTION}/${ENC}/clip_keys_test.npy"
+            CKPT_TEST="${OUTPUT_ACTION}/${ENC}/.probe_features_test_ckpt.npz"
+            for f in "$FEATS_TEST" "$KEYS_TEST" "$CKPT_TEST"; do
+                if [ -f "$f" ]; then
+                    sz=$(du -h "$f" 2>/dev/null | awk '{print $1}')
+                    rm -f "$f"
+                    echo "  [post-stage8-cleanup] removed $f ($sz)"
+                fi
+            done
+        else
+            echo "  [post-stage8-cleanup] SKIPPED for $ENC (mode=$MODE, P_ACTION=$P_ACTION) — features_test.npy preserved for cache_policy=1 reruns"
+        fi
     done
 fi
 

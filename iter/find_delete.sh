@@ -1,7 +1,3 @@
-# One-liner (prints each path then deletes it):
-
-find . -type f -size +50M -print -delete
-
 # Safer two-step (recommended — preview before delete):
 
 # 1. dry-run preview (sorted by size, human-readable)

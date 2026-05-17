@@ -319,35 +319,44 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     project_root = Path(__file__).parent.parent
     init_from = cfg["init_from_ckpt"]   # always set — argparse required=True
 
-    if not init_from.startswith("hf://"):
-        print("FATAL: --init-from-ckpt must be hf:// URI.")
-        print(f"  Got:      {init_from}")
-        print("  Expected: hf://<owner>/<repo>/<filename>")
-        print("  Example:  hf://anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep/m09a_ckpt_best.pt")
-        sys.exit(1)
+    # iter15 (2026-05-17): dispatcher accepts BOTH hf:// URIs AND local
+    # filesystem paths, for ANY mode (SANITY/POC/FULL). No mode-gating — caller
+    # decides via the --init-from-ckpt CLI value. Wrapper resolves the source;
+    # m09c1 just loads what it's given.
+    if init_from.startswith("hf://"):
+        from dotenv import load_dotenv
+        from huggingface_hub import hf_hub_download
+        load_dotenv(project_root / ".env")
+        uri = init_from[len("hf://"):]
+        parts = uri.split("/", 2)            # owner / repo / filename
+        if len(parts) < 3:
+            print(f"FATAL: bad --init-from-ckpt URI: {init_from}")
+            print("  Expected: hf://<owner>/<repo>/<filename>")
+            sys.exit(1)
+        repo_id = f"{parts[0]}/{parts[1]}"
+        filename = parts[2]
+        hf_token = os.getenv("HF_TOKEN")
+        if not hf_token:
+            print("FATAL: HF_TOKEN missing in .env — required for HF model-repo download.")
+            print(f"  Repo: {repo_id}")
+            print("  Fix: add HF_TOKEN=hf_... to .env (project root)")
+            sys.exit(1)
 
-    from dotenv import load_dotenv
-    from huggingface_hub import hf_hub_download
-    load_dotenv(project_root / ".env")
-    uri = init_from[len("hf://"):]
-    parts = uri.split("/", 2)            # owner / repo / filename
-    if len(parts) < 3:
-        print(f"FATAL: bad --init-from-ckpt URI: {init_from}")
-        print("  Expected: hf://<owner>/<repo>/<filename>")
-        sys.exit(1)
-    repo_id = f"{parts[0]}/{parts[1]}"
-    filename = parts[2]
-    hf_token = os.getenv("HF_TOKEN")
-    if not hf_token:
-        print("FATAL: HF_TOKEN missing in .env — required for HF model-repo download.")
-        print(f"  Repo: {repo_id}")
-        print("  Fix: add HF_TOKEN=hf_... to .env (project root)")
-        sys.exit(1)
+        print(f"  [iter14] HF download: {repo_id}/{filename}")
+        init_path = Path(hf_hub_download(
+            repo_id=repo_id, filename=filename, token=hf_token))
+        print(f"  [iter14] HF cached at: {init_path}")
+    else:
+        # Local filesystem path — relative paths resolved against project root.
+        init_path = Path(init_from)
+        if not init_path.is_absolute():
+            init_path = project_root / init_path
+        if not init_path.is_file():
+            print(f"FATAL: --init-from-ckpt local path not found: {init_path}")
+            print(f"  Resolved from: {init_from}")
+            sys.exit(1)
+        print(f"  [iter15] Local init from: {init_path}")
 
-    print(f"  [iter14] HF download: {repo_id}/{filename}")
-    init_path = Path(hf_hub_download(
-        repo_id=repo_id, filename=filename, token=hf_token))
-    print(f"  [iter14] HF cached at: {init_path}")
     print(f"  [iter14] Loading init from prior-run ckpt: {init_path}")
     ckpt = torch.load(init_path, map_location="cpu", weights_only=False)
 

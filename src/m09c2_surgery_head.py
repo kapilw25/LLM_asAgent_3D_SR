@@ -107,6 +107,12 @@ def merge_config_with_args(cfg: dict, args) -> dict:
         mode_key = "full"
     merge_m09_common_config(cfg, args, mode_key)
 
+    # iter15 (2026-05-17): mirror m09c1:159 — pass --init-from-ckpt through to cfg
+    # so build_model can read it. Required for Δ5 paired-test validity: both
+    # surg_DI_enc (m09c1) and surg_DI_head (m09c2) MUST start from the same
+    # post-pretrain init (was previously Meta baseline → invalidated Δ5).
+    cfg["init_from_ckpt"] = args.init_from_ckpt
+
     # === Force head-only contract regardless of yaml/CLI ===
     # iter15 Phase 5 V0 preflight fix (2026-05-14): surgery configs use per-stage
     # `unfreeze_below` (via set_trainable_prefix in build_model), NOT the global
@@ -175,24 +181,67 @@ def build_model(cfg: dict, device: torch.device) -> dict:
         use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
     )
 
+    # iter15 (2026-05-17): mirror m09c1:319-352 init_from_ckpt dispatcher.
+    # Accepts BOTH hf:// URIs AND local filesystem paths for ANY mode. Replaces
+    # the previous Meta V-JEPA 2.1 baseline load (which produced an invalid Δ5
+    # paired test — m09c1 starts from post-pretrain, m09c2 was starting from
+    # Meta baseline). Schema: prior-run ckpt MUST carry "student" + "predictor"
+    # keys (same contract as m09c1 — verified at hf://anonymousML123/
+    # factorjepa-pretrain-vjepa21-vitg-5ep/m09a_ckpt_best.pt).
     project_root = Path(__file__).parent.parent
-    ckpt_path = project_root / model_cfg["checkpoint_path"]
-    ckpt_url = model_cfg["checkpoint_url"]
-    if ckpt_path.exists():
-        print(f"Loading pretrained weights from {ckpt_path}")
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    else:
-        print(f"Downloading pretrained weights: {ckpt_url}")
-        ckpt_path.parent.mkdir(parents=True, exist_ok=True)
-        ckpt = torch.hub.load_state_dict_from_url(
-            ckpt_url, map_location="cpu", model_dir=str(ckpt_path.parent))
+    init_from = cfg["init_from_ckpt"]   # always set — argparse required=True
 
-    if "target_encoder" in ckpt:
-        state_dict = ckpt["target_encoder"]
-    elif "encoder" in ckpt:
-        state_dict = ckpt["encoder"]
+    if init_from.startswith("hf://"):
+        from dotenv import load_dotenv
+        from huggingface_hub import hf_hub_download
+        load_dotenv(project_root / ".env")
+        uri = init_from[len("hf://"):]
+        parts = uri.split("/", 2)
+        if len(parts) < 3:
+            print(f"FATAL: bad --init-from-ckpt URI: {init_from}")
+            print("  Expected: hf://<owner>/<repo>/<filename>")
+            sys.exit(1)
+        repo_id = f"{parts[0]}/{parts[1]}"
+        filename = parts[2]
+        hf_token = os.getenv("HF_TOKEN")
+        if not hf_token:
+            print("FATAL: HF_TOKEN missing in .env — required for HF model-repo download.")
+            print(f"  Repo: {repo_id}")
+            print("  Fix: add HF_TOKEN=hf_... to .env (project root)")
+            sys.exit(1)
+        print(f"  [iter15] HF download: {repo_id}/{filename}")
+        ckpt_path = Path(hf_hub_download(
+            repo_id=repo_id, filename=filename, token=hf_token))
+        print(f"  [iter15] HF cached at: {ckpt_path}")
     else:
-        state_dict = ckpt
+        ckpt_path = Path(init_from)
+        if not ckpt_path.is_absolute():
+            ckpt_path = project_root / ckpt_path
+        if not ckpt_path.is_file():
+            print(f"FATAL: --init-from-ckpt local path not found: {ckpt_path}")
+            print(f"  Resolved from: {init_from}")
+            sys.exit(1)
+        print(f"  [iter15] Local init from: {ckpt_path}")
+
+    print(f"Loading pretrained weights from {ckpt_path}")
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+
+    # FAIL LOUD on schema mismatch (mirrors m09c1:360-369): prior-run ckpt MUST
+    # carry "student" + "predictor" keys. NOT the Meta baseline schema
+    # ("target_encoder"/"encoder") — that path is gone with iter15 parity fix.
+    if not (isinstance(ckpt, dict) and "student" in ckpt
+            and isinstance(ckpt["student"], dict)
+            and "predictor" in ckpt
+            and isinstance(ckpt["predictor"], dict)):
+        print(f"FATAL: init ckpt missing 'student' + 'predictor' schema: {ckpt_path}")
+        top_keys = list(ckpt.keys()) if isinstance(ckpt, dict) else type(ckpt).__name__
+        print(f"  Top-level: {top_keys}")
+        print("  m09c2 accepts ONLY full prior-run ckpt schema (m09a_ckpt_best.pt /"
+              " m09c_ckpt_best.pt). NOT Meta baseline (vjepa2_1_vitG_384.pt).")
+        sys.exit(1)
+    state_dict = ckpt["student"]
+    print(f"  [iter15] Schema: student ({len(state_dict)} keys) + "
+          f"predictor ({len(ckpt['predictor'])} keys)")
     state_dict = {k.replace("module.", "").replace("backbone.", ""): v
                   for k, v in state_dict.items()}
     msg = student.load_state_dict(state_dict, strict=False)
@@ -879,6 +928,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="V-JEPA 2.1 HEAD-ONLY surgery (m09c2 — iter15 Phase 2).")
     add_m09_common_args(parser, require_val_data=True)
+    # iter15 (2026-05-17): mirror m09c1:1783-1787 — REQUIRED init for Δ5 paired-
+    # test validity. Accepts hf:// URI OR local path; dispatcher in build_model.
+    parser.add_argument("--init-from-ckpt", type=str, required=True,
+                        help="iter15 REQUIRED: init source for frozen encoder + "
+                             "predictor. Accepts hf://<owner>/<repo>/<filename> OR "
+                             "local filesystem path. Schema MUST be the prior-run "
+                             "ckpt (m09a_ckpt_best.pt) carrying 'student' + "
+                             "'predictor' keys — NOT the Meta baseline.")
     add_wandb_args(parser)
     args = parser.parse_args()
 

@@ -36,5 +36,34 @@ style X fill:#HEX,color:#fff,font-weight:bold,font-size:28px
 - UNINSTALL: `mermaidchart.vscode-mermaid-chart`, `vstirbu.vscode-mermaid-preview` (conflict)
 
 ## Direction
-- Default: `flowchart LR` (left-to-right) for pipelines
-- Use `flowchart TD` (top-down) for hierarchies
+- **Outer flowchart: always `flowchart LR`** (left-to-right at the high level)
+- **Inside every `subgraph`: always declare `direction TB`** (top-to-bottom for the subgraph's internals)
+- This applies uniformly — no per-diagram judgement about "pipeline vs hierarchy". Outer = LR, inner = TB.
+
+### Gotcha — `direction TB` is a no-op without internal edges
+Mermaid only honors a subgraph's `direction` directive when there are edges to lay out. If a subgraph contains multiple atoms with **no internal edges** between them, mermaid arranges them side-by-side regardless of `direction TB`.
+
+**Solution:** add an invisible chain (`~~~`) between sibling atoms inside any multi-atom subgraph. This gives mermaid the edges it needs to honor TB without drawing visible arrows.
+
+```
+flowchart LR
+    subgraph S1["group A"]
+        direction TB
+        a1["leaf 1"]
+        a2["leaf 2"]
+        a3["leaf 3"]
+        a1 ~~~ a2 ~~~ a3            %% invisible chain → forces TB stacking
+    end
+    subgraph S2["group B"]
+        direction TB
+        b1 --> b2                   %% real edge → TB already honored, no chain needed
+    end
+    S1 --> S2
+```
+
+**Rule:** any subgraph with ≥ 2 atoms AND zero internal `-->` / `-.->` edges MUST add an invisible `~~~` chain across all its atoms.
+
+### Gotcha — orphan top-level atoms break the LR / TB split
+Per the outer-LR / inner-TB rule, every atomic node should live inside a subgraph. A bare atom at the top level (not wrapped in any subgraph) gets laid out by the outer LR engine, which can produce ambiguous flow when mixed with sibling subgraphs.
+
+**Solution:** wrap every atom in a subgraph (even single-atom subgraphs are fine — the subgraph acts as the labeled container). Top-level edges then connect subgraph IDs to subgraph IDs, never to bare atoms.

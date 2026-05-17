@@ -78,45 +78,72 @@ grep -E 'Stage:|FATAL|IMMINENT SIGKILL' logs/iter15_v*enc_*.log | head -20
 
 ---
 
-## 🏆 Phase 6 — POC head-only + encoder-update (96 GB Blackwell, ~3-4 hr, ~$3 total)
-
-> 🧹 **REMEMBER**: `rm -rf outputs/sanity` before Phase 6 to free disk space (~73 GB)
-
-📊 3 head-only 🧊 + 3 encoder-update 🔓 cells. On 96 GB all 6 run sequentially in ~3-4 hr wall (head-only ~30-45 min each, encoder-update ~30-60 min each); parallel-in-3 cuts to ~2 hr.
+## 🏆 Phase 6 — POC 7-cell paired-Δ matrix + Δ3 compute control (96 GB Blackwell, ~5-6 hr, ~$4 total)
 
 ```bash
-# ── 🧊 HEAD-ONLY POC (3 cells — frozen encoder, head trains only) ───────────
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_head --POC 2>&1 \
-    | tee logs/iter15_poc_m09a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log
+# 🧹 Free ~73 GB disk first: rm -rf outputs/sanity
+# 📊 7 cells:
+#    3 encoder-update 🔓 (m09a1 pretrain · m09c1 3stage_DI · m09c1 noDI)
+#    3 head-only      🧊 (m09a2 pretrain · m09c2 3stage_DI · m09c2 noDI)
+#    1 compute-match  ⚖️ (m09a1 pretrain_2X — 2× POC epochs, Δ3 control)
+# ⏱️ ~5-6 hr sequential on 96 GB; head ~25 min, enc ~80 min, pretrain_2X ~180 min
 
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_head --POC 2>&1 \
-    | tee logs/iter15_poc_m09c2_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log
-
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_head --POC 2>&1 \
-    | tee logs/iter15_poc_m09c2_noDI_head_$(date +%Y%m%d_%H%M%S).log
-
-# ── 🔓 ENCODER-UPDATE POC (3 cells — paired-Δ counterpart for paper claim) ──
+# ── 1️⃣ PRETRAIN ENCODER FIRST — provides SURGERY_INIT for all 4 surgery cells ──
+# iter15 (2026-05-17): all 4 surgery cells (m09c1 + m09c2) now share one init via
+# $SURGERY_INIT for Δ5/Δ7 paired-test validity. Default = HF FULL 5-ep anchor;
+# override to local POC pretrain so POC↔FULL parity holds (POC=2+2, FULL=5+5).
 CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_encoder --POC 2>&1 \
-    | tee logs/iter15_poc_m09a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log
+| tee logs/iter15_poc_m09a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log
 
+# ── 2️⃣ PRETRAIN HEAD — no SURGERY_INIT dep (Δ6 paired with m09a1, both Meta init) ──
+CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_head --POC 2>&1 \
+| tee logs/iter15_poc_m09a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log
+
+# ── 3️⃣ ALL 4 SURGERY CELLS — each prefixes SURGERY_INIT inline for paired-Δ validity ──
+# Δ5 = surg_3stage_DI_encoder − surg_3stage_DI_head (⭐ headline)
+# Δ7 = surg_noDI_encoder      − surg_noDI_head
+# Both encoder + head cells in each pair MUST start from the same ckpt.
+
+# ENCODER
+SURGERY_INIT=outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
 CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_encoder --POC 2>&1 \
-    | tee logs/iter15_poc_m09c1_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log
+| tee logs/iter15_poc_m09c1_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log
 
+SURGERY_INIT=outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
 CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_encoder --POC 2>&1 \
-    | tee logs/iter15_poc_m09c1_noDI_encoder_$(date +%Y%m%d_%H%M%S).log
+| tee logs/iter15_poc_m09c1_noDI_encoder_$(date +%Y%m%d_%H%M%S).log
+
+# HEAD
+SURGERY_INIT=outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
+CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_head --POC 2>&1 \
+| tee logs/iter15_poc_m09c2_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log
+
+SURGERY_INIT=outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
+CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_head --POC 2>&1 \
+| tee logs/iter15_poc_m09c2_noDI_head_$(date +%Y%m%d_%H%M%S).log
+
+# ── 4️⃣ PRETRAIN_2X — compute-matched control for Δ3 (factor-patching CAUSAL test) ──
+# iter15 (2026-05-17): surgery_enc total compute = 2 (pretrain init) + 2 (surgery) = 4 epoch of encoder updates. pretrain_enc = 2 ep. → Δ2 (surg − pret) is compute-UNFAIR.
+# pretrain_2X_encoder runs 4 ep from Meta init (= 2× yaml max_epochs.poc, derived dynamically in run_train.sh, no hardcoded 4) → enables formal Δ3 test:
+#  Δ3 = surg_enc − pretrain_2X_enc   ← measures CAUSAL benefit of factor-patching beyond extra continual-SSL compute.
+# Independent of SURGERY_INIT (loads Meta init, NOT pretrain ckpt). Can run anytime.
+CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_2X_encoder --POC 2>&1 \
+| tee logs/iter15_poc_m09a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log
 ```
 
-🎯 Pass criteria per cell — 🧊 head-only:
-- ✅ `student_encoder.pt` bit-identical to Meta (rerun V4 against POC outputs)
-- ✅ `m09{a,c}_ckpt_best.pt` has `motion_aux_head_state_dict` + `best_val_loss`
-- 📉 `train_loss` DECREASING across epochs (early: high; late: low)
-- 📊 Final `motion_aux` val_loss < frozen baseline anchor (~0.47)
+🎯 Pass criteria — 🧊 head-only cells (m09a2 / m09c2):
+- ✅ `m09{a,c}_ckpt_best.pt` carries `motion_aux_head_state_dict` + `best_val_loss`
+- 📉 `train_loss` DECREASING across epochs
+- 📊 Final motion_aux val_loss < frozen-baseline anchor (~0.47)
+- 🧊 `student_encoder.pt` bit-identical to its init:
+   - 🅰️ m09a2 pretrain_head     → identical to Meta `vjepa2_1_vitG_384.pt`
+   - 🅱️ 🅲 m09c2 surgery_*_head → identical to `$SURGERY_INIT` (post-pretrain ckpt)
 - ⛔ NO `IMMINENT SIGKILL`
 
-🎯 Pass criteria per cell — 🔓 encoder-update:
-- 🧠 `student_encoder.pt` ≠ Meta (encoder DID drift — measured via V4 helper, expected > 1e-4 rel_l2)
-- 📊 `lambda_reg` drift-control prints reasonable values (m09a1)
+🎯 Pass criteria — 🔓 encoder-update cells (m09a1 / m09c1):
+- 🧠 `student_encoder.pt` ≠ init (encoder drifted; ‖Δ‖/‖init‖ > 1e-4 — printed at end of m09a1/c1)
 - 🔬 Surgery stages emit in order (stage1 → stage2 → stage3 for 3stage_DI; stage1 → stage2 for noDI)
+- 📦 Both `student_encoder.pt` (6.9 GB) + `m09{a,c}_ckpt_best.pt` (14 GB, carries `predictor`) produced
 
 ---
 
@@ -125,7 +152,7 @@ CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_encoder --POC 2>&1 \
 ```bash
 # 🎬 Run the full 13-stage eval pipeline on POC ckpts
 CACHE_POLICY_ALL=1 ./scripts/run_eval.sh --POC 2>&1 \
-    | tee logs/iter15_post_poc_eval_$(date +%Y%m%d_%H%M%S).log
+| tee logs/iter15_post_poc_eval_$(date +%Y%m%d_%H%M%S).log
 
 # 🎯 Δ5 = surgery_3stage_DI_encoder − surgery_3stage_DI_head  (paper claim)
 #   🟢 |Δ5| < 0.01 + CI contains 0 → head-only WINS (1/40× GPU savings unlock)

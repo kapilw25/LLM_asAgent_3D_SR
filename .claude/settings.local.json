@@ -199,7 +199,25 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(nvidia-smi --query-compute-apps=pid,used_memory,process_name --format=csv)",
       "Bash(tar -tf data/eval_10k_local/subset-00000.tar)",
-      "Bash(grep -c '^.``mermaid' iter/iter15_trainHead_freezeEncoder/high_level_mermaid_SD.md)"
+      "Bash(grep -c '^.``mermaid' iter/iter15_trainHead_freezeEncoder/high_level_mermaid_SD.md)",
+      "Bash(command -v mmdc)",
+      "Bash(command -v npx)",
+      "Bash(npx --no-install @mermaid-js/mermaid-cli --version)",
+      "Bash(awk '{ for\\(i=1;i<=NF;i++\\) if\\(match\\($i,/#[0-9a-fA-F]{6}/\\)\\) print substr\\($i,RSTART,RLENGTH\\) }')",
+      "Read(//tmp/**)",
+      "Bash(timeout 90 npx --yes -p @mermaid-js/mermaid-cli mmdc --version)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(pkill -f m09a1_pretrain_encoder)",
+      "Bash(nvidia-smi --query-gpu=memory.used,memory.free,utilization.gpu --format=csv)",
+      "Bash(grep -nA5 'max_epochs:' configs/train/surgery_base.yaml configs/train/pretrain_encoder.yaml)",
+      "Bash(grep -nA3 'raw_replay_pct' src/utils/training.py)",
+      "Bash(grep -nA8 'raw_replay_pct' src/utils/training.py)",
+      "Bash(awk '/Per-cell pos\\\\/neg/,/Eval current ETA/' iter/iter15_trainHead_freezeEncoder/high_level_outputs.md)",
+      "Bash(awk '/Eval-time formal metrics/,/Eval current ETA/' iter/iter15_trainHead_freezeEncoder/high_level_outputs.md)",
+      "Bash(awk '/^┌─/,/^└─/' iter/iter15_trainHead_freezeEncoder/high_level_outputs.md)",
+      "Bash(awk '{printf \"%.1f GB\\\\t%s\\\\n\", $1/1024/1024/1024, $2}')",
+      "Bash(xargs -I{} ls -lh {})",
+      "Bash(xargs -I{} sh -c 'ls -lh \"{}\" 2>/dev/null')"
     ]
   }
 }

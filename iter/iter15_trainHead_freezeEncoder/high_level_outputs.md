@@ -615,3 +615,182 @@ all cells: 1096 train / 220 val · 2 ep · BS=32 · 14 motion classes · 23-D mo
 │                        │ surgery > pretrain     │ (compute-parity claim)            │
 └───────────────────────┴───────────────────────┴───────────────────────────────────┘
 ```
+
+---
+
+## ⚠️ Two known design asymmetries to acknowledge before reading the 6-run tables
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│ 🚨 A1. Encoder-compute asymmetry (Δ2 contaminated; Δ5/Δ6/Δ7 unaffected)              │
+│   surg_enc total = 2 (pretrain init) + 2 (surgery) = 4 ep encoder updates             │
+│   pret_enc total = 2 ep encoder updates                                                │
+│   → Δ2 (surg − pret) is NOT compute-matched. Proper control = pretrain_2X (4 ep)     │
+│     which is NOT trained at POC (collapses to pretrain in run_train.sh at POC mode). │
+│   → Δ3 (surg − pretrain_2X) requires FULL mode to be testable.                        │
+│   → Δ5/Δ6/Δ7 paired tests are unaffected (paired cells share total compute).         │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│ 🚨 A2. Cross-pair frozen-encoder asymmetry (pretrain_head vs surgery_head)           │
+│   pretrain_head frozen encoder = Meta (0 continual SSL epochs)                        │
+│   surgery_head  frozen encoder = pretrain ckpt (2 continual SSL epochs)               │
+│   → pretrain_head vs surgery_head head-only metrics are NOT a clean signal for       │
+│     "factor curriculum helps head" — they conflate (a) curriculum effect with         │
+│     (b) frozen-encoder quality difference.                                            │
+│   → Within-pair Δ5 / Δ7 are unaffected (paired cells share frozen-encoder source).   │
+│   → For an apples-apples curriculum ablation, we would need pretrain_head retrained  │
+│     from the pretrain ckpt (currently pretrain_head loads Meta).                      │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📊 iter15 POC 6-run mid-training probe-trio comparison (🏃 LIVE 2026-05-17 10:47 UTC)
+
+```
+┌──────────────────────┬───────────────────────────────────────────────────────────┐
+│ Cell                  │ Status                                                    │
+├──────────────────────┼───────────────────────────────────────────────────────────┤
+│ 🦣🔓 m09a1 pret2X_enc │ 🏃 step 14/136 (restart @10:35; 091952 wiped after crash) │
+│ 🔧🔓 m09c1 3st_DI_enc │ ✅ DONE @08:00 (7 probes, final s620)                      │
+│ ✂🔓 m09c1 noDI_enc    │ ✅ DONE @10:44 (7 probes, final s622)                      │
+│ 🧊🧠 m09a2 pret_head  │ ✅ DONE @07:31 (4 probes, final s68)                       │
+│ 🔧🧠 m09c2 3st_head   │ ✅ DONE @08:02 (4 probes, final s68)                       │
+│ ✂🧠 m09c2 noDI_head   │ ✅ DONE @08:35 (4 probes, final s68)                       │
+│ ⚖ run_eval.sh --POC  │ ⚠️ INTERRUPTED @ 3st_head taxonomy (disk-full); 4 done    │
+└──────────────────────┴───────────────────────────────────────────────────────────┘
+```
+
+### 📐 val_jepa (↓ lower = better) · 🔓 ENCODER cells only · 🧊🧠 head cells show `ma s##:` (motion_aux loss; JEPA frozen)
+
+```
+┌────────┬──────────────────────┬──────────────────────┬──────────────────────┬────────────────────────┬────────────────────────┬────────────────────────┐
+│ 🔢 #    │ 🦣🔓 m09a1 pret2X_enc│ 🔧🔓 m09c1 3st_enc   │ ✂🔓 m09c1 noDI_enc   │ 🧊🧠 m09a2 pret_head   │ 🔧🧠 m09c2 3st_head    │ ✂🧠 m09c2 noDI_head    │
+│        │ (4 ep · running)     │                      │                      │                        │                        │                        │
+├────────┼──────────────────────┼──────────────────────┼──────────────────────┼────────────────────────┼────────────────────────┼────────────────────────┤
+│   1️⃣   │ s17  : ⏳             │ s56  : 0.4697        │ s56  : 0.4698        │ ma s17 : 3.8753        │ ma s17 : 4.0609        │ ma s17 : 3.6078        │
+│   2️⃣   │ s34  : ⏳             │ s141 : 0.4554        │ s141 : 0.4550        │ ma s34 : 3.5859        │ ma s34 : 3.1045        │ ma s34 : 3.5021        │
+│   3️⃣   │ s51  : ⏳             │ s282 : 0.4506        │ s282 : 0.4511        │ ma s51 : 3.1857        │ ma s51 : 3.0431        │ ma s51 : 3.0410        │
+│   4️⃣   │ s68  : ⏳             │ s423 : 0.4499        │ s339 : 0.4535        │ ma s68 : 3.1403 🏁fin  │ ma s68 : 2.9377 🏁     │ ma s68 : 2.8720 🏁🏆   │
+│   5️⃣   │ s85  : ⏳             │ s451 : 0.4508        │ s423 : 0.4519        │  —                     │  —                     │  —                     │
+│   6️⃣   │ s102 : ⏳             │ s564 : 0.4483 🏆     │ s564 : 0.4515        │  —                     │  —                     │  —                     │
+│   7️⃣   │ s119 : ⏳             │ s620 : 0.4510 🏁fin  │ s622 : 0.4476 🏁🏆   │  —                     │  —                     │  —                     │
+│   8️⃣   │ s136 : ⏳ (final)     │  —                   │  —                    │  —                     │  —                     │  —                     │
+└────────┴──────────────────────┴──────────────────────┴──────────────────────┴────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+### 🎯 probe_top1 (↑ higher = better) · ⚓ anchor = 0.3160 (m09a1 final)
+
+```
+┌────────┬──────────────────────┬──────────────────────┬──────────────────────┬────────────────────────┬────────────────────────┬────────────────────────┐
+│ 🔢 #    │ 🦣🔓 m09a1 pret2X_enc│ 🔧🔓 m09c1 3st_enc   │ ✂🔓 m09c1 noDI_enc   │ 🧊🧠 m09a2 pret_head   │ 🔧🧠 m09c2 3st_head    │ ✂🧠 m09c2 noDI_head    │
+│        │ (4 ep · running)     │                      │                      │                        │                        │                        │
+├────────┼──────────────────────┼──────────────────────┼──────────────────────┼────────────────────────┼────────────────────────┼────────────────────────┤
+│   1️⃣   │ s17  : ⏳             │ s56  : 0.2156        │ s56  : 0.2156        │ s17  : 0.2420          │ s17  : 0.3140          │ s17  : 0.3160 ⚓match  │
+│   2️⃣   │ s34  : ⏳             │ s141 : 0.2248        │ s141 : 0.2202        │ s34  : 0.2430          │ s34  : 0.3160 ⚓match  │ s34  : 0.3150          │
+│   3️⃣   │ s51  : ⏳             │ s282 : 0.2248        │ s282 : 0.2294        │ s51  : 0.2430          │ s51  : 0.3140          │ s51  : 0.3180 🏆 ⚓+0.2│
+│   4️⃣   │ s68  : ⏳             │ s423 : 0.2248        │ s339 : 0.2202        │ s68  : 0.2450 🏁fin    │ s68  : 0.3130 🏁fin    │ s68  : 0.3160 🏁⚓match │
+│   5️⃣   │ s85  : ⏳             │ s451 : 0.2294 🏆     │ s423 : 0.2248        │  —                     │  —                     │  —                     │
+│   6️⃣   │ s102 : ⏳             │ s564 : 0.2248        │ s564 : 0.2294        │  —                     │  —                     │  —                     │
+│   7️⃣   │ s119 : ⏳             │ s620 : 0.2248 🏁fin  │ s622 : 0.2294 🏁fin  │  —                     │  —                     │  —                     │
+│   8️⃣   │ s136 : ⏳ (final)     │  —                   │  —                    │  —                     │  —                     │  —                     │
+└────────┴──────────────────────┴──────────────────────┴──────────────────────┴────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+### 🧭 motion_cos (↑ higher = better)
+
+```
+┌────────┬──────────────────────┬──────────────────────┬──────────────────────┬────────────────────────┬────────────────────────┬────────────────────────┐
+│ 🔢 #    │ 🦣🔓 m09a1 pret2X_enc│ 🔧🔓 m09c1 3st_enc   │ ✂🔓 m09c1 noDI_enc   │ 🧊🧠 m09a2 pret_head   │ 🔧🧠 m09c2 3st_head    │ ✂🧠 m09c2 noDI_head    │
+│        │ (4 ep · running)     │                      │                      │                        │                        │                        │
+├────────┼──────────────────────┼──────────────────────┼──────────────────────┼────────────────────────┼────────────────────────┼────────────────────────┤
+│   1️⃣   │ s17  : ⏳             │ s56  : 0.0580        │ s56  : 0.0581        │ s17  : 0.0133          │ s17  : 0.0698          │ s17  : 0.0682          │
+│   2️⃣   │ s34  : ⏳             │ s141 : 0.0616        │ s141 : 0.0628        │ s34  : 0.0135          │ s34  : 0.0688          │ s34  : 0.0700 🏆       │
+│   3️⃣   │ s51  : ⏳             │ s282 : 0.0636        │ s282 : 0.0631        │ s51  : 0.0138          │ s51  : 0.0692          │ s51  : 0.0696          │
+│   4️⃣   │ s68  : ⏳             │ s423 : 0.0638        │ s339 : 0.0647        │ s68  : 0.0139 🏁fin    │ s68  : 0.0691 🏁fin    │ s68  : 0.0696 🏁fin    │
+│   5️⃣   │ s85  : ⏳             │ s451 : 0.0650        │ s423 : 0.0668        │  —                     │  —                     │  —                     │
+│   6️⃣   │ s102 : ⏳             │ s564 : 0.0638        │ s564 : 0.0669        │  —                     │  —                     │  —                     │
+│   7️⃣   │ s119 : ⏳             │ s620 : 0.0631 🏁fin  │ s622 : 0.0684 🏁     │  —                     │  —                     │  —                     │
+│   8️⃣   │ s136 : ⏳ (final)     │  —                   │  —                    │  —                     │  —                     │  —                     │
+└────────┴──────────────────────┴──────────────────────┴──────────────────────┴────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+### ⏭ future_l1 (↓ lower = better)
+
+```
+┌────────┬──────────────────────┬──────────────────────┬──────────────────────┬────────────────────────┬────────────────────────┬────────────────────────┐
+│ 🔢 #    │ 🦣🔓 m09a1 pret2X_enc│ 🔧🔓 m09c1 3st_enc   │ ✂🔓 m09c1 noDI_enc   │ 🧊🧠 m09a2 pret_head   │ 🔧🧠 m09c2 3st_head    │ ✂🧠 m09c2 noDI_head    │
+│        │ (4 ep · running)     │                      │                      │                        │                        │                        │
+├────────┼──────────────────────┼──────────────────────┼──────────────────────┼────────────────────────┼────────────────────────┼────────────────────────┤
+│   1️⃣   │ s17  : ⏳             │ s56  : 0.5273        │ s56  : 0.5282        │ s17  : 0.5607          │ s17  : 0.5450 ⚡cache  │ s17  : 0.5450 ⚡cache  │
+│   2️⃣   │ s34  : ⏳             │ s141 : 0.5197        │ s141 : 0.5212        │ s34  : 0.5607 ⚡cache  │ s34  : 0.5450 ⚡cache  │ s34  : 0.5450 ⚡cache  │
+│   3️⃣   │ s51  : ⏳             │ s282 : 0.5147        │ s282 : 0.5164        │ s51  : 0.5607 ⚡cache  │ s51  : 0.5450 ⚡cache  │ s51  : 0.5450 ⚡cache  │
+│   4️⃣   │ s68  : ⏳             │ s423 : 0.5164        │ s339 : 0.5195        │ s68  : 0.5607 ⚡cache  │ s68  : 0.5450 🏁⚡     │ s68  : 0.5450 🏁⚡     │
+│   5️⃣   │ s85  : ⏳             │ s451 : 0.5155        │ s423 : 0.5220        │  —                     │  —                     │  —                     │
+│   6️⃣   │ s102 : ⏳             │ s564 : 0.5143 🏆     │ s564 : 0.5161        │  —                     │  —                     │  —                     │
+│   7️⃣   │ s119 : ⏳             │ s620 : 0.5171 🏁fin  │ s622 : 0.5140 🏁🏆   │  —                     │  —                     │  —                     │
+│   8️⃣   │ s136 : ⏳ (final)     │  —                   │  —                    │  —                     │  —                     │  —                     │
+└────────┴──────────────────────┴──────────────────────┴──────────────────────┴────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+### 🏁 Aggregate honest verdict — 6-run best-so-far (🔸 gap < 5 pp = noise at N=218)
+
+```
+┌──────────────────┬────────────────┬─────────────────┬─────────────────┬────────────────┬─────────────────┬─────────────────┐
+│ 📊 Metric         │ 🦣🔓 m09a1     │ 🔧🔓 m09c1 3st  │ ✂🔓 m09c1 noDI  │ 🧊🧠 m09a2     │ 🔧🧠 m09c2 3st  │ ✂🧠 m09c2 noDI  │
+│                  │ pret2X_enc 🏃  │ enc 🏁fin        │ enc 🏃 stage 3  │ pret_head 🏁fin│ head 🏁fin       │ head 🏁fin       │
+│                  │ (4 ep · s17/136│                 │                 │                │                 │                 │
+├──────────────────┼────────────────┼─────────────────┼─────────────────┼────────────────┼─────────────────┼─────────────────┤
+│ 📐 val_jepa (↓)  │ ⏳ pending      │ 0.4483 @s564 🏆 │ 0.4476 @s622    │ N/A (head only)│ N/A (head only) │ N/A (head only) │
+│ 📐 ma_loss (↓)   │ N/A            │ N/A             │ N/A             │ 3.1403 @s68    │ 2.9377 @s68     │ 2.8720 @s68 🏆  │
+│ 🎯 probe_top1 (↑)│ ⏳ pending      │ 0.2294 @s451    │ 0.2294 @s564/622│ 0.2450 @s68    │ 0.3160 @s34 ⚓  │ 0.3180 @s51 🏆⚓│
+│                  │                │ -8.66 pp regr 🚨│ -8.66 pp regr 🚨│ -7.10 pp regr  │  0.00 pp MATCH  │ +0.20 pp ABOVE  │
+│ 🧭 motion_cos (↑)│ ⏳             │ 0.0650 @s451    │ 0.0684 @s622 🏆 │ 0.0139 @s68    │ 0.0698 @s17     │ 0.0700 @s34     │
+│ ⏭ future_l1 (↓) │ ⏳             │ 0.5143 @s564    │ 0.5140 @s622 🏆 │ 0.5607 @s68    │ 0.5450 @s68 ⚡  │ 0.5450 @s68 ⚡  │
+└──────────────────┴────────────────┴─────────────────┴─────────────────┴────────────────┴─────────────────┴─────────────────┘
+⚓ anchor = m09a1 pret_enc final (2 ep) top1 = 0.3160 — actual SURGERY_INIT loaded by all 4 surgery cells; pret2X (4 ep) is compute-control baseline only.
+```
+
+### 🧮 Paired-Δ preview (head − encoder · best-so-far · final eval pending)
+
+```
+┌───────┬───────────────────────────────────────────────────────┬──────────────────────┬─────────────────────────────────┐
+│ Test  │ Pair                                                   │ Δ (head − encoder)   │ 🚦 Verdict                       │
+├───────┼───────────────────────────────────────────────────────┼──────────────────────┼─────────────────────────────────┤
+│ ⭐ Δ5 │ m09c2 surg_3st_head − m09c1 surg_3st_enc · probe_top1 │ 0.3160 − 0.2294 =     │ 🟢 HEAD WINS +8.66 pp           │
+│       │   (best vs best)                                       │ +0.0866 (>>5 pp)      │ head-only PRESERVES motion       │
+│       │                                                       │                      │ classification; encoder-update   │
+│       │                                                       │                      │ DAMAGES it.                      │
+│ 🧪 Δ6 │ m09a2 pret_head − m09a1 pret_enc (init anchor) · top1 │ 0.2450 − 0.3160 =     │ 🔵 encoder margin -7.10 pp      │
+│       │   (best vs anchor; pret2X version pending)             │ −0.0710 (>>5 pp)      │ pretrain benefits from encoder   │
+│       │                                                       │                      │ training (Δ6 sign opposite Δ5)   │
+│ 🧪 Δ3 │ surg_3st_enc − m09a1 pret2X_enc · probe_top1          │ ⏳ pret2X pending      │ ⏳ awaiting pret2X final         │
+│       │   (compute-matched factor-patching causal test)        │                      │                                  │
+│ 🧪 Δ7 │ m09c2 surg_noDI_head − m09c1 surg_noDI_enc · top1     │ 0.3180 − 0.2294 =     │ 🟢 HEAD WINS +8.86 pp           │
+│       │   (best vs best · noDI_enc final s622)                 │ +0.0886 (>>5 pp)      │ matches Δ5 finding; replicates   │
+│       │                                                       │                      │ across both surgery variants.    │
+└───────┴───────────────────────────────────────────────────────┴──────────────────────┴─────────────────────────────────┘
+
+### 🏃 Eval-time formal metrics (post-POC, run_eval.sh --POC)
+
+```
+┌──────────────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+│ 🔬 Metric         │ 🧊 frozn │ 🦣 pretE │ 🐘 pret2X│ 🔧 3stE  │ 🧠 pretH │ 💡 3stH  │ 🪒 noDIH │
+├──────────────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ 🎯 top1 mean      │ 0.3136   │ 0.3909🏆 │ 🟡 pend  │ 0.3409   │ 0.3136   │ 0.3636   │ 🟡 pend  │
+│ 🎯 top1 95%CI hw  │ 0.0614   │ 0.0659   │ 🟡 pend  │ 0.0614   │ 0.0614   │ 0.0614   │ 🟡       │
+│ 🧭 motion_cos     │ 0.0144   │ 0.0767   │ 🟡 pend  │ 0.0846🏆 │ 0.0150   │ 🔴 crash │ 🟡       │
+│ 🔮 future_mse mu  │ 0.5564   │ 0.5412   │ 🟡 pend  │ 0.5140🏆 │ 0.5577   │ 🔴 crash │ 🔴 SKIP  │
+│ 🔮 future_mse sig │ 0.0186   │ 0.0169   │ 🟡 pend  │ 0.0224   │ 0.0198   │ 🔴       │ 🔴 SKIP  │
+│ 📋 taxonomy 15d   │ 🟢 done  │ 🟢 done  │ 🟡 pend  │ 🟢 done  │ 🟢 done  │ 🔴 crash │ 🟡       │
+│ 🕐 wall (min)     │ ~23      │ ~24      │ 🟡 pend  │ ~24      │ ~23      │ 🔴 partl │ 🟡       │
+└──────────────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+🟢=done  🟡=pending  🔴=skipped/crashed  🏃=running  🏆=best · cols: frozen·pretrain_enc(2ep)·pretrain_2X(4ep)·surg_3stage_DI_enc·pret_head·3st_head·noDI_head
+eval interrupted (disk full) mid 3st_head taxonomy; 2nd pass after pret2X training finishes
+```
+
+🗝️ Marker legend:
+- 🦣🔓 m09a1 / m09c1 encoder-update (full ViT-G backward) · 🧊🧠 m09a2 / m09c2 head-only (encoder + predictor frozen, MA head trains)
+- 🔧 surgery (factor curriculum 3stage_DI) · ✂ noDI (surgery without D_I phase) · 🦣 pretrain (continual SSL only)
+- ⚓ anchor (init = m09a1 POC final, used for all 4 surgery cells per SURGERY_INIT) · ⚓match = matched anchor exactly
+- 🏁 final wall · 🏆 best-so-far · 🚨 > 5 pp regression · 🔸 < 5 pp gap (noise at N=218) · ⚡ D15 cache HIT
+
