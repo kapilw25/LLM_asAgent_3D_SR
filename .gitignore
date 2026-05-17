@@ -59,6 +59,8 @@ checkpoints/
 # Logs
 logs/*.log
 *.logclear
+# Allow logs anywhere under iter/ — iteration runbooks track raw .log alongside results
+!iter/**/*.log
 
 # Weights & Biases
 # wandb/

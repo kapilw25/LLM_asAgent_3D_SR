@@ -1,0 +1,212 @@
+═══ 11:20:33 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/eval_10k_train_split.json: 1096 clips (split=train)
+Generated data/eval_10k_local/eval_10k_val_split.json: 220 clips (split=val)
+Generated data/eval_10k_local/eval_10k_test_split.json: 220 clips (split=test)
+  [multi-task] Using taxonomy labels: outputs/poc/probe_taxonomy/taxonomy_labels.json
+═══ 11:20:33 · m09a continual SSL pretrain_encoder (POC) ═══
+  config:    configs/train/pretrain_encoder.yaml
+  subset:    data/eval_10k_local/eval_10k_train_split.json
+  val:       data/eval_10k_local/eval_10k_val_split.json
+  local:     data/eval_10k_local
+  output:    outputs/poc/m09a_pretrain_encoder
+  lambda:    0.0 (read from yaml; bypasses auto-ablation gate)
+[live-debug] installed — pid=1893. Force a stack dump anytime via:
+[live-debug]   kill -USR1 1893   # signal-safe native dump
+[live-debug]   kill -USR2 1893   # Python dump with banner
+GPU: NVIDIA RTX PRO 6000 Blackwell Server Edition
+CUDA version: 12.8
+[m09a1] cgroup envelope:
+[m09a1]   memory: 0.8 GB / 513.0 GB (0%)
+[m09a1]   pids:   761 / 7680 (10%)
+[m09a1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json
+  [cache-policy=2/recompute] WIPING output_dir (m09a_pretrain_encoder): outputs/poc/m09a_pretrain_encoder (0 file(s))
+  [cache-policy=2/recompute] output_dir (m09a_pretrain_encoder) recreated empty: outputs/poc/m09a_pretrain_encoder
+
+=== Building Model ===
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Loading pretrained weights from /workspace/factorjepa/checkpoints/vjepa2_1_vitG_384.pt
+Student loaded: 1,843,937,152 params (588/588 keys = 100%)
+  layer_freeze: blocks [0, 20) frozen + [20, 48) trainable + norms always trainable. Trainable params: 1,074,278,144/1,843,937,152 = 58.3%
+Teacher created (deepcopy of student, hierarchical output enabled)
+Predictor loaded from checkpoint (300/300 keys = 100%)
+Predictor: 59,430,400 params
+  [motion_aux] enabled: 14 classes, 23-D vec, 1,536 clips with targets, 436,261 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+Mask generators: 2 (blocks: [8, 2])
+[POC] Loaded subset: 1,096 clip keys from eval_10k_train_split.json
+[VAL] Loaded val subset: 220 clips from eval_10k_val_split.json
+Train clips: 1,096 | Val clips: 220
+Epochs: 2 | Steps/epoch: 34 | Total steps: 68
+Checkpoint every 17 steps (2x/epoch, keep last 5)
+Validation every 17 steps (2x/epoch, 220 val clips)
+  Optimizer: AdamW (fp32, vanilla — SPD off) — 726 param groups
+
+Collecting 220 val clips into memory...
+Val clips collected: 220 in 7 batches
+  [probe] decoding clips from outputs/poc/probe_action/action_labels.json ...
+  [probe] subsampled to 1000 clips (seed=42, deterministic across val checkpoints + re-runs)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00005.tar: emitted=22, dropped=0 (missing_part=0, empty_mp4=0), filtered=978 (subset=978, resume=0)
+  [tar reader] subset-00003.tar: emitted=47, dropped=0 (missing_part=0, empty_mp4=0), filtered=953 (subset=953, resume=0)
+  [tar reader] subset-00008.tar: emitted=14, dropped=0 (missing_part=0, empty_mp4=0), filtered=986 (subset=986, resume=0)
+  [tar reader] subset-00002.tar: emitted=127, dropped=0 (missing_part=0, empty_mp4=0), filtered=873 (subset=873, resume=0)
+  [tar reader] subset-00009.tar: emitted=5, dropped=0 (missing_part=0, empty_mp4=0), filtered=292 (subset=292, resume=0)
+  [tar reader] subset-00004.tar: emitted=27, dropped=0 (missing_part=0, empty_mp4=0), filtered=973 (subset=973, resume=0)
+  [tar reader] subset-00007.tar: emitted=9, dropped=0 (missing_part=0, empty_mp4=0), filtered=991 (subset=991, resume=0)
+  [tar reader] subset-00006.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
+  [tar reader] subset-00001.tar: emitted=170, dropped=0 (missing_part=0, empty_mp4=0), filtered=830 (subset=830, resume=0)
+  [tar reader] subset-00000.tar: emitted=559, dropped=0 (missing_part=0, empty_mp4=0), filtered=441 (subset=441, resume=0)
+  [probe] decoding 1000 clips with 8 CPU workers (was serial → ~8x speedup expected)
+probe_decode:   0%|          | 0/1000 [00:00<?, ?clip/s]probe_decode:   0%|          | 1/1000 [00:03<53:23,  3.21s/clip]probe_decode:   0%|          | 5/1000 [00:03<08:41,  1.91clip/s]probe_decode:   1%|          | 9/1000 [00:03<04:16,  3.87clip/s]probe_decode:   2%|▏         | 21/1000 [00:03<01:25, 11.46clip/s]probe_decode:   3%|▎         | 33/1000 [00:04<01:14, 12.91clip/s]probe_decode:   4%|▍         | 45/1000 [00:05<01:05, 14.55clip/s]probe_decode:   6%|▋         | 65/1000 [00:05<00:45, 20.67clip/s]probe_decode:   7%|▋         | 69/1000 [00:06<00:47, 19.73clip/s]probe_decode:   7%|▋         | 73/1000 [00:06<00:45, 20.45clip/s]probe_decode:   8%|▊         | 77/1000 [00:06<00:48, 18.99clip/s]probe_decode:   9%|▉         | 93/1000 [00:06<00:31, 28.89clip/s]probe_decode:  10%|▉         | 97/1000 [00:07<00:41, 21.87clip/s]probe_decode:  10%|█         | 101/1000 [00:07<00:44, 19.98clip/s]probe_decode:  10%|█         | 105/1000 [00:07<00:53, 16.83clip/s]probe_decode:  12%|█▏        | 117/1000 [00:07<00:31, 27.69clip/s]probe_decode:  12%|█▏        | 122/1000 [00:08<00:29, 29.97clip/s]probe_decode:  13%|█▎        | 127/1000 [00:08<00:32, 26.71clip/s]probe_decode:  13%|█▎        | 131/1000 [00:08<00:42, 20.62clip/s]probe_decode:  14%|█▎        | 137/1000 [00:08<00:41, 20.99clip/s]probe_decode:  14%|█▍        | 145/1000 [00:09<00:46, 18.25clip/s]probe_decode:  16%|█▌        | 157/1000 [00:09<00:40, 20.83clip/s]probe_decode:  16%|█▋        | 165/1000 [00:10<00:38, 21.48clip/s]probe_decode:  17%|█▋        | 173/1000 [00:10<00:32, 25.74clip/s]probe_decode:  18%|█▊        | 177/1000 [00:10<00:38, 21.60clip/s]probe_decode:  18%|█▊        | 181/1000 [00:10<00:36, 22.18clip/s]probe_decode:  18%|█▊        | 185/1000 [00:11<00:35, 23.24clip/s]probe_decode:  19%|█▉        | 193/1000 [00:11<00:30, 26.53clip/s]probe_decode:  20%|█▉        | 197/1000 [00:11<00:50, 15.81clip/s]probe_decode:  20%|██        | 205/1000 [00:12<00:37, 21.29clip/s]probe_decode:  21%|██▏       | 213/1000 [00:12<00:32, 24.42clip/s]probe_decode:  22%|██▏       | 217/1000 [00:12<00:33, 23.26clip/s]probe_decode:  22%|██▎       | 225/1000 [00:12<00:26, 29.11clip/s]probe_decode:  23%|██▎       | 229/1000 [00:13<00:34, 22.60clip/s]probe_decode:  23%|██▎       | 233/1000 [00:13<00:32, 23.81clip/s]probe_decode:  24%|██▎       | 237/1000 [00:13<00:47, 15.98clip/s]probe_decode:  24%|██▍       | 245/1000 [00:13<00:36, 20.45clip/s]probe_decode:  25%|██▍       | 249/1000 [00:14<00:42, 17.67clip/s]probe_decode:  26%|██▋       | 265/1000 [00:14<00:29, 25.25clip/s]probe_decode:  27%|██▋       | 269/1000 [00:15<00:40, 18.01clip/s]probe_decode:  28%|██▊       | 281/1000 [00:15<00:30, 23.76clip/s]probe_decode:  28%|██▊       | 285/1000 [00:15<00:30, 23.70clip/s]probe_decode:  30%|██▉       | 297/1000 [00:15<00:24, 29.02clip/s]probe_decode:  30%|███       | 301/1000 [00:16<00:38, 17.94clip/s]probe_decode:  30%|███       | 305/1000 [00:16<00:39, 17.50clip/s]probe_decode:  32%|███▎      | 325/1000 [00:17<00:18, 35.68clip/s]probe_decode:  33%|███▎      | 331/1000 [00:17<00:23, 28.92clip/s]probe_decode:  34%|███▎      | 336/1000 [00:17<00:23, 28.53clip/s]probe_decode:  34%|███▍      | 341/1000 [00:18<00:35, 18.68clip/s]probe_decode:  35%|███▍      | 349/1000 [00:18<00:37, 17.41clip/s]probe_decode:  36%|███▋      | 365/1000 [00:18<00:21, 29.73clip/s]probe_decode:  37%|███▋      | 371/1000 [00:18<00:19, 32.03clip/s]probe_decode:  38%|███▊      | 377/1000 [00:19<00:36, 17.28clip/s]probe_decode:  38%|███▊      | 381/1000 [00:19<00:32, 18.95clip/s]probe_decode:  38%|███▊      | 385/1000 [00:20<00:29, 20.52clip/s]probe_decode:  39%|███▉      | 393/1000 [00:20<00:29, 20.51clip/s]probe_decode:  40%|████      | 405/1000 [00:21<00:34, 17.02clip/s]probe_decode:  41%|████▏     | 413/1000 [00:21<00:28, 20.35clip/s]probe_decode:  42%|████▎     | 425/1000 [00:21<00:22, 26.08clip/s]probe_decode:  43%|████▎     | 429/1000 [00:21<00:21, 27.07clip/s]probe_decode:  44%|████▎     | 437/1000 [00:22<00:28, 19.58clip/s]probe_decode:  44%|████▍     | 441/1000 [00:22<00:31, 17.52clip/s]probe_decode:  46%|████▌     | 457/1000 [00:23<00:19, 28.56clip/s]probe_decode:  46%|████▌     | 461/1000 [00:23<00:22, 24.25clip/s]probe_decode:  46%|████▋     | 465/1000 [00:23<00:23, 22.51clip/s]probe_decode:  47%|████▋     | 469/1000 [00:24<00:28, 18.49clip/s]probe_decode:  47%|████▋     | 473/1000 [00:24<00:32, 16.00clip/s]probe_decode:  49%|████▉     | 493/1000 [00:24<00:18, 27.66clip/s]probe_decode:  50%|████▉     | 497/1000 [00:25<00:22, 22.21clip/s]probe_decode:  50%|█████     | 501/1000 [00:25<00:28, 17.80clip/s]probe_decode:  51%|█████     | 509/1000 [00:25<00:23, 20.56clip/s]probe_decode:  52%|█████▏    | 521/1000 [00:26<00:17, 27.70clip/s]probe_decode:  52%|█████▎    | 525/1000 [00:26<00:18, 26.27clip/s]probe_decode:  53%|█████▎    | 529/1000 [00:26<00:24, 19.34clip/s]probe_decode:  53%|█████▎    | 533/1000 [00:27<00:31, 14.91clip/s]probe_decode:  54%|█████▍    | 541/1000 [00:27<00:22, 20.32clip/s]probe_decode:  55%|█████▌    | 553/1000 [00:27<00:18, 23.84clip/s]probe_decode:  56%|█████▌    | 561/1000 [00:28<00:16, 26.14clip/s]probe_decode:  56%|█████▋    | 565/1000 [00:28<00:25, 16.96clip/s]probe_decode:  58%|█████▊    | 577/1000 [00:29<00:20, 21.03clip/s]probe_decode:  59%|█████▉    | 589/1000 [00:29<00:16, 24.84clip/s]probe_decode:  60%|█████▉    | 597/1000 [00:30<00:23, 17.46clip/s]probe_decode:  61%|██████▏   | 613/1000 [00:30<00:17, 22.39clip/s]probe_decode:  62%|██████▎   | 625/1000 [00:30<00:13, 27.73clip/s]probe_decode:  63%|██████▎   | 629/1000 [00:31<00:20, 17.77clip/s]probe_decode:  63%|██████▎   | 633/1000 [00:31<00:18, 19.39clip/s]probe_decode:  64%|██████▍   | 645/1000 [00:32<00:15, 22.38clip/s]probe_decode:  65%|██████▌   | 653/1000 [00:32<00:13, 26.33clip/s]probe_decode:  66%|██████▌   | 661/1000 [00:33<00:18, 18.12clip/s]probe_decode:  67%|██████▋   | 669/1000 [00:33<00:14, 22.78clip/s]probe_decode:  67%|██████▋   | 673/1000 [00:33<00:13, 23.75clip/s]probe_decode:  68%|██████▊   | 677/1000 [00:33<00:18, 17.78clip/s]probe_decode:  69%|██████▉   | 693/1000 [00:34<00:16, 18.58clip/s]probe_decode:  71%|███████   | 709/1000 [00:34<00:10, 29.08clip/s]probe_decode:  72%|███████▏  | 715/1000 [00:35<00:11, 25.50clip/s]probe_decode:  72%|███████▏  | 720/1000 [00:35<00:12, 21.68clip/s]probe_decode:  72%|███████▎  | 725/1000 [00:35<00:13, 20.72clip/s]probe_decode:  73%|███████▎  | 733/1000 [00:36<00:12, 21.68clip/s]probe_decode:  74%|███████▍  | 745/1000 [00:36<00:09, 25.50clip/s]probe_decode:  75%|███████▍  | 749/1000 [00:36<00:09, 26.55clip/s]probe_decode:  75%|███████▌  | 753/1000 [00:37<00:13, 17.80clip/s]probe_decode:  76%|███████▌  | 757/1000 [00:37<00:12, 19.51clip/s]probe_decode:  76%|███████▋  | 765/1000 [00:37<00:09, 25.25clip/s]probe_decode:  77%|███████▋  | 769/1000 [00:37<00:08, 26.49clip/s]probe_decode:  78%|███████▊  | 777/1000 [00:38<00:10, 20.88clip/s]probe_decode:  78%|███████▊  | 785/1000 [00:38<00:13, 16.05clip/s]probe_decode:  80%|████████  | 801/1000 [00:39<00:07, 25.62clip/s]probe_decode:  81%|████████  | 809/1000 [00:39<00:08, 21.74clip/s]probe_decode:  82%|████████▏ | 817/1000 [00:40<00:09, 20.29clip/s]probe_decode:  83%|████████▎ | 829/1000 [00:40<00:06, 24.50clip/s]probe_decode:  84%|████████▎ | 837/1000 [00:41<00:08, 19.25clip/s]probe_decode:  84%|████████▍ | 845/1000 [00:41<00:07, 21.91clip/s]probe_decode:  85%|████████▍ | 849/1000 [00:41<00:07, 20.67clip/s]probe_decode:  85%|████████▌ | 853/1000 [00:41<00:06, 22.64clip/s]probe_decode:  86%|████████▌ | 861/1000 [00:42<00:06, 21.22clip/s]probe_decode:  87%|████████▋ | 869/1000 [00:42<00:05, 22.41clip/s]probe_decode:  87%|████████▋ | 873/1000 [00:42<00:05, 24.00clip/s]probe_decode:  88%|████████▊ | 877/1000 [00:42<00:04, 25.44clip/s]probe_decode:  88%|████████▊ | 881/1000 [00:43<00:06, 17.12clip/s]probe_decode:  89%|████████▉ | 893/1000 [00:43<00:03, 28.11clip/s]probe_decode:  90%|████████▉ | 897/1000 [00:43<00:04, 22.24clip/s]probe_decode:  90%|█████████ | 901/1000 [00:43<00:04, 21.38clip/s]probe_decode:  90%|█████████ | 905/1000 [00:44<00:05, 17.31clip/s]probe_decode:  91%|█████████▏| 913/1000 [00:44<00:03, 22.84clip/s]probe_decode:  92%|█████████▏| 917/1000 [00:44<00:03, 23.17clip/s]probe_decode:  92%|█████████▏| 921/1000 [00:44<00:03, 21.80clip/s]probe_decode:  93%|█████████▎| 929/1000 [00:45<00:03, 19.77clip/s]probe_decode:  93%|█████████▎| 933/1000 [00:45<00:03, 20.08clip/s]probe_decode:  94%|█████████▎| 937/1000 [00:45<00:02, 21.16clip/s]probe_decode:  94%|█████████▍| 945/1000 [00:45<00:02, 20.46clip/s]probe_decode:  95%|█████████▍| 949/1000 [00:46<00:02, 22.04clip/s]probe_decode:  96%|█████████▌| 961/1000 [00:46<00:01, 19.86clip/s]probe_decode:  97%|█████████▋| 969/1000 [00:47<00:01, 22.20clip/s]probe_decode:  98%|█████████▊| 977/1000 [00:47<00:00, 23.39clip/s]probe_decode:  98%|█████████▊| 981/1000 [00:47<00:00, 24.14clip/s]probe_decode:  98%|█████████▊| 985/1000 [00:47<00:00, 20.85clip/s]probe_decode:  99%|█████████▉| 993/1000 [00:48<00:00, 23.49clip/s]probe_decode: 100%|█████████▉| 997/1000 [00:48<00:00, 24.26clip/s]probe_decode: 100%|██████████| 1000/1000 [00:49<00:00, 20.39clip/s]
+  [probe] decoded 1000 clips (0 skipped — no tag match)
+  [probe] decoded 1000 clips (1536 have action labels)
+m09a1_pretrain_encoder:   0%|          | 0/68 [00:00<?, ?step/s]
+=== Training: 0 → 68 steps (2 epochs) ===
+Batch size: 32
+Grad checkpointing: True
+Mixed precision: bfloat16
+EMA momentum: 0.99925
+Drift control: lambda=0
+Loss log: outputs/poc/m09a_pretrain_encoder/loss_log.csv
+AdaptiveBatchSizer (training, grad-accum): start=30, max=32 (= effective BS), target VRAM=85%
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00006.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  [tar reader] subset-00007.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  AdaptiveBatch: VRAM 33% < 65% → sub-batch 30 → 31
+  [tar reader] subset-00009.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=293 (subset=293, resume=0)
+  [tar reader] subset-00005.tar: emitted=30, dropped=0 (missing_part=0, empty_mp4=0), filtered=970 (subset=970, resume=0)
+  [tar reader] subset-00004.tar: emitted=29, dropped=0 (missing_part=0, empty_mp4=0), filtered=971 (subset=971, resume=0)
+m09a1_pretrain_encoder:   0%|          | 0/68 [00:46<?, ?step/s]m09a1_pretrain_encoder:   1%|▏         | 1/68 [00:46<52:10, 46.73s/step]  [tar reader] subset-00003.tar: emitted=54, dropped=0 (missing_part=0, empty_mp4=0), filtered=946 (subset=946, resume=0)
+  [tar reader] subset-00008.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+  AdaptiveBatch: VRAM 42% < 65% → sub-batch 31 → 32
+m09a1_pretrain_encoder:   1%|▏         | 1/68 [01:19<52:10, 46.73s/step]m09a1_pretrain_encoder:   3%|▎         | 2/68 [01:19<42:25, 38.56s/step]m09a1_pretrain_encoder:   3%|▎         | 2/68 [01:51<42:25, 38.56s/step]m09a1_pretrain_encoder:   4%|▍         | 3/68 [01:51<38:29, 35.53s/step]  [tar reader] subset-00002.tar: emitted=129, dropped=0 (missing_part=0, empty_mp4=0), filtered=871 (subset=871, resume=0)
+m09a1_pretrain_encoder:   4%|▍         | 3/68 [02:22<38:29, 35.53s/step]m09a1_pretrain_encoder:   6%|▌         | 4/68 [02:22<36:00, 33.76s/step]m09a1_pretrain_encoder:   6%|▌         | 4/68 [02:54<36:00, 33.76s/step]m09a1_pretrain_encoder:   7%|▋         | 5/68 [02:54<34:43, 33.07s/step]m09a1_pretrain_encoder:   7%|▋         | 5/68 [03:24<34:43, 33.07s/step]m09a1_pretrain_encoder:   9%|▉         | 6/68 [03:24<33:06, 32.04s/step]  [tar reader] subset-00001.tar: emitted=196, dropped=0 (missing_part=0, empty_mp4=0), filtered=804 (subset=804, resume=0)
+m09a1_pretrain_encoder:   9%|▉         | 6/68 [03:54<33:06, 32.04s/step]m09a1_pretrain_encoder:  10%|█         | 7/68 [03:54<31:55, 31.41s/step]m09a1_pretrain_encoder:  10%|█         | 7/68 [04:30<31:55, 31.41s/step]m09a1_pretrain_encoder:  12%|█▏        | 8/68 [04:30<32:51, 32.87s/step]m09a1_pretrain_encoder:  12%|█▏        | 8/68 [05:05<32:51, 32.87s/step]m09a1_pretrain_encoder:  13%|█▎        | 9/68 [05:05<33:07, 33.68s/step]m09a1_pretrain_encoder:  13%|█▎        | 9/68 [05:36<33:07, 33.68s/step]m09a1_pretrain_encoder:  15%|█▍        | 10/68 [05:36<31:35, 32.68s/step]  AdaptiveBatch: VRAM 88% > 85% cap → sub-batch 32 → 31
+m09a1_pretrain_encoder:  15%|█▍        | 10/68 [06:12<31:35, 32.68s/step]m09a1_pretrain_encoder:  16%|█▌        | 11/68 [06:12<32:00, 33.69s/step]m09a1_pretrain_encoder:  16%|█▌        | 11/68 [06:43<32:00, 33.69s/step]m09a1_pretrain_encoder:  18%|█▊        | 12/68 [06:43<30:38, 32.82s/step]m09a1_pretrain_encoder:  18%|█▊        | 12/68 [07:14<30:38, 32.82s/step]m09a1_pretrain_encoder:  19%|█▉        | 13/68 [07:14<29:42, 32.41s/step]m09a1_pretrain_encoder:  19%|█▉        | 13/68 [07:46<29:42, 32.41s/step]m09a1_pretrain_encoder:  21%|██        | 14/68 [07:46<28:56, 32.15s/step]m09a1_pretrain_encoder:  21%|██        | 14/68 [08:17<28:56, 32.15s/step]m09a1_pretrain_encoder:  22%|██▏       | 15/68 [08:17<28:15, 32.00s/step]m09a1_pretrain_encoder:  22%|██▏       | 15/68 [08:49<28:15, 32.00s/step]m09a1_pretrain_encoder:  24%|██▎       | 16/68 [08:49<27:40, 31.93s/step]m09a1_pretrain_encoder:  24%|██▎       | 16/68 [09:20<27:40, 31.93s/step]m09a1_pretrain_encoder:  25%|██▌       | 17/68 [09:20<26:51, 31.60s/step]
+--- Checkpoint at 50% of epoch 1 (step 17) ---
+  Step 17 | Val JEPA loss: 0.4745 (mt=0.0000 · ma=3.5951 · drift=0.000000 · total=0.8340; 7 batches)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_loss_decomposition.png + .pdf
+  [probe-trio] encoding 1000 clips...
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  [probe-trio] step=16 top1=0.2290  motion_cos=0.0196  future_l1=0.5366  (N=1000)
+/workspace/factorjepa/src/utils/plots.py:764: UserWarning: Attempting to set identical low and high xlims makes transformation singular; automatically expanding.
+  im = ax_h.imshow(np.log10(drift_safe.T), aspect="auto", origin="lower",
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+  🎯 New best probe_top1: 0.2290 (val_jepa at this step: 0.4745)
+  [tar reader] subset-00000.tar: emitted=612, dropped=0 (missing_part=0, empty_mp4=0), filtered=388 (subset=388, resume=0)
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09a1_pretrain_encoder:  25%|██▌       | 17/68 [22:36<26:51, 31.60s/step]m09a1_pretrain_encoder:  26%|██▋       | 18/68 [22:36<3:37:44, 261.28s/step]m09a1_pretrain_encoder:  26%|██▋       | 18/68 [23:08<3:37:44, 261.28s/step]m09a1_pretrain_encoder:  28%|██▊       | 19/68 [23:08<2:37:13, 192.51s/step]m09a1_pretrain_encoder:  28%|██▊       | 19/68 [23:43<2:37:13, 192.51s/step]m09a1_pretrain_encoder:  29%|██▉       | 20/68 [23:43<1:56:04, 145.09s/step]m09a1_pretrain_encoder:  29%|██▉       | 20/68 [24:16<1:56:04, 145.09s/step]m09a1_pretrain_encoder:  31%|███       | 21/68 [24:16<1:27:19, 111.47s/step]m09a1_pretrain_encoder:  31%|███       | 21/68 [24:46<1:27:19, 111.47s/step]m09a1_pretrain_encoder:  32%|███▏      | 22/68 [24:46<1:06:46, 87.10s/step] m09a1_pretrain_encoder:  32%|███▏      | 22/68 [25:21<1:06:46, 87.10s/step]m09a1_pretrain_encoder:  34%|███▍      | 23/68 [25:21<53:30, 71.34s/step]  m09a1_pretrain_encoder:  34%|███▍      | 23/68 [25:51<53:30, 71.34s/step]m09a1_pretrain_encoder:  35%|███▌      | 24/68 [25:51<43:10, 58.87s/step]m09a1_pretrain_encoder:  35%|███▌      | 24/68 [26:22<43:10, 58.87s/step]m09a1_pretrain_encoder:  37%|███▋      | 25/68 [26:22<36:15, 50.60s/step]m09a1_pretrain_encoder:  37%|███▋      | 25/68 [26:53<36:15, 50.60s/step]m09a1_pretrain_encoder:  38%|███▊      | 26/68 [26:53<31:21, 44.81s/step]  Producer: starting epoch 2 (rotated tmp_dir → /tmp/m09_e2_s61453fu)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00007.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  [tar reader] subset-00006.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+m09a1_pretrain_encoder:  38%|███▊      | 26/68 [27:26<31:21, 44.81s/step]m09a1_pretrain_encoder:  40%|███▉      | 27/68 [27:26<28:06, 41.13s/step]m09a1_pretrain_encoder:  40%|███▉      | 27/68 [27:57<28:06, 41.13s/step]m09a1_pretrain_encoder:  41%|████      | 28/68 [27:57<25:29, 38.23s/step]m09a1_pretrain_encoder:  43%|████▎     | 29/68 [28:30<23:44, 36.52s/step]  [tar reader] subset-00004.tar: emitted=29, dropped=0 (missing_part=0, empty_mp4=0), filtered=971 (subset=971, resume=0)
+  [tar reader] subset-00009.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=293 (subset=293, resume=0)
+m09a1_pretrain_encoder:  43%|████▎     | 29/68 [29:03<23:44, 36.52s/step]m09a1_pretrain_encoder:  44%|████▍     | 30/68 [29:03<22:34, 35.64s/step]m09a1_pretrain_encoder:  44%|████▍     | 30/68 [29:37<22:34, 35.64s/step]m09a1_pretrain_encoder:  46%|████▌     | 31/68 [29:37<21:38, 35.10s/step]m09a1_pretrain_encoder:  46%|████▌     | 31/68 [30:12<21:38, 35.10s/step]m09a1_pretrain_encoder:  47%|████▋     | 32/68 [30:12<21:00, 35.01s/step]  [tar reader] subset-00008.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+m09a1_pretrain_encoder:  47%|████▋     | 32/68 [30:45<21:00, 35.01s/step]m09a1_pretrain_encoder:  49%|████▊     | 33/68 [30:45<20:02, 34.37s/step]  [tar reader] subset-00005.tar: emitted=30, dropped=0 (missing_part=0, empty_mp4=0), filtered=970 (subset=970, resume=0)
+m09a1_pretrain_encoder:  49%|████▊     | 33/68 [31:16<20:02, 34.37s/step]m09a1_pretrain_encoder:  50%|█████     | 34/68 [31:16<19:00, 33.54s/step]
+--- Checkpoint at 100% of epoch 1 (step 34) ---
+  Step 34 | Val JEPA loss: 0.4756 (mt=0.0000 · ma=3.5085 · drift=0.000000 · total=0.8264; 7 batches)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_loss_decomposition.png + .pdf
+  [probe-trio] encoding 1000 clips...
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  [probe-trio] step=33 top1=0.2560  motion_cos=0.0412  future_l1=0.5464  (N=1000)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+  🎯 New best probe_top1: 0.2560 (val_jepa at this step: 0.4756)
+
+--- Epoch 1/2 complete (step 34) ---
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  AdaptiveBatch: VRAM 42% < 65% → sub-batch 31 → 32
+m09a1_pretrain_encoder:  50%|█████     | 34/68 [43:54<19:00, 33.54s/step]m09a1_pretrain_encoder:  51%|█████▏    | 35/68 [43:54<2:17:53, 250.71s/step]  [tar reader] subset-00002.tar: emitted=129, dropped=0 (missing_part=0, empty_mp4=0), filtered=871 (subset=871, resume=0)
+m09a1_pretrain_encoder:  53%|█████▎    | 36/68 [44:24<1:38:24, 184.52s/step]  [tar reader] subset-00003.tar: emitted=54, dropped=0 (missing_part=0, empty_mp4=0), filtered=946 (subset=946, resume=0)
+m09a1_pretrain_encoder:  53%|█████▎    | 36/68 [44:55<1:38:24, 184.52s/step]m09a1_pretrain_encoder:  54%|█████▍    | 37/68 [44:55<1:11:31, 138.44s/step]m09a1_pretrain_encoder:  54%|█████▍    | 37/68 [45:26<1:11:31, 138.44s/step]m09a1_pretrain_encoder:  56%|█████▌    | 38/68 [45:26<53:03, 106.13s/step]  m09a1_pretrain_encoder:  57%|█████▋    | 39/68 [45:55<40:06, 82.97s/step] m09a1_pretrain_encoder:  57%|█████▋    | 39/68 [46:23<40:06, 82.97s/step]m09a1_pretrain_encoder:  59%|█████▉    | 40/68 [46:23<31:05, 66.61s/step]m09a1_pretrain_encoder:  60%|██████    | 41/68 [46:54<25:09, 55.89s/step]  [tar reader] subset-00001.tar: emitted=196, dropped=0 (missing_part=0, empty_mp4=0), filtered=804 (subset=804, resume=0)
+m09a1_pretrain_encoder:  60%|██████    | 41/68 [47:23<25:09, 55.89s/step]m09a1_pretrain_encoder:  62%|██████▏   | 42/68 [47:23<20:45, 47.92s/step]m09a1_pretrain_encoder:  62%|██████▏   | 42/68 [47:54<20:45, 47.92s/step]m09a1_pretrain_encoder:  63%|██████▎   | 43/68 [47:54<17:50, 42.84s/step]m09a1_pretrain_encoder:  63%|██████▎   | 43/68 [48:29<17:50, 42.84s/step]m09a1_pretrain_encoder:  65%|██████▍   | 44/68 [48:29<16:08, 40.37s/step]m09a1_pretrain_encoder:  65%|██████▍   | 44/68 [49:00<16:08, 40.37s/step]m09a1_pretrain_encoder:  66%|██████▌   | 45/68 [49:00<14:23, 37.55s/step]m09a1_pretrain_encoder:  68%|██████▊   | 46/68 [49:29<12:53, 35.14s/step]m09a1_pretrain_encoder:  68%|██████▊   | 46/68 [49:59<12:53, 35.14s/step]m09a1_pretrain_encoder:  69%|██████▉   | 47/68 [49:59<11:44, 33.54s/step]m09a1_pretrain_encoder:  69%|██████▉   | 47/68 [50:30<11:44, 33.54s/step]m09a1_pretrain_encoder:  71%|███████   | 48/68 [50:30<10:52, 32.62s/step]m09a1_pretrain_encoder:  71%|███████   | 48/68 [51:00<10:52, 32.62s/step]m09a1_pretrain_encoder:  72%|███████▏  | 49/68 [51:00<10:06, 31.95s/step]m09a1_pretrain_encoder:  72%|███████▏  | 49/68 [51:30<10:06, 31.95s/step]m09a1_pretrain_encoder:  74%|███████▎  | 50/68 [51:30<09:27, 31.52s/step]m09a1_pretrain_encoder:  74%|███████▎  | 50/68 [52:01<09:27, 31.52s/step]m09a1_pretrain_encoder:  75%|███████▌  | 51/68 [52:01<08:52, 31.35s/step]
+--- Checkpoint at 50% of epoch 2 (step 51) ---
+  Step 51 | Val JEPA loss: 0.4724 (mt=0.0000 · ma=3.1183 · drift=0.000000 · total=0.7842; 7 batches)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_loss_decomposition.png + .pdf
+  [probe-trio] encoding 1000 clips...
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  [probe-trio] step=50 top1=0.2710  motion_cos=0.0449  future_l1=0.5422  (N=1000)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+  🎯 New best probe_top1: 0.2710 (val_jepa at this step: 0.4724)
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09a1_pretrain_encoder:  75%|███████▌  | 51/68 [1:05:02<08:52, 31.35s/step]m09a1_pretrain_encoder:  76%|███████▋  | 52/68 [1:05:02<1:08:20, 256.28s/step]  [tar reader] subset-00000.tar: emitted=612, dropped=0 (missing_part=0, empty_mp4=0), filtered=388 (subset=388, resume=0)
+m09a1_pretrain_encoder:  76%|███████▋  | 52/68 [1:05:35<1:08:20, 256.28s/step]m09a1_pretrain_encoder:  78%|███████▊  | 53/68 [1:05:35<47:18, 189.26s/step]  m09a1_pretrain_encoder:  78%|███████▊  | 53/68 [1:06:05<47:18, 189.26s/step]m09a1_pretrain_encoder:  79%|███████▉  | 54/68 [1:06:05<32:59, 141.42s/step]m09a1_pretrain_encoder:  79%|███████▉  | 54/68 [1:06:35<32:59, 141.42s/step]m09a1_pretrain_encoder:  81%|████████  | 55/68 [1:06:35<23:23, 107.99s/step]m09a1_pretrain_encoder:  81%|████████  | 55/68 [1:07:06<23:23, 107.99s/step]m09a1_pretrain_encoder:  82%|████████▏ | 56/68 [1:07:06<16:59, 84.92s/step] m09a1_pretrain_encoder:  82%|████████▏ | 56/68 [1:07:37<16:59, 84.92s/step]m09a1_pretrain_encoder:  84%|████████▍ | 57/68 [1:07:37<12:34, 68.57s/step]m09a1_pretrain_encoder:  84%|████████▍ | 57/68 [1:08:07<12:34, 68.57s/step]m09a1_pretrain_encoder:  85%|████████▌ | 58/68 [1:08:07<09:31, 57.16s/step]m09a1_pretrain_encoder:  85%|████████▌ | 58/68 [1:08:38<09:31, 57.16s/step]m09a1_pretrain_encoder:  87%|████████▋ | 59/68 [1:08:38<07:23, 49.28s/step]m09a1_pretrain_encoder:  87%|████████▋ | 59/68 [1:09:12<07:23, 49.28s/step]m09a1_pretrain_encoder:  88%|████████▊ | 60/68 [1:09:12<05:56, 44.61s/step]m09a1_pretrain_encoder:  88%|████████▊ | 60/68 [1:09:43<05:56, 44.61s/step]m09a1_pretrain_encoder:  90%|████████▉ | 61/68 [1:09:43<04:43, 40.48s/step]  Producer: starting epoch 3 (rotated tmp_dir → /tmp/m09_e3_15319_19)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00003.tar: emitted=54, dropped=0 (missing_part=0, empty_mp4=0), filtered=946 (subset=946, resume=0)
+  [tar reader] subset-00007.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  [tar reader] subset-00005.tar: emitted=30, dropped=0 (missing_part=0, empty_mp4=0), filtered=970 (subset=970, resume=0)
+m09a1_pretrain_encoder:  90%|████████▉ | 61/68 [1:10:13<04:43, 40.48s/step]m09a1_pretrain_encoder:  91%|█████████ | 62/68 [1:10:13<03:44, 37.48s/step]  [tar reader] subset-00004.tar: emitted=29, dropped=0 (missing_part=0, empty_mp4=0), filtered=971 (subset=971, resume=0)
+m09a1_pretrain_encoder:  91%|█████████ | 62/68 [1:10:46<03:44, 37.48s/step]m09a1_pretrain_encoder:  93%|█████████▎| 63/68 [1:10:46<02:59, 35.95s/step]m09a1_pretrain_encoder:  93%|█████████▎| 63/68 [1:11:17<02:59, 35.95s/step]m09a1_pretrain_encoder:  94%|█████████▍| 64/68 [1:11:17<02:17, 34.49s/step]  [tar reader] subset-00009.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=293 (subset=293, resume=0)
+m09a1_pretrain_encoder:  94%|█████████▍| 64/68 [1:11:48<02:17, 34.49s/step]m09a1_pretrain_encoder:  96%|█████████▌| 65/68 [1:11:48<01:40, 33.48s/step]m09a1_pretrain_encoder:  96%|█████████▌| 65/68 [1:12:21<01:40, 33.48s/step]m09a1_pretrain_encoder:  97%|█████████▋| 66/68 [1:12:21<01:07, 33.54s/step]  [tar reader] subset-00006.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+m09a1_pretrain_encoder:  97%|█████████▋| 66/68 [1:12:53<01:07, 33.54s/step]m09a1_pretrain_encoder:  99%|█████████▊| 67/68 [1:12:53<00:32, 32.92s/step]  [tar reader] subset-00008.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+m09a1_pretrain_encoder:  99%|█████████▊| 67/68 [1:13:23<00:32, 32.92s/step]m09a1_pretrain_encoder: 100%|██████████| 68/68 [1:13:23<00:00, 32.16s/step]
+--- Checkpoint at 100% of epoch 2 (step 68) ---
+  Step 68 | Val JEPA loss: 0.4683 (mt=0.0000 · ma=3.0077 · drift=0.000000 · total=0.7691; 7 batches)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_loss_decomposition.png + .pdf
+  [probe-trio] encoding 1000 clips...
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  [probe-trio] step=67 top1=0.2940  motion_cos=0.0580  future_l1=0.5431  (N=1000)
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+  🎯 New best probe_top1: 0.2940 (val_jepa at this step: 0.4683)
+
+--- Epoch 2/2 complete (step 68) ---
+m09a1_pretrain_encoder: 100%|██████████| 68/68 [1:25:45<00:00, 75.66s/step]
+
+=== COOLDOWN PHASE ===
+  Frames: 16 → 64
+  LR: 1.00e-05 → 1e-06
+  Epochs: 1
+  Warmup: 0 steps
+  Cooldown LR schedule: 1.00e-05 → 1.00e-06 over 34 steps (linear)
+  NOTE: Full cooldown with 64f data loading requires producer restart.
+  Cooldown is a paper-quality enhancement. POC results valid without it.
+Exported student encoder: outputs/poc/m09a_pretrain_encoder/student_encoder.pt
+  ✓ encoder training-effect verified: ||Δ||/||init|| = 7.265e-03
+Exported motion_aux head: outputs/poc/m09a_pretrain_encoder/motion_aux_head.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_latest.pt: outputs/poc/m09a_pretrain_encoder/m09a_ckpt_latest.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_step51.pt: outputs/poc/m09a_pretrain_encoder/m09a_ckpt_step51.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_step68.pt: outputs/poc/m09a_pretrain_encoder/m09a_ckpt_step68.pt
+
+=== TRAINING COMPLETE ===
+Steps:        68 (2.0 epochs)
+Clips seen:   2,176
+Student:      outputs/poc/m09a_pretrain_encoder/student_encoder.pt
+Loss log:     outputs/poc/m09a_pretrain_encoder/loss_log.csv
+Summary:      outputs/poc/m09a_pretrain_encoder/training_summary.json
+
+═══ 12:50:10 · DONE ═══
+Expected outputs (consumed by scripts/run_eval.sh):
+-rw-rw-r-- 1 root root 6.9G May 17 12:49 outputs/poc/m09a_pretrain_encoder/student_encoder.pt
+-rw-rw-r-- 1 root root 14G May 17 12:49 outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  → Stage 8 future_mse will use this (carries 'predictor' key).

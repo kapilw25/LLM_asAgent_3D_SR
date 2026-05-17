@@ -234,7 +234,8 @@
       "Bash(cp outputs/poc/probe_plot/eval/probe_future_mse_compare.png  docs/static/images/probe_future_mse_compare.png)",
       "Bash(grep -nE \"--[a-z-]+:|@font-face\" docs/index.html)",
       "Bash(grep -nE \"^<section|^<!--\\\\s*={4,}\" docs/index.html)",
-      "Bash(rsync -avh --stats --exclude=*.pt --exclude=*.pth --exclude=*.onnx --exclude=*.pkl --exclude=*.npy --exclude=*.npz --exclude=*.tar --exclude=*.mp4 --exclude=*.ply --exclude=*.splat --exclude=*.pyc --exclude=*.pyo --exclude=*.pyd --exclude=__pycache__/ --exclude=*.log --exclude=*.logclear --exclude=checkpoints/ outputs/poc iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/)"
+      "Bash(rsync -avh --stats --exclude=*.pt --exclude=*.pth --exclude=*.onnx --exclude=*.pkl --exclude=*.npy --exclude=*.npz --exclude=*.tar --exclude=*.mp4 --exclude=*.ply --exclude=*.splat --exclude=*.pyc --exclude=*.pyo --exclude=*.pyd --exclude=__pycache__/ --exclude=*.log --exclude=*.logclear --exclude=checkpoints/ outputs/poc iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

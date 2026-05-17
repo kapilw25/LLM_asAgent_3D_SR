@@ -1,0 +1,152 @@
+═══ 08:09:45 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/eval_10k_train_split.json: 1083 clips (split=train)
+Generated data/eval_10k_local/eval_10k_val_split.json: 218 clips (split=val)
+Generated data/eval_10k_local/eval_10k_test_split.json: 218 clips (split=test)
+  [multi-task] Using taxonomy labels: outputs/poc/probe_taxonomy/taxonomy_labels.json
+═══ 08:09:46 · m09c2 HEAD-ONLY surgery [variant=noDI_head] (POC) ═══
+  config:    configs/train/surgery_2stage_noDI_head.yaml
+  subset:    data/eval_10k_local/eval_10k_train_split.json
+  factor:    data/eval_10k_local/m11_factor_datasets
+  output:    outputs/poc/m09c_surgery_noDI_head
+  init:      outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — paired-Δ parity with m09c1; accepts hf:// or local path)
+  contract:  all 48 ViT-G blocks + predictor FROZEN; trainable = motion_aux head
+[live-debug] installed — pid=2373128. Force a stack dump anytime via:
+[live-debug]   kill -USR1 2373128   # signal-safe native dump
+[live-debug]   kill -USR2 2373128   # Python dump with banner
+  [cache-policy=2/recompute] WIPING m09c2 head-only surgery output dir: outputs/poc/m09c_surgery_noDI_head (0 file(s))
+  [cache-policy=2/recompute] m09c2 head-only surgery output dir recreated empty: outputs/poc/m09c_surgery_noDI_head
+GPU: NVIDIA RTX PRO 6000 Blackwell Server Edition
+CUDA version: 12.8
+[m09c2] cgroup envelope:
+[m09c2]   memory: 28.8 GB / 513.0 GB (6%)
+[m09c2]   pids:   770 / 7680 (10%)
+[m09c2]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+Output dir: outputs/poc/m09c_surgery_noDI_head
+[POC] Loaded subset: 1,083 clip keys from eval_10k_train_split.json
+[POC] Loaded subset: 218 clip keys from eval_10k_val_split.json
+Train: 1,083 keys · Val: 218 keys
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  [iter15] Local init from: /workspace/factorjepa/outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt
+Loading pretrained weights from /workspace/factorjepa/outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter15] Schema: student (588 keys) + predictor (300 keys)
+Student loaded: 1,843,937,152 params (588/588 keys = 100%)
+  Trainable prefix: 0/48 blocks (332,800/1,843,937,152 = 0.0%)
+[m09c2 STRICT HEAD-ONLY] encoder FROZEN: 0 trainable block params (asserted)
+Predictor loaded: 300/300 keys = 100%
+Predictor: 59,430,400 params (FROZEN)
+  [motion_aux] enabled: 13 classes, 23-D vec, 1,519 clips with targets, 436,004 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+  Optimizer: AdamW (fp32, vanilla — SPD off) — 0 param groups
+Trainable params: motion_aux head = 436,004 (~432K expected)
+Mask generators: 2 (for in-training trio future_l1)
+  [probe] decoding clips from outputs/poc/probe_action/action_labels.json ...
+  [probe] subsampled to 1000 clips (seed=42, deterministic across val checkpoints + re-runs)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00006.tar: emitted=14, dropped=0 (missing_part=0, empty_mp4=0), filtered=986 (subset=986, resume=0)
+  [tar reader] subset-00004.tar: emitted=24, dropped=0 (missing_part=0, empty_mp4=0), filtered=976 (subset=976, resume=0)
+  [tar reader] subset-00009.tar: emitted=5, dropped=0 (missing_part=0, empty_mp4=0), filtered=292 (subset=292, resume=0)
+  [tar reader] subset-00002.tar: emitted=128, dropped=0 (missing_part=0, empty_mp4=0), filtered=872 (subset=872, resume=0)
+  [tar reader] subset-00007.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00005.tar: emitted=25, dropped=0 (missing_part=0, empty_mp4=0), filtered=975 (subset=975, resume=0)
+  [tar reader] subset-00003.tar: emitted=48, dropped=0 (missing_part=0, empty_mp4=0), filtered=952 (subset=952, resume=0)
+  [tar reader] subset-00000.tar: emitted=563, dropped=0 (missing_part=0, empty_mp4=0), filtered=437 (subset=437, resume=0)
+  [tar reader] subset-00008.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  [tar reader] subset-00001.tar: emitted=173, dropped=0 (missing_part=0, empty_mp4=0), filtered=827 (subset=827, resume=0)
+  [probe] decoding 1000 clips with 8 CPU workers (was serial → ~8x speedup expected)
+probe_decode:   0%|          | 0/1000 [00:00<?, ?clip/s]probe_decode:   0%|          | 1/1000 [00:01<33:13,  2.00s/clip]probe_decode:   0%|          | 5/1000 [00:02<05:40,  2.92clip/s]probe_decode:   3%|▎         | 33/1000 [00:03<01:14, 13.00clip/s]probe_decode:   4%|▎         | 37/1000 [00:03<01:20, 12.00clip/s]probe_decode:   6%|▋         | 65/1000 [00:04<00:50, 18.41clip/s]probe_decode:   7%|▋         | 73/1000 [00:05<00:45, 20.22clip/s]probe_decode:   8%|▊         | 77/1000 [00:05<00:54, 16.95clip/s]probe_decode:  10%|▉         | 97/1000 [00:06<00:41, 21.91clip/s]probe_decode:  10%|█         | 101/1000 [00:06<00:43, 20.63clip/s]probe_decode:  11%|█▏        | 113/1000 [00:06<00:33, 26.13clip/s]probe_decode:  12%|█▏        | 117/1000 [00:07<00:35, 24.61clip/s]probe_decode:  12%|█▏        | 121/1000 [00:07<00:36, 23.97clip/s]probe_decode:  13%|█▎        | 129/1000 [00:07<00:44, 19.46clip/s]probe_decode:  13%|█▎        | 133/1000 [00:08<00:46, 18.68clip/s]probe_decode:  14%|█▎        | 137/1000 [00:08<00:42, 20.37clip/s]probe_decode:  14%|█▍        | 141/1000 [00:08<00:41, 20.65clip/s]probe_decode:  14%|█▍        | 145/1000 [00:08<00:39, 21.43clip/s]probe_decode:  15%|█▍        | 149/1000 [00:08<00:36, 23.42clip/s]probe_decode:  15%|█▌        | 153/1000 [00:08<00:38, 22.00clip/s]probe_decode:  16%|█▌        | 161/1000 [00:09<00:55, 15.12clip/s]probe_decode:  17%|█▋        | 173/1000 [00:09<00:35, 23.10clip/s]probe_decode:  18%|█▊        | 181/1000 [00:09<00:27, 29.25clip/s]probe_decode:  19%|█▊        | 186/1000 [00:10<00:27, 29.60clip/s]probe_decode:  19%|█▉        | 190/1000 [00:10<00:27, 29.10clip/s]probe_decode:  19%|█▉        | 194/1000 [00:10<00:54, 14.90clip/s]probe_decode:  20%|█▉        | 197/1000 [00:11<00:50, 15.92clip/s]probe_decode:  20%|██        | 201/1000 [00:11<00:46, 17.23clip/s]probe_decode:  21%|██        | 209/1000 [00:11<00:30, 25.67clip/s]probe_decode:  21%|██▏       | 213/1000 [00:11<00:28, 27.98clip/s]probe_decode:  22%|██▏       | 221/1000 [00:11<00:21, 36.19clip/s]probe_decode:  23%|██▎       | 226/1000 [00:12<00:55, 14.01clip/s]probe_decode:  23%|██▎       | 230/1000 [00:12<00:56, 13.57clip/s]probe_decode:  25%|██▍       | 249/1000 [00:13<00:26, 28.21clip/s]probe_decode:  26%|██▌       | 257/1000 [00:14<00:48, 15.40clip/s]probe_decode:  27%|██▋       | 273/1000 [00:14<00:28, 25.15clip/s]probe_decode:  28%|██▊       | 281/1000 [00:14<00:27, 25.81clip/s]probe_decode:  29%|██▉       | 289/1000 [00:15<00:34, 20.57clip/s]probe_decode:  29%|██▉       | 294/1000 [00:15<00:34, 20.63clip/s]probe_decode:  30%|███       | 301/1000 [00:15<00:32, 21.49clip/s]probe_decode:  31%|███▏      | 313/1000 [00:16<00:23, 29.65clip/s]probe_decode:  32%|███▏      | 318/1000 [00:16<00:22, 30.16clip/s]probe_decode:  32%|███▏      | 323/1000 [00:16<00:34, 19.65clip/s]probe_decode:  33%|███▎      | 327/1000 [00:17<00:37, 18.02clip/s]probe_decode:  33%|███▎      | 333/1000 [00:17<00:30, 21.83clip/s]probe_decode:  34%|███▎      | 337/1000 [00:17<00:29, 22.50clip/s]probe_decode:  34%|███▍      | 345/1000 [00:17<00:26, 24.31clip/s]probe_decode:  35%|███▌      | 353/1000 [00:18<00:33, 19.26clip/s]probe_decode:  36%|███▌      | 357/1000 [00:18<00:34, 18.49clip/s]probe_decode:  36%|███▋      | 365/1000 [00:18<00:24, 25.42clip/s]probe_decode:  38%|███▊      | 377/1000 [00:19<00:26, 23.58clip/s]probe_decode:  38%|███▊      | 385/1000 [00:19<00:26, 23.42clip/s]probe_decode:  39%|███▉      | 389/1000 [00:19<00:30, 20.23clip/s]probe_decode:  39%|███▉      | 393/1000 [00:20<00:34, 17.60clip/s]probe_decode:  41%|████      | 409/1000 [00:20<00:31, 18.62clip/s]probe_decode:  42%|████▏     | 421/1000 [00:21<00:26, 22.22clip/s]probe_decode:  42%|████▎     | 425/1000 [00:21<00:27, 20.75clip/s]probe_decode:  43%|████▎     | 433/1000 [00:21<00:21, 26.51clip/s]probe_decode:  44%|████▍     | 441/1000 [00:22<00:27, 20.57clip/s]probe_decode:  45%|████▍     | 449/1000 [00:22<00:24, 22.66clip/s]probe_decode:  45%|████▌     | 453/1000 [00:23<00:31, 17.49clip/s]probe_decode:  47%|████▋     | 473/1000 [00:23<00:22, 23.59clip/s]probe_decode:  48%|████▊     | 477/1000 [00:23<00:22, 23.48clip/s]probe_decode:  48%|████▊     | 481/1000 [00:24<00:26, 19.47clip/s]probe_decode:  48%|████▊     | 485/1000 [00:24<00:28, 17.97clip/s]probe_decode:  50%|█████     | 501/1000 [00:24<00:16, 29.92clip/s]probe_decode:  50%|█████     | 505/1000 [00:25<00:24, 20.45clip/s]probe_decode:  51%|█████     | 509/1000 [00:25<00:22, 22.19clip/s]probe_decode:  51%|█████▏    | 513/1000 [00:25<00:34, 14.20clip/s]probe_decode:  53%|█████▎    | 529/1000 [00:26<00:18, 26.07clip/s]probe_decode:  54%|█████▎    | 537/1000 [00:26<00:18, 25.25clip/s]probe_decode:  54%|█████▍    | 541/1000 [00:26<00:23, 19.77clip/s]probe_decode:  55%|█████▍    | 545/1000 [00:27<00:23, 19.44clip/s]probe_decode:  55%|█████▍    | 549/1000 [00:27<00:20, 21.53clip/s]probe_decode:  55%|█████▌    | 553/1000 [00:27<00:24, 17.98clip/s]probe_decode:  56%|█████▌    | 557/1000 [00:27<00:23, 19.24clip/s]probe_decode:  57%|█████▋    | 573/1000 [00:28<00:15, 27.55clip/s]probe_decode:  58%|█████▊    | 577/1000 [00:28<00:18, 23.43clip/s]probe_decode:  58%|█████▊    | 581/1000 [00:28<00:20, 20.54clip/s]probe_decode:  58%|█████▊    | 585/1000 [00:29<00:30, 13.56clip/s]probe_decode:  60%|██████    | 605/1000 [00:29<00:13, 29.73clip/s]probe_decode:  61%|██████    | 610/1000 [00:29<00:14, 26.20clip/s]probe_decode:  61%|██████▏   | 614/1000 [00:30<00:18, 20.95clip/s]probe_decode:  62%|██████▏   | 621/1000 [00:30<00:23, 16.37clip/s]probe_decode:  64%|██████▎   | 637/1000 [00:31<00:13, 27.90clip/s]probe_decode:  64%|██████▍   | 642/1000 [00:31<00:14, 23.98clip/s]probe_decode:  65%|██████▍   | 646/1000 [00:31<00:19, 18.09clip/s]probe_decode:  65%|██████▌   | 653/1000 [00:32<00:17, 20.13clip/s]probe_decode:  66%|██████▌   | 657/1000 [00:32<00:18, 18.40clip/s]probe_decode:  67%|██████▋   | 673/1000 [00:32<00:09, 33.53clip/s]probe_decode:  68%|██████▊   | 679/1000 [00:33<00:14, 21.41clip/s]probe_decode:  68%|██████▊   | 684/1000 [00:33<00:13, 23.93clip/s]probe_decode:  69%|██████▉   | 689/1000 [00:33<00:17, 18.10clip/s]probe_decode:  70%|███████   | 701/1000 [00:34<00:12, 23.88clip/s]probe_decode:  71%|███████   | 709/1000 [00:34<00:16, 18.14clip/s]probe_decode:  72%|███████▏  | 717/1000 [00:35<00:14, 20.10clip/s]probe_decode:  72%|███████▏  | 721/1000 [00:35<00:14, 19.07clip/s]probe_decode:  73%|███████▎  | 733/1000 [00:35<00:10, 26.48clip/s]probe_decode:  74%|███████▎  | 737/1000 [00:35<00:10, 26.14clip/s]probe_decode:  74%|███████▍  | 741/1000 [00:36<00:12, 21.11clip/s]probe_decode:  75%|███████▍  | 749/1000 [00:36<00:12, 19.33clip/s]probe_decode:  75%|███████▌  | 753/1000 [00:36<00:12, 19.06clip/s]probe_decode:  76%|███████▌  | 757/1000 [00:36<00:11, 21.35clip/s]probe_decode:  76%|███████▋  | 765/1000 [00:37<00:08, 26.24clip/s]probe_decode:  77%|███████▋  | 769/1000 [00:37<00:09, 23.66clip/s]probe_decode:  77%|███████▋  | 773/1000 [00:37<00:09, 24.42clip/s]probe_decode:  78%|███████▊  | 777/1000 [00:37<00:08, 25.13clip/s]probe_decode:  78%|███████▊  | 781/1000 [00:38<00:14, 14.79clip/s]probe_decode:  78%|███████▊  | 785/1000 [00:38<00:12, 17.13clip/s]probe_decode:  79%|███████▉  | 789/1000 [00:38<00:11, 18.47clip/s]probe_decode:  80%|████████  | 801/1000 [00:38<00:08, 24.47clip/s]probe_decode:  81%|████████  | 809/1000 [00:39<00:06, 28.14clip/s]probe_decode:  81%|████████▏ | 813/1000 [00:39<00:11, 16.17clip/s]probe_decode:  82%|████████▏ | 821/1000 [00:39<00:08, 21.53clip/s]probe_decode:  82%|████████▎ | 825/1000 [00:40<00:07, 21.90clip/s]probe_decode:  83%|████████▎ | 833/1000 [00:40<00:07, 23.59clip/s]probe_decode:  84%|████████▎ | 837/1000 [00:40<00:07, 20.91clip/s]probe_decode:  84%|████████▍ | 845/1000 [00:41<00:08, 17.82clip/s]probe_decode:  85%|████████▌ | 853/1000 [00:41<00:06, 21.56clip/s]probe_decode:  86%|████████▌ | 861/1000 [00:41<00:06, 22.05clip/s]probe_decode:  87%|████████▋ | 869/1000 [00:42<00:06, 21.13clip/s]probe_decode:  88%|████████▊ | 877/1000 [00:42<00:05, 21.34clip/s]probe_decode:  88%|████████▊ | 881/1000 [00:42<00:06, 18.28clip/s]probe_decode:  89%|████████▉ | 893/1000 [00:43<00:04, 26.38clip/s]probe_decode:  90%|█████████ | 901/1000 [00:43<00:05, 18.35clip/s]probe_decode:  91%|█████████ | 909/1000 [00:44<00:04, 18.92clip/s]probe_decode:  91%|█████████▏| 913/1000 [00:44<00:04, 20.65clip/s]probe_decode:  92%|█████████▎| 925/1000 [00:44<00:02, 31.14clip/s]probe_decode:  93%|█████████▎| 933/1000 [00:45<00:03, 20.20clip/s]probe_decode:  94%|█████████▎| 937/1000 [00:45<00:03, 18.86clip/s]probe_decode:  94%|█████████▍| 941/1000 [00:45<00:03, 16.89clip/s]probe_decode:  96%|█████████▌| 957/1000 [00:45<00:01, 30.13clip/s]probe_decode:  96%|█████████▋| 965/1000 [00:46<00:01, 20.37clip/s]probe_decode:  97%|█████████▋| 969/1000 [00:46<00:01, 19.94clip/s]probe_decode:  97%|█████████▋| 973/1000 [00:47<00:01, 19.87clip/s]probe_decode:  98%|█████████▊| 977/1000 [00:47<00:01, 20.10clip/s]probe_decode: 100%|█████████▉| 997/1000 [00:47<00:00, 27.10clip/s]probe_decode: 100%|██████████| 1000/1000 [00:48<00:00, 20.83clip/s]
+  [probe] decoded 1000 clips (0 skipped — no tag match)
+  [probe] decoded 1000 clips (1519 have action labels)
+Stage: stage0_head_only_noDI · mixture: {'L': 0.5, 'A': 0.5, 'I': 0.0} · mode: poc · epochs: 2 · batch: 32 · steps/epoch: 34
+Validation every 17 steps (2x/epoch — D13 cadence parity)
+AdaptiveBatchSizer: AdaptiveBatchSizer(size=32, range=[1, 32], cap=85%, ooms=0)
+  build_streaming_indices: 9297 clips ready (9297 mp4, 9297 masks, 10 TARs scanned)
+  StreamingFactorDataset: REQUESTED={'L': 0.5, 'A': 0.5} → ACTUAL={D_L=50%, D_A=50%} (indexed=9297 clips)
+m09c2 head-only [stage0_head_only_noDI]:   0%|          | 0/68 [00:00<?, ?step/s]  StreamingFactorDataset: raw-replay ENABLED (worker 0/4) raw_pct=50% · raw_clips_local=2325
+  StreamingFactorDataset: raw-replay ENABLED (worker 2/4) raw_pct=50% · raw_clips_local=2324
+  StreamingFactorDataset: raw-replay ENABLED (worker 1/4) raw_pct=50% · raw_clips_local=2324
+  StreamingFactorDataset: raw-replay ENABLED (worker 3/4) raw_pct=50% · raw_clips_local=2324
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09c2 head-only [stage0_head_only_noDI]:   1%|▏         | 1/68 [00:38<43:08, 38.63s/step]m09c2 head-only [stage0_head_only_noDI]:   3%|▎         | 2/68 [00:42<20:12, 18.36s/step]m09c2 head-only [stage0_head_only_noDI]:   4%|▍         | 3/68 [00:46<12:51, 11.87s/step]m09c2 head-only [stage0_head_only_noDI]:   6%|▌         | 4/68 [00:51<09:24,  8.82s/step]m09c2 head-only [stage0_head_only_noDI]:   7%|▋         | 5/68 [01:07<12:02, 11.47s/step]m09c2 head-only [stage0_head_only_noDI]:   9%|▉         | 6/68 [01:11<09:16,  8.98s/step]m09c2 head-only [stage0_head_only_noDI]:  10%|█         | 7/68 [01:15<07:31,  7.40s/step]m09c2 head-only [stage0_head_only_noDI]:  12%|█▏        | 8/68 [01:19<06:21,  6.36s/step]m09c2 head-only [stage0_head_only_noDI]:  13%|█▎        | 9/68 [01:31<07:54,  8.04s/step]m09c2 head-only [stage0_head_only_noDI]:  15%|█▍        | 10/68 [01:35<06:36,  6.84s/step]m09c2 head-only [stage0_head_only_noDI]:  16%|█▌        | 11/68 [01:39<05:42,  6.01s/step]m09c2 head-only [stage0_head_only_noDI]:  18%|█▊        | 12/68 [01:43<05:04,  5.44s/step]m09c2 head-only [stage0_head_only_noDI]:  19%|█▉        | 13/68 [01:54<06:19,  6.90s/step]m09c2 head-only [stage0_head_only_noDI]:  21%|██        | 14/68 [01:58<05:27,  6.06s/step]m09c2 head-only [stage0_head_only_noDI]:  22%|██▏       | 15/68 [02:02<04:50,  5.48s/step]m09c2 head-only [stage0_head_only_noDI]:  24%|██▎       | 16/68 [02:06<04:23,  5.07s/step]m09c2 head-only [stage0_head_only_noDI]:  25%|██▌       | 17/68 [02:13<04:51,  5.71s/step]/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+
+[step 17 · epoch 0/2 · mid-epoch] train_loss=3.6771  val_loss=3.6078  wall=257s  stage=stage0_head_only_noDI
+  [probe-trio] encoding 1000 clips...
+  [probe-trio][D15 cache POPULATED] stored pooled_no_ma=(1000, 1664) + per_clip_l1=(1000,) for reuse across val checkpoints.
+  [probe-trio] step=17 top1=0.3160  motion_cos=0.0682  future_l1=0.5450  (N=1000)
+/workspace/factorjepa/src/utils/plots.py:764: UserWarning: Attempting to set identical low and high xlims makes transformation singular; automatically expanding.
+  im = ax_h.imshow(np.log10(drift_safe.T), aspect="auto", origin="lower",
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_block_drift.png + .pdf
+Exported motion_aux head: outputs/poc/m09c_surgery_noDI_head/motion_aux_head.pt
+  ✅ new best val_loss=3.6078 (step 17, epoch 0)
+/workspace/factorjepa/src/utils/plots.py:515: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  ax.legend(loc="upper right")
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_train_loss.png + .pdf
+  SKIP plot_combined_losses: only 0 train rows in outputs/poc/m09c_surgery_noDI_head/loss_log.jsonl
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.png + .pdf
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09c2 head-only [stage0_head_only_noDI]:  26%|██▋       | 18/68 [14:56<3:14:19, 233.19s/step]m09c2 head-only [stage0_head_only_noDI]:  28%|██▊       | 19/68 [15:00<2:14:15, 164.39s/step]m09c2 head-only [stage0_head_only_noDI]:  29%|██▉       | 20/68 [15:04<1:33:00, 116.27s/step]m09c2 head-only [stage0_head_only_noDI]:  31%|███       | 21/68 [15:08<1:04:42, 82.60s/step] m09c2 head-only [stage0_head_only_noDI]:  32%|███▏      | 22/68 [15:12<45:16, 59.05s/step]  m09c2 head-only [stage0_head_only_noDI]:  34%|███▍      | 23/68 [15:17<31:57, 42.62s/step]m09c2 head-only [stage0_head_only_noDI]:  35%|███▌      | 24/68 [15:21<22:46, 31.06s/step]m09c2 head-only [stage0_head_only_noDI]:  37%|███▋      | 25/68 [15:25<16:28, 22.98s/step]m09c2 head-only [stage0_head_only_noDI]:  38%|███▊      | 26/68 [15:29<12:07, 17.32s/step]m09c2 head-only [stage0_head_only_noDI]:  40%|███▉      | 27/68 [15:33<09:07, 13.36s/step]m09c2 head-only [stage0_head_only_noDI]:  41%|████      | 28/68 [15:37<07:03, 10.58s/step]m09c2 head-only [stage0_head_only_noDI]:  43%|████▎     | 29/68 [15:41<05:36,  8.64s/step]m09c2 head-only [stage0_head_only_noDI]:  44%|████▍     | 30/68 [15:45<04:36,  7.28s/step]m09c2 head-only [stage0_head_only_noDI]:  46%|████▌     | 31/68 [15:50<03:53,  6.32s/step]m09c2 head-only [stage0_head_only_noDI]:  47%|████▋     | 32/68 [15:54<03:24,  5.69s/step]m09c2 head-only [stage0_head_only_noDI]:  49%|████▊     | 33/68 [15:58<03:02,  5.22s/step]m09c2 head-only [stage0_head_only_noDI]:  50%|█████     | 34/68 [16:02<02:46,  4.89s/step]
+[step 34 · epoch 0/2 · epoch-end] train_loss=3.3882  val_loss=3.5021  wall=1076s  stage=stage0_head_only_noDI
+  [probe-trio][D15 cache HIT] reused 1000 pooled + 1000 per-clip L1 — skipped encoder forward.
+  [probe-trio] step=34 top1=0.3150  motion_cos=0.0700  future_l1=0.5450  (N=1000)
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_block_drift.png + .pdf
+Exported motion_aux head: outputs/poc/m09c_surgery_noDI_head/motion_aux_head.pt
+  ✅ new best val_loss=3.5021 (step 34, epoch 0)
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_train_loss.png + .pdf
+  SKIP plot_combined_losses: only 1 train rows in outputs/poc/m09c_surgery_noDI_head/loss_log.jsonl
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.png + .pdf
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09c2 head-only [stage0_head_only_noDI]:  51%|█████▏    | 35/68 [18:02<21:42, 39.48s/step]m09c2 head-only [stage0_head_only_noDI]:  53%|█████▎    | 36/68 [18:06<15:24, 28.88s/step]m09c2 head-only [stage0_head_only_noDI]:  54%|█████▍    | 37/68 [18:10<11:05, 21.45s/step]m09c2 head-only [stage0_head_only_noDI]:  56%|█████▌    | 38/68 [18:15<08:07, 16.26s/step]m09c2 head-only [stage0_head_only_noDI]:  57%|█████▋    | 39/68 [18:19<06:05, 12.62s/step]m09c2 head-only [stage0_head_only_noDI]:  59%|█████▉    | 40/68 [18:23<04:42, 10.07s/step]m09c2 head-only [stage0_head_only_noDI]:  60%|██████    | 41/68 [18:27<03:43,  8.29s/step]m09c2 head-only [stage0_head_only_noDI]:  62%|██████▏   | 42/68 [18:31<03:02,  7.04s/step]m09c2 head-only [stage0_head_only_noDI]:  63%|██████▎   | 43/68 [18:35<02:34,  6.16s/step]m09c2 head-only [stage0_head_only_noDI]:  65%|██████▍   | 44/68 [18:39<02:13,  5.55s/step]m09c2 head-only [stage0_head_only_noDI]:  66%|██████▌   | 45/68 [18:43<01:57,  5.12s/step]m09c2 head-only [stage0_head_only_noDI]:  68%|██████▊   | 46/68 [18:48<01:46,  4.82s/step]m09c2 head-only [stage0_head_only_noDI]:  69%|██████▉   | 47/68 [18:52<01:36,  4.61s/step]m09c2 head-only [stage0_head_only_noDI]:  71%|███████   | 48/68 [18:56<01:29,  4.46s/step]m09c2 head-only [stage0_head_only_noDI]:  72%|███████▏  | 49/68 [19:00<01:22,  4.36s/step]m09c2 head-only [stage0_head_only_noDI]:  74%|███████▎  | 50/68 [19:04<01:17,  4.29s/step]m09c2 head-only [stage0_head_only_noDI]:  75%|███████▌  | 51/68 [19:08<01:11,  4.23s/step]
+[step 51 · epoch 1/2 · mid-epoch] train_loss=3.2242  val_loss=3.0410  wall=183s  stage=stage0_head_only_noDI
+  [probe-trio][D15 cache HIT] reused 1000 pooled + 1000 per-clip L1 — skipped encoder forward.
+  [probe-trio] step=51 top1=0.3180  motion_cos=0.0696  future_l1=0.5450  (N=1000)
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_block_drift.png + .pdf
+Exported motion_aux head: outputs/poc/m09c_surgery_noDI_head/motion_aux_head.pt
+  ✅ new best val_loss=3.0410 (step 51, epoch 1)
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_train_loss.png + .pdf
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_loss_decomposition.png + .pdf
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.png + .pdf
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09c2 head-only [stage0_head_only_noDI]:  76%|███████▋  | 52/68 [21:09<10:25, 39.08s/step]m09c2 head-only [stage0_head_only_noDI]:  78%|███████▊  | 53/68 [21:13<07:09, 28.60s/step]m09c2 head-only [stage0_head_only_noDI]:  79%|███████▉  | 54/68 [21:17<04:57, 21.26s/step]m09c2 head-only [stage0_head_only_noDI]:  81%|████████  | 55/68 [21:21<03:29, 16.12s/step]m09c2 head-only [stage0_head_only_noDI]:  82%|████████▏ | 56/68 [21:25<02:30, 12.53s/step]m09c2 head-only [stage0_head_only_noDI]:  84%|████████▍ | 57/68 [21:29<01:50, 10.01s/step]m09c2 head-only [stage0_head_only_noDI]:  85%|████████▌ | 58/68 [21:33<01:22,  8.24s/step]m09c2 head-only [stage0_head_only_noDI]:  87%|████████▋ | 59/68 [21:37<01:03,  7.01s/step]m09c2 head-only [stage0_head_only_noDI]:  88%|████████▊ | 60/68 [21:42<00:49,  6.15s/step]m09c2 head-only [stage0_head_only_noDI]:  90%|████████▉ | 61/68 [21:46<00:38,  5.54s/step]m09c2 head-only [stage0_head_only_noDI]:  91%|█████████ | 62/68 [21:50<00:30,  5.12s/step]m09c2 head-only [stage0_head_only_noDI]:  93%|█████████▎| 63/68 [21:54<00:24,  4.82s/step]m09c2 head-only [stage0_head_only_noDI]:  94%|█████████▍| 64/68 [21:58<00:18,  4.61s/step]m09c2 head-only [stage0_head_only_noDI]:  96%|█████████▌| 65/68 [22:02<00:13,  4.46s/step]m09c2 head-only [stage0_head_only_noDI]:  97%|█████████▋| 66/68 [22:06<00:08,  4.36s/step]m09c2 head-only [stage0_head_only_noDI]:  99%|█████████▊| 67/68 [22:10<00:04,  4.29s/step]m09c2 head-only [stage0_head_only_noDI]: 100%|██████████| 68/68 [22:15<00:00,  4.24s/step]
+[step 68 · epoch 1/2 · epoch-end] train_loss=3.0685  val_loss=2.8720  wall=371s  stage=stage0_head_only_noDI
+  [probe-trio][D15 cache HIT] reused 1000 pooled + 1000 per-clip L1 — skipped encoder forward.
+  [probe-trio] step=68 top1=0.3160  motion_cos=0.0696  future_l1=0.5450  (N=1000)
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_block_drift.png + .pdf
+Exported motion_aux head: outputs/poc/m09c_surgery_noDI_head/motion_aux_head.pt
+  ✅ new best val_loss=2.8720 (step 68, epoch 1)
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_train_loss.png + .pdf
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_loss_decomposition.png + .pdf
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.png + .pdf
+m09c2 head-only [stage0_head_only_noDI]: 100%|██████████| 68/68 [24:12<00:00, 21.36s/step]
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_train_loss.png + .pdf
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_loss_decomposition.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:969: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.png + .pdf
+  Saved: outputs/poc/m09c_surgery_noDI_head/m09c2_val_loss_jepa.png + .pdf
+Exported student encoder: outputs/poc/m09c_surgery_noDI_head/student_encoder.pt
+Saved: outputs/poc/m09c_surgery_noDI_head/m09c_ckpt_best.pt
+Saved: outputs/poc/m09c_surgery_noDI_head/training_summary.json
+
+═══ 08:35:39 · DONE ═══
+Expected outputs (consumed by scripts/run_eval.sh):
+-rw-rw-r-- 1 root root 6.9G May 17 08:35 outputs/poc/m09c_surgery_noDI_head/student_encoder.pt
+-rw-rw-r-- 1 root root 7.1G May 17 08:35 outputs/poc/m09c_surgery_noDI_head/m09c_ckpt_best.pt
+  → Stage 8 future_mse will use this (carries 'predictor' key).
