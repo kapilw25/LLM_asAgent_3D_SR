@@ -1009,7 +1009,7 @@ echo "  🔥 P1 GATE     $OUTPUT_ACTION/probe_paired_delta.json"
 echo "  motion_cos     $OUTPUT_COS/probe_motion_cos_paired.json"
 echo "  future_mse     $OUTPUT_MSE/probe_future_mse_per_variant.json"
 echo "  taxonomy lbls  $OUTPUT_TAXONOMY/taxonomy_labels.json (consumed by run_train.sh multi-task path)"
-echo "  plots          $OUTPUT_PLOTS/{probe_action_loss,probe_action_acc,probe_encoder_comparison}.{png,pdf}"
+echo "  plots          $OUTPUT_PLOTS/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}"
 echo "Per-encoder probe ckpts:"
 for ENC in $ENCODERS; do
     echo "  $OUTPUT_ACTION/$ENC/probe.pt"

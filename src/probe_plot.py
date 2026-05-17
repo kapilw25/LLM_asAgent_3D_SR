@@ -13,7 +13,9 @@ or any future fine-tuning technique that lands a row in by_encoder):
 Writes (under --output-dir):
   probe_action_loss.{png,pdf}       train loss per encoder/LR
   probe_action_acc.{png,pdf}        val acc per encoder/LR (train dropped — see loss plot for overfit signal)
-  probe_encoder_comparison.{png,pdf}      3-panel (acc, cos, mse) — N bars with 95% CI
+  probe_action_acc_compare.{png,pdf}      bars sorted ↓ highest-first (higher=better)
+  probe_motion_cos_compare.{png,pdf}      bars sorted ↓ highest-first (higher=better)
+  probe_future_mse_compare.{png,pdf}      bars sorted ↑ lowest-first  (lower=better)
 
 USAGE:
   python -u src/probe_plot.py --SANITY \\
@@ -245,7 +247,12 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
             ax.text(xi, v + er_safe + pad * 0.1, f"{v:.3f}",
                     ha="center", va="bottom", fontsize=9, color="#222")
     ax.set_xticks(x)
-    ax.set_xticklabels([_display_label(e).replace(" ", "\n") for e in encoders], fontsize=9)
+    # iter15 Phase 8 (2026-05-17): rotated 25° instead of multi-line wrap — keeps
+    # vertical footprint to ~1 line height so the per-axes caption below doesn't
+    # collide with the tick labels. ha="right" anchors the label end at the tick
+    # for visual alignment with the bar.
+    ax.set_xticklabels([_display_label(e) for e in encoders],
+                       fontsize=9, rotation=25, ha="right")
     ax.set_ylabel(ylabel, fontsize=11)
     ax.set_title(title, fontsize=12, fontweight="bold")
     # Direction badge (top-left of axes) — at-a-glance "tall bar = good or bad".
@@ -263,12 +270,40 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
                           edgecolor="#E65100", linewidth=1.0, alpha=0.85))
 
 
+def _sort_by_metric(encoders: list, vals: list, errs: list,
+                    na_set: set, direction: str):
+    """Sort (encoder, val, err) triples by val; N/A entries always pushed to the tail.
+
+    direction = "desc" → descending (higher=better metrics: top1, motion_cos)
+    direction = "asc"  → ascending  (lower=better metrics: future_mse)
+    NaN-safe via np.isnan check; NaN values are treated as N/A (sent to tail).
+    """
+    triples = list(zip(encoders, vals, errs))
+    real = [(e, v, er) for e, v, er in triples
+            if e not in na_set and not (isinstance(v, float) and np.isnan(v))]
+    na = [(e, v, er) for e, v, er in triples
+          if e in na_set or (isinstance(v, float) and np.isnan(v))]
+    real.sort(key=lambda t: t[1], reverse=(direction == "desc"))
+    out = real + na  # N/A always last regardless of direction
+    return [t[0] for t in out], [t[1] for t in out], [t[2] for t in out]
+
+
 def plot_encoder_comparison(paired_delta: dict, motion_cos: dict,
                             future_mse: dict, output_dir: Path):
+    """Emit 3 SEPARATE comparison figures (one per metric), bars sorted in-panel.
+
+    iter15 Phase 8 (2026-05-17): split the prior 3-subplot stacked figure into
+    3 individual files so each can be embedded standalone in slides/paper.
+    Bars within each figure are sorted by the metric value:
+      probe_action_acc_compare.png   — DESCENDING by top1 (higher=better)
+      probe_motion_cos_compare.png   — DESCENDING by score_mean (higher=better)
+      probe_future_mse_compare.png   — ASCENDING  by mse_mean  (lower=better)
+    N/A bars always tail-position regardless of direction.
+    """
     # Encoder set = union of all encoders that appear in any of the 3 JSONs'
-    # by_encoder/by_variant blocks. Sorted for determinism. The same encoder
-    # name may appear with `null` in future_mse.by_variant if its trainer
-    # didn't run — we treat that as N/A in the MSE panel.
+    # by_encoder/by_variant blocks. The same encoder name may appear with
+    # `null` in future_mse.by_variant if its trainer didn't run — we treat
+    # that as N/A in the MSE panel.
     ap_enc = set(paired_delta.get("by_encoder", {}).keys())
     mc_enc = set(motion_cos.get("by_encoder", {}).keys())
     bv = future_mse.get("by_variant", {})
@@ -277,61 +312,82 @@ def plot_encoder_comparison(paired_delta: dict, motion_cos: dict,
     if not encoders:
         sys.exit("FATAL: no encoders found in any paired-Δ JSON")
 
-    # iter13 v13 (2026-05-07): per-panel captions live UNDER each subplot.
-    # Figsize height bumped 5.5 → 8.0 to make room for caption blocks; widened
-    # via 4× per-encoder so 3-line caption text doesn't wrap awkwardly.
-    fig, axes = plt.subplots(1, 3, figsize=(max(13, 4.0 * len(encoders)), 8.0))
-
-    # Per-panel captions (positioned UNDER each subplot, not in a combined block).
-    # Lines kept ≤ ~55 chars so they don't truncate at narrow column width.
-    # Bootstrap iter count pulled from utils.bootstrap.N_BOOTSTRAP (single source).
     if N_BOOTSTRAP >= 1000:
         boot_str = f"{N_BOOTSTRAP // 1000} K bootstrap"
     else:
         boot_str = f"{N_BOOTSTRAP} bootstrap"
-    panel_captions = [
-        # Panel 1 — Action probe
-        "AttentiveClassifier on encoder features →\n"
-        "K-class motion-flow accuracy (magnitude × direction).\n"
-        "Tests linear separability — are motion classes encoded?\n"
-        f"TEST split;  whiskers = BCa 95 % CI from {boot_str}.",
-        # Panel 2 — Motion cosine
-        "Same-class minus different-class cosine separation.\n"
-        "> 0 ⇒ encoder clusters clips semantically by motion;\n"
-        "near 0 ⇒ no clustering.\n"
-        f"TEST split;  whiskers = BCa 95 % CI from {boot_str}.",
-        # Panel 3 — Future MSE
-        "V-JEPA predictor L1 on masked next-frame tokens —\n"
-        "the JEPA objective itself.\n"
-        "Tests temporal predictive capability.\n"
-        "V-JEPA-only (no predictor for DINOv2 / CLIP → N/A).",
-    ]
 
-    # Panel 1 — top-1 action accuracy (per-encoder CI from by_encoder.top1_ci).
+    # Shared figure dimensions per metric — width scales with encoder count.
+    # iter15 Phase 8 (2026-05-17): bumped height 6.5 → 8.5 + caption-y −0.27
+    # → −0.55 + tight_layout bottom rect 0.18 → 0.32 so the rotated xtick
+    # labels (25° angle, full encoder names) clear the caption box without
+    # overlap. Reduced top rect 0.94 → 0.93 to compensate.
+    def _fig_size(n_enc: int):
+        return (max(8, 1.4 * n_enc + 2), 8.5)
+
+    def _emit_one(out_name: str, sorted_enc, sorted_vals, sorted_errs,
+                  na_set: set, ylabel: str, title: str, direction_badge: str,
+                  caption: str):
+        fig, ax = plt.subplots(figsize=_fig_size(len(encoders)))
+        _bar_with_ci(ax, sorted_enc, sorted_vals, sorted_errs,
+                     ylabel=ylabel, title=title,
+                     na_set=na_set, direction=direction_badge)
+        ax.text(0.5, -0.55, caption,
+                transform=ax.transAxes, ha="center", va="top",
+                fontsize=9.5, color="#000", fontweight="medium",
+                linespacing=1.5,
+                bbox=dict(boxstyle="round,pad=0.4", facecolor="#FAFAFA",
+                          edgecolor="#888", linewidth=0.8))
+        fig.suptitle(f"{title} · {len(encoders)} encoders · 95 % BCa CI",
+                     fontsize=14, fontweight="bold", y=0.97)
+        fig.tight_layout(rect=[0, 0.32, 1, 0.93])
+        save_fig(fig, str(output_dir / out_name))
+
+    # ─── Figure 1: probe_action top-1 (DESCENDING — higher = better) ───
     ap_be = paired_delta.get("by_encoder", {})
     acc_vals = [ap_be.get(e, {}).get("acc_pct", 0.0) for e in encoders]
     acc_errs = [ap_be.get(e, {}).get("top1_ci", {}).get("ci_half", 0.0) * 100.0
                 for e in encoders]
     ap_na = {e for e in encoders if e not in ap_be}
+    enc_acc, acc_vals, acc_errs = _sort_by_metric(
+        encoders, acc_vals, acc_errs, ap_na, direction="desc"
+    )
     _n_test = next(iter(ap_be.values()), {}).get("n", "?")
-    _bar_with_ci(axes[0], encoders, acc_vals, acc_errs,
-                 ylabel="Top-1 accuracy (%) — higher is better",
-                 title=f"Action probe (top-1, n={_n_test})",
-                 na_set=ap_na, direction="higher")
+    _emit_one(
+        "probe_action_acc_compare",
+        enc_acc, acc_vals, acc_errs, ap_na,
+        ylabel="Top-1 accuracy (%) — higher is better",
+        title=f"Action probe top-1 (n={_n_test}) — sorted ↓ highest first",
+        direction_badge="higher",
+        caption=("AttentiveClassifier on encoder features →\n"
+                 "K-class motion-flow accuracy (magnitude × direction).\n"
+                 "Tests linear separability — are motion classes encoded?\n"
+                 f"TEST split;  whiskers = BCa 95 % CI from {boot_str}."),
+    )
 
-    # Panel 2 — motion cosine intra-minus-inter (per-encoder CI from by_encoder.score_ci).
+    # ─── Figure 2: motion cosine intra−inter (DESCENDING — higher = better) ───
     mc_be = motion_cos.get("by_encoder", {})
     cos_vals = [mc_be.get(e, {}).get("score_mean", 0.0) for e in encoders]
     cos_errs = [mc_be.get(e, {}).get("score_ci", {}).get("ci_half", 0.0)
                 for e in encoders]
     mc_na = {e for e in encoders if e not in mc_be}
+    enc_cos, cos_vals, cos_errs = _sort_by_metric(
+        encoders, cos_vals, cos_errs, mc_na, direction="desc"
+    )
     _n_cos = next(iter(mc_be.values()), {}).get("n", "?")
-    _bar_with_ci(axes[1], encoders, cos_vals, cos_errs,
-                 ylabel="Intra − Inter cosine — higher is better",
-                 title=f"Motion cosine (n={_n_cos})",
-                 na_set=mc_na, direction="higher")
+    _emit_one(
+        "probe_motion_cos_compare",
+        enc_cos, cos_vals, cos_errs, mc_na,
+        ylabel="Intra − Inter cosine — higher is better",
+        title=f"Motion cosine (n={_n_cos}) — sorted ↓ highest first",
+        direction_badge="higher",
+        caption=("Same-class minus different-class cosine separation.\n"
+                 "> 0 ⇒ encoder clusters clips semantically by motion;\n"
+                 "near 0 ⇒ no clustering.\n"
+                 f"TEST split;  whiskers = BCa 95 % CI from {boot_str}."),
+    )
 
-    # Panel 3 — future-frame L1 (V-JEPA-only by design — DINOv2/etc. have no predictor).
+    # ─── Figure 3: future-frame L1 (ASCENDING — lower = better) ───
     mse_vals, mse_errs = [], []
     fm_na = set()
     n_test_mse = "?"
@@ -345,28 +401,284 @@ def plot_encoder_comparison(paired_delta: dict, motion_cos: dict,
             mse_vals.append(0.0)
             mse_errs.append(0.0)
             fm_na.add(e)
-    _bar_with_ci(axes[2], encoders, mse_vals, mse_errs,
-                 ylabel="Future L1 — lower is better",
-                 title=f"Future-frame MSE (n={n_test_mse})",
-                 na_set=fm_na, direction="lower")
+    enc_mse, mse_vals, mse_errs = _sort_by_metric(
+        encoders, mse_vals, mse_errs, fm_na, direction="asc"
+    )
+    _emit_one(
+        "probe_future_mse_compare",
+        enc_mse, mse_vals, mse_errs, fm_na,
+        ylabel="Future L1 — lower is better",
+        title=f"Future-frame MSE (n={n_test_mse}) — sorted ↑ lowest first",
+        direction_badge="lower",
+        caption=("V-JEPA predictor L1 on masked next-frame tokens —\n"
+                 "the JEPA objective itself.\n"
+                 "Tests temporal predictive capability.\n"
+                 "V-JEPA-only (no predictor for DINOv2 / CLIP → N/A)."),
+    )
 
-    # Per-panel caption — anchored to each axis via transAxes so it stays
-    # under its own subplot regardless of figure-level layout.
-    # iter13 v13 (2026-05-07): darkened color (#333 → #000) + bumped fontsize
-    # (8.5 → 9.5) + fontweight=medium so caption text reads at the same
-    # visual weight as panel labels and tick labels.
-    for ax, cap in zip(axes, panel_captions):
-        ax.text(0.5, -0.27, cap,
-                transform=ax.transAxes, ha="center", va="top",
-                fontsize=9.5, color="#000", fontweight="medium",
-                linespacing=1.5,
-                bbox=dict(boxstyle="round,pad=0.4", facecolor="#FAFAFA",
-                          edgecolor="#888", linewidth=0.8))
 
-    fig.suptitle(f"Probe trio · {len(encoders)} encoders · 95 % BCa CI",
-                 fontsize=14, fontweight="bold", y=0.97)
-    fig.tight_layout(rect=[0, 0.18, 1, 0.94])
-    save_fig(fig, str(output_dir / "probe_encoder_comparison"))
+# ── Training-side N-run comparison (iter15 Phase 8, 2026-05-17) ──────
+#
+# Reads <training_root>/m09*/{loss_log.csv, probe_history.jsonl,
+# *_block_drift_history.json, training_summary.json} and emits 1 PNG per
+# metric × N lines (one per training run). Style: 7 distinct colors + family
+# linestyle (encoder=solid, head=dashed). X-axis: dual (bottom = % of training
+# 0-100%, top = raw step) per user preference. PNG-only (no PDF/SVG).
+
+TRAINING_RUNS_CANONICAL = [
+    # (subdir_name,                       display_label,             family,    color)
+    ("m09a_pretrain_encoder",              "pretrain_encoder (2ep)",    "encoder", "tab:blue"),
+    ("m09a_pretrain_2X_encoder",           "pretrain_2X_encoder (4ep)", "encoder", "tab:cyan"),
+    ("m09c_surgery_3stage_DI_encoder",     "surgery_3stage_DI_enc",     "encoder", "tab:red"),
+    ("m09c_surgery_noDI_encoder",          "surgery_noDI_encoder",      "encoder", "tab:orange"),
+    ("m09a_pretrain_head",                 "pretrain_head",             "head",    "tab:purple"),
+    ("m09c_surgery_3stage_DI_head",        "surgery_3stage_DI_head",    "head",    "tab:green"),
+    ("m09c_surgery_noDI_head",             "surgery_noDI_head",         "head",    "tab:brown"),
+]
+TRAINING_LINESTYLE_BY_FAMILY = {"encoder": "-", "head": "--"}
+
+
+def _read_csv_typed(path: Path):
+    """csv.DictReader → list-of-dicts; numeric strings cast to float; empty → NaN."""
+    import csv
+    with open(path) as f:
+        reader = csv.DictReader(f)
+        rows = []
+        for row in reader:
+            out = {}
+            for k, v in row.items():
+                if v is None or v == "":
+                    out[k] = float("nan")
+                else:
+                    try:
+                        out[k] = float(v)
+                    except ValueError:
+                        out[k] = v
+            rows.append(out)
+    return rows
+
+
+def _col(rows: list, col: str):
+    """Pair (step, col-value) from list-of-dicts as (steps, values) np arrays; NaN-filtered."""
+    steps, vals = [], []
+    for r in rows:
+        v = r.get(col)
+        if not isinstance(v, (int, float)) or (isinstance(v, float) and np.isnan(v)):
+            continue
+        s = r.get("step")
+        if isinstance(s, (int, float)) and not np.isnan(s):
+            steps.append(float(s))
+            vals.append(float(v))
+    return np.array(steps), np.array(vals)
+
+
+def _probe_col(probe_rows: list, col: str):
+    """Probe-history column — prefers global_step over step (m09c1 stage-keyed)."""
+    steps, vals = [], []
+    for r in probe_rows:
+        v = r.get(col)
+        if not isinstance(v, (int, float)) or (isinstance(v, float) and np.isnan(v)):
+            continue
+        s = r.get("global_step", r.get("step"))
+        if isinstance(s, (int, float)) and not np.isnan(s):
+            steps.append(float(s))
+            vals.append(float(v))
+    return np.array(steps), np.array(vals)
+
+
+def _derive_loss_total_m09c1(loss_rows: list):
+    """m09c1 loss_log lacks loss_total → Σ(jepa+masked+context+infonce+tcc) per row."""
+    cols = ("loss_jepa", "loss_masked", "loss_context", "loss_infonce", "loss_tcc")
+    steps, vals = [], []
+    for r in loss_rows:
+        comps = [r.get(c) for c in cols]
+        comps = [c for c in comps
+                 if isinstance(c, (int, float)) and not (isinstance(c, float) and np.isnan(c))]
+        if not comps:
+            continue
+        s = r.get("step")
+        if isinstance(s, (int, float)) and not np.isnan(s):
+            steps.append(float(s))
+            vals.append(float(sum(comps)))
+    return np.array(steps), np.array(vals)
+
+
+def _drift_mean_series(drift_list: list):
+    """list of {step, rel_l2_per_block} → (steps, mean_rel_l2_across_blocks)."""
+    if not drift_list:
+        return np.array([]), np.array([])
+    steps = np.array([d["step"] for d in drift_list], dtype=np.float64)
+    means = np.array([float(np.mean(d["rel_l2_per_block"])) for d in drift_list],
+                     dtype=np.float64)
+    return steps, means
+
+
+def _load_training_run(subdir: Path) -> dict:
+    """Load loss_log.csv + probe_history.jsonl + *block_drift_history.json + training_summary.json
+    from a single training output subdir. FAIL LOUD if any required file is missing.
+    """
+    if not subdir.is_dir():
+        sys.exit(f"FATAL: training subdir missing: {subdir}")
+    loss_csv = subdir / "loss_log.csv"
+    if not loss_csv.is_file():
+        sys.exit(f"FATAL: {loss_csv} missing")
+    loss_rows = _read_csv_typed(loss_csv)
+
+    probe_jsonl = subdir / "probe_history.jsonl"
+    if not probe_jsonl.is_file():
+        sys.exit(f"FATAL: {probe_jsonl} missing")
+    probe_rows = [json.loads(line) for line in probe_jsonl.read_text().splitlines() if line.strip()]
+
+    drift_files = list(subdir.glob("*block_drift_history.json"))
+    if not drift_files:
+        sys.exit(f"FATAL: no *block_drift_history.json in {subdir}")
+    drift_list = json.loads(drift_files[0].read_text())
+
+    summary_path = subdir / "training_summary.json"
+    if not summary_path.is_file():
+        sys.exit(f"FATAL: {summary_path} missing")
+    summary = json.loads(summary_path.read_text())
+
+    if "steps" in summary:
+        total_steps = int(summary["steps"])
+    elif "total_steps" in summary:
+        total_steps = int(summary["total_steps"])
+    else:
+        max_step = 0
+        for r in loss_rows:
+            s = r.get("step")
+            if isinstance(s, (int, float)) and not np.isnan(s):
+                max_step = max(max_step, int(s))
+        for r in probe_rows:
+            s = r.get("global_step", r.get("step", 0))
+            if isinstance(s, (int, float)):
+                max_step = max(max_step, int(s))
+        total_steps = max_step
+
+    return {"loss_rows": loss_rows, "probe_rows": probe_rows,
+            "drift_list": drift_list, "summary": summary, "total_steps": total_steps}
+
+
+def _plot_training_metric(runs: dict, extractor, ylabel: str,
+                          title: str, out_name: str, output_dir: Path,
+                          y_log: bool = False):
+    """Emit 1 figure with N lines (1 per canonical run) + dual x-axis (% bottom, step top)."""
+    fig, ax = plt.subplots(figsize=(11, 6.5))
+    plotted = 0
+    max_total_steps = 0
+    for subdir_name, display, family, color in TRAINING_RUNS_CANONICAL:
+        rd = runs.get(subdir_name)
+        if rd is None:
+            continue
+        steps_arr, values_arr, total_steps = extractor(rd)
+        if steps_arr is None or len(steps_arr) == 0:
+            continue
+        max_total_steps = max(max_total_steps, total_steps)
+        pct = 100.0 * steps_arr.astype(np.float64) / max(total_steps, 1)
+        ax.plot(pct, values_arr,
+                color=color,
+                linestyle=TRAINING_LINESTYLE_BY_FAMILY[family],
+                linewidth=1.8,
+                marker="o", markersize=4,
+                label=f"{display}  [{family}, n_steps={total_steps}]")
+        plotted += 1
+    if plotted == 0:
+        print(f"  [SKIP] {out_name}: no run carries this metric")
+        plt.close(fig)
+        return
+    ax.set_xlabel("% of training (0 → 100)", fontsize=11)
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_title(title, fontsize=13, fontweight="bold")
+    ax.set_xlim(0, 100)
+    ax.grid(True, alpha=0.25, linestyle=":")
+    if y_log:
+        ax.set_yscale("log")
+    ax.legend(loc="best", fontsize=8.5, framealpha=0.9)
+    if max_total_steps > 0:
+        ax_top = ax.twiny()
+        ax_top.set_xlim(0, max_total_steps)
+        ax_top.set_xlabel(f"raw step (max across runs = {max_total_steps})",
+                          fontsize=10, color="#555")
+        ax_top.tick_params(axis="x", labelsize=8, colors="#555")
+    fig.tight_layout()
+    out_path = output_dir / f"{out_name}.png"
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {out_path} ({plotted}/{len(TRAINING_RUNS_CANONICAL)} lines)")
+
+
+def run_training_side_compare(training_root: Path, output_dir: Path):
+    """Generate 12 N-run training-side comparison PNGs in output_dir.
+    Splits the per-run m09{a,c}_probe_trajectory_trio.png into 3 separate plots
+    (probe_top1 / motion_cos / future_l1) per user request.
+    """
+    runs = {}
+    for subdir_name, _, _, _ in TRAINING_RUNS_CANONICAL:
+        sub = training_root / subdir_name
+        if sub.is_dir():
+            runs[subdir_name] = _load_training_run(sub)
+        else:
+            print(f"  [missing] {sub} — skipping this run")
+    if not runs:
+        sys.exit(f"FATAL: no training subdirs found under {training_root}/m09*/")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _loss_col(col):
+        def _x(rd):
+            s, v = _col(rd["loss_rows"], col)
+            return s, v, rd["total_steps"]
+        return _x
+
+    def _loss_total(rd):
+        s, v = _col(rd["loss_rows"], "loss_total")
+        if len(s) > 0:
+            return s, v, rd["total_steps"]
+        s, v = _derive_loss_total_m09c1(rd["loss_rows"])
+        return s, v, rd["total_steps"]
+
+    def _probe(col):
+        def _x(rd):
+            s, v = _probe_col(rd["probe_rows"], col)
+            return s, v, rd["total_steps"]
+        return _x
+
+    def _drift(rd):
+        s, v = _drift_mean_series(rd["drift_list"])
+        return s, v, rd["total_steps"]
+
+    plots = [
+        ("train_loss_jepa_compare",     _loss_col("loss_jepa"),
+         "loss_jepa",                    "Training — JEPA loss",                          False),
+        ("train_loss_total_compare",    _loss_total,
+         "loss_total (m09c1: Σ jepa+masked+context+infonce+tcc)",
+                                         "Training — total loss",                         False),
+        ("train_grad_norm_compare",     _loss_col("grad_norm"),
+         "grad_norm",                    "Training — gradient norm",                      False),
+        ("train_lr_compare",            _loss_col("lr"),
+         "learning rate (log y)",        "Training — LR schedule",                        True),
+        ("val_loss_jepa_compare",       _probe("val_jepa_loss"),
+         "val_jepa_loss",                "Validation — JEPA loss",                        False),
+        ("val_motion_aux_loss_compare", _probe("val_motion_aux_loss"),
+         "val_motion_aux_loss",          "Validation — motion_aux (CE + MSE)",            False),
+        ("val_total_loss_compare",      _probe("val_total_loss"),
+         "val_total_loss",               "Validation — total loss",                       False),
+        ("probe_top1_compare",          _probe("probe_top1"),
+         "probe_top1 (kNN-LOOCV)",       "Probe-trio split 1/3 — probe_top1 (HIGHER better)",  False),
+        ("motion_cos_compare",          _probe("motion_cos"),
+         "motion_cos (intra − inter)",   "Probe-trio split 2/3 — motion_cos (HIGHER better)",  False),
+        ("future_l1_compare",           _probe("future_l1"),
+         "future_l1",                    "Probe-trio split 3/3 — future_l1 (LOWER better)",    False),
+        ("block_drift_mean_compare",    _drift,
+         "mean(rel_l2 across blocks)",   "Encoder weight drift — mean over blocks",       False),
+        ("val_drift_loss_compare",      _probe("val_drift_loss"),
+         "val_drift_loss",               "Validation — drift penalty (SPD)",              False),
+    ]
+    pbar = make_pbar(total=len(plots), desc="train_compare", unit="plot")
+    for out_name, extractor, ylabel, title, y_log in plots:
+        _plot_training_metric(runs, extractor, ylabel, title, out_name, output_dir, y_log=y_log)
+        pbar.update(1)
+    pbar.close()
+    print(f"  Training-side compare plots written to: {output_dir}")
 
 
 # ── CLI ──────────────────────────────────────────────────────────────
@@ -377,9 +689,19 @@ def main():
     p.add_argument("--SANITY", action="store_true")
     p.add_argument("--POC",    action="store_true")
     p.add_argument("--FULL",   action="store_true")
-    p.add_argument("--action-probe-root", type=Path, required=True)
-    p.add_argument("--motion-cos-root",   type=Path, required=True)
-    p.add_argument("--future-mse-root",   type=Path, required=True)
+    # iter15 Phase 8 (2026-05-17): --training-side splits the output_dir into
+    # /eval and /train subdirs. Eval-side path (default) requires the 3 probe
+    # roots; training-side requires --training-root. Body validation below
+    # raises a clear FATAL if the required flags for the chosen mode are absent.
+    p.add_argument("--training-side", action="store_true",
+                   help="Generate N-run training-side comparison plots (12 PNGs) from "
+                        "<training-root>/m09*/. Output goes to <output-dir>/train/.")
+    p.add_argument("--training-root", type=Path, default=None,
+                   help="Required when --training-side: dir containing m09*/ subdirs "
+                        "(e.g. outputs/poc).")
+    p.add_argument("--action-probe-root", type=Path, default=None)
+    p.add_argument("--motion-cos-root",   type=Path, default=None)
+    p.add_argument("--future-mse-root",   type=Path, default=None)
     p.add_argument("--output-dir",        type=Path, required=True)
     add_wandb_args(p)
     args = p.parse_args()
@@ -387,16 +709,43 @@ def main():
         sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
     mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
 
-    if args.output_dir.exists():
-        n = sum(1 for _ in args.output_dir.rglob("*") if _.is_file())
-        print(f"  [probe_plot] wiping output_dir ({args.output_dir.name}) — {n} stale file(s)")
-        shutil.rmtree(args.output_dir)
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    # Output-dir auto-suffix: --training-side → <output_dir>/train/, else /eval/.
+    # Only wipe the active subdir, leaving the sibling (other-side) plots intact.
+    sub_name = "train" if args.training_side else "eval"
+    sub_dir = args.output_dir / sub_name
+    if sub_dir.exists():
+        n = sum(1 for _ in sub_dir.rglob("*") if _.is_file())
+        print(f"  [probe_plot] wiping {sub_name}/ — {n} stale file(s)")
+        shutil.rmtree(sub_dir)
+    sub_dir.mkdir(parents=True, exist_ok=True)
+    args.output_dir = sub_dir
+
+    # Mode-specific arg validation (FAIL LOUD per CLAUDE.md — no silent defaults).
+    if args.training_side:
+        if args.training_root is None:
+            sys.exit("ERROR: --training-side requires --training-root (e.g. outputs/poc)")
+    else:
+        missing = [name for name, val in [
+            ("--action-probe-root", args.action_probe_root),
+            ("--motion-cos-root",   args.motion_cos_root),
+            ("--future-mse-root",   args.future_mse_root),
+        ] if val is None]
+        if missing:
+            sys.exit(f"ERROR: eval-side mode requires: {', '.join(missing)}")
 
     wb = init_wandb("probe_plot", mode,
                     config=vars(args), enabled=not args.no_wandb)
     try:
         init_style()
+
+        # iter15 Phase 8 (2026-05-17): branch on --training-side. The training
+        # path reads outputs/poc/m09*/{loss_log.csv, probe_history.jsonl, ...}
+        # and emits 12 N-run comparison PNGs. The eval path below stays
+        # unchanged — same 5 plots (loss, acc, 3 sorted-bar compares).
+        if args.training_side:
+            run_training_side_compare(args.training_root, args.output_dir)
+            return
+
         paired_delta = _load_json(args.action_probe_root / "probe_paired_delta.json", "Stage 4")
         motion_cos   = _load_json(args.motion_cos_root   / "probe_motion_cos_paired.json", "Stage 7")
         future_mse   = _load_json(args.future_mse_root   / "probe_future_mse_per_variant.json", "Stage 9")

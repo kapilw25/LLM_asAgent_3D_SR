@@ -169,6 +169,17 @@ else:
     print(f'Δ5 95% CI: [{d5[\"delta_ci_lo\"]:+.4f}, {d5[\"delta_ci_hi\"]:+.4f}]')
     print(f'p_value:   {d5[\"p_value\"]:.4f}')
     print(f'interpretation: {d5[\"interpretation\"]}')"
+
+# 📊 N-run comparison plots (training-side, 12 PNGs in outputs/poc/probe_plot/train/)
+# Reads outputs/poc/m09*/{loss_log.csv, probe_history.jsonl, *block_drift_history.json}
+# and emits 12 multi-line figures (7 runs each, dual x-axis: % bottom + raw step top).
+# Splits the per-run m09{a,c}_probe_trajectory_trio.png into 3 separate plots
+# (probe_top1 / motion_cos / future_l1) per iter15 Phase 8 design.
+python -u src/probe_plot.py --POC --training-side \
+    --training-root outputs/poc \
+    --output-dir    outputs/poc/probe_plot \
+    --no-wandb 2>&1 | tee logs/iter15_probe_plot_train_$(date +%Y%m%d_%H%M%S).log
+# → 12 PNGs land in outputs/poc/probe_plot/train/  (eval-side plots stay in /eval/)
 ```
 
 ---

@@ -221,7 +221,13 @@
       "Bash(grep -vE 'configs/probe_encoders|_load_encoders|ENCODERS\\\\[|args\\\\.encoder|enc_dir|probe_encoders\\\\.yaml|KNOWN_VARIANTS|case \"\\\\$|\\\\$1.*=')",
       "Bash(chmod +x /tmp/eval_monitor.sh)",
       "Bash(bash -n /tmp/eval_monitor.sh)",
-      "Bash(/tmp/eval_monitor.sh *)"
+      "Bash(/tmp/eval_monitor.sh *)",
+      "Bash([ -f \"$d/test_metrics.json\" ])",
+      "Bash(head -500 iter/iter15_trainHead_freezeEncoder/high_level_outputs.md)",
+      "Bash(cat /tmp/new_iter15_section.md)",
+      "Bash(echo \"\")",
+      "Bash(mv /tmp/new_high_level_outputs.md iter/iter15_trainHead_freezeEncoder/high_level_outputs.md)",
+      "Bash(grep -nE \"^#|^##|^### |^\\\\`\\\\`\\\\`mermaid\" iter/iter15_trainHead_freezeEncoder/high_level_mermaid_SD.md)"
     ]
   }
 }
