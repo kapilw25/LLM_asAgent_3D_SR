@@ -539,97 +539,24 @@ tiers: 1️⃣ winner · 2️⃣ recoverable drops · 3️⃣ load-bearing drops
 👉 N=1000 probe-trio sub-sample, seed=42; head cells share frozen-encoder forward → top1/m_cos/fL1 all measure HEAD-augmented features (D=1712 vs encoder D=1664)
 ```
 
-### 🏃 Eval-side test metrics — probe_action/cos/mse/taxonomy (8 encoders = 7 trained + frozen anchor)
+### 🏃 Eval-side metrics — 7 trained encoders × 3 metrics (probe_plot eval/*_compare.png data)
 
 ```
-┌────────────────────────┬──────────────────┬──────────────────┬──────────────────┬──────────────────┬─────────────┐
-│ 🆔 Encoder              │ 🎯 top1 ± CI  ↑  │ 🧭 m_cos ± CI ↑  │ 🔮 fL1 μ ± σ  ↓  │ 🌀 ma_L1 μ ± σ↓  │ 📋 tax15  ↑ │
-│                         │  N=220 BCa       │  intra−inter     │  per-clip MSE    │  per-clip aux    │  15-dim     │
-├────────────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────┤
-│ 0 🧊 frozen anchor      │ 0.3091 ± .061 🥉 │ 0.0144 ± .004 🥉 │ 0.5564 ± .019    │ n/a              │ 0.7441 🥉   │
-│ 1 🦣 pretrain_encoder   │ 0.3318 ± .061    │ 0.0767 ± .009    │ 0.5412 ± .017    │ 0.3151 ± .105    │ 0.7611      │
-│ 2 🐘 pretrain_2X_enc    │ 0.3864 ± .064 🥇 │ 0.0801 ± .008    │ 0.5514 ± .017    │ 0.4807 ± .154 🥉 │ 0.7602      │
-│ 3 🔧 surg_3stage_DI_enc │ 0.3409 ± .061    │ 0.0846 ± .009    │ 0.5140 ± .022    │ 0.1459 ± .083    │ 0.7617      │
-│ 4 🪒 surg_noDI_enc      │ 0.3500 ± .064    │ 0.0887 ± .010 🥇 │ 0.5108 ± .023 🥇 │ 0.1668 ± .103    │ 0.7595      │
-│ 5 🧊🧠 pretrain_head    │ 0.3364 ± .062    │ 0.0150 ± .004    │ 0.5577 ± .020 🥉 │ 0.0613 ± .030 🥇 │ 0.7493      │
-│ 6 🔧🧠 surg_3st_DI_head │ 0.3182 ± .061    │ 0.0772 ± .009    │ 0.5411 ± .015    │ 0.3103 ± .156    │ 0.7639      │
-│ 7 🪒🧠 surg_noDI_head   │ 0.3773 ± .064    │ 0.0777 ± .009    │ 0.5415 ± .016    │ 0.2886 ± .189    │ 0.7674 🥇   │
-└────────────────────────┴──────────────────┴──────────────────┴──────────────────┴──────────────────┴─────────────┘
+┌──────────────────────────┬──────────────────┬──────────────────┬──────────────────┐
+│ 🆔 Encoder (7 trained)    │ 🎯 top1 ± CI ↑   │ 🧭 m_cos ± CI ↑  │ 🔮 fL1 μ ± σ ↓   │
+├──────────────────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ 1 🦣 pretrain_encoder     │ 0.3318 ± .061    │ 0.0767 ± .009    │ 0.5412 ± .017    │
+│ 2 🐘 pretrain_2X_encoder  │ 0.3864 ± .064 🥇 │ 0.0801 ± .008    │ 0.5514 ± .017    │
+│ 3 🔧 surg_3stage_DI_enc   │ 0.3409 ± .061    │ 0.0846 ± .009    │ 0.5140 ± .022    │
+│ 4 🪒 surg_noDI_encoder    │ 0.3500 ± .064    │ 0.0887 ± .010 🥇 │ 0.5108 ± .023 🥇 │
+│ 5 🧊🧠 pretrain_head      │ 0.3364 ± .062    │ 0.0150 ± .004 🥉 │ 0.5577 ± .020 🥉 │
+│ 6 🔧🧠 surg_3st_DI_head   │ 0.3182 ± .061 🥉 │ 0.0772 ± .009    │ 0.5411 ± .015    │
+│ 7 🪒🧠 surg_noDI_head     │ 0.3773 ± .064    │ 0.0777 ± .009    │ 0.5415 ± .016    │
+└──────────────────────────┴──────────────────┴──────────────────┴──────────────────┘
 🥇 = column-best · 🥉 = column-worst · ↑ higher better · ↓ lower better
-👉 CI half-width @ N=220: top1 ±~6 pp · m_cos ±~0.009 · fL1 paired ±~0.002 · ma_L1 ±~0.01-0.02
-👉 cell 3 surg_3stage_DI_enc: encoder ckpt LOST → eval uses pre-deletion cached features (top1/tax stale-valid; m_cos/fL1 recomputable from cached features.npy)
-👉 ma_L1 source: outputs/poc/probe_future_mse/<enc>/aggregate_motion_aux_l1.json (n/a for frozen — no aux head)
-👉 tax15 = unweighted mean across 15 v3-taxonomy dims (scene_type, weather, ..., video_quality)
-```
-
-### 🧮 Paired-Δ paper tests — Δ1..Δ7 (top1 metric, eval-side test_metrics.json)
-
-```
-┌──────┬─────────────────────────────────────────────────┬───────────────┬───────────┬──────────────────────────────────┐
-│ Test │ a − b                                            │ a_top1 − b    │ Δ pp      │ 🚦 Verdict (5 pp threshold)      │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ1   │ pretrain_encoder − frozen                        │ 0.3318−0.3091 │ +2.27 pp  │ 🟡 noise (<5 pp) · continual SSL │
-│      │ "continual SSL beats frozen baseline"            │               │           │   gives modest probe lift        │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ2   │ surg_3stage_DI_encoder − pretrain_encoder        │ 0.3409−0.3318 │ +0.91 pp  │ 🟡 noise · A1 asymmetry warning  │
-│      │ "surgery > pretrain (factor patching adds val)"  │               │           │   (surg=4ep total, pret=2ep)     │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ3   │ surg_3stage_DI_encoder − pretrain_2X_encoder     │ 0.3409−0.3864 │ −4.55 pp  │ 🟠 near-threshold · CAUSAL TEST: │
-│      │ "surgery > pretrain_2X (causal — not extra step)"│               │           │   compute-matched 4ep — surgery  │
-│      │                                                  │               │           │   LOSES vs pure-pretrain at 4ep  │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ4   │ pretrain_encoder − pretrain_head                 │ 0.3318−0.3364 │ −0.46 pp  │ 🟡 noise                         │
-│      │ "encoder-update > head-only on pretrain track"   │               │           │                                  │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ5   │ surg_3stage_DI_encoder − surg_3stage_DI_head     │ 0.3409−0.3182 │ +2.27 pp  │ 🟡 noise · headline undecided    │
-│      │ ⭐ KEY iter15 PAPER CLAIM                         │               │           │   at POC; needs FULL             │
-│      │ "if |Δ5|<5pp → head-only WINS (1/40× GPU)"       │               │           │                                  │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ6   │ surg_3stage_DI_head − pretrain_head              │ 0.3182−0.3364 │ −1.82 pp  │ 🟡 noise · A2 asymmetry confound │
-│      │ "factor curriculum helps even at head-only"      │               │           │                                  │
-├──────┼─────────────────────────────────────────────────┼───────────────┼───────────┼──────────────────────────────────┤
-│ Δ7   │ surg_3stage_DI_head − surg_noDI_head             │ 0.3636−⏳     │ ⏳ pending │ ⏳ eval order 7 (noDI_head)      │
-│      │ "D_I tubes carry signal beyond D_L+D_A"          │               │           │   → resolves after current eval  │
-└──────┴─────────────────────────────────────────────────┴───────────────┴───────────┴──────────────────────────────────┘
-👉 single source: configs/eval/paired_deltas.yaml (added 2026-05-17 as part of iter15 Phase 8 refactor — no hardcoded ITER14_DELTAS in src/*.py)
-👉 5 pp threshold ← BCa 95% CI half-width at POC N=220 → smaller Δ falls inside CI overlap → label as 🟡 noise
-👉 Δ values may shift once eval 144506 finishes — entries marked ⏳ will be filled after Stage 4 paired_delta runs
-```
-
-### 🚦 Decision matrix per Δ outcome
-
-```
-┌────────────────────────────────────┬──────────────────────────────────────────────────────────────────┐
-│ Δ outcome category                  │ ➡️ Paper claim disposition                                       │
-├────────────────────────────────────┼──────────────────────────────────────────────────────────────────┤
-│ 🟢 Δ ≥ +5 pp                       │ winning side wins by margin (escapes BCa CI) — strong claim       │
-│ 🟢 Δ ≤ -5 pp                       │ losing side actually WINS the test (Δ direction flipped)         │
-│ 🟠 |Δ| ∈ [3, 5) pp                 │ marginal · likely shifts at FULL scale (N=9.9k → CI ~±2 pp)      │
-│ 🟡 |Δ| < 3 pp                      │ noise · paper-claim undecided at POC                              │
-│ ⏳ pending                          │ eval not yet completed for one of the encoders                    │
-└────────────────────────────────────┴──────────────────────────────────────────────────────────────────┘
-```
-
-### ⚠️ Two known design asymmetries (Δ3 / Δ6 confounded reads — kept from prior section)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│ 🚨 A1. Encoder-compute asymmetry (Δ2 contaminated; Δ3 is the correct causal test)   │
-│   surg_enc total = 2 (pretrain init) + 2 (surgery) = 4 ep encoder updates           │
-│   pret_enc total = 2 ep encoder updates                                              │
-│   → Δ2 (surg − pret) is NOT compute-matched. Proper control = pretrain_2X (4 ep).   │
-│   → Δ3 IS the compute-matched control · result: -4.55 pp (surgery LOSES at POC).   │
-│   → Δ5/Δ6/Δ7 paired tests are unaffected (paired cells share total compute).        │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│ 🚨 A2. Cross-pair frozen-encoder asymmetry (pretrain_head vs surgery_head)          │
-│   pretrain_head frozen encoder = Meta init (0 continual SSL epochs)                  │
-│   surgery_head  frozen encoder = pretrain ckpt (2 continual SSL epochs)              │
-│   → Δ6 (surg_head − pretrain_head) conflates curriculum effect with frozen-encoder  │
-│     quality — NOT a clean signal for "factor curriculum helps head".                 │
-│   → Within-pair Δ5 / Δ7 are unaffected (paired cells share frozen-encoder source).  │
-│   → For an apples-apples curriculum ablation, pretrain_head would need to load the  │
-│     same pretrain ckpt as surgery_head (currently loads Meta).                       │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+👉 source JSONs: probe_paired_delta.json (top1) · probe_motion_cos_paired.json (m_cos) · probe_future_mse_per_variant.json (fL1)
+👉 same data backs outputs/poc/probe_plot/eval/probe_{action_acc,motion_cos,future_mse}_compare.png
+👉 CI half-width @ N=220: top1 ±~6 pp · m_cos ±~0.009 · fL1 paired ±~0.002
 ```
 
 ### 📐 Mid-training probe-trio trajectory — val_jepa / ma_loss (↓ lower = better, 7-cell · cell 3 🔁 ckpt-lost re-run pending)
