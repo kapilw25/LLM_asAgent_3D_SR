@@ -1,0 +1,8 @@
+step,epoch,loss_jepa,loss_drift,loss_total,loss_multi_task,loss_motion_aux,lr,grad_norm,throughput,val_loss,stage
+17,0,,,,,,,,,3.607797,stage0_head_only_noDI
+20,0,,0,3.295679,,3.295679,4.396895e-04,,,,stage0_head_only_noDI
+34,0,,,,,,,,,3.502074,stage0_head_only_noDI
+40,1,,0,3.380418,,3.380418,2.121431e-04,,,,stage0_head_only_noDI
+51,1,,,,,,,,,3.040967,stage0_head_only_noDI
+60,1,,0,3.697335,,3.697335,5.000000e-05,,,,stage0_head_only_noDI
+68,1,,,,,,,,,2.872016,stage0_head_only_noDI

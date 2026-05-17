@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_surgical_noDI_encoder",
+  "n_test": 220,
+  "mse_mean": 0.510847,
+  "mse_std": 0.022871,
+  "mse_ci": {
+    "mean": 0.510847,
+    "ci_lo": 0.507796,
+    "ci_hi": 0.513988,
+    "ci_half": 0.003096
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt"
+}

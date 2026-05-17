@@ -1,0 +1,58 @@
+[
+  {
+    "step": 17,
+    "rel_l2_per_block": [
+      0.56550289,
+      0.38383432,
+      0.37990877
+    ],
+    "block_names": [
+      "trunk",
+      "ce_head",
+      "mse_head"
+    ],
+    "source": "motion_aux_head"
+  },
+  {
+    "step": 34,
+    "rel_l2_per_block": [
+      0.73892047,
+      0.51901786,
+      0.45651554
+    ],
+    "block_names": [
+      "trunk",
+      "ce_head",
+      "mse_head"
+    ],
+    "source": "motion_aux_head"
+  },
+  {
+    "step": 51,
+    "rel_l2_per_block": [
+      0.76649586,
+      0.54511277,
+      0.46931614
+    ],
+    "block_names": [
+      "trunk",
+      "ce_head",
+      "mse_head"
+    ],
+    "source": "motion_aux_head"
+  },
+  {
+    "step": 68,
+    "rel_l2_per_block": [
+      0.76896014,
+      0.54664353,
+      0.4677595
+    ],
+    "block_names": [
+      "trunk",
+      "ce_head",
+      "mse_head"
+    ],
+    "source": "motion_aux_head"
+  }
+]

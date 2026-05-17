@@ -1,0 +1,7 @@
+{"epoch": 0, "train_loss": 3.7635104375727035, "val_loss": 3.8753323817471848, "wall_sec": 225.95455837249756, "step": 17}
+{"step": 20, "epoch": 0, "loss_jepa": NaN, "loss_drift": 0.0, "loss_multi_task": NaN, "loss_motion_aux": 3.852234363555908, "loss_total": 3.852234363555908, "lr": 0.0004396895306731977, "branch": {"ce": 2.9736328125, "mse": 0.878601610660553, "n_kept": 32}}
+{"epoch": 0, "train_loss": 3.7715636912514183, "val_loss": 3.585923820460608, "wall_sec": 1050.3727807998657, "step": 34}
+{"step": 40, "epoch": 1, "loss_jepa": NaN, "loss_drift": 0.0, "loss_multi_task": NaN, "loss_motion_aux": 3.558192491531372, "loss_total": 3.558192491531372, "lr": 0.00021214305562385592, "branch": {"ce": 2.91943359375, "mse": 0.6387588977813721, "n_kept": 32}}
+{"epoch": 1, "train_loss": 3.3682225031011246, "val_loss": 3.1857242146763234, "wall_sec": 187.62852311134338, "step": 51}
+{"step": 60, "epoch": 1, "loss_jepa": NaN, "loss_drift": 0.0, "loss_multi_task": NaN, "loss_motion_aux": 3.077711582183838, "loss_total": 3.077711582183838, "lr": 5e-05, "branch": {"ce": 2.444580078125, "mse": 0.6331313848495483, "n_kept": 32}}
+{"epoch": 1, "train_loss": 3.2610765204710117, "val_loss": 3.140318820235926, "wall_sec": 375.49634528160095, "step": 68}

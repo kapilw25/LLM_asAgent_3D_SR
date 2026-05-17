@@ -1,0 +1,7 @@
+{"epoch": 0, "train_loss": 3.3728056094225716, "val_loss": 4.0608644222994466, "wall_sec": 214.1902358531952, "step": 17, "stage": "stage0_head_only_DI"}
+{"step": 20, "epoch": 0, "loss_jepa": NaN, "loss_drift": 0.0, "loss_multi_task": NaN, "loss_motion_aux": 2.889838695526123, "loss_total": 2.889838695526123, "lr": 0.0004396895306731977, "branch": {"ce": 2.2786457538604736, "mse": 0.611193060874939, "n_kept": 6}, "stage": "stage0_head_only_DI"}
+{"epoch": 0, "train_loss": 3.5599484934526333, "val_loss": 3.104518553532592, "wall_sec": 1034.3548800945282, "step": 34, "stage": "stage0_head_only_DI"}
+{"step": 40, "epoch": 1, "loss_jepa": NaN, "loss_drift": 0.0, "loss_multi_task": NaN, "loss_motion_aux": 3.163926124572754, "loss_total": 3.163926124572754, "lr": 0.00021214305562385592, "branch": {"ce": 2.39453125, "mse": 0.7693949341773987, "n_kept": 6}, "stage": "stage0_head_only_DI"}
+{"epoch": 1, "train_loss": 3.3343060717863193, "val_loss": 3.0430838449285664, "wall_sec": 184.4069299697876, "step": 51, "stage": "stage0_head_only_DI"}
+{"step": 60, "epoch": 1, "loss_jepa": NaN, "loss_drift": 0.0, "loss_multi_task": NaN, "loss_motion_aux": 2.922025203704834, "loss_total": 2.922025203704834, "lr": 5e-05, "branch": {"ce": 2.4075520038604736, "mse": 0.5144731998443604, "n_kept": 6}, "stage": "stage0_head_only_DI"}
+{"epoch": 1, "train_loss": 3.2026888412587784, "val_loss": 2.9377488630627275, "wall_sec": 369.4709253311157, "step": 68, "stage": "stage0_head_only_DI"}

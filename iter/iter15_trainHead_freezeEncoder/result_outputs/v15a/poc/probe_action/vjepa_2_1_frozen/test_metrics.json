@@ -1,0 +1,32 @@
+{
+  "encoder": "vjepa_2_1_frozen",
+  "n_classes": 14,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__leftward",
+    "medium__rightward",
+    "medium__upward",
+    "slow__downward",
+    "slow__leftward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 220,
+  "top1_acc": 0.3090909090909091,
+  "top1_ci": {
+    "mean": 0.309091,
+    "ci_lo": 0.25,
+    "ci_hi": 0.372727,
+    "ci_half": 0.061364
+  },
+  "best_val_acc": 0.37272727272727274,
+  "probe_lr": 0.0005,
+  "warmup_pct": 0.0,
+  "epochs": 20
+}

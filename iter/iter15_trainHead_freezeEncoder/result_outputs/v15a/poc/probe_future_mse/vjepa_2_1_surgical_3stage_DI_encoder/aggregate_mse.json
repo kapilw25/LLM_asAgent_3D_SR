@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_encoder",
+  "n_test": 220,
+  "mse_mean": 0.513987,
+  "mse_std": 0.022357,
+  "mse_ci": {
+    "mean": 0.513987,
+    "ci_lo": 0.510971,
+    "ci_hi": 0.516837,
+    "ci_half": 0.002933
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt"
+}

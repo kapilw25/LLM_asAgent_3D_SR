@@ -170,14 +170,25 @@ def _mirror_cleanup(api, local_path: Path, subfolder: str):
     of stale checkpoints + every renamed iter11/ path remained on HF forever.
     """
     from huggingface_hub.hf_api import RepoFile
+    from huggingface_hub.errors import RemoteEntryNotFoundError
     try:
-        # 1. List all files on HF under this subfolder (recursive)
+        # 1. List all files on HF under this subfolder (recursive).
+        #    A missing subfolder (fresh repo, or post-purge state where we manually
+        #    wiped `outputs/` before re-uploading) raises RemoteEntryNotFoundError
+        #    because HF has no folder-exists API — folders only exist implicitly
+        #    via files. Semantically that's the same as "no remote files to clean
+        #    up", so we early-return and let the upload create the subfolder fresh.
         remote_paths = []
-        for item in api.list_repo_tree(
-                HF_OUTPUTS_REPO, path_in_repo=subfolder, repo_type="dataset",
-                recursive=True):
-            if isinstance(item, RepoFile):
-                remote_paths.append(item.path)
+        try:
+            for item in api.list_repo_tree(
+                    HF_OUTPUTS_REPO, path_in_repo=subfolder, repo_type="dataset",
+                    recursive=True):
+                if isinstance(item, RepoFile):
+                    remote_paths.append(item.path)
+        except RemoteEntryNotFoundError:
+            print(f"  Mirror: subfolder '{subfolder}' does not exist on HF "
+                  f"(fresh repo or post-purge) — skipping cleanup, upload will create it")
+            return
 
         if not remote_paths:
             print(f"  Mirror: no remote files under '{subfolder}' (fresh repo or empty subfolder)")

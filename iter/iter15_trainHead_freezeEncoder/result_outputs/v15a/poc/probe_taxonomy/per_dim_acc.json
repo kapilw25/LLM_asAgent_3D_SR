@@ -1,0 +1,5119 @@
+{
+  "dims": {
+    "crowd_density": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 3,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.786364,
+          "test_ci": {
+            "mean": 0.786364,
+            "ci_lo": 0.727273,
+            "ci_hi": 0.836364,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.836364,
+          "test_ci": {
+            "mean": 0.836364,
+            "ci_lo": 0.781818,
+            "ci_hi": 0.881818,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.804545,
+          "test_ci": {
+            "mean": 0.804545,
+            "ci_lo": 0.75,
+            "ci_hi": 0.854545,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.827273,
+          "test_ci": {
+            "mean": 0.827273,
+            "ci_lo": 0.772727,
+            "ci_hi": 0.872727,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.809091,
+          "test_ci": {
+            "mean": 0.809091,
+            "ci_lo": 0.75,
+            "ci_hi": 0.854545,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.827273,
+          "test_ci": {
+            "mean": 0.827273,
+            "ci_lo": 0.772727,
+            "ci_hi": 0.872727,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.818182,
+          "test_ci": {
+            "mean": 0.818182,
+            "ci_lo": 0.763636,
+            "ci_hi": 0.863636,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.822727,
+          "test_ci": {
+            "mean": 0.822727,
+            "ci_lo": 0.768182,
+            "ci_hi": 0.868182,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.05,
+          "ci_lo": -0.095455,
+          "ci_hi": -0.004545,
+          "ci_half": 0.045455,
+          "p_value": 0.0382,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.027273,
+          "ci_half": 0.045455,
+          "p_value": 0.4762,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.081818,
+          "ci_hi": -0.009091,
+          "ci_half": 0.036364,
+          "p_value": 0.0368,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.022727,
+          "ci_half": 0.045455,
+          "p_value": 0.3856,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.086364,
+          "ci_hi": 0.004545,
+          "ci_half": 0.045455,
+          "p_value": 0.0982,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.013636,
+          "ci_half": 0.045455,
+          "p_value": 0.2108,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.009091,
+          "ci_half": 0.045455,
+          "p_value": 0.133,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.031818,
+          "ci_lo": -0.004545,
+          "ci_hi": 0.072727,
+          "ci_half": 0.038636,
+          "p_value": 0.1558,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.05,
+          "ci_half": 0.040909,
+          "p_value": 0.7492,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.068182,
+          "ci_half": 0.038636,
+          "p_value": 0.22,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.054545,
+          "ci_half": 0.045455,
+          "p_value": 0.7778,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.059091,
+          "ci_half": 0.038636,
+          "p_value": 0.4204,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.05,
+          "ci_half": 0.036364,
+          "p_value": 0.5586,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.018182,
+          "ci_half": 0.040909,
+          "p_value": 0.3438,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.05,
+          "ci_hi": 0.040909,
+          "ci_half": 0.045455,
+          "p_value": 0.927,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.038636,
+          "p_value": 0.2986,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.027273,
+          "ci_half": 0.040909,
+          "p_value": 0.593,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.013636,
+          "ci_half": 0.034091,
+          "p_value": 0.376,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.063636,
+          "ci_half": 0.043182,
+          "p_value": 0.4682,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.05,
+          "ci_half": 0.038636,
+          "p_value": 0.7342,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.045455,
+          "ci_half": 0.038636,
+          "p_value": 0.9238,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.040909,
+          "p_value": 0.4438,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.027273,
+          "ci_half": 0.036364,
+          "p_value": 0.7112,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.018182,
+          "ci_half": 0.031818,
+          "p_value": 0.488,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.054545,
+          "ci_half": 0.045455,
+          "p_value": 0.7616,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.040909,
+          "ci_half": 0.036364,
+          "p_value": 0.8948,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.027273,
+          "ci_half": 0.034091,
+          "p_value": 0.891,
+          "gate_pass": false
+        }
+      }
+    },
+    "infrastructure_quality": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 3,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.781818,
+          "test_ci": {
+            "mean": 0.781818,
+            "ci_lo": 0.722727,
+            "ci_hi": 0.831818,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.772727,
+          "test_ci": {
+            "mean": 0.772727,
+            "ci_lo": 0.713636,
+            "ci_hi": 0.822727,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.745455,
+          "test_ci": {
+            "mean": 0.745455,
+            "ci_lo": 0.681818,
+            "ci_hi": 0.8,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.781818,
+          "test_ci": {
+            "mean": 0.781818,
+            "ci_lo": 0.722727,
+            "ci_hi": 0.831818,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.813636,
+          "test_ci": {
+            "mean": 0.813636,
+            "ci_lo": 0.759091,
+            "ci_hi": 0.859091,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.804545,
+          "test_ci": {
+            "mean": 0.804545,
+            "ci_lo": 0.75,
+            "ci_hi": 0.854545,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.763636,
+          "test_ci": {
+            "mean": 0.763636,
+            "ci_lo": 0.704545,
+            "ci_hi": 0.818182,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.8,
+          "test_ci": {
+            "mean": 0.8,
+            "ci_lo": 0.745455,
+            "ci_hi": 0.85,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.054545,
+          "ci_half": 0.043182,
+          "p_value": 0.7828,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.036364,
+          "ci_lo": -0.004545,
+          "ci_hi": 0.086364,
+          "ci_half": 0.045455,
+          "p_value": 0.1352,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.018182,
+          "ci_half": 0.05,
+          "p_value": 0.2354,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.038636,
+          "p_value": 0.2964,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.068182,
+          "ci_half": 0.047727,
+          "p_value": 0.5278,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.027273,
+          "ci_half": 0.045455,
+          "p_value": 0.4846,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.072727,
+          "ci_half": 0.043182,
+          "p_value": 0.2724,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.040909,
+          "ci_half": 0.05,
+          "p_value": 0.7708,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.095455,
+          "ci_hi": 0.009091,
+          "ci_half": 0.052273,
+          "p_value": 0.1506,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.009091,
+          "ci_half": 0.043182,
+          "p_value": 0.1714,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.063636,
+          "ci_half": 0.054545,
+          "p_value": 0.8016,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.009091,
+          "ci_half": 0.038636,
+          "p_value": 0.2094,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.043182,
+          "p_value": 0.098,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.068182,
+          "ci_lo": -0.118182,
+          "ci_hi": -0.022727,
+          "ci_half": 0.047727,
+          "p_value": 0.0068,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.059091,
+          "ci_lo": -0.104545,
+          "ci_hi": -0.018182,
+          "ci_half": 0.043182,
+          "p_value": 0.0072,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.031818,
+          "ci_half": 0.052273,
+          "p_value": 0.5478,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.054545,
+          "ci_lo": -0.1,
+          "ci_hi": -0.013636,
+          "ci_half": 0.043182,
+          "p_value": 0.0214,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.009091,
+          "ci_half": 0.043182,
+          "p_value": 0.1892,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.018182,
+          "ci_half": 0.043182,
+          "p_value": 0.3494,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.068182,
+          "ci_half": 0.05,
+          "p_value": 0.5298,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.031818,
+          "ci_half": 0.05,
+          "p_value": 0.5404,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.05,
+          "ci_half": 0.038636,
+          "p_value": 0.7232,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.05,
+          "ci_lo": 0.0,
+          "ci_hi": 0.104545,
+          "ci_half": 0.052273,
+          "p_value": 0.071,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.059091,
+          "ci_half": 0.045455,
+          "p_value": 0.6208,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.040909,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.090909,
+          "ci_half": 0.05,
+          "p_value": 0.1298,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.040909,
+          "ci_half": 0.036364,
+          "p_value": 0.8966,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.090909,
+          "ci_hi": 0.013636,
+          "ci_half": 0.052273,
+          "p_value": 0.1916,
+          "gate_pass": false
+        }
+      }
+    },
+    "lighting": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 4,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.981818,
+          "test_ci": {
+            "mean": 0.981818,
+            "ci_lo": 0.954545,
+            "ci_hi": 0.995455,
+            "ci_half": 0.020455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.968182,
+          "test_ci": {
+            "mean": 0.968182,
+            "ci_lo": 0.936364,
+            "ci_hi": 0.986364,
+            "ci_half": 0.025
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.986364,
+          "test_ci": {
+            "mean": 0.986364,
+            "ci_lo": 0.963636,
+            "ci_hi": 0.995455,
+            "ci_half": 0.015909
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.977273,
+          "test_ci": {
+            "mean": 0.977273,
+            "ci_lo": 0.95,
+            "ci_hi": 0.990909,
+            "ci_half": 0.020455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.977273,
+          "test_ci": {
+            "mean": 0.977273,
+            "ci_lo": 0.95,
+            "ci_hi": 0.990909,
+            "ci_half": 0.020455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.972727,
+          "test_ci": {
+            "mean": 0.972727,
+            "ci_lo": 0.945455,
+            "ci_hi": 0.990909,
+            "ci_half": 0.022727
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.981818,
+          "test_ci": {
+            "mean": 0.981818,
+            "ci_lo": 0.954545,
+            "ci_hi": 0.995455,
+            "ci_half": 0.020455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.981818,
+          "test_ci": {
+            "mean": 0.981818,
+            "ci_lo": 0.954545,
+            "ci_hi": 0.995455,
+            "ci_half": 0.020455
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.036364,
+          "ci_half": 0.015909,
+          "p_value": 0.0982,
+          "gate_pass": true
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.0,
+          "ci_half": 0.011364,
+          "p_value": 0.7374,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.015909,
+          "p_value": 0.774,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.015909,
+          "p_value": 0.7766,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": 0.0,
+          "ci_hi": 0.031818,
+          "ci_half": 0.015909,
+          "p_value": 0.2632,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.013636,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.013636,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.045455,
+          "ci_hi": -0.004545,
+          "ci_half": 0.020455,
+          "p_value": 0.0354,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.018182,
+          "p_value": 0.4542,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.018182,
+          "p_value": 0.447,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.009091,
+          "ci_half": 0.015909,
+          "p_value": 0.792,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.036364,
+          "ci_hi": -0.004545,
+          "ci_half": 0.015909,
+          "p_value": 0.1,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.036364,
+          "ci_hi": -0.004545,
+          "ci_half": 0.015909,
+          "p_value": 0.0942,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.004545,
+          "ci_hi": 0.031818,
+          "ci_half": 0.018182,
+          "p_value": 0.4388,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": 0.0,
+          "ci_hi": 0.031818,
+          "ci_half": 0.015909,
+          "p_value": 0.2632,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.036364,
+          "ci_half": 0.015909,
+          "p_value": 0.0934,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": 0.0,
+          "ci_hi": 0.025974,
+          "ci_half": 0.012987,
+          "p_value": 0.726,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": 0.0,
+          "ci_hi": 0.022727,
+          "ci_half": 0.011364,
+          "p_value": 0.7226,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.013636,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": 0.0,
+          "ci_hi": 0.022727,
+          "ci_half": 0.011364,
+          "p_value": 0.7382,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.009091,
+          "ci_half": 0.015909,
+          "p_value": 0.7854,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.013636,
+          "ci_half": 0.020455,
+          "p_value": 0.8196,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": 0.0,
+          "ci_hi": 0.022727,
+          "ci_half": 0.011364,
+          "p_value": 0.7374,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.0,
+          "ci_half": 0.011364,
+          "p_value": 0.7194,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.009091,
+          "ci_half": 0.015909,
+          "p_value": 0.7846,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.0,
+          "ci_half": 0.015909,
+          "p_value": 0.2672,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.018182,
+          "p_value": 0.45,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.013636,
+          "p_value": 1.0,
+          "gate_pass": false
+        }
+      }
+    },
+    "notable_objects": {
+      "type": "multi",
+      "metric": "sample_f1",
+      "n_classes": 15,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.580912,
+          "test_ci": {
+            "mean": 0.580912,
+            "ci_lo": 0.536424,
+            "ci_hi": 0.62358,
+            "ci_half": 0.043578
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.594279,
+          "test_ci": {
+            "mean": 0.594279,
+            "ci_lo": 0.548786,
+            "ci_hi": 0.637072,
+            "ci_half": 0.044143
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.597835,
+          "test_ci": {
+            "mean": 0.597835,
+            "ci_lo": 0.551578,
+            "ci_hi": 0.640108,
+            "ci_half": 0.044265
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.580342,
+          "test_ci": {
+            "mean": 0.580342,
+            "ci_lo": 0.534117,
+            "ci_hi": 0.62384,
+            "ci_half": 0.044862
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.580922,
+          "test_ci": {
+            "mean": 0.580922,
+            "ci_lo": 0.53604,
+            "ci_hi": 0.623141,
+            "ci_half": 0.043551
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.582205,
+          "test_ci": {
+            "mean": 0.582205,
+            "ci_lo": 0.537003,
+            "ci_hi": 0.624343,
+            "ci_half": 0.04367
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.589297,
+          "test_ci": {
+            "mean": 0.589297,
+            "ci_lo": 0.545732,
+            "ci_hi": 0.63186,
+            "ci_half": 0.043064
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.609182,
+          "test_ci": {
+            "mean": 0.609182,
+            "ci_lo": 0.564532,
+            "ci_hi": 0.65025,
+            "ci_half": 0.042859
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.013367,
+          "ci_lo": -0.038909,
+          "ci_hi": 0.012831,
+          "ci_half": 0.02587,
+          "p_value": 0.3102,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.016923,
+          "ci_lo": -0.042288,
+          "ci_hi": 0.011329,
+          "ci_half": 0.026808,
+          "p_value": 0.2182,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.00057,
+          "ci_lo": -0.021813,
+          "ci_hi": 0.025538,
+          "ci_half": 0.023676,
+          "p_value": 0.9678,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -1e-05,
+          "ci_lo": -0.026189,
+          "ci_hi": 0.025077,
+          "ci_half": 0.025633,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.001293,
+          "ci_lo": -0.02381,
+          "ci_hi": 0.022448,
+          "ci_half": 0.023129,
+          "p_value": 0.9078,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.008385,
+          "ci_lo": -0.033188,
+          "ci_hi": 0.016542,
+          "ci_half": 0.024865,
+          "p_value": 0.5082,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.02827,
+          "ci_lo": -0.060051,
+          "ci_hi": 0.000813,
+          "ci_half": 0.030432,
+          "p_value": 0.063,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.003556,
+          "ci_lo": -0.028246,
+          "ci_hi": 0.02218,
+          "ci_half": 0.025213,
+          "p_value": 0.7644,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.013937,
+          "ci_lo": -0.009512,
+          "ci_hi": 0.039311,
+          "ci_half": 0.024411,
+          "p_value": 0.2746,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013357,
+          "ci_lo": -0.015077,
+          "ci_hi": 0.039174,
+          "ci_half": 0.027125,
+          "p_value": 0.3402,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.012074,
+          "ci_lo": -0.012069,
+          "ci_hi": 0.033364,
+          "ci_half": 0.022717,
+          "p_value": 0.3068,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004982,
+          "ci_lo": -0.019965,
+          "ci_hi": 0.028668,
+          "ci_half": 0.024316,
+          "p_value": 0.6934,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.014903,
+          "ci_lo": -0.051826,
+          "ci_hi": 0.01733,
+          "ci_half": 0.034578,
+          "p_value": 0.3822,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.017493,
+          "ci_lo": -0.004226,
+          "ci_hi": 0.038833,
+          "ci_half": 0.02153,
+          "p_value": 0.1038,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.016913,
+          "ci_lo": -0.010598,
+          "ci_hi": 0.040485,
+          "ci_half": 0.025542,
+          "p_value": 0.1936,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.01563,
+          "ci_lo": -0.00771,
+          "ci_hi": 0.036242,
+          "ci_half": 0.021976,
+          "p_value": 0.1614,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.008538,
+          "ci_lo": -0.020518,
+          "ci_hi": 0.034973,
+          "ci_half": 0.027745,
+          "p_value": 0.5314,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.011347,
+          "ci_lo": -0.049079,
+          "ci_hi": 0.021243,
+          "ci_half": 0.035161,
+          "p_value": 0.521,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.00058,
+          "ci_lo": -0.030996,
+          "ci_hi": 0.025842,
+          "ci_half": 0.028419,
+          "p_value": 0.976,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.001863,
+          "ci_lo": -0.024939,
+          "ci_hi": 0.018587,
+          "ci_half": 0.021763,
+          "p_value": 0.8624,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.008955,
+          "ci_lo": -0.038119,
+          "ci_hi": 0.017438,
+          "ci_half": 0.027779,
+          "p_value": 0.519,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.02884,
+          "ci_lo": -0.066614,
+          "ci_hi": 0.002363,
+          "ci_half": 0.034488,
+          "p_value": 0.0854,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.001283,
+          "ci_lo": -0.023337,
+          "ci_hi": 0.021957,
+          "ci_half": 0.022647,
+          "p_value": 0.9106,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.008375,
+          "ci_lo": -0.030007,
+          "ci_hi": 0.015518,
+          "ci_half": 0.022763,
+          "p_value": 0.4756,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.02826,
+          "ci_lo": -0.059076,
+          "ci_hi": 0.001319,
+          "ci_half": 0.030197,
+          "p_value": 0.0624,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.007092,
+          "ci_lo": -0.030595,
+          "ci_hi": 0.016205,
+          "ci_half": 0.0234,
+          "p_value": 0.553,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.026977,
+          "ci_lo": -0.060061,
+          "ci_hi": 0.001647,
+          "ci_half": 0.030854,
+          "p_value": 0.0744,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.019885,
+          "ci_lo": -0.050319,
+          "ci_hi": 0.006662,
+          "ci_half": 0.028491,
+          "p_value": 0.1544,
+          "gate_pass": false
+        }
+      }
+    },
+    "pedestrian_vehicle_separation": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 3,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.8,
+          "test_ci": {
+            "mean": 0.8,
+            "ci_lo": 0.740909,
+            "ci_hi": 0.85,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.772727,
+          "test_ci": {
+            "mean": 0.772727,
+            "ci_lo": 0.713636,
+            "ci_hi": 0.822727,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.790909,
+          "test_ci": {
+            "mean": 0.790909,
+            "ci_lo": 0.731818,
+            "ci_hi": 0.840909,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.786364,
+          "test_ci": {
+            "mean": 0.786364,
+            "ci_lo": 0.727273,
+            "ci_hi": 0.836364,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.786364,
+          "test_ci": {
+            "mean": 0.786364,
+            "ci_lo": 0.727273,
+            "ci_hi": 0.836364,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.809091,
+          "test_ci": {
+            "mean": 0.809091,
+            "ci_lo": 0.754545,
+            "ci_hi": 0.859091,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.786364,
+          "test_ci": {
+            "mean": 0.786364,
+            "ci_lo": 0.731818,
+            "ci_hi": 0.836364,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.786364,
+          "test_ci": {
+            "mean": 0.786364,
+            "ci_lo": 0.727273,
+            "ci_hi": 0.836364,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.072727,
+          "ci_half": 0.045455,
+          "p_value": 0.2706,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.045455,
+          "ci_half": 0.034091,
+          "p_value": 0.691,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.045455,
+          "ci_half": 0.031818,
+          "p_value": 0.4942,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.054545,
+          "ci_half": 0.038636,
+          "p_value": 0.5746,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.022727,
+          "ci_half": 0.031818,
+          "p_value": 0.6788,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.05,
+          "ci_half": 0.034091,
+          "p_value": 0.5282,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.054545,
+          "ci_half": 0.038636,
+          "p_value": 0.5732,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.040909,
+          "p_value": 0.4396,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.035069,
+          "ci_half": 0.04708,
+          "p_value": 0.6206,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.031818,
+          "ci_half": 0.045455,
+          "p_value": 0.6164,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.004545,
+          "ci_half": 0.040909,
+          "p_value": 0.1104,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.031818,
+          "ci_half": 0.045455,
+          "p_value": 0.6236,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.027273,
+          "ci_half": 0.040909,
+          "p_value": 0.576,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.040909,
+          "ci_half": 0.038636,
+          "p_value": 0.8996,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.045455,
+          "ci_half": 0.040909,
+          "p_value": 0.9056,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.018182,
+          "ci_half": 0.038636,
+          "p_value": 0.4008,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.045455,
+          "ci_half": 0.040909,
+          "p_value": 0.919,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.045455,
+          "ci_half": 0.040909,
+          "p_value": 0.9116,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.009091,
+          "ci_half": 0.034091,
+          "p_value": 0.2372,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.036364,
+          "ci_half": 0.036364,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.043615,
+          "ci_hi": 0.045455,
+          "ci_half": 0.044535,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.004545,
+          "ci_half": 0.031818,
+          "p_value": 0.2022,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.036364,
+          "ci_half": 0.036364,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.059091,
+          "ci_half": 0.034091,
+          "p_value": 0.2424,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.068182,
+          "ci_half": 0.043182,
+          "p_value": 0.3484,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        }
+      }
+    },
+    "road_encroachment": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 3,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.75,
+          "test_ci": {
+            "mean": 0.75,
+            "ci_lo": 0.690909,
+            "ci_hi": 0.804545,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.754545,
+          "test_ci": {
+            "mean": 0.754545,
+            "ci_lo": 0.695455,
+            "ci_hi": 0.809091,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.759091,
+          "test_ci": {
+            "mean": 0.759091,
+            "ci_lo": 0.7,
+            "ci_hi": 0.813636,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.704545,
+          "test_ci": {
+            "mean": 0.704545,
+            "ci_lo": 0.640909,
+            "ci_hi": 0.763636,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.740909,
+          "test_ci": {
+            "mean": 0.740909,
+            "ci_lo": 0.677273,
+            "ci_hi": 0.795455,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.75,
+          "test_ci": {
+            "mean": 0.75,
+            "ci_lo": 0.690909,
+            "ci_hi": 0.804545,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.75,
+          "test_ci": {
+            "mean": 0.75,
+            "ci_lo": 0.690909,
+            "ci_hi": 0.804545,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.777273,
+          "test_ci": {
+            "mean": 0.777273,
+            "ci_lo": 0.718182,
+            "ci_hi": 0.827273,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.036364,
+          "ci_half": 0.040909,
+          "p_value": 0.916,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.031818,
+          "ci_half": 0.040909,
+          "p_value": 0.7398,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.045455,
+          "ci_lo": 0.018182,
+          "ci_hi": 0.081818,
+          "ci_half": 0.031818,
+          "p_value": 0.0058,
+          "gate_pass": true
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.05,
+          "ci_half": 0.040909,
+          "p_value": 0.7526,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.036364,
+          "ci_half": 0.036364,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.036364,
+          "ci_half": 0.036364,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.013636,
+          "ci_half": 0.043182,
+          "p_value": 0.2538,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.036364,
+          "ci_half": 0.040909,
+          "p_value": 0.903,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.05,
+          "ci_lo": 0.009091,
+          "ci_hi": 0.095455,
+          "ci_half": 0.043182,
+          "p_value": 0.0246,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.059091,
+          "ci_half": 0.045455,
+          "p_value": 0.6322,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.040909,
+          "ci_half": 0.036364,
+          "p_value": 0.9002,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.045455,
+          "ci_half": 0.038636,
+          "p_value": 0.9176,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.013636,
+          "ci_half": 0.036364,
+          "p_value": 0.268,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.054545,
+          "ci_lo": 0.018182,
+          "ci_hi": 0.1,
+          "ci_half": 0.040909,
+          "p_value": 0.0124,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.063636,
+          "ci_half": 0.045455,
+          "p_value": 0.498,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.05,
+          "ci_half": 0.040909,
+          "p_value": 0.7364,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.054545,
+          "ci_half": 0.045455,
+          "p_value": 0.7714,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.027273,
+          "ci_half": 0.047727,
+          "p_value": 0.506,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.043182,
+          "p_value": 0.124,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.045455,
+          "ci_lo": -0.086364,
+          "ci_hi": -0.009091,
+          "ci_half": 0.038636,
+          "p_value": 0.0278,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.045455,
+          "ci_lo": -0.086364,
+          "ci_hi": -0.009091,
+          "ci_half": 0.038636,
+          "p_value": 0.0276,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.072727,
+          "ci_lo": -0.122727,
+          "ci_hi": -0.027273,
+          "ci_half": 0.047727,
+          "p_value": 0.0052,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.031818,
+          "ci_half": 0.040909,
+          "p_value": 0.729,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.031818,
+          "ci_half": 0.040909,
+          "p_value": 0.745,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.043182,
+          "p_value": 0.1188,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.031818,
+          "ci_half": 0.031818,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.004545,
+          "ci_half": 0.034091,
+          "p_value": 0.1598,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.004545,
+          "ci_half": 0.034091,
+          "p_value": 0.1264,
+          "gate_pass": false
+        }
+      }
+    },
+    "road_layout": {
+      "type": "multi",
+      "metric": "sample_f1",
+      "n_classes": 8,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.61632,
+          "test_ci": {
+            "mean": 0.61632,
+            "ci_lo": 0.565449,
+            "ci_hi": 0.664848,
+            "ci_half": 0.0497
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.635714,
+          "test_ci": {
+            "mean": 0.635714,
+            "ci_lo": 0.584682,
+            "ci_hi": 0.682368,
+            "ci_half": 0.048843
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.64632,
+          "test_ci": {
+            "mean": 0.64632,
+            "ci_lo": 0.596017,
+            "ci_hi": 0.693064,
+            "ci_half": 0.048523
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.614199,
+          "test_ci": {
+            "mean": 0.614199,
+            "ci_lo": 0.564394,
+            "ci_hi": 0.661636,
+            "ci_half": 0.048621
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.630606,
+          "test_ci": {
+            "mean": 0.630606,
+            "ci_lo": 0.581265,
+            "ci_hi": 0.678764,
+            "ci_half": 0.048749
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.634805,
+          "test_ci": {
+            "mean": 0.634805,
+            "ci_lo": 0.585548,
+            "ci_hi": 0.681058,
+            "ci_half": 0.047755
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.617186,
+          "test_ci": {
+            "mean": 0.617186,
+            "ci_lo": 0.565815,
+            "ci_hi": 0.665453,
+            "ci_half": 0.049819
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.647532,
+          "test_ci": {
+            "mean": 0.647532,
+            "ci_lo": 0.595717,
+            "ci_hi": 0.693571,
+            "ci_half": 0.048927
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.019394,
+          "ci_lo": -0.047879,
+          "ci_hi": 0.008939,
+          "ci_half": 0.028409,
+          "p_value": 0.1802,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.03,
+          "ci_lo": -0.063233,
+          "ci_hi": -0.002121,
+          "ci_half": 0.030556,
+          "p_value": 0.0472,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.002121,
+          "ci_lo": -0.021818,
+          "ci_hi": 0.024697,
+          "ci_half": 0.023258,
+          "p_value": 0.859,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.014286,
+          "ci_lo": -0.044387,
+          "ci_hi": 0.012899,
+          "ci_half": 0.028643,
+          "p_value": 0.3176,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.018485,
+          "ci_lo": -0.05,
+          "ci_hi": 0.009394,
+          "ci_half": 0.029697,
+          "p_value": 0.222,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.000866,
+          "ci_lo": -0.029957,
+          "ci_hi": 0.029091,
+          "ci_half": 0.029524,
+          "p_value": 0.9462,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.031212,
+          "ci_lo": -0.060606,
+          "ci_hi": -0.003543,
+          "ci_half": 0.028532,
+          "p_value": 0.0302,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.010606,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.016818,
+          "ci_half": 0.028864,
+          "p_value": 0.4784,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.021515,
+          "ci_lo": -0.007576,
+          "ci_hi": 0.049545,
+          "ci_half": 0.028561,
+          "p_value": 0.1432,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.005108,
+          "ci_lo": -0.026667,
+          "ci_hi": 0.036818,
+          "ci_half": 0.031742,
+          "p_value": 0.7514,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.000909,
+          "ci_lo": -0.032424,
+          "ci_hi": 0.032879,
+          "ci_half": 0.032652,
+          "p_value": 0.954,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018528,
+          "ci_lo": -0.009848,
+          "ci_hi": 0.051558,
+          "ci_half": 0.030703,
+          "p_value": 0.2312,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.011818,
+          "ci_lo": -0.039438,
+          "ci_hi": 0.015,
+          "ci_half": 0.027219,
+          "p_value": 0.384,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.032121,
+          "ci_lo": 0.006061,
+          "ci_hi": 0.063894,
+          "ci_half": 0.028917,
+          "p_value": 0.0232,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.015714,
+          "ci_lo": -0.012165,
+          "ci_hi": 0.047705,
+          "ci_half": 0.029935,
+          "p_value": 0.2942,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.011515,
+          "ci_lo": -0.011667,
+          "ci_hi": 0.038485,
+          "ci_half": 0.025076,
+          "p_value": 0.3628,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.029134,
+          "ci_lo": -0.002195,
+          "ci_hi": 0.064181,
+          "ci_half": 0.033188,
+          "p_value": 0.0794,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.001212,
+          "ci_lo": -0.028865,
+          "ci_hi": 0.027814,
+          "ci_half": 0.028339,
+          "p_value": 0.9208,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.016407,
+          "ci_lo": -0.03974,
+          "ci_hi": 0.005717,
+          "ci_half": 0.022729,
+          "p_value": 0.1524,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.020606,
+          "ci_lo": -0.048211,
+          "ci_hi": 0.003939,
+          "ci_half": 0.026075,
+          "p_value": 0.1162,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.002987,
+          "ci_lo": -0.028636,
+          "ci_hi": 0.026054,
+          "ci_half": 0.027345,
+          "p_value": 0.814,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.033333,
+          "ci_lo": -0.061775,
+          "ci_hi": -0.007115,
+          "ci_half": 0.02733,
+          "p_value": 0.013,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.004199,
+          "ci_lo": -0.033333,
+          "ci_hi": 0.023074,
+          "ci_half": 0.028203,
+          "p_value": 0.778,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.01342,
+          "ci_lo": -0.014004,
+          "ci_hi": 0.043506,
+          "ci_half": 0.028755,
+          "p_value": 0.358,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.016926,
+          "ci_lo": -0.044437,
+          "ci_hi": 0.007625,
+          "ci_half": 0.026031,
+          "p_value": 0.1986,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.017619,
+          "ci_lo": -0.008701,
+          "ci_hi": 0.048485,
+          "ci_half": 0.028593,
+          "p_value": 0.2152,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.012727,
+          "ci_lo": -0.040567,
+          "ci_hi": 0.013789,
+          "ci_half": 0.027178,
+          "p_value": 0.3478,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.030346,
+          "ci_lo": -0.059173,
+          "ci_hi": -0.00368,
+          "ci_half": 0.027747,
+          "p_value": 0.028,
+          "gate_pass": false
+        }
+      }
+    },
+    "road_surface": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 8,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.718182,
+          "test_ci": {
+            "mean": 0.718182,
+            "ci_lo": 0.659091,
+            "ci_hi": 0.772727,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.75,
+          "test_ci": {
+            "mean": 0.75,
+            "ci_lo": 0.690909,
+            "ci_hi": 0.804545,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.722727,
+          "test_ci": {
+            "mean": 0.722727,
+            "ci_lo": 0.659091,
+            "ci_hi": 0.777273,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.709091,
+          "test_ci": {
+            "mean": 0.709091,
+            "ci_lo": 0.645455,
+            "ci_hi": 0.768182,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.736364,
+          "test_ci": {
+            "mean": 0.736364,
+            "ci_lo": 0.672727,
+            "ci_hi": 0.790909,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.731818,
+          "test_ci": {
+            "mean": 0.731818,
+            "ci_lo": 0.668182,
+            "ci_hi": 0.786364,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.740909,
+          "test_ci": {
+            "mean": 0.740909,
+            "ci_lo": 0.681818,
+            "ci_hi": 0.795455,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.722727,
+          "test_ci": {
+            "mean": 0.722727,
+            "ci_lo": 0.659091,
+            "ci_hi": 0.777273,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.013636,
+          "ci_half": 0.047727,
+          "p_value": 0.2308,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.05,
+          "ci_hi": 0.040909,
+          "ci_half": 0.045455,
+          "p_value": 0.9166,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.045455,
+          "ci_half": 0.036364,
+          "p_value": 0.7374,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.027273,
+          "ci_half": 0.045455,
+          "p_value": 0.494,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.036364,
+          "ci_half": 0.05,
+          "p_value": 0.6642,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.031818,
+          "ci_half": 0.054545,
+          "p_value": 0.452,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.045455,
+          "ci_half": 0.05,
+          "p_value": 0.9316,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.077273,
+          "ci_half": 0.05,
+          "p_value": 0.3158,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.040909,
+          "ci_lo": -0.004545,
+          "ci_hi": 0.090909,
+          "ci_half": 0.047727,
+          "p_value": 0.1224,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.063636,
+          "ci_half": 0.05,
+          "p_value": 0.6512,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.063636,
+          "ci_half": 0.045455,
+          "p_value": 0.4818,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.059091,
+          "ci_half": 0.05,
+          "p_value": 0.778,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.072727,
+          "ci_half": 0.045455,
+          "p_value": 0.2828,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.054545,
+          "ci_half": 0.040909,
+          "p_value": 0.588,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.036364,
+          "ci_half": 0.052273,
+          "p_value": 0.68,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.040909,
+          "ci_half": 0.05,
+          "p_value": 0.7808,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.031818,
+          "ci_half": 0.05,
+          "p_value": 0.548,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.013636,
+          "ci_half": 0.043182,
+          "p_value": 0.2816,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.027273,
+          "ci_half": 0.052273,
+          "p_value": 0.4436,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.086364,
+          "ci_hi": 0.022727,
+          "ci_half": 0.054545,
+          "p_value": 0.2824,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.031818,
+          "ci_half": 0.047727,
+          "p_value": 0.6588,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.05,
+          "ci_half": 0.045455,
+          "p_value": 0.9308,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.05,
+          "ci_hi": 0.040909,
+          "ci_half": 0.045455,
+          "p_value": 0.915,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.059091,
+          "ci_half": 0.045455,
+          "p_value": 0.6348,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.031818,
+          "ci_half": 0.040909,
+          "p_value": 0.739,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.05,
+          "ci_half": 0.040909,
+          "p_value": 0.7308,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.059091,
+          "ci_half": 0.038636,
+          "p_value": 0.4028,
+          "gate_pass": false
+        }
+      }
+    },
+    "scene_type": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 13,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.477273,
+          "test_ci": {
+            "mean": 0.477273,
+            "ci_lo": 0.413636,
+            "ci_hi": 0.540909,
+            "ci_half": 0.063636
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.55,
+          "test_ci": {
+            "mean": 0.55,
+            "ci_lo": 0.486364,
+            "ci_hi": 0.613636,
+            "ci_half": 0.063636
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.590909,
+          "test_ci": {
+            "mean": 0.590909,
+            "ci_lo": 0.522727,
+            "ci_hi": 0.654545,
+            "ci_half": 0.065909
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.527273,
+          "test_ci": {
+            "mean": 0.527273,
+            "ci_lo": 0.459091,
+            "ci_hi": 0.595455,
+            "ci_half": 0.068182
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.559091,
+          "test_ci": {
+            "mean": 0.559091,
+            "ci_lo": 0.495455,
+            "ci_hi": 0.627273,
+            "ci_half": 0.065909
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.586364,
+          "test_ci": {
+            "mean": 0.586364,
+            "ci_lo": 0.518182,
+            "ci_hi": 0.65,
+            "ci_half": 0.065909
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.572727,
+          "test_ci": {
+            "mean": 0.572727,
+            "ci_lo": 0.504545,
+            "ci_hi": 0.636364,
+            "ci_half": 0.065909
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.568182,
+          "test_ci": {
+            "mean": 0.568182,
+            "ci_lo": 0.504545,
+            "ci_hi": 0.631818,
+            "ci_half": 0.063636
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.072727,
+          "ci_lo": -0.131818,
+          "ci_hi": -0.013636,
+          "ci_half": 0.059091,
+          "p_value": 0.0178,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.113636,
+          "ci_lo": -0.181818,
+          "ci_hi": -0.045455,
+          "ci_half": 0.068182,
+          "p_value": 0.002,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.05,
+          "ci_lo": -0.109091,
+          "ci_hi": 0.009091,
+          "ci_half": 0.059091,
+          "p_value": 0.114,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.081818,
+          "ci_lo": -0.140909,
+          "ci_hi": -0.022727,
+          "ci_half": 0.059091,
+          "p_value": 0.0072,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.109091,
+          "ci_lo": -0.172727,
+          "ci_hi": -0.05,
+          "ci_half": 0.061364,
+          "p_value": 0.0006,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.095455,
+          "ci_lo": -0.159091,
+          "ci_hi": -0.036364,
+          "ci_half": 0.061364,
+          "p_value": 0.0022,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.090909,
+          "ci_lo": -0.154545,
+          "ci_hi": -0.027273,
+          "ci_half": 0.063636,
+          "p_value": 0.004,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.104545,
+          "ci_hi": 0.022727,
+          "ci_half": 0.063636,
+          "p_value": 0.2506,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.086364,
+          "ci_half": 0.063636,
+          "p_value": 0.509,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.05,
+          "ci_half": 0.059091,
+          "p_value": 0.829,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.1,
+          "ci_hi": 0.022727,
+          "ci_half": 0.061364,
+          "p_value": 0.297,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.036364,
+          "ci_half": 0.059091,
+          "p_value": 0.5028,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.045455,
+          "ci_half": 0.063636,
+          "p_value": 0.6366,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.063636,
+          "ci_lo": -0.004545,
+          "ci_hi": 0.133381,
+          "ci_half": 0.068963,
+          "p_value": 0.084,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.031818,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.090909,
+          "ci_half": 0.059091,
+          "p_value": 0.3288,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.063636,
+          "ci_half": 0.061364,
+          "p_value": 0.9232,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.077273,
+          "ci_half": 0.059091,
+          "p_value": 0.6008,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.077273,
+          "ci_half": 0.054545,
+          "p_value": 0.457,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.1,
+          "ci_hi": 0.036364,
+          "ci_half": 0.068182,
+          "p_value": 0.3858,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.059091,
+          "ci_lo": -0.122727,
+          "ci_hi": 0.004545,
+          "ci_half": 0.063636,
+          "p_value": 0.0804,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.045455,
+          "ci_lo": -0.113636,
+          "ci_hi": 0.022727,
+          "ci_half": 0.068182,
+          "p_value": 0.2146,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.104545,
+          "ci_hi": 0.022727,
+          "ci_half": 0.063636,
+          "p_value": 0.2214,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.086364,
+          "ci_hi": 0.031818,
+          "ci_half": 0.059091,
+          "p_value": 0.404,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.036364,
+          "ci_half": 0.05,
+          "p_value": 0.6588,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.040909,
+          "ci_half": 0.05,
+          "p_value": 0.7778,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.068182,
+          "ci_half": 0.054545,
+          "p_value": 0.693,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.077273,
+          "ci_half": 0.059091,
+          "p_value": 0.6296,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.059091,
+          "ci_half": 0.052273,
+          "p_value": 0.9526,
+          "gate_pass": false
+        }
+      }
+    },
+    "time_of_day": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 2,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.986364,
+          "test_ci": {
+            "mean": 0.986364,
+            "ci_lo": 0.963636,
+            "ci_hi": 0.995455,
+            "ci_half": 0.015909
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.959091,
+          "test_ci": {
+            "mean": 0.959091,
+            "ci_lo": 0.927273,
+            "ci_hi": 0.981818,
+            "ci_half": 0.027273
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.977273,
+          "test_ci": {
+            "mean": 0.977273,
+            "ci_lo": 0.95,
+            "ci_hi": 0.990909,
+            "ci_half": 0.020455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.972727,
+          "test_ci": {
+            "mean": 0.972727,
+            "ci_lo": 0.945455,
+            "ci_hi": 0.990909,
+            "ci_half": 0.022727
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.972727,
+          "test_ci": {
+            "mean": 0.972727,
+            "ci_lo": 0.944764,
+            "ci_hi": 0.990909,
+            "ci_half": 0.023073
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.972727,
+          "test_ci": {
+            "mean": 0.972727,
+            "ci_lo": 0.940909,
+            "ci_hi": 0.990909,
+            "ci_half": 0.025
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.968182,
+          "test_ci": {
+            "mean": 0.968182,
+            "ci_lo": 0.936364,
+            "ci_hi": 0.986364,
+            "ci_half": 0.025
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.972727,
+          "test_ci": {
+            "mean": 0.972727,
+            "ci_lo": 0.945455,
+            "ci_hi": 0.990909,
+            "ci_half": 0.022727
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.054545,
+          "ci_half": 0.025,
+          "p_value": 0.0334,
+          "gate_pass": true
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.031818,
+          "ci_half": 0.020455,
+          "p_value": 0.5406,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.040909,
+          "ci_half": 0.018182,
+          "p_value": 0.0904,
+          "gate_pass": true
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.040909,
+          "ci_half": 0.025,
+          "p_value": 0.3294,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.040909,
+          "ci_half": 0.018182,
+          "p_value": 0.0918,
+          "gate_pass": true
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": 0.0,
+          "ci_hi": 0.045455,
+          "ci_half": 0.022727,
+          "p_value": 0.1236,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.004545,
+          "ci_hi": 0.036364,
+          "ci_half": 0.020455,
+          "p_value": 0.2386,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.004545,
+          "ci_half": 0.025,
+          "p_value": 0.2094,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.009091,
+          "ci_half": 0.025,
+          "p_value": 0.3238,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.036364,
+          "ci_hi": -0.004545,
+          "ci_half": 0.015909,
+          "p_value": 0.1008,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.004545,
+          "ci_half": 0.020455,
+          "p_value": 0.2448,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.018182,
+          "p_value": 0.4448,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.009091,
+          "ci_half": 0.025,
+          "p_value": 0.324,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.031818,
+          "ci_half": 0.027273,
+          "p_value": 0.8746,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.027273,
+          "ci_half": 0.020455,
+          "p_value": 0.8284,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.027273,
+          "ci_half": 0.022727,
+          "p_value": 0.8486,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.036364,
+          "ci_half": 0.025,
+          "p_value": 0.5936,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.027273,
+          "ci_half": 0.020455,
+          "p_value": 0.8388,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.022727,
+          "ci_half": 0.022727,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.018182,
+          "ci_half": 0.018182,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.022727,
+          "ci_half": 0.018182,
+          "p_value": 0.8072,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.022727,
+          "ci_half": 0.022727,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.018182,
+          "ci_half": 0.018182,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.015909,
+          "p_value": 0.7996,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.018182,
+          "ci_half": 0.018182,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.015909,
+          "p_value": 0.7928,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.018182,
+          "ci_half": 0.018182,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.013636,
+          "ci_half": 0.020455,
+          "p_value": 0.821,
+          "gate_pass": false
+        }
+      }
+    },
+    "traffic_density": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 3,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.790909,
+          "test_ci": {
+            "mean": 0.790909,
+            "ci_lo": 0.731818,
+            "ci_hi": 0.840909,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.790909,
+          "test_ci": {
+            "mean": 0.790909,
+            "ci_lo": 0.731818,
+            "ci_hi": 0.840909,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.790909,
+          "test_ci": {
+            "mean": 0.790909,
+            "ci_lo": 0.731818,
+            "ci_hi": 0.83675,
+            "ci_half": 0.052466
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.772727,
+          "test_ci": {
+            "mean": 0.772727,
+            "ci_lo": 0.709091,
+            "ci_hi": 0.822727,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.790909,
+          "test_ci": {
+            "mean": 0.790909,
+            "ci_lo": 0.731818,
+            "ci_hi": 0.840909,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.772727,
+          "test_ci": {
+            "mean": 0.772727,
+            "ci_lo": 0.713636,
+            "ci_hi": 0.822727,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.772727,
+          "test_ci": {
+            "mean": 0.772727,
+            "ci_lo": 0.713636,
+            "ci_hi": 0.822727,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.8,
+          "test_ci": {
+            "mean": 0.8,
+            "ci_lo": 0.745455,
+            "ci_hi": 0.85,
+            "ci_half": 0.052273
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.063636,
+          "ci_half": 0.043182,
+          "p_value": 0.4742,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.054545,
+          "ci_half": 0.036364,
+          "p_value": 0.3946,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.063636,
+          "ci_half": 0.045455,
+          "p_value": 0.493,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.036364,
+          "ci_half": 0.045455,
+          "p_value": 0.7712,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.068182,
+          "ci_half": 0.05,
+          "p_value": 0.5284,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.05,
+          "ci_hi": 0.045455,
+          "ci_half": 0.047727,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.063636,
+          "ci_half": 0.043182,
+          "p_value": 0.4562,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.063636,
+          "ci_half": 0.045455,
+          "p_value": 0.4938,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.040909,
+          "ci_half": 0.05,
+          "p_value": 0.7818,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.068182,
+          "ci_half": 0.05,
+          "p_value": 0.5314,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.05,
+          "ci_half": 0.047727,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.054545,
+          "ci_half": 0.034091,
+          "p_value": 0.3496,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.063636,
+          "ci_half": 0.045455,
+          "p_value": 0.4802,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.040909,
+          "ci_half": 0.05,
+          "p_value": 0.7722,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.027273,
+          "ci_half": 0.047727,
+          "p_value": 0.5074,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.009091,
+          "ci_half": 0.038636,
+          "p_value": 0.212,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.063636,
+          "ci_half": 0.045455,
+          "p_value": 0.4776,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.054545,
+          "ci_half": 0.036364,
+          "p_value": 0.414,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.027273,
+          "ci_half": 0.038636,
+          "p_value": 0.7266,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.013636,
+          "ci_half": 0.043182,
+          "p_value": 0.2558,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.009091,
+          "ci_half": 0.038636,
+          "p_value": 0.2206,
+          "gate_pass": false
+        }
+      }
+    },
+    "traffic_mix": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 4,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.7,
+          "test_ci": {
+            "mean": 0.7,
+            "ci_lo": 0.636364,
+            "ci_hi": 0.759091,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.704545,
+          "test_ci": {
+            "mean": 0.704545,
+            "ci_lo": 0.640909,
+            "ci_hi": 0.763636,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.731818,
+          "test_ci": {
+            "mean": 0.731818,
+            "ci_lo": 0.668182,
+            "ci_hi": 0.786364,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.709091,
+          "test_ci": {
+            "mean": 0.709091,
+            "ci_lo": 0.645455,
+            "ci_hi": 0.763636,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.7,
+          "test_ci": {
+            "mean": 0.7,
+            "ci_lo": 0.636364,
+            "ci_hi": 0.759091,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.727273,
+          "test_ci": {
+            "mean": 0.727273,
+            "ci_lo": 0.663636,
+            "ci_hi": 0.781818,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.736364,
+          "test_ci": {
+            "mean": 0.736364,
+            "ci_lo": 0.677273,
+            "ci_hi": 0.790909,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.7,
+          "test_ci": {
+            "mean": 0.7,
+            "ci_lo": 0.636364,
+            "ci_hi": 0.759091,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.059091,
+          "ci_half": 0.063636,
+          "p_value": 0.944,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.095455,
+          "ci_hi": 0.031818,
+          "ci_half": 0.063636,
+          "p_value": 0.358,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.036364,
+          "ci_half": 0.045455,
+          "p_value": 0.758,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.063636,
+          "ci_half": 0.063636,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.090909,
+          "ci_hi": 0.036364,
+          "ci_half": 0.063636,
+          "p_value": 0.435,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.104545,
+          "ci_hi": 0.031818,
+          "ci_half": 0.068182,
+          "p_value": 0.3264,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.059091,
+          "ci_half": 0.059091,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.022727,
+          "ci_half": 0.05,
+          "p_value": 0.3318,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.054545,
+          "ci_half": 0.061364,
+          "p_value": 0.9442,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.054545,
+          "ci_half": 0.05,
+          "p_value": 0.9334,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.027273,
+          "ci_half": 0.05,
+          "p_value": 0.4092,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.086364,
+          "ci_hi": 0.022727,
+          "ci_half": 0.054545,
+          "p_value": 0.2858,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.05,
+          "ci_half": 0.045455,
+          "p_value": 0.9208,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.081818,
+          "ci_half": 0.059091,
+          "p_value": 0.5032,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.031818,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.081818,
+          "ci_half": 0.05,
+          "p_value": 0.2372,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.05,
+          "ci_hi": 0.059091,
+          "ci_half": 0.054545,
+          "p_value": 0.944,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.054545,
+          "ci_half": 0.059091,
+          "p_value": 0.9408,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.031818,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.081818,
+          "ci_half": 0.05,
+          "p_value": 0.2522,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.068182,
+          "ci_half": 0.059091,
+          "p_value": 0.8124,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.036364,
+          "ci_half": 0.054545,
+          "p_value": 0.5734,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.090909,
+          "ci_hi": 0.036364,
+          "ci_half": 0.063636,
+          "p_value": 0.4528,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.063636,
+          "ci_half": 0.054545,
+          "p_value": 0.7976,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.027273,
+          "ci_half": 0.054545,
+          "p_value": 0.3606,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.095455,
+          "ci_hi": 0.018182,
+          "ci_half": 0.056818,
+          "p_value": 0.2342,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.045455,
+          "ci_half": 0.045455,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.045455,
+          "ci_half": 0.054545,
+          "p_value": 0.8176,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.077273,
+          "ci_half": 0.047727,
+          "p_value": 0.2942,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.036364,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.1,
+          "ci_half": 0.061364,
+          "p_value": 0.2614,
+          "gate_pass": false
+        }
+      }
+    },
+    "vegetation": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 4,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.740909,
+          "test_ci": {
+            "mean": 0.740909,
+            "ci_lo": 0.677273,
+            "ci_hi": 0.795455,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.754545,
+          "test_ci": {
+            "mean": 0.754545,
+            "ci_lo": 0.695455,
+            "ci_hi": 0.809091,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.722727,
+          "test_ci": {
+            "mean": 0.722727,
+            "ci_lo": 0.659091,
+            "ci_hi": 0.781818,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.709091,
+          "test_ci": {
+            "mean": 0.709091,
+            "ci_lo": 0.645455,
+            "ci_hi": 0.763636,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.75,
+          "test_ci": {
+            "mean": 0.75,
+            "ci_lo": 0.690909,
+            "ci_hi": 0.804545,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.686364,
+          "test_ci": {
+            "mean": 0.686364,
+            "ci_lo": 0.622727,
+            "ci_hi": 0.745455,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.745455,
+          "test_ci": {
+            "mean": 0.745455,
+            "ci_lo": 0.681818,
+            "ci_hi": 0.8,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.763636,
+          "test_ci": {
+            "mean": 0.763636,
+            "ci_lo": 0.704545,
+            "ci_hi": 0.813636,
+            "ci_half": 0.054545
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.040909,
+          "ci_half": 0.054545,
+          "p_value": 0.6772,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.077273,
+          "ci_half": 0.059091,
+          "p_value": 0.5986,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.031818,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.090909,
+          "ci_half": 0.056818,
+          "p_value": 0.3066,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.036364,
+          "ci_half": 0.045455,
+          "p_value": 0.7706,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.054545,
+          "ci_lo": 0.0,
+          "ci_hi": 0.109091,
+          "ci_half": 0.054545,
+          "p_value": 0.058,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.045455,
+          "ci_half": 0.05,
+          "p_value": 0.9264,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.027273,
+          "ci_half": 0.05,
+          "p_value": 0.4298,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.031818,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.086364,
+          "ci_half": 0.054545,
+          "p_value": 0.2858,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.045455,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.109091,
+          "ci_half": 0.063636,
+          "p_value": 0.1924,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.054545,
+          "ci_half": 0.05,
+          "p_value": 0.926,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.068182,
+          "ci_lo": 0.013636,
+          "ci_hi": 0.127273,
+          "ci_half": 0.056818,
+          "p_value": 0.0214,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.059091,
+          "ci_half": 0.05,
+          "p_value": 0.7984,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.045455,
+          "ci_half": 0.054545,
+          "p_value": 0.8042,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.081818,
+          "ci_half": 0.068182,
+          "p_value": 0.7576,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.027273,
+          "ci_half": 0.054545,
+          "p_value": 0.3644,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.036364,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.104545,
+          "ci_half": 0.065909,
+          "p_value": 0.3138,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.036364,
+          "ci_half": 0.059091,
+          "p_value": 0.4916,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.095455,
+          "ci_hi": 0.013636,
+          "ci_half": 0.054545,
+          "p_value": 0.171,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.1,
+          "ci_hi": 0.018182,
+          "ci_half": 0.059091,
+          "p_value": 0.2108,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.086364,
+          "ci_half": 0.065909,
+          "p_value": 0.5396,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.1,
+          "ci_hi": 0.027273,
+          "ci_half": 0.063636,
+          "p_value": 0.3016,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.054545,
+          "ci_lo": -0.118182,
+          "ci_hi": 0.013636,
+          "ci_half": 0.065909,
+          "p_value": 0.1094,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.063636,
+          "ci_lo": 0.013636,
+          "ci_hi": 0.118182,
+          "ci_half": 0.052273,
+          "p_value": 0.0164,
+          "gate_pass": true
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.05,
+          "ci_half": 0.045455,
+          "p_value": 0.9172,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.027273,
+          "ci_half": 0.040909,
+          "p_value": 0.583,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.059091,
+          "ci_lo": -0.104545,
+          "ci_hi": -0.013636,
+          "ci_half": 0.045455,
+          "p_value": 0.012,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.077273,
+          "ci_lo": -0.131818,
+          "ci_hi": -0.027273,
+          "ci_half": 0.052273,
+          "p_value": 0.0024,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.027273,
+          "ci_half": 0.047727,
+          "p_value": 0.494,
+          "gate_pass": false
+        }
+      }
+    },
+    "video_quality": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 3,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.727273,
+          "test_ci": {
+            "mean": 0.727273,
+            "ci_lo": 0.663636,
+            "ci_hi": 0.781818,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.7,
+          "test_ci": {
+            "mean": 0.7,
+            "ci_lo": 0.636364,
+            "ci_hi": 0.754545,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.731818,
+          "test_ci": {
+            "mean": 0.731818,
+            "ci_lo": 0.668182,
+            "ci_hi": 0.786364,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.736364,
+          "test_ci": {
+            "mean": 0.736364,
+            "ci_lo": 0.672727,
+            "ci_hi": 0.790909,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.736364,
+          "test_ci": {
+            "mean": 0.736364,
+            "ci_lo": 0.677273,
+            "ci_hi": 0.790909,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.740909,
+          "test_ci": {
+            "mean": 0.740909,
+            "ci_lo": 0.681818,
+            "ci_hi": 0.795455,
+            "ci_half": 0.056818
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.686364,
+          "test_ci": {
+            "mean": 0.686364,
+            "ci_lo": 0.622727,
+            "ci_hi": 0.745455,
+            "ci_half": 0.061364
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.722727,
+          "test_ci": {
+            "mean": 0.722727,
+            "ci_lo": 0.659091,
+            "ci_hi": 0.777273,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.077273,
+          "ci_half": 0.047727,
+          "p_value": 0.2916,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.036364,
+          "ci_half": 0.040909,
+          "p_value": 0.9076,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.027273,
+          "ci_half": 0.038636,
+          "p_value": 0.7306,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.027273,
+          "ci_half": 0.036364,
+          "p_value": 0.7156,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.031818,
+          "ci_half": 0.043182,
+          "p_value": 0.5942,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.040909,
+          "ci_lo": 0.0,
+          "ci_hi": 0.081818,
+          "ci_half": 0.040909,
+          "p_value": 0.0602,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.036364,
+          "ci_half": 0.031818,
+          "p_value": 0.8758,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.004545,
+          "ci_half": 0.038636,
+          "p_value": 0.1266,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.004545,
+          "ci_half": 0.043182,
+          "p_value": 0.1064,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.081818,
+          "ci_hi": 0.009091,
+          "ci_half": 0.045455,
+          "p_value": 0.132,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.086364,
+          "ci_hi": 0.0,
+          "ci_half": 0.043182,
+          "p_value": 0.0842,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.031818,
+          "ci_hi": 0.059091,
+          "ci_half": 0.045455,
+          "p_value": 0.6118,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.068182,
+          "ci_hi": 0.018182,
+          "ci_half": 0.043182,
+          "p_value": 0.3442,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.031818,
+          "ci_half": 0.036364,
+          "p_value": 0.9148,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.045455,
+          "ci_hi": 0.036364,
+          "ci_half": 0.040909,
+          "p_value": 0.9096,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.031818,
+          "ci_half": 0.040909,
+          "p_value": 0.7514,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.045455,
+          "ci_lo": 0.009091,
+          "ci_hi": 0.086364,
+          "ci_half": 0.038636,
+          "p_value": 0.0286,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.009091,
+          "ci_lo": -0.027273,
+          "ci_hi": 0.045455,
+          "ci_half": 0.036364,
+          "p_value": 0.71,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.040909,
+          "ci_half": 0.040909,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.05,
+          "ci_hi": 0.040909,
+          "ci_half": 0.045455,
+          "p_value": 0.921,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.05,
+          "ci_lo": 0.013636,
+          "ci_hi": 0.095455,
+          "ci_half": 0.040909,
+          "p_value": 0.017,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.054545,
+          "ci_half": 0.038636,
+          "p_value": 0.5794,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.031818,
+          "ci_half": 0.036364,
+          "p_value": 0.9016,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.05,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.095455,
+          "ci_half": 0.045455,
+          "p_value": 0.0384,
+          "gate_pass": true
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.013636,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.045455,
+          "ci_half": 0.031818,
+          "p_value": 0.4844,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": 0.054545,
+          "ci_lo": 0.004545,
+          "ci_hi": 0.104545,
+          "ci_half": 0.05,
+          "p_value": 0.0406,
+          "gate_pass": true
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.022727,
+          "ci_hi": 0.063636,
+          "ci_half": 0.043182,
+          "p_value": 0.468,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.036364,
+          "ci_lo": -0.077273,
+          "ci_hi": 0.0,
+          "ci_half": 0.038636,
+          "p_value": 0.085,
+          "gate_pass": false
+        }
+      }
+    },
+    "weather": {
+      "type": "single",
+      "metric": "top1_acc",
+      "n_classes": 5,
+      "by_encoder": {
+        "vjepa_2_1_frozen": {
+          "test_mean": 0.722727,
+          "test_ci": {
+            "mean": 0.722727,
+            "ci_lo": 0.659091,
+            "ci_hi": 0.777273,
+            "ci_half": 0.059091
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_2X_encoder": {
+          "test_mean": 0.859091,
+          "test_ci": {
+            "mean": 0.859091,
+            "ci_lo": 0.809091,
+            "ci_hi": 0.9,
+            "ci_half": 0.045455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_encoder": {
+          "test_mean": 0.818182,
+          "test_ci": {
+            "mean": 0.818182,
+            "ci_lo": 0.763636,
+            "ci_hi": 0.863636,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_pretrain_head": {
+          "test_mean": 0.831818,
+          "test_ci": {
+            "mean": 0.831818,
+            "ci_lo": 0.777273,
+            "ci_hi": 0.877273,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder": {
+          "test_mean": 0.840909,
+          "test_ci": {
+            "mean": 0.840909,
+            "ci_lo": 0.790909,
+            "ci_hi": 0.886364,
+            "ci_half": 0.047727
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_3stage_DI_head": {
+          "test_mean": 0.859091,
+          "test_ci": {
+            "mean": 0.859091,
+            "ci_lo": 0.809091,
+            "ci_hi": 0.9,
+            "ci_half": 0.045455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_encoder": {
+          "test_mean": 0.863636,
+          "test_ci": {
+            "mean": 0.863636,
+            "ci_lo": 0.813636,
+            "ci_hi": 0.904545,
+            "ci_half": 0.045455
+          },
+          "n_test": 220
+        },
+        "vjepa_2_1_surgical_noDI_head": {
+          "test_mean": 0.836364,
+          "test_ci": {
+            "mean": 0.836364,
+            "ci_lo": 0.781818,
+            "ci_hi": 0.881818,
+            "ci_half": 0.05
+          },
+          "n_test": 220
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+          "n_shared": 220,
+          "delta": -0.136364,
+          "ci_lo": -0.190909,
+          "ci_hi": -0.090909,
+          "ci_half": 0.05,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": -0.095455,
+          "ci_lo": -0.140909,
+          "ci_hi": -0.059091,
+          "ci_half": 0.040909,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.109091,
+          "ci_lo": -0.159091,
+          "ci_hi": -0.068182,
+          "ci_half": 0.045455,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.118182,
+          "ci_lo": -0.172727,
+          "ci_hi": -0.068182,
+          "ci_half": 0.052273,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.136364,
+          "ci_lo": -0.190909,
+          "ci_hi": -0.090909,
+          "ci_half": 0.05,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.140909,
+          "ci_lo": -0.195455,
+          "ci_hi": -0.090909,
+          "ci_half": 0.052273,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.113636,
+          "ci_lo": -0.168182,
+          "ci_hi": -0.063636,
+          "ci_half": 0.052273,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+          "n_shared": 220,
+          "delta": 0.040909,
+          "ci_lo": 0.009091,
+          "ci_hi": 0.077273,
+          "ci_half": 0.034091,
+          "p_value": 0.0184,
+          "gate_pass": true
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": 0.0,
+          "ci_hi": 0.063066,
+          "ci_half": 0.031533,
+          "p_value": 0.103,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": 0.018182,
+          "ci_lo": -0.013636,
+          "ci_hi": 0.054545,
+          "ci_half": 0.034091,
+          "p_value": 0.3886,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": 0.0,
+          "ci_lo": -0.036364,
+          "ci_hi": 0.036364,
+          "ci_half": 0.036364,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.031818,
+          "ci_half": 0.036364,
+          "p_value": 0.8886,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.059091,
+          "ci_half": 0.034091,
+          "p_value": 0.2108,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+          "n_shared": 220,
+          "delta": -0.013636,
+          "ci_lo": -0.05,
+          "ci_hi": 0.022727,
+          "ci_half": 0.036364,
+          "p_value": 0.5542,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.013636,
+          "ci_half": 0.038636,
+          "p_value": 0.2892,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.040909,
+          "ci_lo": -0.086984,
+          "ci_hi": 0.004545,
+          "ci_half": 0.045765,
+          "p_value": 0.0906,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.045455,
+          "ci_lo": -0.090909,
+          "ci_hi": -0.004545,
+          "ci_half": 0.043182,
+          "p_value": 0.041,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.059091,
+          "ci_hi": 0.022727,
+          "ci_half": 0.040909,
+          "p_value": 0.4494,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+          "n_shared": 220,
+          "delta": -0.009091,
+          "ci_lo": -0.05,
+          "ci_hi": 0.031818,
+          "ci_half": 0.040909,
+          "p_value": 0.7192,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.027273,
+          "ci_lo": -0.063636,
+          "ci_hi": 0.004545,
+          "ci_half": 0.034091,
+          "p_value": 0.1604,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.031818,
+          "ci_lo": -0.072727,
+          "ci_hi": 0.009091,
+          "ci_half": 0.040909,
+          "p_value": 0.1536,
+          "gate_pass": false
+        },
+        "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.031818,
+          "ci_half": 0.036364,
+          "p_value": 0.8816,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+          "n_shared": 220,
+          "delta": -0.018182,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.013636,
+          "ci_half": 0.034091,
+          "p_value": 0.3806,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.022727,
+          "ci_lo": -0.054545,
+          "ci_hi": 0.004545,
+          "ci_half": 0.029545,
+          "p_value": 0.1662,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.004545,
+          "ci_lo": -0.018182,
+          "ci_hi": 0.027273,
+          "ci_half": 0.022727,
+          "p_value": 0.8508,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 220,
+          "delta": -0.004545,
+          "ci_lo": -0.040909,
+          "ci_hi": 0.031818,
+          "ci_half": 0.036364,
+          "p_value": 0.8926,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.022727,
+          "ci_lo": -0.009091,
+          "ci_hi": 0.059091,
+          "ci_half": 0.034091,
+          "p_value": 0.2334,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 220,
+          "delta": 0.027273,
+          "ci_lo": 0.0,
+          "ci_hi": 0.059091,
+          "ci_half": 0.029545,
+          "p_value": 0.1056,
+          "gate_pass": false
+        }
+      }
+    }
+  }
+}

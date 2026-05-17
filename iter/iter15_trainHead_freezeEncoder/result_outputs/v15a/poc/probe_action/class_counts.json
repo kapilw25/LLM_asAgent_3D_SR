@@ -1,0 +1,72 @@
+{
+  "fast__downward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "fast__upward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "medium__downward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "medium__leftward": {
+    "train": 13,
+    "val": 2,
+    "test": 2
+  },
+  "medium__rightward": {
+    "train": 42,
+    "val": 8,
+    "test": 8
+  },
+  "medium__upward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "slow__downward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "slow__leftward": {
+    "train": 62,
+    "val": 12,
+    "test": 12
+  },
+  "slow__rightward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "slow__upward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "still__downward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "still__leftward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "still__rightward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  },
+  "still__upward": {
+    "train": 89,
+    "val": 18,
+    "test": 18
+  }
+}
