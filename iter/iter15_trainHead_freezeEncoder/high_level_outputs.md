@@ -498,9 +498,9 @@ tiers: 1️⃣ winner · 2️⃣ recoverable drops · 3️⃣ load-bearing drops
 
 ---
 
-## 📊 iter15 POC 7-Cell Paired-Δ — Head-only vs Encoder-update (🏃 LIVE 2026-05-17 15:54 UTC — eval running, 6/7 cells done)
+## 📊 iter15 POC 7-Cell Paired-Δ — Head-only vs Encoder-update (✅ COMPLETE 2026-05-17 16:14 UTC · 89 min · N=220 BCa)
 
-> Source: 7 training logs `logs/iter15_poc_*_20260517_*.log` + running eval `logs/iter15_post_poc_eval_20260517_144506.log` + cached `outputs/poc/probe_{action,motion_cos,future_mse,taxonomy}/<encoder>/test_metrics.json`.
+> Source: eval `logs/iter15_post_poc_eval_20260517_144506.log` + JSONs under `outputs/poc/probe_*/`.
 > Δ tests defined in `configs/eval/paired_deltas.yaml` (single source of truth, runtime-loaded via `src/utils/config.get_paired_deltas`).
 
 ### 🔬 Sweep matrix — 7 trained cells + 1 frozen anchor (paired-Δ design)
@@ -542,23 +542,24 @@ tiers: 1️⃣ winner · 2️⃣ recoverable drops · 3️⃣ load-bearing drops
 ### 🏃 Eval-side test metrics — probe_action/cos/mse/taxonomy (8 encoders = 7 trained + frozen anchor)
 
 ```
-┌────────────────────────┬───────────────┬──────────┬─────────────────┬──────────┬──────────────────────────────────┐
-│ 🆔 Encoder              │ 🎯 top1 ± CI   │ 🧭 m_cos │ 🔮 fMSE μ±σ    │ 📋 tax15 │ 📜 eval status                   │
-│                         │  (N=220 BCa)   │  (score) │  (per-clip)     │ (mean)   │                                  │
-├────────────────────────┼───────────────┼──────────┼─────────────────┼──────────┼──────────────────────────────────┤
-│ 0 🧊 frozen anchor      │ 0.3091 ± .061 │ 0.0144   │ 0.5564 ± .019   │ 0.7441   │ ✅ all cached                    │
-│ 1 🦣 pretrain_encoder   │ 0.3318 ± .061 │ 0.0767   │ 0.5412 ± .017   │ 0.7611   │ ✅ all cached                    │
-│ 2 🐘 pretrain_2X_enc    │ 0.3864 ± .064 │ 0.0801   │ 0.5514 ± .017   │ 0.7602   │ ✅ all fresh from current eval   │
-│ 3 🔧 surg_3stage_DI_enc │ 0.3409 ± .061 │ 0.0846   │ 0.5140 ± .022   │ 0.7617   │ 🟡 cached (encoder lost; vals    │
-│                         │               │          │                 │          │   are pre-deletion stale-valid)  │
-│ 4 🪒 surg_noDI_enc      │ 0.3500 ± .064 │ 0.0887   │ 0.5108 ± .023   │ 0.7595   │ ✅ all fresh from current eval   │
-│ 5 🧊🧠 pretrain_head    │ 0.3364 ± .062 │ 0.0150   │ 0.5577 ± .020   │ 0.7493   │ ✅ DONE                          │
-│ 6 🔧🧠 surg_3st_DI_head │ 0.3182 ± .061 │ 0.0772   │ 0.5411 ± .015   │ 0.7639   │ ✅ DONE                          │
-│ 7 🪒🧠 surg_noDI_head   │ ⏳ pend       │ ⏳ pend   │ ⏳ pend          │ ⏳ pend  │ 🟡 Stage 3 lazy-extract 14%      │
-└────────────────────────┴───────────────┴──────────┴─────────────────┴──────────┴──────────────────────────────────┘
-👉 CI half-width ≈ ±6 pp at POC N=220 → only Δ ≥ 5 pp escape the noise floor (per memory:no-fake-improvement-markers)
-👉 🟡 = cached from a prior eval run (values valid for the trained-encoder state at that time)
-👉 ⏳ = not yet eval'd in current run; the live eval 144506 is on encoder 5/7 (pretrain_head Stage 3 lazy-extract)
+┌────────────────────────┬──────────────────┬──────────────────┬──────────────────┬──────────────────┬─────────────┐
+│ 🆔 Encoder              │ 🎯 top1 ± CI  ↑  │ 🧭 m_cos ± CI ↑  │ 🔮 fL1 μ ± σ  ↓  │ 🌀 ma_L1 μ ± σ↓  │ 📋 tax15  ↑ │
+│                         │  N=220 BCa       │  intra−inter     │  per-clip MSE    │  per-clip aux    │  15-dim     │
+├────────────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────┤
+│ 0 🧊 frozen anchor      │ 0.3091 ± .061 🥉 │ 0.0144 ± .004 🥉 │ 0.5564 ± .019    │ n/a              │ 0.7441 🥉   │
+│ 1 🦣 pretrain_encoder   │ 0.3318 ± .061    │ 0.0767 ± .009    │ 0.5412 ± .017    │ 0.3151 ± .105    │ 0.7611      │
+│ 2 🐘 pretrain_2X_enc    │ 0.3864 ± .064 🥇 │ 0.0801 ± .008    │ 0.5514 ± .017    │ 0.4807 ± .154 🥉 │ 0.7602      │
+│ 3 🔧 surg_3stage_DI_enc │ 0.3409 ± .061    │ 0.0846 ± .009    │ 0.5140 ± .022    │ 0.1459 ± .083    │ 0.7617      │
+│ 4 🪒 surg_noDI_enc      │ 0.3500 ± .064    │ 0.0887 ± .010 🥇 │ 0.5108 ± .023 🥇 │ 0.1668 ± .103    │ 0.7595      │
+│ 5 🧊🧠 pretrain_head    │ 0.3364 ± .062    │ 0.0150 ± .004    │ 0.5577 ± .020 🥉 │ 0.0613 ± .030 🥇 │ 0.7493      │
+│ 6 🔧🧠 surg_3st_DI_head │ 0.3182 ± .061    │ 0.0772 ± .009    │ 0.5411 ± .015    │ 0.3103 ± .156    │ 0.7639      │
+│ 7 🪒🧠 surg_noDI_head   │ 0.3773 ± .064    │ 0.0777 ± .009    │ 0.5415 ± .016    │ 0.2886 ± .189    │ 0.7674 🥇   │
+└────────────────────────┴──────────────────┴──────────────────┴──────────────────┴──────────────────┴─────────────┘
+🥇 = column-best · 🥉 = column-worst · ↑ higher better · ↓ lower better
+👉 CI half-width @ N=220: top1 ±~6 pp · m_cos ±~0.009 · fL1 paired ±~0.002 · ma_L1 ±~0.01-0.02
+👉 cell 3 surg_3stage_DI_enc: encoder ckpt LOST → eval uses pre-deletion cached features (top1/tax stale-valid; m_cos/fL1 recomputable from cached features.npy)
+👉 ma_L1 source: outputs/poc/probe_future_mse/<enc>/aggregate_motion_aux_l1.json (n/a for frozen — no aux head)
+👉 tax15 = unweighted mean across 15 v3-taxonomy dims (scene_type, weather, ..., video_quality)
 ```
 
 ### 🧮 Paired-Δ paper tests — Δ1..Δ7 (top1 metric, eval-side test_metrics.json)
