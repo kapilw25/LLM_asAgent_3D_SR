@@ -22,22 +22,28 @@ flowchart LR
 
 ---
 
-## § 2 — 🧬 Encoder zoo (5 arms compared at eval)
+## § 2 — 🧬 Encoder zoo (8 arms compared at eval · iter15 Phase 8)
 
 ```mermaid
 flowchart LR
     M["🦣 V-JEPA 2.1 ViT-G<br>🧮 1.84 B · 🏛️ Meta init"]
     M --> A0["0️⃣ 🧊 frozen<br>🎯 zero-shot baseline"]
-    M --> A1["1️⃣ 🏋️ pretrain · 5 ep<br>🔄 continual SSL"]
-    M --> A2["2️⃣ 🔁 pretrain_2X · 10 ep<br>⚖️ compute control"]
-    A1 --> A3["3️⃣ 🔧 surgery_3stage_DI · 5 ep<br>🧩 D_L → D_A → D_I"]
-    A1 --> A4["4️⃣ ✂️ surgery_noDI · 5 ep<br>🧩 D_L → D_A"]
+    M --> A1["1️⃣ 🏋️ pretrain · 2 ep<br>🔄 continual SSL"]
+    M --> A2["2️⃣ 🔁 pretrain_2X · 4 ep<br>⚖️ Δ3 compute control"]
+    A1 --> A3["3️⃣ 🔧 surg_3stage_DI · 2 ep<br>🧩 D_L → D_A → D_I"]
+    A1 --> A4["4️⃣ ✂️ surg_noDI · 2 ep<br>🧩 D_L → D_A"]
+    M --> A5["5️⃣ 🧠 pretrain_head · 2 ep<br>🧊 enc frozen · 🧠 head trains"]
+    A1 --> A6["6️⃣ 💡 surg_3stage_DI_head · 2 ep<br>🧊 enc frozen · 🧠 head trains"]
+    A1 --> A7["7️⃣ 🪒 surg_noDI_head · 2 ep<br>🧊 enc frozen · 🧠 head trains"]
     style M fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style A0 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style A1 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style A2 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style A3 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style A4 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style A5 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style A6 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style A7 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
 ```
 
 ---
@@ -111,28 +117,33 @@ flowchart LR
 
 ---
 
-## § 5 — 🧪 iter15 6-cell paired-Δ matrix
+## § 5 — 🧪 iter15 7-cell paired-Δ matrix (iter15 Phase 8 + pret2X compute control)
 
 ```mermaid
 flowchart LR
-    subgraph EU["🔓 encoder-update · ViT-G backward · ⏱️ ~80 min / cell"]
+    subgraph EU["🔓 encoder-update · ViT-G backward · ⏱️ ~25 min/cell at POC"]
         direction TB
-        D["🅳 🏋️ pretrain_encoder<br>📦 m09a1"]
-        E["🅴 🔧 surg_3stage_DI_enc<br>📦 m09c1"]
-        Ff["🅵 ✂️ surg_noDI_enc<br>📦 m09c1"]
-        D ~~~ E ~~~ Ff
+        P1["🦣 pretrain_enc · 2 ep<br>📦 m09a1"]
+        P2X["🐘 pretrain_2X_enc · 4 ep<br>📦 m09a1 · ⚖️ Δ3 control"]
+        D["🅳 🏋️ pretrain_encoder<br>📦 m09a1 (= P1 above)"]
+        E["🅴 🔧 surg_3stage_DI_enc<br>📦 m09c1 · 2+2=4 ep total"]
+        Ff["🅵 ✂️ surg_noDI_enc<br>📦 m09c1 · 2+2=4 ep total"]
+        P1 ~~~ P2X ~~~ E ~~~ Ff
     end
-    subgraph HO["🧊 head-only · encoder frozen · ⚡ ~9 min / cell"]
+    subgraph HO["🧊 head-only · encoder frozen · ⚡ ~25 min / cell"]
         direction TB
-        A["🅰️ 🏋️ pretrain_head<br>📦 m09a2"]
-        B["🅱️ 🔧 surg_3stage_DI_head<br>📦 m09c2"]
-        C["🅲 ✂️ surg_noDI_head<br>📦 m09c2"]
+        A["🅰️ 🧠 pretrain_head<br>📦 m09a2 · Meta init"]
+        B["🅱️ 💡 surg_3stage_DI_head<br>📦 m09c2 · P1 init"]
+        C["🅲 🪒 surg_noDI_head<br>📦 m09c2 · P1 init"]
         A ~~~ B ~~~ C
     end
-    D -.->|"🧪 Δ6"| A
-    E -.->|"⭐ Δ5 headline"| B
+    P2X -.->|"⭐ Δ3 compute-matched"| E
+    P2X -.->|"⭐ Δ3 compute-matched"| Ff
+    P1 -.->|"🧪 Δ6"| A
+    E -.->|"🧪 Δ5"| B
     Ff -.->|"🧪 Δ7"| C
-    style D fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style P1 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style P2X fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style E fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style Ff fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style A fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
@@ -144,29 +155,35 @@ flowchart LR
 
 ---
 
-## § 6 — 📊 Paired-Δ tests (paper §4 Results)
+## § 6 — 📊 Paired-Δ tests · POC compute-matched verdicts (paper §4 Results)
 
 ```mermaid
 flowchart LR
-    subgraph Tests["📐 paired BCa 95% CI · 🎲 10K resample"]
+    subgraph Tests["📐 paired BCa 95% CI · 🎲 10K resample · POC N=220"]
         direction TB
-        D5["⭐ Δ5 = 🔧🔓 surg_DI_enc − 🔧🧊 surg_DI_head"]
-        D6["🧪 Δ6 = 🏋️🔓 pretrain_enc − 🏋️🧊 pretrain_head"]
-        D7["🧪 Δ7 = ✂️🔓 surg_noDI_enc − ✂️🧊 surg_noDI_head"]
-        D5 ~~~ D6 ~~~ D7
+        D3["⭐ Δ3 · compute-matched 4ep<br>🔧🔓 surg_enc − 🐘 pretrain_2X"]
+        D5["🧪 Δ5 · 🔧🔓 surg_DI_enc − 💡 surg_DI_head"]
+        D6["🧪 Δ6 · 🦣 pretrain_enc − 🧠 pretrain_head"]
+        D7["🧪 Δ7 · 🔧 surg_DI_head − 🪒 surg_noDI_head"]
+        D3 ~~~ D5 ~~~ D6 ~~~ D7
     end
-    D5 --> O5{"🔍 sign of Δ5"}
-    O5 -->|"🟰 ≈ 0 · CI ∋ 0"| W["🟢 🧠 head-only WINS<br>⚡ 1/40× GPU"]
-    O5 -->|"➕ Δ5 &gt; 0"| Enc["🔵 🔓 encoder margin"]
-    O5 -->|"➖ Δ5 &lt; 0"| Hd["🔴 🧠 head outperforms"]
+    subgraph Verdicts3["⭐ Δ3 verdict per metric (POC)"]
+        direction TB
+        V1["🎯 top1 = −4.55 pp · 🟠 marginal · pretrain_2X wins"]
+        V2["🧭 m_cos = +0.005 to +0.009 · 🟡 noise"]
+        V3["🔮 future_mse = −0.040 · 🟢 surgery WINS · escapes CI"]
+        V1 ~~~ V2 ~~~ V3
+    end
+    D3 --> Verdicts3
+    style D3 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style D5 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style D6 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style D7 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
-    style O5 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
-    style W fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
-    style Enc fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
-    style Hd fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style V1 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style V2 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style V3 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style Tests fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style Verdicts3 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
 ```
 
 ---

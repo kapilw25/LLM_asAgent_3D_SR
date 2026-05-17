@@ -40,7 +40,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@300;400;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
   <style>
     :root {
@@ -380,6 +380,282 @@
     }
     #main-tabs .tabs li.is-active .tab-subtitle {
       color: var(--accent-terracotta);
+    }
+
+    /* ================================================================
+       VERIFICATION WALL — cinematic dark interlude for m11 factor masks
+       Inverted from the cream editorial body: warm charcoal + saffron.
+       ================================================================ */
+    .verification-wall {
+      --vw-ink: #FAF7F2;
+      --vw-bg: #1A1612;
+      --vw-bg-deep: #0E0B08;
+      --vw-accent: #D4762C;
+      position: relative;
+      background: var(--vw-bg);
+      color: var(--vw-ink);
+      padding: 7rem 0 8rem;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .verification-wall::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.92 0 0 0 0 0.85 0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      opacity: 0.65;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .verification-wall::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 0%, rgba(212,118,44,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.55) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .vw-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 2.75rem;
+    }
+
+    /* Film-strip sprocket holes on both edges */
+    .vw-sprockets {
+      position: absolute;
+      top: 5rem;
+      bottom: 5rem;
+      width: 16px;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        rgba(212,118,44,0.28) 0 7px,
+        transparent 7px 28px
+      );
+      z-index: 2;
+      opacity: 0.7;
+    }
+    .vw-sprockets--left  { left: 1rem;  }
+    .vw-sprockets--right { right: 1rem; }
+
+    /* Header: oversized typographic gesture + right-aligned deck */
+    .vw-header {
+      display: grid;
+      grid-template-columns: 1fr minmax(220px, 30ch);
+      align-items: end;
+      gap: 3rem;
+      margin-bottom: 4rem;
+      padding-bottom: 1.75rem;
+      border-bottom: 1px solid rgba(212,118,44,0.28);
+    }
+    .vw-eyebrow {
+      display: block;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--vw-accent);
+      margin-bottom: 1.4rem;
+    }
+    .vw-title {
+      font-family: 'Libre Baskerville', serif;
+      font-weight: 400;
+      font-style: italic;
+      font-size: clamp(2.6rem, 7.5vw, 6.4rem);
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      margin: 0;
+      color: var(--vw-ink);
+    }
+    .vw-title em {
+      font-style: italic;
+      color: var(--vw-accent);
+      position: relative;
+    }
+    .vw-deck {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 300;
+      line-height: 1.65;
+      color: rgba(250,247,242,0.72);
+      padding-left: 1.4rem;
+      border-left: 1px solid rgba(212,118,44,0.45);
+      text-align: left;
+      max-width: 32ch;
+    }
+    .vw-deck code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      background: rgba(212,118,44,0.10);
+      color: var(--vw-accent);
+      padding: 0.05rem 0.35rem;
+      border-radius: 2px;
+    }
+    .vw-deck sub {
+      color: var(--vw-accent);
+      font-weight: 600;
+    }
+
+    /* Asymmetric magazine grid */
+    .vw-stage {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 1.4rem;
+      margin-bottom: 1.4rem;
+    }
+    .vw-stack {
+      display: grid;
+      grid-template-rows: repeat(3, 1fr);
+      gap: 1.4rem;
+    }
+    .vw-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.4rem;
+    }
+
+    /* Individual clip frames */
+    .vw-clip {
+      position: relative;
+      overflow: hidden;
+      background: var(--vw-bg-deep);
+      border: 1px solid rgba(212,118,44,0.22);
+      cursor: pointer;
+      margin: 0;
+      transition: border-color 0.45s ease, transform 0.45s cubic-bezier(0.2,0.7,0.2,1), box-shadow 0.45s ease;
+      opacity: 0;
+      transform: translateY(22px);
+    }
+    .vw-clip.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.9s ease, transform 1s cubic-bezier(0.2,0.7,0.2,1);
+    }
+    .vw-clip::before {
+      content: "";
+      display: block;
+      padding-top: 56.25%;       /* 16:9 default — hero clip */
+    }
+    .vw-clip--square::before {
+      padding-top: 100%;          /* 1:1 — secondary clips */
+    }
+    .vw-clip video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: brightness(0.93) contrast(1.06) saturate(1.05);
+      transition: filter 0.55s ease, transform 0.8s cubic-bezier(0.2,0.7,0.2,1);
+    }
+    .vw-clip:hover {
+      border-color: var(--vw-accent);
+      transform: translateY(-3px);
+      box-shadow: 0 14px 30px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,118,44,0.5) inset;
+    }
+    .vw-clip:hover video {
+      filter: brightness(1.06) contrast(1.10) saturate(1.12);
+      transform: scale(1.045);
+    }
+
+    .vw-clip__tier {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.85rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      padding: 0.22rem 0.55rem;
+      color: var(--vw-ink);
+      background: rgba(26,22,18,0.6);
+      border: 1px solid rgba(212,118,44,0.45);
+      text-transform: uppercase;
+      z-index: 3;
+      backdrop-filter: blur(2px);
+    }
+
+    .vw-clip__meta {
+      position: absolute;
+      inset: auto 0 0 0;
+      padding: 0.95rem 1rem 0.85rem;
+      background: linear-gradient(to top,
+        rgba(10,8,5,0.92) 0%,
+        rgba(10,8,5,0.55) 55%,
+        transparent 100%);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.6rem;
+      z-index: 3;
+      margin: 0;
+    }
+    .vw-clip__city {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--vw-ink);
+    }
+    .vw-clip__cond {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      color: var(--vw-accent);
+      text-transform: uppercase;
+    }
+
+    .vw-footer {
+      margin-top: 3.5rem;
+      padding-top: 1.6rem;
+      border-top: 1px solid rgba(212,118,44,0.22);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2rem;
+      align-items: center;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(250,247,242,0.55);
+    }
+    .vw-footer code {
+      color: var(--vw-accent);
+      background: none;
+      padding: 0;
+      font-family: inherit;
+      letter-spacing: 0.08em;
+      text-transform: none;
+    }
+    .vw-footer span:last-child { text-align: right; }
+
+    @media (max-width: 960px) {
+      .verification-wall { padding: 4.5rem 0 5rem; }
+      .vw-inner { padding: 0 1.4rem; }
+      .vw-header {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .vw-deck {
+        border-left: none;
+        border-top: 1px solid rgba(212,118,44,0.45);
+        padding-left: 0;
+        padding-top: 1.1rem;
+        max-width: 100%;
+      }
+      .vw-stage { grid-template-columns: 1fr; }
+      .vw-stack { grid-template-rows: auto; grid-template-columns: repeat(3, 1fr); }
+      .vw-row { grid-template-columns: repeat(2, 1fr); }
+      .vw-sprockets { display: none; }
+      .vw-footer { grid-template-columns: 1fr; }
+      .vw-footer span:last-child { text-align: left; }
     }
   </style>
 </head>
@@ -781,17 +1057,24 @@
       iter13 v12 placeholders &mdash; numerical refresh pending Phase 6 head-only POC (vec[13] FG-binning).
     </p>
 
-    <div class="columns">
-      <div class="column is-7">
+    <!-- iter15 Phase 8 (2026-05-17): 3 split bar-comparison plots (compute-matched 4ep) -->
+    <div class="columns is-multiline">
+      <div class="column is-12">
         <div class="plot-container">
-          <img src="static/images/probe_action_acc.png" alt="Bar chart: 7-encoder motion-class top-1 accuracy on the 8-class taxonomy, with 95% BCa CI bars">
-          <p class="plot-caption">7 encoders &times; motion top-1. V-JEPA (frozen baseline) leads at 0.84; image encoders cap around 0.55. iter14 surgery R1 lifts V-JEPA to 0.846; iter15 head-only target = match this with frozen encoder.</p>
+          <img src="static/images/probe_action_acc_compare.png" alt="Bar chart sorted ↓ DESCENDING by top-1 accuracy — 8 encoders × motion-class, with BCa 95% CI whiskers">
+          <p class="plot-caption">🎯 <strong>Action probe top-1</strong> (HIGHER better, sorted descending). Compute-matched 4ep: <code>pretrain_2X_encoder</code> leads at 38.6&nbsp;%; surgery encoders trail by &minus;3.6 to &minus;4.6&nbsp;pp (marginal 🟠). At POC N=220 the &plusmn;6&nbsp;pp CI bars overlap; the &Delta;3 paper-claim "surgery &gt; pretrain_2X" fails on top-1 (p=0.27).</p>
         </div>
       </div>
-      <div class="column is-5">
+      <div class="column is-12">
         <div class="plot-container">
-          <img src="static/images/probe_encoder_comparison.png" alt="Encoder rank-ladder plot: 7 encoders sorted by motion top-1, with confidence bands">
-          <p class="plot-caption">Encoder rank ladder. V-JEPA Surgery &gt; V-JEPA Frozen &gt; V-JEPA Pretrain &gt; DINOv2 &gt; CLIP &gt; Random. Surgery's +1.1 pp lift over frozen is the iter14 R1 paired-&Delta; result.</p>
+          <img src="static/images/probe_motion_cos_compare.png" alt="Bar chart sorted ↓ DESCENDING by intra-minus-inter cosine — surgery encoders cluster at top, pretrain_head + frozen at bottom">
+          <p class="plot-caption">🧭 <strong>Motion cosine</strong> intra&minus;inter (HIGHER better, sorted descending). All 4 surgery variants cluster at 0.077&ndash;0.089; <code>pretrain_head</code> + <code>V-JEPA 2.1 frozen</code> tail at 0.014&ndash;0.015 (5&times; lower &mdash; motion-aware separation lives in the trained head). Surgery wins by +0.005 to +0.009 over pretrain_2X (within noise 🟡 at POC).</p>
+        </div>
+      </div>
+      <div class="column is-12">
+        <div class="plot-container">
+          <img src="static/images/probe_future_mse_compare.png" alt="Bar chart sorted ↑ ASCENDING by future-frame L1 — surgery encoders lowest at 0.511 and 0.514, pretrain_head highest at 0.558">
+          <p class="plot-caption">🔮 <strong>Future-frame MSE</strong> (LOWER better, sorted ascending). Surgery encoders bottom-of-chart at 0.511 and 0.514; <code>pretrain_2X</code> at 0.551. Surgery wins by &minus;0.037 to &minus;0.040 vs pretrain_2X (escapes BCa CI 🟢) &mdash; the only &Delta;3 metric where the paper claim "surgery &gt; pretrain_2X" holds at POC scale.</p>
         </div>
       </div>
     </div>
@@ -954,6 +1237,120 @@
         magnitude, even when the scenes differ (market vs drive vs walking).
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ==================== VERIFICATION WALL (m11 factor masks) ==================== -->
+<section class="verification-wall">
+  <div class="vw-sprockets vw-sprockets--left"  aria-hidden="true"></div>
+  <div class="vw-sprockets vw-sprockets--right" aria-hidden="true"></div>
+
+  <div class="vw-inner">
+    <header class="vw-header">
+      <div>
+        <span class="vw-eyebrow">M11 &middot; Factor Decomposition &middot; Per-Clip Verification</span>
+        <h2 class="vw-title">What the <em>surgery</em><br>actually sees.</h2>
+      </div>
+      <p class="vw-deck">
+        Streaming-pass outputs from the <code>m11</code> factor extractor &mdash;
+        layout&nbsp;(<sub>D<small>L</small></sub>), agent&nbsp;(<sub>D<small>A</small></sub>),
+        and interaction&nbsp;(<sub>D<small>I</small></sub>) &mdash; the three masked views that
+        feed the recipe-v3 surgery loss. Eight clips, eight Indian cities, eight conditions.
+      </p>
+    </header>
+
+    <!-- Stage: 1 hero 16:9  +  3 stacked 1:1 -->
+    <div class="vw-stage">
+      <figure class="vw-clip vw-clip--hero">
+        <span class="vw-clip__tier">tier&nbsp;2 &middot; drone</span>
+        <video src="static/videos/m11_factor_verify/coimbatore_drone.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Coimbatore</span>
+          <span class="vw-clip__cond">aerial &middot; clear</span>
+        </figcaption>
+      </figure>
+
+      <div class="vw-stack">
+        <figure class="vw-clip vw-clip--square">
+          <span class="vw-clip__tier">tier&nbsp;1</span>
+          <video src="static/videos/m11_factor_verify/bangalore_drive.mp4"
+                 autoplay muted loop playsinline preload="metadata"></video>
+          <figcaption class="vw-clip__meta">
+            <span class="vw-clip__city">Bangalore</span>
+            <span class="vw-clip__cond">drive</span>
+          </figcaption>
+        </figure>
+
+        <figure class="vw-clip vw-clip--square">
+          <span class="vw-clip__tier">tier&nbsp;2 &middot; rain</span>
+          <video src="static/videos/m11_factor_verify/ahmedabad_rain.mp4"
+                 autoplay muted loop playsinline preload="metadata"></video>
+          <figcaption class="vw-clip__meta">
+            <span class="vw-clip__city">Ahmedabad</span>
+            <span class="vw-clip__cond">drive &middot; rain</span>
+          </figcaption>
+        </figure>
+
+        <figure class="vw-clip vw-clip--square">
+          <span class="vw-clip__tier">tier&nbsp;2</span>
+          <video src="static/videos/m11_factor_verify/varanasi_walking.mp4"
+                 autoplay muted loop playsinline preload="metadata"></video>
+          <figcaption class="vw-clip__meta">
+            <span class="vw-clip__city">Varanasi</span>
+            <span class="vw-clip__cond">walking</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <!-- Lower row: 4 equal squares -->
+    <div class="vw-row">
+      <figure class="vw-clip vw-clip--square">
+        <span class="vw-clip__tier">tier&nbsp;1</span>
+        <video src="static/videos/m11_factor_verify/delhi_walking.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Delhi</span>
+          <span class="vw-clip__cond">walking</span>
+        </figcaption>
+      </figure>
+
+      <figure class="vw-clip vw-clip--square">
+        <span class="vw-clip__tier">tier&nbsp;1</span>
+        <video src="static/videos/m11_factor_verify/kolkata_walking.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Kolkata</span>
+          <span class="vw-clip__cond">walking</span>
+        </figcaption>
+      </figure>
+
+      <figure class="vw-clip vw-clip--square">
+        <span class="vw-clip__tier">tier&nbsp;2</span>
+        <video src="static/videos/m11_factor_verify/nagpur_drive.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Nagpur</span>
+          <span class="vw-clip__cond">drive</span>
+        </figcaption>
+      </figure>
+
+      <figure class="vw-clip vw-clip--square">
+        <span class="vw-clip__tier">tier&nbsp;2 &middot; rain</span>
+        <video src="static/videos/m11_factor_verify/bhopal_rain.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Bhopal</span>
+          <span class="vw-clip__cond">drive &middot; rain</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <footer class="vw-footer">
+      <span>Source &middot; <code>data/eval_10k_local/m11_factor_datasets/m11_per_Videoclip_verify/</code></span>
+      <span>8&nbsp;clips &middot; 4.7&nbsp;MB &middot; autoplay muted loop</span>
+    </footer>
   </div>
 </section>
 
@@ -1533,6 +1930,30 @@ document.addEventListener('click', function(e) {
   document.body.appendChild(overlay);
 });
 </script>
+
+<!-- Verification Wall: staggered scroll-reveal for m11 factor clips -->
+<script>
+(function () {
+  var clips = document.querySelectorAll('.verification-wall .vw-clip');
+  if (!clips.length) return;
+  if (!('IntersectionObserver' in window)) {
+    clips.forEach(function (c) { c.classList.add('is-visible'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      var clip = entry.target;
+      var idx = Array.prototype.indexOf.call(clips, clip);
+      clip.style.transitionDelay = (idx * 90) + 'ms';
+      clip.classList.add('is-visible');
+      io.unobserve(clip);
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
+  clips.forEach(function (c) { io.observe(c); });
+})();
+</script>
+
 <style>
 .mermaid svg { cursor: zoom-in; }
 /* Force bold white text on ALL mindmap nodes (including root-level) */
