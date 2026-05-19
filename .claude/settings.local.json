@@ -235,7 +235,8 @@
       "Bash(grep -nE \"--[a-z-]+:|@font-face\" docs/index.html)",
       "Bash(grep -nE \"^<section|^<!--\\\\s*={4,}\" docs/index.html)",
       "Bash(rsync -avh --stats --exclude=*.pt --exclude=*.pth --exclude=*.onnx --exclude=*.pkl --exclude=*.npy --exclude=*.npz --exclude=*.tar --exclude=*.mp4 --exclude=*.ply --exclude=*.splat --exclude=*.pyc --exclude=*.pyo --exclude=*.pyd --exclude=__pycache__/ --exclude=*.log --exclude=*.logclear --exclude=checkpoints/ outputs/poc iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(nvidia-smi --query-gpu=name,memory.total,compute_cap,driver_version --format=csv)"
     ]
   }
 }
