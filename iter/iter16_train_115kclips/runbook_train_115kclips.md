@@ -1,8 +1,15 @@
 # 🚀 iter16 — 115K FULL training runbook
 
+> **Status legend** (update as tasks complete):
+> ⏳ pending · 🟡 in-progress · ✅ done · ❌ blocked · ⏭️ skipped
+>
+> Update the emoji next to each section header as that task moves through the lifecycle.
+
+---
+
 ## 🛠️ Code modifications (one-time, before any run)
 
-### M1. Wire 75:5:20 split via YAML (single source of truth — no shell, no CLI)
+### ⏳ M1. Wire 75:5:20 split via YAML (single source of truth — no shell, no CLI)
 
 ```yaml
 # configs/pipeline.yaml — add new top-level block, mode-keyed (mirrors probe_head_train)
@@ -53,7 +60,7 @@ splits = stratified_split(records, seed=args.seed,
 # resolve the split ratios from configs/pipeline.yaml via get_probe_split(mode).
 ```
 
-### M2. max_epochs.full = 1
+### ⏳ M2. max_epochs.full = 1
 
 ```yaml
 # configs/train/pretrain_encoder.yaml — line 79
@@ -75,7 +82,7 @@ max_epochs:
   full: 1                          # iter16 — was 15
 ```
 
-### M3. full_local.json generator (one-time)
+### ⏳ M3. full_local.json generator (one-time)
 
 ```bash
 # Locate / write the master-manifest generator (mirrors eval_10k.json shape).
@@ -90,7 +97,7 @@ grep -rn "eval_10k.json\|full_local.json" src/m00*.py src/utils/*.py 2>/dev/null
 
 ## 🖥️ Terminal commands (in execution order)
 
-### Stage 1 — HF download walkindia-200k (~10-15 min, Pro 4000 OK)
+### ⏳ Stage 1 — HF download walkindia-200k (~10-15 min, Pro 4000 OK)
 
 ```bash
 HF_HUB_ENABLE_HF_TRANSFER=1 python -u - <<'PY' 2>&1 | tee logs/dl_walkindia_full_$(date +%Y%m%d_%H%M%S).log
@@ -112,7 +119,7 @@ HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data 2>&1
   | tee logs/dl_factorjepa_data_$(date +%Y%m%d_%H%M%S).log
 ```
 
-### Stage 2 — full_local.json + m04d motion features (~45 min, Pro 4000 OK)
+### ⏳ Stage 2 — full_local.json + m04d motion features (~45 min, Pro 4000 OK)
 
 ```bash
 # 2a) Generate full_local.json (after M3 generator is in place)
@@ -127,7 +134,7 @@ CACHE_POLICY_ALL=2 python -u src/m04d_motion_features.py --FULL \
     --no-wandb 2>&1 | tee logs/m04d_full_$(date +%Y%m%d_%H%M%S).log
 ```
 
-### Stage 3 — m10 + m11 factor prep (Pro 4000 OK)
+### ⏳ Stage 3 — m10 + m11 factor prep (Pro 4000 OK)
 
 ```bash
 # 3a) SANITY parallel first (~5 min, catches m10_split_subset bugs)
@@ -145,7 +152,7 @@ LOCAL_DATA=data/full_local \
 ./scripts/run_factor_prep.sh configs/train/surgery_3stage_DI_encoder.yaml --FULL
 ```
 
-### Stage 4 — Train 3 HEAD cells on Pro 4000 24 GB (~9 hr total)
+### ⏳ Stage 4 — Train 3 HEAD cells on Pro 4000 24 GB (~9 hr total)
 
 ```bash
 # 4a) pretrain_encoder FIRST — provides SURGERY_INIT for cells 4c-4d
@@ -167,7 +174,7 @@ CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_head --FULL 2>&1 \
   | tee logs/iter16_full_m09c2_noDI_head_$(date +%Y%m%d_%H%M%S).log
 ```
 
-### Stage 5 — Train 3 ENCODER cells on Pro 6000 96 GB [⚠️ migrate instance]
+### ⏳ Stage 5 — Train 3 ENCODER cells on Pro 6000 96 GB [⚠️ migrate instance]
 
 ```bash
 # Pre-req on new Pro 6000 box: pull pretrain_encoder ckpt from this instance
@@ -190,7 +197,7 @@ CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_encoder --FULL 2>&1 \
   | tee logs/iter16_full_m09c1_noDI_encoder_$(date +%Y%m%d_%H%M%S).log
 ```
 
-### Stage 6 — Full 13-stage eval (~3 hr Pro 4000, ~1.5 hr Pro 6000)
+### ⏳ Stage 6 — Full 13-stage eval (~3 hr Pro 4000, ~1.5 hr Pro 6000)
 
 ```bash
 # Pre-req: pull all 7 cell ckpts back to whichever box runs eval
@@ -200,7 +207,7 @@ CACHE_POLICY_ALL=1 ./scripts/run_eval.sh --FULL 2>&1 \
   | tee logs/iter16_post_full_eval_$(date +%Y%m%d_%H%M%S).log
 ```
 
-### Stage 7 — Plot N-run comparisons (CPU, ~5 min)
+### ⏳ Stage 7 — Plot N-run comparisons (CPU, ~5 min)
 
 ```bash
 python -u src/probe_plot.py --FULL --training-side \
@@ -209,7 +216,7 @@ python -u src/probe_plot.py --FULL --training-side \
     --no-wandb 2>&1 | tee logs/iter16_probe_plot_train_$(date +%Y%m%d_%H%M%S).log
 ```
 
-### Stage 8 — Persist to HF (after all 7 cells + eval complete)
+### ⏳ Stage 8 — Persist to HF (after all 7 cells + eval complete)
 
 ```bash
 HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload outputs/full 2>&1 \

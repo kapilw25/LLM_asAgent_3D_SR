@@ -22,6 +22,22 @@ set -e  # Exit on error
 mkdir -p logs  # Ensure logs/ exists early (for tee piping)
 
 # ============================================================================
+# Redirect UV scratch space to /dev/shm (RAM-tmpfs, typically 26-31 GB).
+# Why: PyTorch nightly + CUDA wheel set explodes to ~8.5 GB during extraction.
+# On vast.ai, both / (overlay) and /workspace (XFS prjquota, often host-shared
+# and near-full) can OOM the install. /dev/shm is per-container RAM and is
+# always sized at ~half-RAM, so it has the headroom and clears itself after
+# the install finishes.
+# Evidence: logs/setup_env_gpu_20260519_182245.log:335-340 (/tmp ENOSPC) +
+#          logs/setup_env_gpu_20260519_183654.log:195-199 (/workspace ENOSPC).
+# ============================================================================
+if [ -d "/dev/shm" ]; then
+    export TMPDIR="${TMPDIR:-/dev/shm/uv_tmp}"
+    export UV_CACHE_DIR="${UV_CACHE_DIR:-/dev/shm/uv_cache}"
+    mkdir -p "$TMPDIR" "$UV_CACHE_DIR"
+fi
+
+# ============================================================================
 # Pinned versions (Blackwell sm_120 + CUDA 13.0 + Python 3.12)
 # ============================================================================
 TORCH_VERSION="2.12.0.dev20260407"  # PyTorch nightly cu128 — pinned for FA2 wheel compat.
