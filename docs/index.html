@@ -41,6 +41,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <!-- KaTeX (math rendering) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+  <!-- Chart.js — clips-per-city plots -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     :root {
@@ -383,6 +390,128 @@
     }
 
     /* ================================================================
+       §1 FACTOR GRID — light-theme 2×2, all cells identical 16:9
+       ================================================================ */
+    .factor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+      margin: 0 auto;
+    }
+    .factor-cell {
+      position: relative;
+      overflow: hidden;
+      margin: 0;
+      background: var(--bg-sand);
+      border: 1px solid var(--border-tan);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(45, 35, 24, 0.06);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .factor-cell::before {
+      content: "";
+      display: block;
+      padding-top: 56.25%;        /* uniform 16:9 — matches native mp4 */
+    }
+    .factor-cell video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .factor-cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(45, 35, 24, 0.12);
+    }
+    .factor-cell figcaption {
+      position: absolute;
+      left: 0.75rem;
+      bottom: 0.7rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+      font-family: 'Source Sans 3', sans-serif;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .factor-cell__city {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .factor-cell__cond {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    @media (max-width: 700px) {
+      .factor-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ================================================================
+       CHART-BLOCK — clips-per-city Chart.js bars
+       ================================================================ */
+    .chart-block { margin: 0.5rem 0 1.5rem; }
+    .chart-title {
+      font-family: 'Source Sans 3', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-dark);
+      margin: 0 0 0.5rem 0.25rem;
+    }
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      background: var(--bg-cream);
+      border-radius: 8px;
+      padding: 0.75rem 0.75rem 0.4rem;
+    }
+
+    /* ================================================================
+       LOSS-LEGEND — one component per line, with layman analogy
+       ================================================================ */
+    .loss-legend {
+      list-style: none;
+      padding: 0;
+      margin: 1rem auto 0 auto;
+      max-width: 760px;
+      text-align: left;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--text-dark);
+    }
+    .loss-legend li {
+      display: grid;
+      grid-template-columns: 6.2rem 1fr;
+      column-gap: 0.7rem;
+      align-items: baseline;
+      padding: 0.45rem 0;
+      border-bottom: 1px dashed var(--border-tan);
+    }
+    .loss-legend li:last-child { border-bottom: 0; }
+    .loss-legend__sym {
+      font-size: 1rem;
+      text-align: right;
+      padding-right: 0.15rem;
+    }
+    .loss-legend__def { color: var(--text-dark); }
+    .loss-legend__plain {
+      display: block;
+      grid-column: 2;
+      margin-top: 0.15rem;
+      font-style: italic;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    /* ================================================================
        VERIFICATION WALL — cinematic dark interlude for m11 factor masks
        Inverted from the cream editorial body: warm charcoal + saffron.
        ================================================================ */
@@ -502,22 +631,11 @@
       font-weight: 600;
     }
 
-    /* Asymmetric magazine grid */
-    .vw-stage {
-      display: grid;
-      grid-template-columns: 1.55fr 1fr;
-      gap: 1.4rem;
-      margin-bottom: 1.4rem;
-    }
-    .vw-stack {
-      display: grid;
-      grid-template-rows: repeat(3, 1fr);
-      gap: 1.4rem;
-    }
-    .vw-row {
+    /* Uniform contact-sheet grid — 4 columns × 2 rows = 8 cells, all same 16:9 */
+    .vw-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 1.4rem;
+      gap: 1.1rem;
     }
 
     /* Individual clip frames */
@@ -540,10 +658,7 @@
     .vw-clip::before {
       content: "";
       display: block;
-      padding-top: 56.25%;       /* 16:9 default — hero clip */
-    }
-    .vw-clip--square::before {
-      padding-top: 100%;          /* 1:1 — secondary clips */
+      padding-top: 56.25%;       /* uniform 16:9 — every cell same shape */
     }
     .vw-clip video {
       position: absolute;
@@ -650,9 +765,7 @@
         padding-top: 1.1rem;
         max-width: 100%;
       }
-      .vw-stage { grid-template-columns: 1fr; }
-      .vw-stack { grid-template-rows: auto; grid-template-columns: repeat(3, 1fr); }
-      .vw-row { grid-template-columns: repeat(2, 1fr); }
+      .vw-grid { grid-template-columns: repeat(2, 1fr); }
       .vw-sprockets { display: none; }
       .vw-footer { grid-template-columns: 1fr; }
       .vw-footer span:last-child { text-align: left; }
@@ -713,6 +826,12 @@
           <a>
             <span class="icon"><i class="fas fa-globe"></i></span>
             <span>DenseWorld<span class="tab-subtitle">Dataset</span></span>
+          </a>
+        </li>
+        <li data-tab="training">
+          <a>
+            <span class="icon"><i class="fas fa-microscope"></i></span>
+            <span>FactorJEPA<span class="tab-subtitle">Training</span></span>
           </a>
         </li>
         <li data-tab="factorjepa">
@@ -902,80 +1021,39 @@
       </div>
     </div>
 
-    <!-- Detailed clip count tables — open by default -->
+    <!-- Clips-per-city — Chart.js horizontal stacked bars (data from static/stats.json) -->
     <details open style="margin-top: 1.5rem; background: white; border-radius: 12px; padding: 1.2rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
       <summary style="cursor: pointer; font-weight: 700; font-size: 1.2rem; color: var(--text-dark); padding: 0.5rem 0; border-bottom: 2px solid var(--accent-terracotta); margin-bottom: 1rem; list-style: none;">
         <span style="display: flex; align-items: center; justify-content: space-between;">
-          <span><i class="fas fa-table" style="color: var(--accent-terracotta);"></i> &nbsp;Clips Per City &mdash; Full Breakdown</span>
-          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 400;">(click to collapse)</span>
+          <span><i class="fas fa-chart-bar" style="color: var(--accent-terracotta);"></i> &nbsp;Clips Per City &mdash; Full Breakdown</span>
+          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 400;">drive · walk · drone · rain</span>
         </span>
       </summary>
-      <div style="overflow-x: auto;">
 
-        <!-- Tier 1 -->
-        <h4 style="margin-bottom: 0.5rem; font-family: 'Source Sans 3', sans-serif; font-weight: 600;">Tier 1 Cities &mdash; 6 metros, 68,614 clips</h4>
-        <table class="results-table" style="margin-bottom: 1.5rem;">
-          <thead><tr><th>City</th><th>Drive</th><th>Walk</th><th>Drone</th><th>Total</th><th>Hours</th><th>GB</th></tr></thead>
-          <tbody>
-            <tr><td>Kolkata</td><td>3,790</td><td>20,633</td><td>655</td><td class="best-value">25,078</td><td>58.0</td><td>27.1</td></tr>
-            <tr><td>Mumbai</td><td>6,412</td><td>4,167</td><td>181</td><td>10,760</td><td>25.8</td><td>12.1</td></tr>
-            <tr><td>Delhi</td><td>4,114</td><td>6,159</td><td>199</td><td>10,472</td><td>24.5</td><td>11.5</td></tr>
-            <tr><td>Chennai</td><td>1,984</td><td>5,870</td><td>426</td><td>8,280</td><td>19.5</td><td>9.0</td></tr>
-            <tr><td>Hyderabad</td><td>2,210</td><td>5,037</td><td>217</td><td>7,464</td><td>18.0</td><td>6.8</td></tr>
-            <tr><td>Bangalore</td><td>3,453</td><td>2,335</td><td>772</td><td>6,560</td><td>15.7</td><td>7.2</td></tr>
-            <tr style="font-weight: 700; background: var(--bg-sand);"><td>Tier 1 Total</td><td>21,963</td><td>44,201</td><td>2,450</td><td>68,614</td><td>161.4</td><td>73.7</td></tr>
-          </tbody>
-        </table>
-
-        <!-- Goa -->
-        <h4 style="margin-bottom: 0.5rem; font-family: 'Source Sans 3', sans-serif; font-weight: 600;">Goa &mdash; 5,835 clips</h4>
-        <table class="results-table" style="margin-bottom: 1.5rem;">
-          <thead><tr><th>City</th><th>Walk</th><th>Total</th><th>Hours</th><th>GB</th></tr></thead>
-          <tbody>
-            <tr><td>Goa</td><td>5,835</td><td>5,835</td><td>14.2</td><td>6.1</td></tr>
-          </tbody>
-        </table>
-
-        <!-- Tier 2 -->
-        <h4 style="margin-bottom: 0.5rem; font-family: 'Source Sans 3', sans-serif; font-weight: 600;">Tier 2 Cities &mdash; 15 cities, 40,743 clips</h4>
-        <table class="results-table" style="margin-bottom: 1.5rem;">
-          <thead><tr><th>City</th><th>Drive</th><th>Walk</th><th>Drone</th><th>Rain</th><th>Total</th><th>Hours</th><th>GB</th></tr></thead>
-          <tbody>
-            <tr><td>Ahmedabad</td><td>476</td><td>4,875</td><td>208</td><td>308</td><td class="best-value">5,867</td><td>14.0</td><td>6.8</td></tr>
-            <tr><td>Varanasi</td><td>1,087</td><td>2,761</td><td>233</td><td>236</td><td>4,317</td><td>10.7</td><td>4.5</td></tr>
-            <tr><td>Jaipur</td><td>676</td><td>2,206</td><td>214</td><td>1,074</td><td>4,170</td><td>10.0</td><td>4.2</td></tr>
-            <tr><td>Kochi</td><td>1,021</td><td>1,222</td><td>865</td><td>988</td><td>4,096</td><td>10.1</td><td>4.2</td></tr>
-            <tr><td>Pune</td><td>707</td><td>1,795</td><td>326</td><td>328</td><td>3,156</td><td>7.4</td><td>3.2</td></tr>
-            <tr><td>Coimbatore</td><td>1,705</td><td>554</td><td>145</td><td>529</td><td>2,933</td><td>7.2</td><td>2.9</td></tr>
-            <tr><td>Lucknow</td><td>812</td><td>1,412</td><td>189</td><td>366</td><td>2,779</td><td>6.9</td><td>2.6</td></tr>
-            <tr><td>Thiruvananthapuram</td><td>727</td><td>664</td><td>197</td><td>1,062</td><td>2,650</td><td>6.4</td><td>2.8</td></tr>
-            <tr><td>Chandigarh</td><td>524</td><td>923</td><td>160</td><td>684</td><td>2,291</td><td>5.5</td><td>2.4</td></tr>
-            <tr><td>Nagpur</td><td>376</td><td>929</td><td>131</td><td>434</td><td>1,870</td><td>4.4</td><td>1.6</td></tr>
-            <tr><td>Indore</td><td>645</td><td>614</td><td>90</td><td>345</td><td>1,694</td><td>4.2</td><td>1.4</td></tr>
-            <tr><td>Visakhapatnam</td><td>256</td><td>811</td><td>304</td><td>137</td><td>1,508</td><td>3.6</td><td>1.2</td></tr>
-            <tr><td>Mysuru</td><td>489</td><td>418</td><td>174</td><td>271</td><td>1,352</td><td>3.3</td><td>1.2</td></tr>
-            <tr><td>Surat</td><td>472</td><td>303</td><td>142</td><td>185</td><td>1,102</td><td>2.7</td><td>1.0</td></tr>
-            <tr><td>Bhopal</td><td>249</td><td>322</td><td>119</td><td>268</td><td>958</td><td>2.3</td><td>0.8</td></tr>
-            <tr style="font-weight: 700; background: var(--bg-sand);"><td>Tier 2 Total</td><td>10,222</td><td>19,809</td><td>3,497</td><td>7,215</td><td>40,743</td><td>98.8</td><td>40.9</td></tr>
-          </tbody>
-        </table>
-
-        <!-- Monuments -->
-        <h4 style="margin-bottom: 0.5rem; font-family: 'Source Sans 3', sans-serif; font-weight: 600;">Monuments &mdash; 495 clips</h4>
-        <table class="results-table" style="margin-bottom: 1.5rem;">
-          <thead><tr><th>Monument</th><th>Clips</th><th>Hours</th><th>GB</th></tr></thead>
-          <tbody>
-            <tr><td>Gateway of India, Mumbai</td><td>266</td><td>0.7</td><td>0.3</td></tr>
-            <tr><td>Red Fort, Delhi</td><td>214</td><td>0.6</td><td>0.2</td></tr>
-            <tr><td>Mysore Palace</td><td>15</td><td>0.0</td><td>0.0</td></tr>
-            <tr style="font-weight: 700; background: var(--bg-sand);"><td>Monuments Total</td><td>495</td><td>1.3</td><td>0.5</td></tr>
-          </tbody>
-        </table>
-
-        <!-- Grand Total (populated from stats.json) -->
-        <div id="stat-grand-total" style="background: var(--accent-terracotta); color: white; padding: 0.8rem 1.2rem; border-radius: 8px; text-align: center; font-size: 1.1rem;">
-          <strong>Grand Total: 115,687 clips &nbsp;|&nbsp; 275.8 hours &nbsp;|&nbsp; 121.2 GB</strong>
+      <div class="chart-block">
+        <h4 class="chart-title">Tier 1 Cities &mdash; 6 metros</h4>
+        <div class="chart-wrap" style="height: 320px;">
+          <canvas id="chart-tier1"></canvas>
         </div>
+      </div>
+
+      <div class="chart-block">
+        <h4 class="chart-title">Tier 2 Cities &mdash; 15 cities</h4>
+        <div class="chart-wrap" style="height: 560px;">
+          <canvas id="chart-tier2"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-block">
+        <h4 class="chart-title">Goa &middot; Monuments &mdash; 4 destinations</h4>
+        <div class="chart-wrap" style="height: 220px;">
+          <canvas id="chart-misc"></canvas>
+        </div>
+      </div>
+
+      <!-- Grand total (populated from stats.json) -->
+      <div id="stat-grand-total" style="background: var(--accent-terracotta); color: white; padding: 0.8rem 1.2rem; border-radius: 8px; text-align: center; font-size: 1.1rem; margin-top: 1rem;">
+        <strong>Grand Total: 115,687 clips &nbsp;|&nbsp; 275.8 hours &nbsp;|&nbsp; 121.2 GB</strong>
       </div>
     </details>
 
@@ -984,261 +1062,11 @@
 
 </div><!-- end tab-denseworld -->
 
-<!-- ==================== TAB 2: FactorJEPA (Evaluation) ==================== -->
-<div id="tab-factorjepa" class="tab-content" style="display: none;">
+<!-- ==================== TAB 2: FactorJEPA — Training ==================== -->
+<div id="tab-training" class="tab-content" style="display: none;">
 
-<!-- ==================== ITER15 REFRESH BANNER (planCODE_html.md Stage D.2) ==================== -->
-<div class="notification is-warning" style="max-width: 900px; margin: 1.5rem auto 0 auto;">
-  <strong>⏳ iter15 refresh in progress.</strong>
-  Plots tagged with the dashed-border placeholder are pending the Phase 6 head-only POC.
-  Numerical results currently displayed use iter13 v12 baselines (13-D motion taxonomy, vec[0] binning).
-  Final figures will use the 23-D camera-subtracted taxonomy (vec[13] binning, Phase 3 ✅ complete on 2026-05-14).
-  See <a href="https://github.com/kapilw25/factorjepa/blob/main/iter/iter15_trainHead_freezeEncoder/planCODE_html.md" target="_blank">planCODE_html.md</a>.
-</div>
 
-<!-- ==================== ABSTRACT ==================== -->
-<section class="section">
-  <div class="container" style="max-width: 900px;">
-    <h2 class="title is-3 has-text-centered">Abstract</h2>
-    <blockquote>
-      Do video foundation models trained on Western data understand the dense, crowded, chaotic streets of India?
-      We introduce <strong>DenseWorld-200K</strong>, a large-scale benchmark of 200,000 video clips from 714 YouTube
-      walking tours across 25+ Indian cities. Each clip is automatically tagged with 16 structured attributes
-      (scene type, crowd density, traffic mix, road surface, etc.) using a VLM bake-off won by Qwen3-VL-8B.
-      <br><br>
-      We pivot from spatial scene retrieval to <strong>motion-class probing</strong>: each clip's
-      <strong>23-D camera-subtracted optical-flow signature</strong> (RAFT, foreground residual, Phase 0 / iter15)
-      is binned into 8 classes &mdash; magnitude (<em>still / slow / medium / fast</em>) &times; dominant
-      foreground direction (<em>rightward / upward / leftward / downward</em>). We evaluate seven encoders
-      &mdash; <strong>V-JEPA 2.1</strong> (ViT-G, frozen), <strong>V-JEPA Pretrain</strong> (continual SSL, &lambda;=1e-4),
-      <strong>V-JEPA Surgery</strong> (recipe-v3 progressive prefix unfreeze, 3stage_DI + noDI variants),
-      <strong>DINOv2</strong>, <strong>CLIP</strong>, and a <strong>Random</strong> baseline. Our key finding:
-      <strong>V-JEPA dominates motion-class top-1 (0.84 frozen baseline)</strong>, validating that temporal encoders
-      capture <em>agent motion</em> &mdash; the dimension where image encoders have no signal. Surgery (R1 winner)
-      lifts top-1 to <strong>0.846</strong>; iter15 head-only freeze targets the same gain at 1/40&times; the GPU cost.
-    </blockquote>
-  </div>
-</section>
 
-<!-- ==================== KEY FINDINGS ==================== -->
-<section class="section">
-  <div class="container" style="max-width: 900px;">
-    <h2 class="title is-3 has-text-centered">Key Findings</h2>
-
-    <div class="finding-card">
-      <div class="stat">V-JEPA 0.84 vs DINOv2 ~0.55 top-1</div>
-      <div class="desc"><strong>Video Beats Image (on motion).</strong> When the task is motion-class prediction (8 RAFT-derived classes, camera-subtracted foreground flow), V-JEPA's temporal encoder dominates the image encoders. The retrieval-vs-motion gap is what makes V-JEPA fit-for-purpose on Indian street dynamics.</div>
-    </div>
-
-    <div class="finding-card">
-      <div class="stat">Surgery R1: 0.846 &mdash; +1.5 pp over frozen</div>
-      <div class="desc"><strong>Recipe-v3 Surgery Wins.</strong> iter14 paired-&Delta; sweep: R1 (SALT + LP-FT + Surgical Fine-Tuning + SPD + CLEAR + MGMAE) lifts motion top-1 from 0.835 (frozen anchor) to 0.846. R3, R5, R6 are load-bearing &mdash; dropping any of them regresses to 0.823. 95% paired BCa CI confirms non-overlap.</div>
-    </div>
-
-    <div class="finding-card">
-      <div class="stat">Surgery costs 96 GB / 8 GPU-hr; Head-only fits 24 GB / 8 hr</div>
-      <div class="desc"><strong>Head-Only Freeze: 1/40&times; the GPU Bill.</strong> iter15 hypothesis: a 432K-param motion_aux head trained on FROZEN V-JEPA encoder + FROZEN predictor matches surgery's top-1 lift. No backward through 1.84 B encoder params &rarr; no activation storage &rarr; ViT-G fits 24 GB RTX Pro 4000 at $0.20/hr.</div>
-    </div>
-
-    <div class="finding-card" style="border-left-color: var(--accent-terracotta);">
-      <div class="stat">Adapted 0.838 vs Frozen 0.835 &mdash; &Delta; &approx; +0.3 pp</div>
-      <div class="desc"><strong>10K Clips Can't Move a 1B Model.</strong> Continual pretraining (V-JEPA JEPA + motion_aux, &lambda;=1e-4, 5 epochs) on the 10K POC subset produces near-noise improvement. The full 115K corpus is the unblocker; this POC validated the pipeline, not the encoder.</div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ==================== ENCODER COMPARISON ==================== -->
-<section class="section">
-  <div class="container" style="max-width: 1100px;">
-    <h2 class="title is-3 has-text-centered">Seven-Encoder Motion-Class Comparison</h2>
-    <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-      7 encoders evaluated on 8-class motion taxonomy (top-1 accuracy, 95% paired BCa CI). Plots below are
-      iter13 v12 placeholders &mdash; numerical refresh pending Phase 6 head-only POC (vec[13] FG-binning).
-    </p>
-
-    <!-- iter15 Phase 8 (2026-05-17): 3 split bar-comparison plots (compute-matched 4ep) -->
-    <div class="columns is-multiline">
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/probe_action_acc_compare.png" alt="Bar chart sorted ↓ DESCENDING by top-1 accuracy — 8 encoders × motion-class, with BCa 95% CI whiskers">
-          <p class="plot-caption">🎯 <strong>Action probe top-1</strong> (HIGHER better, sorted descending). Compute-matched 4ep: <code>pretrain_2X_encoder</code> leads at 38.6&nbsp;%; surgery encoders trail by &minus;3.6 to &minus;4.6&nbsp;pp (marginal 🟠). At POC N=220 the &plusmn;6&nbsp;pp CI bars overlap; the &Delta;3 paper-claim "surgery &gt; pretrain_2X" fails on top-1 (p=0.27).</p>
-        </div>
-      </div>
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/probe_motion_cos_compare.png" alt="Bar chart sorted ↓ DESCENDING by intra-minus-inter cosine — surgery encoders cluster at top, pretrain_head + frozen at bottom">
-          <p class="plot-caption">🧭 <strong>Motion cosine</strong> intra&minus;inter (HIGHER better, sorted descending). All 4 surgery variants cluster at 0.077&ndash;0.089; <code>pretrain_head</code> + <code>V-JEPA 2.1 frozen</code> tail at 0.014&ndash;0.015 (5&times; lower &mdash; motion-aware separation lives in the trained head). Surgery wins by +0.005 to +0.009 over pretrain_2X (within noise 🟡 at POC).</p>
-        </div>
-      </div>
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/probe_future_mse_compare.png" alt="Bar chart sorted ↑ ASCENDING by future-frame L1 — surgery encoders lowest at 0.511 and 0.514, pretrain_head highest at 0.558">
-          <p class="plot-caption">🔮 <strong>Future-frame MSE</strong> (LOWER better, sorted ascending). Surgery encoders bottom-of-chart at 0.511 and 0.514; <code>pretrain_2X</code> at 0.551. Surgery wins by &minus;0.037 to &minus;0.040 vs pretrain_2X (escapes BCa CI 🟢) &mdash; the only &Delta;3 metric where the paper claim "surgery &gt; pretrain_2X" holds at POC scale.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Results table — motion-class metrics (iter13 v12 placeholder numerics) -->
-    <table class="results-table">
-      <thead>
-        <tr>
-          <th>Encoder</th>
-          <th>Dim</th>
-          <th>Motion Top-1</th>
-          <th>Motion Top-3</th>
-          <th>Per-Class Macro-F1</th>
-          <th>Probe Train Min-Loss</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr style="background: #F3E5F5;">
-          <td><strong>V-JEPA Surgery</strong><br><small style="color:var(--text-secondary);">iter14 R1 winner</small></td>
-          <td>1664</td>
-          <td class="best-value">0.846</td>
-          <td class="best-value">0.952</td>
-          <td class="best-value">0.812</td>
-          <td class="best-value">0.444</td>
-        </tr>
-        <tr>
-          <td><strong>V-JEPA 2.1</strong> Frozen</td>
-          <td>1664</td>
-          <td>0.835</td>
-          <td>0.947</td>
-          <td>0.797</td>
-          <td>0.468</td>
-        </tr>
-        <tr>
-          <td>V-JEPA Pretrain</td>
-          <td>1664</td>
-          <td>0.838</td>
-          <td>0.948</td>
-          <td>0.801</td>
-          <td>0.460</td>
-        </tr>
-        <tr>
-          <td>DINOv2</td>
-          <td>1024</td>
-          <td>0.547</td>
-          <td>0.781</td>
-          <td>0.512</td>
-          <td>1.092</td>
-        </tr>
-        <tr>
-          <td>CLIP</td>
-          <td>768</td>
-          <td>0.523</td>
-          <td>0.766</td>
-          <td>0.487</td>
-          <td>1.143</td>
-        </tr>
-        <tr>
-          <td>Random</td>
-          <td>1408</td>
-          <td>0.125</td>
-          <td>0.378</td>
-          <td>0.094</td>
-          <td>2.079</td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="plot-caption has-text-centered" style="margin-top: 0.5rem;">8-class motion taxonomy, BCa 95% CI. <strong>Placeholder numerics</strong> from iter13 v12 (13-D vec[0] binning); final values refresh after Phase 6 head-only POC on the 23-D vec[13] taxonomy. Bold = best in column. Purple row = iter14 R1 surgery winner.</p>
-
-    <!-- Ch10: Frozen vs Adapted head-to-head — motion-class metrics -->
-    <h3 class="title is-4 has-text-centered" style="margin-top: 2.5rem;">Ch10: Frozen vs Adapted V-JEPA (Motion-Class)</h3>
-    <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1rem;">
-      Continual pretraining + motion_aux head: JEPA L1 + 8-class CE + 13-D MSE, &lambda;=1e-4 (Meta's continual SSL peak), 5 epochs on 10K Indian clips (8,982 train)
-    </p>
-
-    <table class="results-table" style="max-width: 750px; margin: 0 auto;">
-      <thead>
-        <tr>
-          <th>Metric</th>
-          <th style="background: #E3F2FD; color: #1565C0;">Frozen V-JEPA</th>
-          <th style="background: #F3E5F5; color: #7B1FA2;">Adapted (&lambda;=1e-4)</th>
-          <th>Delta</th>
-          <th>Verdict</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Motion Top-1</strong></td>
-          <td style="background: #E3F2FD;">0.835</td>
-          <td style="background: #F3E5F5;">0.838</td>
-          <td style="color: #2E7D32;">+0.003</td>
-          <td><span style="color: var(--text-secondary);">+0.3 pp (10K-scale noise)</span></td>
-        </tr>
-        <tr>
-          <td><strong>Motion Top-3</strong></td>
-          <td style="background: #E3F2FD;">0.947</td>
-          <td style="background: #F3E5F5;">0.948</td>
-          <td style="color: #2E7D32;">+0.001</td>
-          <td><span style="color: var(--text-secondary);">No change</span></td>
-        </tr>
-        <tr>
-          <td><strong>Per-Class Macro-F1</strong></td>
-          <td style="background: #E3F2FD;">0.797</td>
-          <td style="background: #F3E5F5;">0.801</td>
-          <td style="color: #2E7D32;">+0.004</td>
-          <td><span style="color: var(--text-secondary);">No change</span></td>
-        </tr>
-        <tr>
-          <td><strong>Probe Train Min-Loss</strong></td>
-          <td style="background: #E3F2FD;">0.468</td>
-          <td style="background: #F3E5F5;">0.460</td>
-          <td style="color: #2E7D32;">-0.008</td>
-          <td><span style="color: var(--text-secondary);">No change</span></td>
-        </tr>
-        <tr style="border-top: 2px solid var(--border-tan);">
-          <td><strong>Block-Drift (mean rel L2, 48 blocks)</strong></td>
-          <td style="background: #E3F2FD;">0.0</td>
-          <td style="background: #F3E5F5;">2.4e-3</td>
-          <td style="color: #2E7D32;">+2.4e-3</td>
-          <td><span style="color: #FF8F00;">Real but tiny &mdash; far from catastrophic drift threshold (1e-2)</span></td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="plot-caption has-text-centered" style="margin-top: 0.5rem;">
-      <strong>Conclusion:</strong> 10K clips provide insufficient signal to move a 1.84 B-parameter encoder on motion-class top-1. The full 115K corpus is needed for measurable adaptation. <strong>iter14 surgery</strong> achieves a real +1.1 pp lift (frozen 0.835 &rarr; R1 surgery 0.846) on the same 10K POC by progressively unfreezing top-of-stack blocks with factor-augmented data &mdash; see <a href="#" onclick="return false;">paired-&Delta; sweep table below (iter14 R0-R6)</a>.
-    </p>
-
-    <!-- iter14 paired-Δ sweep table placeholder — refreshed in Stage I -->
-    <div class="plot-container placeholder" style="margin-top: 1.5rem;">
-      <div class="placeholder-icon">⏳</div>
-      <div class="placeholder-label">iter14 Surgery Recipe-v3 Paired-&Delta; Sweep (R0&ndash;R6)</div>
-      <div class="placeholder-eta">pending: format from iter/iter14_surgery_on_pretrain/result_outputs/v14b/high_level_outputs.md (R0 anchor 0.835 / R1 winner 0.846 / R3+R5+R6 load-bearing)</div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ==================== MOTION-CLASS SPECTRUM GALLERY (replaces kNN demo) ==================== -->
-<section class="section">
-  <div class="container" style="max-width: 1100px;">
-    <h2 class="title is-3 has-text-centered">Motion-Class Spectrum</h2>
-    <p class="has-text-centered" style="margin-bottom: 1.5rem; color: var(--text-secondary);">
-      8 motion classes from 23-D camera-subtracted optical-flow features. Each class shows 5 representative clips
-      (closest to class centroid in 23-D space). Top row of each cell: original mp4. Bottom row: RAFT optical flow
-      rendered via the Middlebury color wheel &mdash; hue = direction, saturation = magnitude.
-    </p>
-
-    <div class="plot-container placeholder" style="min-height: 360px;">
-      <div class="placeholder-icon">🎬</div>
-      <div class="placeholder-label">Motion-Class Spectrum Gallery (8 classes &times; 5 clips + RAFT color-wheel viz)</div>
-      <div class="placeholder-eta">
-        pending: <code>src/utils/motion_spectrum_gallery.py</code> (planCODE_html.md Stage G &mdash; ~250 LoC).
-        Inputs: <code>data/eval_10k_local/motion_features.npy</code> (9297, 23) &plus;
-        <code>outputs/full/probe_action/action_labels.json</code> (8 surviving classes).
-        Outputs: 40 clip mp4s + 40 RAFT flow mp4s (~30 min GPU).
-        <br><br>
-        Within each row, all 5 clips will share a CONSISTENT color signature in the RAFT viz column &mdash;
-        e.g., <em>fast__rightward</em> tints red, <em>still__downward</em> stays light with faint cyan.
-        That visual constancy is the visceral proof that the 23-D feature actually captures direction +
-        magnitude, even when the scenes differ (market vs drive vs walking).
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- ==================== VERIFICATION WALL (m11 factor masks) ==================== -->
 <section class="verification-wall">
@@ -1259,54 +1087,19 @@
       </p>
     </header>
 
-    <!-- Stage: 1 hero 16:9  +  3 stacked 1:1 -->
-    <div class="vw-stage">
-      <figure class="vw-clip vw-clip--hero">
-        <span class="vw-clip__tier">tier&nbsp;2 &middot; drone</span>
-        <video src="static/videos/m11_factor_verify/coimbatore_drone.mp4"
+    <!-- Uniform 4×2 — all 8 cells same 16:9 (contact-sheet layout) -->
+    <div class="vw-grid">
+      <figure class="vw-clip">
+        <span class="vw-clip__tier">tier&nbsp;1</span>
+        <video src="static/videos/m11_factor_verify/bangalore_drive.mp4"
                autoplay muted loop playsinline preload="metadata"></video>
         <figcaption class="vw-clip__meta">
-          <span class="vw-clip__city">Coimbatore</span>
-          <span class="vw-clip__cond">aerial &middot; clear</span>
+          <span class="vw-clip__city">Bangalore</span>
+          <span class="vw-clip__cond">drive</span>
         </figcaption>
       </figure>
 
-      <div class="vw-stack">
-        <figure class="vw-clip vw-clip--square">
-          <span class="vw-clip__tier">tier&nbsp;1</span>
-          <video src="static/videos/m11_factor_verify/bangalore_drive.mp4"
-                 autoplay muted loop playsinline preload="metadata"></video>
-          <figcaption class="vw-clip__meta">
-            <span class="vw-clip__city">Bangalore</span>
-            <span class="vw-clip__cond">drive</span>
-          </figcaption>
-        </figure>
-
-        <figure class="vw-clip vw-clip--square">
-          <span class="vw-clip__tier">tier&nbsp;2 &middot; rain</span>
-          <video src="static/videos/m11_factor_verify/ahmedabad_rain.mp4"
-                 autoplay muted loop playsinline preload="metadata"></video>
-          <figcaption class="vw-clip__meta">
-            <span class="vw-clip__city">Ahmedabad</span>
-            <span class="vw-clip__cond">drive &middot; rain</span>
-          </figcaption>
-        </figure>
-
-        <figure class="vw-clip vw-clip--square">
-          <span class="vw-clip__tier">tier&nbsp;2</span>
-          <video src="static/videos/m11_factor_verify/varanasi_walking.mp4"
-                 autoplay muted loop playsinline preload="metadata"></video>
-          <figcaption class="vw-clip__meta">
-            <span class="vw-clip__city">Varanasi</span>
-            <span class="vw-clip__cond">walking</span>
-          </figcaption>
-        </figure>
-      </div>
-    </div>
-
-    <!-- Lower row: 4 equal squares -->
-    <div class="vw-row">
-      <figure class="vw-clip vw-clip--square">
+      <figure class="vw-clip">
         <span class="vw-clip__tier">tier&nbsp;1</span>
         <video src="static/videos/m11_factor_verify/delhi_walking.mp4"
                autoplay muted loop playsinline preload="metadata"></video>
@@ -1316,7 +1109,7 @@
         </figcaption>
       </figure>
 
-      <figure class="vw-clip vw-clip--square">
+      <figure class="vw-clip">
         <span class="vw-clip__tier">tier&nbsp;1</span>
         <video src="static/videos/m11_factor_verify/kolkata_walking.mp4"
                autoplay muted loop playsinline preload="metadata"></video>
@@ -1326,7 +1119,37 @@
         </figcaption>
       </figure>
 
-      <figure class="vw-clip vw-clip--square">
+      <figure class="vw-clip">
+        <span class="vw-clip__tier">tier&nbsp;2 &middot; drone</span>
+        <video src="static/videos/m11_factor_verify/coimbatore_drone.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Coimbatore</span>
+          <span class="vw-clip__cond">aerial</span>
+        </figcaption>
+      </figure>
+
+      <figure class="vw-clip">
+        <span class="vw-clip__tier">tier&nbsp;2 &middot; rain</span>
+        <video src="static/videos/m11_factor_verify/ahmedabad_rain.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Ahmedabad</span>
+          <span class="vw-clip__cond">drive &middot; rain</span>
+        </figcaption>
+      </figure>
+
+      <figure class="vw-clip">
+        <span class="vw-clip__tier">tier&nbsp;2</span>
+        <video src="static/videos/m11_factor_verify/varanasi_walking.mp4"
+               autoplay muted loop playsinline preload="metadata"></video>
+        <figcaption class="vw-clip__meta">
+          <span class="vw-clip__city">Varanasi</span>
+          <span class="vw-clip__cond">walking</span>
+        </figcaption>
+      </figure>
+
+      <figure class="vw-clip">
         <span class="vw-clip__tier">tier&nbsp;2</span>
         <video src="static/videos/m11_factor_verify/nagpur_drive.mp4"
                autoplay muted loop playsinline preload="metadata"></video>
@@ -1336,7 +1159,7 @@
         </figcaption>
       </figure>
 
-      <figure class="vw-clip vw-clip--square">
+      <figure class="vw-clip">
         <span class="vw-clip__tier">tier&nbsp;2 &middot; rain</span>
         <video src="static/videos/m11_factor_verify/bhopal_rain.mp4"
                autoplay muted loop playsinline preload="metadata"></video>
@@ -1354,162 +1177,122 @@
   </div>
 </section>
 
-<!-- ==================== PIPELINE ==================== -->
-<section class="section">
-  <div class="container" style="max-width: 900px;">
-    <h2 class="title is-3 has-text-centered">Pipeline</h2>
-    <div class="plot-container has-text-centered" style="padding: 1.5rem; font-family: 'Source Sans 3', sans-serif; font-size: 1rem; line-height: 2.2;">
-      <strong>YouTube</strong> (714 videos, 20&ndash;30 min each)
-      &rarr; <strong>PySceneDetect</strong> (shot-aware 4&ndash;10s cuts)
-      &rarr; <strong>~115K clips</strong> (121 GB)
-      &rarr; <strong>WebDataset</strong> (116 TAR shards, HuggingFace)
-      <br>
-      &rarr; <strong>VLM Bake-off</strong> (Qwen3-VL-8B wins, 0.919 score)
-      &rarr; <strong>16-field v3 Taxonomy</strong>
-      <br>
-      &rarr; <strong>7 Encoders</strong> (V-JEPA Frozen / Pretrain / Surgery 3stage_DI / Surgery noDI / DINOv2 / CLIP / Random)
-      <br>
-      &rarr; <strong>GPU-RAFT Optical Flow</strong> (m04d, 23-D motion features &mdash; 13 global + 10 foreground camera-subtracted, Phase 0)
-      &rarr; <strong>8-class motion taxonomy</strong> (magnitude &times; FG direction, derived from vec[13] / vec[15:23])
-      <br>
-      &rarr; <strong>probe_action</strong> (top-1, top-3, per-class macro-F1)
-      &rarr; <strong>Bootstrap 95% CI</strong> (BCa, 10K iter)
-      &rarr; <strong>Paired-&Delta; sweep</strong> (R0-R6, iter14 recipe-v3)
-      &rarr; <strong>Motion-Class Spectrum Gallery</strong> (8 classes &times; 5 clips + RAFT color-wheel viz)
-    </div>
-    <p class="plot-caption has-text-centered">End-to-end pipeline: from YouTube walking tours to motion-class probing. Total runtime ~7h on RTX PRO 6000 (96 GB); iter15 head-only variant fits 24 GB RTX Pro 4000 at 1/40&times; the GPU bill.</p>
-  </div>
-</section>
-
-<!-- ==================== DETAILED RESULTS ==================== -->
+<!-- ==================== §2 PER-FACTOR TRAIN LOSS ==================== -->
 <section class="section">
   <div class="container" style="max-width: 1100px;">
-    <h2 class="title is-3 has-text-centered">Detailed Results</h2>
-
-    <div class="columns">
-      <div class="column is-6">
-        <div class="plot-container">
-          <img src="static/images/probe_action_loss.png" alt="Probe-action training loss trajectory per encoder across 8-class motion taxonomy">
-          <p class="plot-caption"><strong>Probe-action training trajectory.</strong> Per-encoder train + val loss across the 8-class motion taxonomy. V-JEPA-family encoders converge to ~0.46 train loss / 0.84 val top-1; image encoders plateau at ~1.10 train loss / 0.55 val top-1. The gap is consistent with the encoder's pretraining objective (temporal-patch reconstruction vs frame-level contrastive).</p>
-        </div>
-      </div>
-      <div class="column is-6">
-        <div class="plot-container placeholder">
-          <div class="placeholder-icon">⏳</div>
-          <div class="placeholder-label">8-class Motion Confusion Matrix</div>
-          <div class="placeholder-eta">pending: probe_action --stage eval after Phase 6 head-only POC (vec[13] taxonomy)</div>
-        </div>
-      </div>
+    <h2 class="title is-3 has-text-centered">Per-Factor Train Loss</h2>
+    <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1rem;">
+      m09c surgery 3-stage DI encoder &mdash;
+      Stage 1&nbsp;<strong>D<sub>L</sub></strong> &rarr; Stage 2&nbsp;<strong>D<sub>A</sub></strong>
+      &rarr; Stage 3&nbsp;<strong>D<sub>I</sub></strong>.
+    </p>
+    <div class="plot-container">
+      <img src="static/images/m09c_train_loss.png" alt="Per-stage training loss curves across the three factors D_L, D_A, D_I">
     </div>
-
   </div>
 </section>
 
-<!-- ==================== ADAPTATION TRAJECTORY ==================== -->
+<!-- ==================== §3 CUSTOMIZED LOSS FUNCTION ==================== -->
 <section class="section">
   <div class="container" style="max-width: 1100px;">
-    <h2 class="title is-3 has-text-centered">Adaptation Trajectory: Inside the Continual Pretraining Loop</h2>
+    <h2 class="title is-3 has-text-centered">Customized Loss Function</h2>
 
-    <div class="columns">
-      <div class="column is-6">
-        <div class="plot-container">
-          <img src="static/images/m09a_probe_trajectory_trio.png" alt="Triple-panel plot showing probe top-1 trajectory across training steps for the m09a continual SSL run">
-          <p class="plot-caption"><strong>Probe top-1 climbs across the m09a continual SSL run.</strong> Per-epoch motion-class top-1 (green), val-loss (orange), and JEPA train loss (blue) over 5 epochs &times; 8,982 clips. Top-1 starts at 0.835 (frozen baseline) and lifts to 0.838 &mdash; small but real; iter14 surgery achieves +1.1 pp through factor data + recipe-v3.</p>
-        </div>
-      </div>
-      <div class="column is-6">
-        <div class="plot-container">
-          <img src="static/images/m09a_loss_decomposition.png" alt="Loss decomposition: JEPA L1 + EWC drift anchor + motion_aux CE + motion_aux MSE components per training step">
-          <p class="plot-caption"><strong>Loss decomposition: JEPA + drift + motion_aux.</strong> Multi-component training: JEPA L1 (predict masked patches) + L2 anchor to Meta init (no drift) + motion_aux CE + motion_aux MSE on 13-D RAFT vec. The motion_aux head gives the encoder direct gradient toward the eval taxonomy &mdash; was the v12 unblock from flat retrieval top-1.</p>
-        </div>
-      </div>
+    <div style="max-width: 900px; margin: 0 auto 1.5rem auto; padding: 1.5rem 2rem; background: var(--bg-sand); border-radius: 12px; border: 1px solid var(--border-tan); text-align: center; overflow-x: auto;">
+      <p style="font-size: 1.4rem; margin: 0;">
+        $$ \mathcal{L}_{\text{total}} \;=\; \mathcal{L}_{\text{JEPA}}^{\text{salt}} \;+\; \alpha \,\mathcal{L}_{\text{CE}}^{\text{8-cls}} \;+\; \beta \,\mathcal{L}_{\text{MSE}}^{\text{23-D}} \;+\; \lambda \,\mathcal{L}_{\text{anchor}}^{L_2} $$
+      </p>
+      <p style="font-size: 1.1rem; margin: 0.5rem 0 0 0;">
+        $$ \mathcal{L}_{\text{JEPA}}^{\text{salt}} \;=\; \sum_{p \,\in\, \mathcal{P}_{\text{mask}}} w(p) \cdot \bigl\lVert \mathrm{student}(p) - \mathrm{teacher}_{\text{salt}}(p) \bigr\rVert_{1} $$
+      </p>
+      <ul class="loss-legend">
+        <li>
+          <span class="loss-legend__sym">$\mathcal{L}_{\text{JEPA}}^{\text{salt}}$</span>
+          <span class="loss-legend__def">saliency-weighted L1 vs frozen SALT teacher latents</span>
+          <span class="loss-legend__plain">&mdash; fill in the masked patches</span>
+        </li>
+        <li>
+          <span class="loss-legend__sym">$\mathcal{L}_{\text{CE}}^{\text{8-cls}}$</span>
+          <span class="loss-legend__def">motion-class cross-entropy (8 classes)</span>
+          <span class="loss-legend__plain">&mdash; name the motion class</span>
+        </li>
+        <li>
+          <span class="loss-legend__sym">$\mathcal{L}_{\text{MSE}}^{\text{23-D}}$</span>
+          <span class="loss-legend__def">RAFT motion-vector regression</span>
+          <span class="loss-legend__plain">&mdash; predict the optical flow</span>
+        </li>
+        <li>
+          <span class="loss-legend__sym">$\mathcal{L}_{\text{anchor}}^{L_2}$</span>
+          <span class="loss-legend__def">L2 drift anchor to Meta initialization</span>
+          <span class="loss-legend__plain">&mdash; don't forget the prior brain</span>
+        </li>
+      </ul>
     </div>
 
     <div class="columns">
-      <div class="column is-6">
+      <div class="column is-7">
         <div class="plot-container">
-          <img src="static/images/m09a_block_drift.png" alt="Per-block weight drift relative to Meta initialization across the 48 ViT-G blocks, plotted per training step">
-          <p class="plot-caption"><strong>Per-block weight drift.</strong> Relative L2 vs Meta init across all 48 ViT-G blocks. Blocks 20-47 (top-of-stack, trainable) show drift ~2e-3; blocks 0-19 (frozen via LayerLock) stay at 0. iter15 head-only freeze sets <em>freeze_below: 48</em> &mdash; all 48 blocks stay at 0 drift; only the 432K motion_aux head moves.</p>
+          <img src="static/images/m09c_loss_decomposition.png" alt="Per-component loss decomposition over training steps — JEPA / CE / MSE / anchor">
+          <p class="plot-caption"><strong>Loss decomposition.</strong> 4 components stacked per training step.</p>
         </div>
       </div>
-      <div class="column is-6">
-        <div class="plot-container placeholder">
-          <div class="placeholder-icon">⏳</div>
-          <div class="placeholder-label">iter15 Head-Only Trajectory Trio</div>
-          <div class="placeholder-eta">pending: Phase 6 head-only POC (m09a2_pretrain_head.py). Shows the equivalent of the left plot but with all 48 blocks pinned at 0 drift &mdash; visual proof of the head-only regime.</div>
+      <div class="column is-5">
+        <div class="plot-container">
+          <img src="static/images/m09c_probe_trajectory_trio.png" alt="Probe-trio validation trajectory: top-1, motion-cos, future-L1 across training steps">
+          <p class="plot-caption"><strong>Validation trajectory.</strong> Probe-trio (top-1 / motion-cos / future-L1) correlates with the decomposed train loss on the left.</p>
         </div>
       </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ==================== SPATIAL-TEMPORAL GAP ==================== -->
-<section class="section">
-  <div class="container" style="max-width: 900px;">
-    <h2 class="title is-3 has-text-centered">Why Motion-Class, Not Scene Retrieval</h2>
-
-    <div class="content" style="font-size: 1.05rem; line-height: 1.8;">
-      <p><strong>The retrieval framing was the wrong frame.</strong></p>
-
-      <p>V-JEPA 2.1 is trained to predict masked spatiotemporal patches &mdash; it learns motion patterns, camera trajectories, and temporal dynamics. An earlier evaluation framed the task as <em>spatial scene retrieval</em> (kNN over a 16-axis scene-attribute taxonomy) and found V-JEPA underperforming image encoders. That gap was real, but it measured V-JEPA on the axis where it has no comparative advantage.</p>
-
-      <p><strong>The right framing: motion-class probing.</strong> Each clip's 23-D camera-subtracted optical-flow signature (RAFT, foreground-only after subtracting per-pair median camera motion) is binned into 8 classes &mdash; magnitude (<em>still / slow / medium / fast</em>) &times; dominant foreground direction. This taxonomy isolates <strong>agent motion</strong> from <strong>camera motion</strong>, the exact decomposition V-JEPA's temporal encoder is built to produce. Result: V-JEPA frozen top-1 reaches <strong>0.84</strong>; surgery R1 lifts it to <strong>0.846</strong>; image encoders cap around 0.55.</p>
-
-      <p><strong>External validation:</strong> <a href="https://arxiv.org/abs/2509.21595" target="_blank">arXiv:2509.21595</a> <em>"Temporal vs Spatial: Comparing DINOv3 and V-JEPA2"</em> reports the same spatial/temporal trade-off on UCF Sports &mdash; image encoders win on appearance, video encoders win on dynamics. We confirm the same dichotomy on the dense, cluttered, camera-handheld Indian street regime where the gap is largest.</p>
-
-      <p><strong>iter15 next step:</strong> head-only freeze + curriculum. If a 432K-param head on a frozen ViT-G matches surgery's top-1 lift, the paper claim becomes <em>"motion-class transfer is a head-level adaptation problem &mdash; the encoder already has the right features; you just have to read them."</em> That single sentence shifts the field from "fine-tune the whole encoder" to "freeze the encoder, train the read-out".</p>
     </div>
   </div>
 </section>
 
-<!-- ==================== FUTURE WORK ==================== -->
+<!-- ==================== §4 PER-BLOCK WEIGHT DRIFT ==================== -->
 <section class="section">
-  <div class="container" style="max-width: 900px;">
-    <h2 class="title is-3 has-text-centered">Roadmap</h2>
+  <div class="container" style="max-width: 1100px;">
+    <h2 class="title is-3 has-text-centered">Per-Block Weight Drift</h2>
+    <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1rem;">
+      Tradeoff axis: <strong>no movement</strong> &nbsp;&harr;&nbsp; <strong>catastrophic forgetting</strong>.
+      Stage-gated backward keeps frozen blocks pinned at 0 drift while top-of-stack blocks adapt within budget.
+    </p>
+    <div class="plot-container">
+      <img src="static/images/m09c_block_drift.png" alt="Per-block weight drift across 48 ViT-G blocks over training steps — frozen blocks pinned at 0, top blocks adapt within drift budget">
+    </div>
+  </div>
+</section>
 
-    <table class="results-table roadmap-table">
-      <thead>
-        <tr><th>Phase</th><th>Description</th><th>Status</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Evaluate (Ch 9)</td>
-          <td>5-encoder benchmark on 10K POC &mdash; retrieval metrics + motion top-1, 95% CI, Easy/Hard</td>
-          <td class="status-complete">Complete</td>
-        </tr>
-        <tr>
-          <td>Motion-Class Probing (iter13 v12)</td>
-          <td>GPU-RAFT motion features (m04d) + 8-class motion taxonomy + probe_action top-1 across 7 encoders</td>
-          <td class="status-complete">Complete</td>
-        </tr>
-        <tr>
-          <td>Pretrain (Ch 10)</td>
-          <td>JEPA continual pretraining + motion_aux head + L2 anchor. Pipeline built &amp; validated on 10K POC &mdash; adapted encoder shows &Delta; &asymp; +0.3 pp (10K-scale noise floor; insufficient signal for 1B model)</td>
-          <td class="status-poc">POC validated &mdash; awaiting 115K</td>
-        </tr>
-        <tr>
-          <td>Surgery Recipe-v3 (iter14)</td>
-          <td>Progressive prefix unfreezing with SAM3 factor datasets (Layout &rarr; Agent &rarr; Interaction) + SALT + LP-FT + SPD + CLEAR + MGMAE. R0-R6 paired-&Delta; sweep: R1 winner at top-1 0.846 (+1.1 pp over frozen anchor); 95% paired BCa CI non-overlapping</td>
-          <td class="status-complete">Complete</td>
-        </tr>
-        <tr>
-          <td>FG Motion Features (iter15 Phase 0/3)</td>
-          <td>m04d extended 13-D &rarr; 23-D: added camera-subtracted foreground flow stats (fg_mean_mag, fg_max_mag, fg_dir_hist[8]). action_labels taxonomy migrated from vec[0] global binning to vec[13] FG binning &mdash; isolates agent motion from camera pan</td>
-          <td class="status-complete">Complete (2026-05-14)</td>
-        </tr>
-        <tr>
-          <td>Head-Only Freeze (iter15 Phase 2/5/6)</td>
-          <td>m09a2 + m09c2: frozen V-JEPA encoder + frozen predictor + trained 432K-param motion_aux head. Target: match surgery R1 at top-1 0.846 with 1/40&times; the GPU bill (24 GB / 8 hr / $1.60 vs surgery's 96 GB / 8 hr / ~$6.40)</td>
-          <td class="status-planned">Phase 2 in progress &mdash; ~730 LoC remaining</td>
-        </tr>
-        <tr>
-          <td>115K Full Corpus</td>
-          <td>Ch9 eval + Ch10 pretrain on full 115,687 clips (~184 GPU-hours). The 10K POC proved the pipeline; 115K is needed to move a 1B encoder</td>
-          <td class="status-poc">Pipeline ready &mdash; awaiting GPU budget</td>
-        </tr>
-      </tbody>
-    </table>
+</div><!-- end tab-training -->
+
+
+<!-- ==================== TAB 3: FactorJEPA — Evaluation ==================== -->
+<div id="tab-factorjepa" class="tab-content" style="display: none;">
+
+<!-- ==================== POC EVAL — 3 COMPARISON PLOTS ==================== -->
+<section class="section" style="padding-top: 2rem;">
+  <div class="container" style="max-width: 1100px;">
+    <h2 class="title is-3 has-text-centered">POC Evaluation &mdash; 7 Trained Encoders</h2>
+    <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+      iter15 POC &middot; N=220 &middot; BCa 10K bootstrap 95% CI &middot; compute-matched 4&nbsp;epochs.
+    </p>
+
+    <div class="columns is-multiline">
+      <div class="column is-12">
+        <div class="plot-container">
+          <img src="static/images/probe_action_acc_compare.png" alt="Bar chart — top-1 accuracy across 7 trained encoders, descending">
+          <p class="plot-caption">🎯 <strong>Action probe top-1</strong> (higher better). <code>pretrain_2X</code> leads at 38.6%; surgery encoders trail by &minus;3.6 to &minus;4.6&nbsp;pp (within POC ±6&nbsp;pp CI).</p>
+        </div>
+      </div>
+      <div class="column is-12">
+        <div class="plot-container">
+          <img src="static/images/probe_motion_cos_compare.png" alt="Bar chart — intra-minus-inter cosine, descending">
+          <p class="plot-caption">🧭 <strong>Motion cosine</strong> intra&minus;inter (higher better). 4 surgery variants cluster at 0.077&ndash;0.089; <code>pretrain_head</code> + frozen tail at 0.014&ndash;0.015.</p>
+        </div>
+      </div>
+      <div class="column is-12">
+        <div class="plot-container">
+          <img src="static/images/probe_future_mse_compare.png" alt="Bar chart — future-frame L1, ascending">
+          <p class="plot-caption">🔮 <strong>Future-frame MSE</strong> (lower better). Surgery encoders bottom-of-chart at 0.511 and 0.514 &mdash; the only Δ3 metric where surgery &gt; <code>pretrain_2X</code> escapes BCa CI.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1883,8 +1666,96 @@ fetch('static/stats.json')
     // Grand total bar
     const gt = document.getElementById('stat-grand-total');
     if (gt) gt.innerHTML = '<strong>Grand Total: ' + fmt(s.total_clips) + ' clips &nbsp;|&nbsp; ' + s.total_hours + ' hours &nbsp;|&nbsp; ' + s.total_gb + ' GB</strong>';
+
+    // -------- Clips-per-city Chart.js bars --------
+    if (window.Chart) renderCityCharts(stats);
   })
   .catch(() => {}); // Fallback: hardcoded values in HTML remain
+
+function renderCityCharts(stats) {
+  const COLORS = {
+    drive: '#8B3A2A',   // terracotta
+    walk:  '#3B6B35',   // green
+    drone: '#D4762C',   // saffron
+    rain:  '#4A6FA5'    // slate
+  };
+  const baseOpts = (totals) => ({
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'nearest', intersect: false },
+    scales: {
+      x: { stacked: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#6B5E52', font: { size: 11 } } },
+      y: { stacked: true, grid: { display: false }, ticks: { color: '#2D2318', font: { weight: '600', size: 12 } } }
+    },
+    plugins: {
+      legend: { position: 'top', align: 'end', labels: { boxWidth: 14, font: { size: 11 }, color: '#2D2318' } },
+      tooltip: {
+        backgroundColor: 'rgba(45,35,24,0.92)',
+        titleFont: { size: 12, weight: '700' },
+        bodyFont: { size: 12 },
+        callbacks: {
+          afterTitle: ctx => 'total: ' + totals[ctx[0].dataIndex].toLocaleString('en-US') + ' clips',
+          label: ctx => '  ' + ctx.dataset.label + ': ' + ctx.parsed.x.toLocaleString('en-US')
+        }
+      }
+    }
+  });
+  const makeStacked = (rows, keys) => {
+    // Sort cities by total descending so the chart reads top-down.
+    const withTotal = rows.map(r => ({ ...r, _total: keys.reduce((s, k) => s + (r[k] || 0), 0) }));
+    withTotal.sort((a, b) => b._total - a._total);
+    return {
+      labels: withTotal.map(r => r.city || r.name),
+      totals: withTotal.map(r => r._total),
+      datasets: keys.map(k => ({
+        label: k,
+        data: withTotal.map(r => r[k] || 0),
+        backgroundColor: COLORS[k],
+        borderColor: COLORS[k],
+        borderWidth: 0,
+        borderRadius: 3,
+        barPercentage: 0.85,
+        categoryPercentage: 0.8
+      }))
+    };
+  };
+
+  // Tier 1 — drive / walk / drone
+  if (stats.tier1) {
+    const d = makeStacked(stats.tier1.cities, ['drive', 'walk', 'drone']);
+    new Chart(document.getElementById('chart-tier1'), {
+      type: 'bar',
+      data: { labels: d.labels, datasets: d.datasets },
+      options: baseOpts(d.totals)
+    });
+  }
+
+  // Tier 2 — drive / walk / drone / rain
+  if (stats.tier2) {
+    const d = makeStacked(stats.tier2.cities, ['drive', 'walk', 'drone', 'rain']);
+    new Chart(document.getElementById('chart-tier2'), {
+      type: 'bar',
+      data: { labels: d.labels, datasets: d.datasets },
+      options: baseOpts(d.totals)
+    });
+  }
+
+  // Goa (walk only) + Monuments (single 'clips' field)
+  const miscRows = [];
+  if (stats.goa) miscRows.push({ city: 'Goa', walk: stats.goa.walk });
+  if (stats.monuments && stats.monuments.sites) {
+    stats.monuments.sites.forEach(m => miscRows.push({ city: m.name, walk: m.clips }));
+  }
+  if (miscRows.length) {
+    const d = makeStacked(miscRows, ['walk']);
+    new Chart(document.getElementById('chart-misc'), {
+      type: 'bar',
+      data: { labels: d.labels, datasets: d.datasets },
+      options: baseOpts(d.totals)
+    });
+  }
+}
 
 function copyBibtex() {
   const text = document.getElementById('bibtex-text').innerText;
@@ -1974,11 +1845,137 @@ document.addEventListener('click', function(e) {
 .mermaid .mindmap-node:nth-child(-n+5) > circle {
   filter: brightness(0.7) !important;
 }
+
+/* ---------- Universal lightbox: <video> click-to-fullscreen ---------- */
+section video,
+.vw-clip video,
+.video-cell video { cursor: zoom-in; }
+
+.media-lightbox {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  cursor: zoom-out;
+  animation: media-lightbox-in 0.2s ease;
+}
+@keyframes media-lightbox-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.media-lightbox video {
+  max-width: 95vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  cursor: default;
+  background: #000;
+}
+.media-lightbox-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+.media-lightbox-close:hover { background: rgba(255, 255, 255, 0.28); }
+.media-lightbox-hint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+  font-family: 'Source Sans 3', sans-serif;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
 </style>
 
-<!-- Click-to-zoom on all result plots (medium-zoom, 4KB CDN) -->
+<!-- Click-to-zoom on all content images (medium-zoom, 4KB CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
-<script>mediumZoom('.plot-container img', { margin: 40, background: 'rgba(0,0,0,0.9)' });</script>
+<script>
+  // Zoom every content image (plots + diagrams + dataset distributions),
+  // but exclude logo + shields.io badges that ship inline in the hero.
+  mediumZoom(
+    'img[src^="static/images/"]:not([alt*="Logo"]):not([alt*="logo"])',
+    { margin: 40, background: 'rgba(0, 0, 0, 0.92)' }
+  );
+</script>
+
+<!-- Click-to-fullscreen on every <video> (city grids + taxonomy + teaser + m11 verify) -->
+<script>
+(function () {
+  document.addEventListener('click', function (e) {
+    var vid = e.target.closest('video');
+    if (!vid) return;
+    if (vid.closest('.media-lightbox')) return;     // already in overlay — ignore
+    if (e.target.tagName === 'A' || e.target.closest('a')) return;
+    e.preventDefault();
+
+    var src = vid.currentSrc
+           || (vid.querySelector('source') && vid.querySelector('source').src)
+           || vid.src;
+    if (!src) return;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'media-lightbox';
+
+    var clone = document.createElement('video');
+    clone.src           = src;
+    clone.controls      = true;
+    clone.autoplay      = true;
+    clone.loop          = true;
+    clone.muted         = vid.muted;
+    clone.playsInline   = true;
+    clone.preload       = 'auto';
+    try { clone.currentTime = vid.currentTime; } catch (_) { /* ignore */ }
+
+    var btn = document.createElement('button');
+    btn.className = 'media-lightbox-close';
+    btn.setAttribute('aria-label', 'Close fullscreen');
+    btn.innerHTML = '&times;';
+
+    var hint = document.createElement('div');
+    hint.className = 'media-lightbox-hint';
+    hint.textContent = 'click outside · press Esc · or × to close';
+
+    overlay.appendChild(clone);
+    overlay.appendChild(btn);
+    overlay.appendChild(hint);
+
+    function close() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(ev) { if (ev.key === 'Escape') close(); }
+
+    overlay.addEventListener('click', function (ev) {
+      // Close only when the backdrop / hint / close-btn is clicked,
+      // not when the video itself is clicked (allow pause/seek/etc.).
+      if (ev.target === overlay || ev.target === btn || ev.target === hint) close();
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+  }, true);
+})();
+</script>
 
 </body>
 </html>
