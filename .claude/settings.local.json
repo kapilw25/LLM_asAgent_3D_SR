@@ -238,7 +238,12 @@
       "Bash(git check-ignore *)",
       "Bash(nvidia-smi --query-gpu=name,memory.total,compute_cap,driver_version --format=csv)",
       "Bash(awk '$NF == 0 && $7 > 1000000 {print $0}')",
-      "Bash(xfs_quota -x -c \"report -p\" /workspace)"
+      "Bash(xfs_quota -x -c \"report -p\" /workspace)",
+      "Bash(top -bn1)",
+      "Bash(nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv)",
+      "Bash(nvidia-smi -q)",
+      "Bash(/workspace/factorjepa/venv_walkindia/bin/ruff check *)",
+      "Bash(grep -A1 -B0 '^- \\\\*\\\\*`action_labels.py`' /workspace/factorjepa/src/MEMORY.md)"
     ]
   }
 }

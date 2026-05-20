@@ -71,17 +71,23 @@ from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metr
 # ── Constants ─────────────────────────────────────────────────────────
 
 _PCFG = get_pipeline_config()
-NUM_FRAMES_DEFAULT = 16
-PATCH_SIZE = 16
-TUBELET_SIZE = 2
-CROP = 384                          # V-JEPA 2.1 ViT-G/384 (must match encoder)
+# iter16 (2026-05-20): architecture + probe defaults moved per CLAUDE.md
+# "No hardcoded values in Python":
+#   - PATCH_SIZE / TUBELET_SIZE / CROP / PRED_* / NUM_MASK_TOKENS → configs/model/vjepa2_1.yaml
+#   - NUM_FRAMES_DEFAULT → configs/pipeline.yaml > probe.num_frames
+from utils.config import get_model_config as _get_mcfg
+_MODEL_CFG     = _get_mcfg(None)["model"]              # None → default vjepa2_1.yaml
+NUM_FRAMES_DEFAULT = _PCFG["probe"]["num_frames"]      # was 16 literal
+PATCH_SIZE     = _MODEL_CFG["patch_size"]               # was 16 literal
+TUBELET_SIZE   = _MODEL_CFG["tubelet_size"]             # was 2 literal
+CROP           = _MODEL_CFG["crop_size"]                # was 384 literal (V-JEPA 2.1 ViT-G/384)
 CHECKPOINT_EVERY = _PCFG["streaming"]["checkpoint_every"]
 
 # V-JEPA 2.1 predictor architecture (from configs/model/vjepa2_1.yaml).
-PRED_EMBED_DIM = 384
-PRED_DEPTH = 24
-PRED_NUM_HEADS = 12
-NUM_MASK_TOKENS = 2
+PRED_EMBED_DIM = _MODEL_CFG["pred_embed_dim"]           # was 384 literal
+PRED_DEPTH     = _MODEL_CFG["pred_depth"]               # was 24 literal
+PRED_NUM_HEADS = _MODEL_CFG["pred_num_heads"]           # was 12 literal
+NUM_MASK_TOKENS = _MODEL_CFG["num_mask_tokens"]         # was 2 literal
 
 # Default mask config — matches V-JEPA 2.1 small-block convention (8 × ~15% spatial).
 # Single mask spec (no large-block component) is sufficient for a forward-only
@@ -670,7 +676,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="probe_action output dir (provides action_labels.json test split)")
     p.add_argument("--output-root", type=Path, required=True)
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT)
-    p.add_argument("--seed", type=int, default=99)
+    p.add_argument("--seed", type=int, default=_PCFG["probe"]["seed"])   # was 99 literal
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p

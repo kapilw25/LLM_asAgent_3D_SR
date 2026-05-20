@@ -105,7 +105,9 @@ torch = None
 raft_large = None
 Raft_Large_Weights = None
 
-FEATURE_DIM = 23
+# iter16 (2026-05-20): FEATURE_DIM + N_FRAME_PAIRS moved to configs/pipeline.yaml
+# > motion: per CLAUDE.md "No hardcoded values in Python". Bound below in the
+# _pcfg block (line ~123) so callers/argparse can reference yaml-resolved values.
 FEATURE_NAMES = [
     # Existing 13-D global flow (indices 0-12)
     "mean_magnitude", "magnitude_std", "max_magnitude",
@@ -119,12 +121,14 @@ FEATURE_NAMES = [
     "fg_dir_hist_0", "fg_dir_hist_1", "fg_dir_hist_2", "fg_dir_hist_3",
     "fg_dir_hist_4", "fg_dir_hist_5", "fg_dir_hist_6", "fg_dir_hist_7",
 ]
-N_FRAME_PAIRS = 16
 _pcfg = get_pipeline_config()
+FEATURE_DIM         = _pcfg["motion"]["feature_dim"]       # iter16: was 23 literal
+N_FRAME_PAIRS       = _pcfg["motion"]["n_frame_pairs"]     # iter16: was 16 literal
 CHECKPOINT_INTERVAL = _pcfg["eval"]["motion_checkpoint_every"]
 PRODUCER_QUEUE_SIZE = _pcfg["streaming"]["producer_queue_motion"]
-CLIPS_PER_GPU_BATCH = _pcfg["gpu"]["motion_batch_size"]
-DECODE_WORKERS = _pcfg["streaming"]["decode_workers_motion"]
+CLIPS_PER_GPU_BATCH = _pcfg["gpu"]["motion_batch_size"]    # max for AdaptiveBatchSizer
+MOTION_INITIAL_BS   = _pcfg["gpu"]["motion_initial_bs"]    # iter16: safe start; sizer grows to max
+DECODE_WORKERS      = _pcfg["streaming"]["decode_workers_motion"]
 
 
 # ── HF Streaming (reuse m05 pattern) ────────────────────────────────
@@ -604,9 +608,13 @@ def main():
     model, transforms = load_raft_model(device)
 
     # Batch sizer for sub-batching within GPU forward (OOM recovery).
-    # VRAM ceiling from universal pipeline.yaml key `gpu_memory_target` (#47).
+    # iter16 (2026-05-20) FIX — GPU pipeline checklist §11 violation: previously
+    # initial_size == max_size, so the sizer could ONLY shrink on OOM, never grow.
+    # On Pro 6000 96 GB this capped at the Pro 4000 ceiling. Now: initial reads
+    # motion_initial_bs (safe start), max reads motion_batch_size (ceiling), so
+    # AdaptiveBatchSizer can ramp toward 0.85×VRAM on whichever GPU is detected.
     sizer = AdaptiveBatchSizer(
-        initial_size=CLIPS_PER_GPU_BATCH * args.n_pairs,
+        initial_size=MOTION_INITIAL_BS   * args.n_pairs,
         min_size=args.n_pairs,
         max_size=CLIPS_PER_GPU_BATCH * args.n_pairs,
         memory_cap=get_pipeline_config()["gpu"]["gpu_memory_target"])

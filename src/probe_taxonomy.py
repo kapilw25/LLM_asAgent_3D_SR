@@ -56,7 +56,7 @@ from utils.cache_policy import (
     add_cache_policy_arg, guarded_delete, resolve_cache_policy_interactive,
 )
 from utils.checkpoint import save_json_checkpoint
-from utils.config import check_gpu
+from utils.config import check_gpu, get_pipeline_config
 from utils.gpu_batch import cleanup_temp
 from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
 from utils.progress import make_pbar
@@ -64,7 +64,10 @@ from utils.vjepa2_imports import get_attentive_classifier
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 
 
-NUM_FRAMES_DEFAULT = 16
+# iter16 (2026-05-20): probe hyperparams moved to configs/pipeline.yaml > probe:
+# per CLAUDE.md "No hardcoded values in Python".
+_PROBE_CFG = get_pipeline_config()["probe"]
+NUM_FRAMES_DEFAULT = _PROBE_CFG["num_frames"]   # was 16 literal
 
 
 # ── Label derivation ─────────────────────────────────────────────────
@@ -614,18 +617,18 @@ def build_parser():
     _add_local_data_arg(p)
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT,
                    help="Frames per clip for lazy extraction; ignored when features already on disk")
-    p.add_argument("--pool-tokens", type=int, default=16,
+    p.add_argument("--pool-tokens", type=int, default=_PROBE_CFG["pool_tokens"],
                    help="Adaptive-avg-pool encoder output to N tokens before storage / probe. "
-                        "Default 16 (V-JEPA paper §4 attentive-probe regime). "
+                        "yaml probe.pool_tokens (was 16 literal — V-JEPA paper §4 attentive-probe regime). "
                         "Use 0 to disable pooling.")
     p.add_argument("--output-root", type=Path, required=True)
-    p.add_argument("--epochs", type=int, default=50)
-    p.add_argument("--probe-lr", type=float, default=5e-4)
-    p.add_argument("--probe-wd", type=float, default=0.05)
-    p.add_argument("--warmup-pct", type=float, default=0.10)
-    p.add_argument("--probe-depth", type=int, default=4)
-    p.add_argument("--train-batch-size", type=int, default=64)
-    p.add_argument("--seed", type=int, default=99)
+    p.add_argument("--epochs", type=int, default=_PROBE_CFG["epochs"])
+    p.add_argument("--probe-lr", type=float, default=_PROBE_CFG["lr"])
+    p.add_argument("--probe-wd", type=float, default=_PROBE_CFG["wd"])
+    p.add_argument("--warmup-pct", type=float, default=_PROBE_CFG["warmup_pct"])
+    p.add_argument("--probe-depth", type=int, default=_PROBE_CFG["depth"])
+    p.add_argument("--train-batch-size", type=int, default=_PROBE_CFG["batch_size"])
+    p.add_argument("--seed", type=int, default=_PROBE_CFG["seed"])
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p

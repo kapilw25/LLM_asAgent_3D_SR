@@ -32,7 +32,9 @@ OUTPUT_JSON = OUTPUT_DIR / "video_durations.json"
 # Defaults
 DEFAULT_WORKERS = get_pipeline_config()["data"]["data_prep_workers"]
 SANITY_LIMIT = get_sanity_clip_limit("data_prep")
-AVG_CLIP_DURATION = 7.85  # seconds (measured from 500 sampled clips across 168 videos)
+# iter16 (2026-05-20): moved to configs/pipeline.yaml > data_prep.avg_clip_duration_sec
+# per CLAUDE.md "No hardcoded values in Python".
+AVG_CLIP_DURATION = get_pipeline_config()["data_prep"]["avg_clip_duration_sec"]  # was 7.85 literal
 
 
 def extract_all_videos(data: dict) -> list:

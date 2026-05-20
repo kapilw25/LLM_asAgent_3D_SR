@@ -25,6 +25,10 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
+# iter16 M5 (2026-05-20): sklearn StratifiedGroupKFold powers the new
+# video-disjoint stratified_split. scikit-learn>=1.3 is already pinned in
+# requirements.txt; first sklearn import in src/ — adopt cleanly.
+from sklearn.model_selection import StratifiedGroupKFold
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.checkpoint import save_json_checkpoint, load_json_checkpoint
@@ -231,49 +235,136 @@ def load_subset_with_labels(subset_path, motion_features_path, *,
     return records, class_names
 
 
+def _extract_video_id(clip_key: str) -> str:
+    """Extract video_id from a clip_key (variable section depth).
+
+    Canonical formats observed in this repo:
+      * tier1/tier2: ``<tier>/<city>/<action>/<video_id>/<file>.mp4`` (5 parts)
+      * goa:        ``goa/<action>/<video_id>/<file>.mp4`` (4 parts)
+      * monuments:  ``monuments/<site>/<video_id>/<file>.mp4`` (4 parts)
+
+    The video_id is ALWAYS the directory immediately above the clip file →
+    ``parts[-2]`` regardless of section depth.
+
+    iter16 M5 (2026-05-20): introduced for video-disjoint stratified_split.
+
+    FAIL LOUD per src/CLAUDE.md if the key has <3 parts (genuinely malformed
+    — no plausible upstream manifest produces such a shape).
+    """
+    parts = clip_key.split("/")
+    if len(parts) < 3:
+        raise ValueError(
+            f"clip_key '{clip_key}' has only {len(parts)} parts; need ≥3 "
+            f"(<section>/.../<video_id>/<file>.mp4). "
+            f"Fix upstream manifest schema; do not silently fall through."
+        )
+    return parts[-2]
+
+
 def stratified_split(records, train_pct=0.70, val_pct=0.15, seed=99,
                      *, min_per_split=MIN_PER_SPLIT_DEFAULT):
-    """Stratified-by-class 70/15/15 split. Returns {clip_key: "train"|"val"|"test"}.
+    """Class-stratified + VIDEO-DISJOINT train/val/test split.
 
-    Raises ValueError if any class has < min_per_split clips in any split.
-    Default min_per_split=5 (BCa CI floor). SANITY can pass a lower value if
-    class data is sparse — at the cost of meaningless per-class CI.
+    Returns ``{clip_key: "train"|"val"|"test"}``. Every clip from a given
+    ``video_id`` (parsed via ``_extract_video_id``) lands in EXACTLY ONE of
+    the three splits — no leakage of visual style / background across splits.
+
+    iter16 M5 (2026-05-20) — hard replacement of the previous clip-key-level
+    shuffle, which let clips from the same source video straddle train↔val↔
+    test. See ``iter/iter16_train_115kclips/legacy/
+    plan_video_disjoint_stratified_split.md`` for the full rationale.
+
+    Algorithm (hybrid sklearn ``StratifiedGroupKFold`` + inner split):
+      Phase 1: outer SGKF on (class_ids, video_ids) → peel off TEST set
+      Phase 2: inner SGKF on remaining train+val pool, renormalised
+               val_inner_pct = val_pct / (train_pct + val_pct), random_state
+               = seed + 1 to decorrelate outer/inner shuffles
+      Phase 3: vectorised per-class per-split count + min_per_split assert
+      Phase 4: defense-in-depth assert — NO video straddles splits
+
+    FAIL LOUD on infeasibility (per src/CLAUDE.md): if any class has <
+    min_per_split clips in any split, ValueError with per-class diagnostic.
+    SANITY mode (≤1,150 clips × 16 classes) MAY trigger this — that is
+    correct behavior; raise sanity.default in pipeline.yaml or relax
+    min_per_split via CLI, do not branch on mode (POC↔FULL parity rule).
     """
-    rng = np.random.default_rng(seed)
-    by_class = defaultdict(list)
-    for r in records:
-        by_class[r["class"]].append(r["clip_key"])
+    # 1 — Build parallel arrays (vectorised on 115K records).
+    clip_keys = np.array([r["clip_key"] for r in records])
+    class_ids = np.array([r["class_id"] for r in records])
+    video_ids = np.array([_extract_video_id(k) for k in clip_keys])
 
-    splits = {}
+    n_classes = int(class_ids.max() + 1)
+    n_videos  = len(np.unique(video_ids))
+    n_total   = len(records)
+
+    # 2 — Outer SGKF: carve out TEST.
     test_pct = 1.0 - train_pct - val_pct
-    for cls in sorted(by_class.keys()):       # deterministic class order
-        keys = list(by_class[cls])
-        rng.shuffle(keys)
-        n = len(keys)
-        # iter13 v13 (2026-05-07): greedy allocation. Previously used
-        # `int(n*pct)` floor for val + test which gave 0 when pct*n < 1
-        # (e.g. n=5, val_pct=0.15 → val=0 → ValueError). The min_per_split
-        # contract is ≥1 per split (BCa CI floor = 1 sample minimum) so
-        # promote val + test to 1 and let train absorb the rounding loss.
-        # For large n where int(n*pct) ≥ 1 the allocation is unchanged
-        # (max(1, k) == k for k≥1), so paper-grade ratios are preserved.
-        # Net effect: keeps small-n classes that otherwise FATAL'd, making
-        # the probe HARDER (more classes to discriminate). Min keepable n=3
-        # (val=1, test=1, train=1).
-        n_val = max(1, int(n * val_pct))
-        n_test = max(1, int(n * test_pct))
-        n_train = n - n_val - n_test
-        if min(n_train, n_val, n_test) < min_per_split:
-            raise ValueError(
-                f"Class '{cls}' has only n={n} → train={n_train}/val={n_val}/test={n_test}; "
-                f"each split must have >={min_per_split} clips for BCa CI to be meaningful."
-            )
-        for k in keys[:n_train]:
-            splits[k] = "train"
-        for k in keys[n_train:n_train + n_val]:
-            splits[k] = "val"
-        for k in keys[n_train + n_val:]:
-            splits[k] = "test"
+    k_test   = int(round(1.0 / test_pct))           # 0.20 → 5 ; 0.15 → 7
+    if abs(1.0 / k_test - test_pct) > 0.03:
+        raise ValueError(
+            f"test_pct={test_pct:.3f} maps to k={k_test} (~{1/k_test:.3f}); "
+            f"choose train_pct/val_pct such that (1 - train - val) = 1/k "
+            f"for integer k (e.g. 0.10, 0.125, 0.15, 0.20, 0.25)."
+        )
+    sgkf_outer = StratifiedGroupKFold(n_splits=k_test, shuffle=True,
+                                      random_state=seed)
+    trainval_idx, test_idx = next(sgkf_outer.split(
+        np.zeros_like(class_ids), class_ids, video_ids,
+    ))
+
+    # 3 — Inner SGKF on train+val pool (renormalised val ratio, seed+1).
+    val_inner_pct = val_pct / (train_pct + val_pct)
+    k_val = int(round(1.0 / val_inner_pct))
+    sgkf_inner = StratifiedGroupKFold(n_splits=k_val, shuffle=True,
+                                      random_state=seed + 1)
+    inner_train, inner_val = next(sgkf_inner.split(
+        np.zeros_like(class_ids[trainval_idx]),
+        class_ids[trainval_idx],
+        video_ids[trainval_idx],
+    ))
+    train_idx = trainval_idx[inner_train]
+    val_idx   = trainval_idx[inner_val]
+
+    # 4 — Build {clip_key: split} dict.
+    splits = {}
+    for i in train_idx: splits[clip_keys[i]] = "train"
+    for i in val_idx:   splits[clip_keys[i]] = "val"
+    for i in test_idx:  splits[clip_keys[i]] = "test"
+
+    # 5 — Vectorised per-class per-split counts + min_per_split FAIL LOUD.
+    split_id = np.full(n_total, -1, dtype=np.int8)
+    split_id[train_idx], split_id[val_idx], split_id[test_idx] = 0, 1, 2
+    counts = np.zeros((n_classes, 3), dtype=np.int64)
+    np.add.at(counts, (class_ids, split_id), 1)
+
+    infeasible = [(int(c), counts[c].tolist()) for c in range(n_classes)
+                  if counts[c].min() < min_per_split]
+    if infeasible:
+        videos_per_class = {int(c): int(np.unique(video_ids[class_ids == c]).size)
+                            for c in range(n_classes)}
+        raise ValueError(
+            f"video-disjoint stratified_split failed min_per_split="
+            f"{min_per_split} for {len(infeasible)} class(es). "
+            f"Per-class [train,val,test] counts: {infeasible}. "
+            f"Videos-per-class: {videos_per_class}. "
+            f"Fix options: (a) raise corpus N (sanity.default / poc.default_n "
+            f"in pipeline.yaml), (b) raise min_clips_per_class so sparse "
+            f"classes drop earlier, (c) lower min_per_split via CLI (only "
+            f"for non-paper SANITY runs)."
+        )
+
+    # 6 — Defense-in-depth: NO video may straddle splits (Phase-4 invariant).
+    video_to_splits = defaultdict(set)
+    for k, s in splits.items():
+        video_to_splits[_extract_video_id(k)].add(s)
+    straddlers = {v: sp for v, sp in video_to_splits.items() if len(sp) > 1}
+    assert not straddlers, (
+        f"BUG: {len(straddlers)} videos straddling splits — {dict(list(straddlers.items())[:5])}"
+    )
+
+    print(f"[stratified_split] video-disjoint iter16+ mode: "
+          f"N_clips={n_total}, N_videos={n_videos}, N_classes={n_classes}; "
+          f"train/val/test = {len(train_idx)}/{len(val_idx)}/{len(test_idx)}")
     return splits
 
 
@@ -321,14 +412,46 @@ def _self_test():
         min_clips_per_class=args.min_clips_per_class)
     splits = stratified_split(records, min_per_split=args.min_per_split)
     counts = Counter(r["class"] for r in records)
-    print(f"\nTotal: {len(records)} clips ({len(counts)} classes after filter)")
     by_clip = {r["clip_key"]: r["class"] for r in records}
+
+    # iter16 M5: per-class videos count (helps diagnose infeasibility) +
+    # per-class per-split CLIP and VIDEO counts (video-disjoint invariant proof).
+    by_video_class = defaultdict(set)
+    for r in records:
+        by_video_class[r["class"]].add(_extract_video_id(r["clip_key"]))
+    video_split = {}                                  # {video_id: split}
+    for k, s in splits.items():
+        video_split[_extract_video_id(k)] = s          # safe — disjoint by Phase-4 assert
+
+    n_videos = len(video_split)
+    print(f"\nTotal: {len(records)} clips · {n_videos} videos · "
+          f"{len(counts)} classes after filter")
+    print(f"  {'class':<24s}  {'clips':>10s}  {'train':>10s}  {'val':>10s}  {'test':>10s}  "
+          f"{'│ vids':>7s}  {'tr_v':>5s}  {'va_v':>5s}  {'te_v':>5s}")
     for cls in sorted(counts.keys()):
         n = counts[cls]
         n_train = sum(1 for k, c in by_clip.items() if c == cls and splits[k] == "train")
         n_val   = sum(1 for k, c in by_clip.items() if c == cls and splits[k] == "val")
         n_test  = sum(1 for k, c in by_clip.items() if c == cls and splits[k] == "test")
-        print(f"  {cls:24s}: total={n:>5d}  train={n_train:>5d}  val={n_val:>5d}  test={n_test:>5d}")
+        cls_videos = by_video_class[cls]
+        v_train = sum(1 for v in cls_videos if video_split.get(v) == "train")
+        v_val   = sum(1 for v in cls_videos if video_split.get(v) == "val")
+        v_test  = sum(1 for v in cls_videos if video_split.get(v) == "test")
+        print(f"  {cls:<24s}  {n:>10d}  {n_train:>10d}  {n_val:>10d}  {n_test:>10d}  "
+              f"{len(cls_videos):>7d}  {v_train:>5d}  {v_val:>5d}  {v_test:>5d}")
+
+    # Defense-in-depth re-assertion outside stratified_split (in case of future
+    # refactor regression): verify no video_id appears in >1 split.
+    vmap = defaultdict(set)
+    for k, s in splits.items():
+        vmap[_extract_video_id(k)].add(s)
+    straddlers = {v: list(sp) for v, sp in vmap.items() if len(sp) > 1}
+    if straddlers:
+        print(f"\n  ❌ BUG: {len(straddlers)} videos straddle splits — "
+              f"{dict(list(straddlers.items())[:5])}")
+        sys.exit(1)
+    print(f"\n  ✅ video-disjoint invariant: every video_id is in exactly ONE split "
+          f"({n_videos}/{n_videos} videos clean)")
 
 
 if __name__ == "__main__":

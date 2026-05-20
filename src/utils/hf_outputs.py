@@ -40,7 +40,10 @@ from utils.progress import make_pbar
 # (m00d disables this because its 8 parallel workers + hf_transfer = CDN throttling)
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
-HF_OUTPUTS_REPO = "anonymousML123/factorjepa-outputs"
+# iter16 (2026-05-20): moved to configs/pipeline.yaml > hf_repos.outputs per
+# CLAUDE.md "No hardcoded values in Python". To fork for a new org, change yaml.
+from utils.config import get_pipeline_config as _get_pcfg
+HF_OUTPUTS_REPO = _get_pcfg()["hf_repos"]["outputs"]   # was "anonymousML123/factorjepa-outputs" literal
 
 _UPLOAD_EXTENSIONS = {"*.npy", "*.npz", "*.json", "*.csv", "*.png", "*.pdf", "*.tex", "*.pt"}
 

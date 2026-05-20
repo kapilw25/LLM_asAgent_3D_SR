@@ -52,8 +52,13 @@ def get_running_process():
         return "unknown"
 
 
-def send_alert(to_email, subject, body, gmail_password, from_email="kapilw25@gmail.com"):
-    """Send email alert via Gmail SMTP."""
+def send_alert(to_email, subject, body, gmail_password, from_email):
+    """Send email alert via Gmail SMTP.
+
+    iter16 (2026-05-20): removed `from_email="..."` default per CLAUDE.md
+    "No hardcoded values in Python". Caller passes from_email explicitly
+    (resolved from .env GMAIL_SENDER_EMAIL or CLI flag).
+    """
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = from_email
@@ -74,12 +79,14 @@ def main():
                         help="Seconds between GPU checks (default: 30)")
     parser.add_argument("--cooldown", type=int, default=30,
                         help="Minutes between repeat alerts (default: 30)")
-    parser.add_argument("--email", type=str, default="kapilw25@gmail.com")
+    parser.add_argument("--email", type=str, required=True,
+                        help="Recipient address for GPU-low alerts (no default per CLAUDE.md).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print alerts instead of emailing")
     args = parser.parse_args()
 
-    # Load Gmail app password from .env
+    # Load Gmail credentials from .env (sender email + app password live there
+    # alongside other secrets — NEVER hardcoded in src/*.py per CLAUDE.md).
     try:
         from dotenv import load_dotenv
         load_dotenv()
@@ -87,10 +94,15 @@ def main():
         print("python-dotenv not installed, checking env directly")
 
     gmail_password = os.getenv("GMAIL_APP_PASSWORD")
+    gmail_sender   = os.getenv("GMAIL_SENDER_EMAIL")
     if not gmail_password and not args.dry_run:
         print("FATAL: GMAIL_APP_PASSWORD not found in .env")
         print("Generate at: https://myaccount.google.com/apppasswords")
         print("Add to .env: GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx")
+        sys.exit(1)
+    if not gmail_sender and not args.dry_run:
+        print("FATAL: GMAIL_SENDER_EMAIL not found in .env")
+        print("Add to .env: GMAIL_SENDER_EMAIL=you@example.com")
         sys.exit(1)
 
     hostname = os.uname().nodename
@@ -136,7 +148,8 @@ def main():
                         print(f"{'='*60}\n")
                     else:
                         try:
-                            send_alert(args.email, subject, body, gmail_password)
+                            send_alert(args.email, subject, body, gmail_password,
+                                       from_email=gmail_sender)
                             print(f"[{datetime.now():%H:%M:%S}] ALERT SENT: GPU {util}% → {args.email}")
                         except Exception as e:
                             print(f"[{datetime.now():%H:%M:%S}] EMAIL FAILED: {e}")

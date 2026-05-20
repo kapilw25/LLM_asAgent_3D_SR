@@ -1,17 +1,27 @@
-"""Bootstrap 95% CI for retrieval metrics via scipy.stats.bootstrap (BCa method, 10K iterations).
+"""Bootstrap 95% CI for retrieval metrics via scipy.stats.bootstrap (BCa method).
 Resample queries (clips), recompute aggregate metric. Standard IR practice (Sakai, SIGIR 2006).
 
 Per-clip metric functions are fully vectorized (NumPy) — no Python for-loops.
-115K clips × k=6: ~1s per metric (was ~10 min with Python loops)."""
+115K clips × k=6: ~1s per metric (was ~10 min with Python loops).
+
+iter16 (2026-05-20): N_BOOTSTRAP / CI_LEVEL moved to configs/pipeline.yaml > bootstrap:
+per CLAUDE.md "No hardcoded values in Python". The module-level constants below are
+now yaml-resolved at import time so existing `paired_bca(delta)` callers in
+probe_*.py continue to work without signature changes.
+"""
 import numpy as np
 from scipy.stats import bootstrap as scipy_bootstrap
 
-N_BOOTSTRAP = 10_000
-CI_LEVEL = 0.95
+from utils.config import get_pipeline_config
+
+_pcfg = get_pipeline_config()
+N_BOOTSTRAP = _pcfg["bootstrap"]["n_iterations"]   # yaml-resolved (was 10_000 literal)
+CI_LEVEL    = _pcfg["bootstrap"]["ci_level"]       # yaml-resolved (was 0.95 literal)
+_DEFAULT_SEED = _pcfg["data_prep"]["default_seed"] # yaml-resolved (was 42 literal in fn sig)
 
 
 def paired_bca(deltas: np.ndarray, n_boot: int = N_BOOTSTRAP,
-               ci: float = CI_LEVEL, seed: int = 42) -> dict:
+               ci: float = CI_LEVEL, seed: int = _DEFAULT_SEED) -> dict:
     """Paired bootstrap BCa 95% CI on per-clip deltas (e.g., Surgical − Frozen).
 
     Under the paired protocol, each clip contributes ONE delta value rather
@@ -69,7 +79,7 @@ def paired_bca(deltas: np.ndarray, n_boot: int = N_BOOTSTRAP,
 
 
 def bootstrap_ci(per_query_scores: np.ndarray, n_boot: int = N_BOOTSTRAP,
-                 ci: float = CI_LEVEL, seed: int = 42) -> dict:
+                 ci: float = CI_LEVEL, seed: int = _DEFAULT_SEED) -> dict:
     """Compute bootstrap 95% CI on per-query metric scores."""
     scores = np.asarray(per_query_scores, dtype=np.float64)
     scores = scores[~np.isnan(scores)]

@@ -31,7 +31,10 @@ INDIAN_SPECIFIC = {
     "auto_rickshaw", "cycle_rickshaw", "handcart", "street_vendor",
     "sacred_cow", "stray_dog", "religious_shrine", "overhead_wires", "signage",
 }
-CONFIDENCE_FLOOR = 0.7
+# iter16 (2026-05-20): moved to configs/pipeline.yaml > data_prep.confidence_floor
+# per CLAUDE.md "No hardcoded values in Python".
+from utils.config import get_pipeline_config as _get_pcfg
+CONFIDENCE_FLOOR = _get_pcfg()["data_prep"]["confidence_floor"]   # was 0.7 literal
 
 
 def is_high_conf(t: dict, field: str) -> bool:
@@ -127,7 +130,7 @@ def main() -> int:
                         help="ultra_hard mid-training probe split (default 306 = 10% of 3066)")
     parser.add_argument("--ultra-eval-n", type=int, default=308,
                         help="ultra_hard paired-BCa decision-gate split (default 308 = remainder)")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=_get_pcfg()["data_prep"]["default_seed"])   # was 42 literal
     parser.add_argument("--no-wandb", action="store_true",
                         help="(no-op flag for pipeline consistency)")
     args = parser.parse_args()

@@ -1,8 +1,10 @@
 """VRAM profiler for V-JEPA 2 ViT-g. GPU-only.
 
-python -u src/utils/profile_vram.py --training 2>&1 | tee logs/profile_vram_training.log && \
-python -u src/utils/profile_vram.py --inference 2>&1 | tee logs/profile_vram_inference.log && \
-python -u src/utils/profile_vram.py --dinov2 2>&1 | tee logs/profile_vram_dinov2.log
+iter16 (2026-05-20): --config + --local-data now REQUIRED (no defaults — CLAUDE.md).
+
+python -u src/utils/profile_vram.py --training  --config configs/legacy2/ch10_pretrain.yaml --local-data data/full_local 2>&1 | tee logs/profile_vram_training.log && \
+python -u src/utils/profile_vram.py --inference --config configs/legacy2/ch10_pretrain.yaml --local-data data/full_local 2>&1 | tee logs/profile_vram_inference.log && \
+python -u src/utils/profile_vram.py --dinov2    --config configs/legacy2/ch10_pretrain.yaml --local-data data/full_local 2>&1 | tee logs/profile_vram_dinov2.log
     
     
   Training VRAM at BS=112: 62.5 GB (from profile_data.json)
@@ -59,11 +61,11 @@ vit_predictor = sys.modules["src.models.predictor"].vit_predictor
 
 # Shared video I/O (Rule 32: no cross-imports between m*.py)
 from utils.video_io import decode_video_bytes
-# Phase 3 of #49: m09_pretrain.py was split into m09a/b/c. load_config now lives in
-# utils.training. DEFAULT_CONFIG was a legacy name (never defined post-rename to
-# DEFAULT_TRAIN_CONFIG); define locally here to preserve the one consumer at line 625.
+# Phase 3 of #49: m09_pretrain.py was split into m09a/b/c. load_config lives in
+# utils.training. iter16 (2026-05-20): DEFAULT_CONFIG module constant retired per
+# CLAUDE.md "NO module-level path constants" — config path now flows through
+# argparse `--config` (required) into each entry-point.
 from utils.training import load_config
-DEFAULT_CONFIG = "configs/legacy2/ch10_pretrain.yaml"  # profiler defaults to Ch10 pretrain config
 _MaskGenerator = sys.modules["src.masks.multiseq_multiblock3d"]._MaskGenerator
 apply_masks = sys.modules["src.masks.utils"].apply_masks
 
@@ -412,7 +414,7 @@ def generate_plots(results_no_ckpt, results_ckpt, gpu_name, gpu_total_gb,
     print(f"\nAll plots saved to {out_dir}/")
 
 
-def main():
+def main(local_data: str, config_path: str):
     if not torch.cuda.is_available():
         print("ERROR: No CUDA GPU available. Run this on the GPU machine.")
         print("       This script is for profiling only — no CPU fallback.")
@@ -428,9 +430,10 @@ def main():
 
     # Load real video clips for realistic profiling
     max_bs = max(BATCH_SIZES)
-    print(f"Loading {max_bs} real video clips from data/full_local...")
+    print(f"Loading {max_bs} real video clips from {local_data}...")
     try:
-        real_batch = _load_real_video_batch(max_bs)
+        real_batch = _load_real_video_batch(max_bs, local_data=local_data,
+                                            config_path=config_path)
         print(f"Real batch: {real_batch.shape}")
     except Exception as e:
         print(f"WARN: Could not load real data ({e}), falling back to synthetic")
@@ -621,12 +624,17 @@ def main():
         save_fig(fig, str(out_dir / f"plot_training_profile_{tag}"))
 
 
-def _load_real_video_batch(n_clips: int, local_data: str = "data/full_local"):
-    """Load real videos using the pipeline's video decode + config functions."""
+def _load_real_video_batch(n_clips: int, local_data: str, config_path: str):
+    """Load real videos using the pipeline's video decode + config functions.
+
+    iter16 (2026-05-20): both `local_data` and `config_path` required (no defaults)
+    per CLAUDE.md "No hardcoded values in Python". Caller resolves them from
+    argparse `--local-data` + `--config` (both required=True).
+    """
     from transformers import AutoVideoProcessor
     from utils.config import VJEPA_MODEL_ID
 
-    cfg = load_config(str(REPO_ROOT / DEFAULT_CONFIG))
+    cfg = load_config(str(REPO_ROOT / config_path))
     num_frames = cfg["data"]["num_frames"]
     crop_size = cfg["data"]["crop_size"]
 
@@ -661,7 +669,7 @@ def _load_real_video_batch(n_clips: int, local_data: str = "data/full_local"):
     return processed["pixel_values_videos"]
 
 
-def profile_inference():
+def profile_inference(local_data: str, config_path: str):
     """Profile V-JEPA inference with REAL video data + torch.compile (realistic VRAM).
         python -u src/utils/profile_vram.py --inference 2>&1 | tee logs/profile_vram_inference.log
     """
@@ -678,8 +686,9 @@ def profile_inference():
 
     # Load real video clips for realistic profiling
     max_bs = 256  # max we'll test
-    print(f"Loading {max_bs} real video clips from data/full_local...")
-    real_batch = _load_real_video_batch(max_bs)
+    print(f"Loading {max_bs} real video clips from {local_data}...")
+    real_batch = _load_real_video_batch(max_bs, local_data=local_data,
+                                        config_path=config_path)
     print(f"Real batch shape: {real_batch.shape} (dtype={real_batch.dtype})")
 
     # Build model exactly like m05 does
@@ -851,9 +860,9 @@ def profile_inference():
     return optimal
 
 
-def profile_dinov2():
+def profile_dinov2(local_data: str, config_path: str):
     """Profile DINOv2-giant inference VRAM (single image, not video).
-        python -u src/utils/profile_vram.py --dinov2 2>&1 | tee logs/profile_vram_dinov2.log
+        python -u src/utils/profile_vram.py --dinov2 --config <path> --local-data <path>
     """
     if not torch.cuda.is_available():
         print("ERROR: No CUDA GPU available.")
@@ -871,7 +880,8 @@ def profile_dinov2():
     max_bs = 256  # enough for profiling — DINOv2 saturates throughput at BS=96
     print(f"Loading {max_bs} real video clips for middle-frame extraction...")
     try:
-        real_videos = _load_real_video_batch(max_bs)
+        real_videos = _load_real_video_batch(max_bs, local_data=local_data,
+                                             config_path=config_path)
         # Extract middle frame from each video: (B, T, C, H, W) → (B, C, H, W)
         mid_idx = real_videos.shape[1] // 2
         real_images_raw = real_videos[:, mid_idx]  # (B, C, H, W)
@@ -1010,15 +1020,29 @@ def profile_dinov2():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] not in ("--training", "--inference", "--dinov2"):
-        print("Usage:")
-        print("  python -u src/utils/profile_vram.py --training 2>&1 | tee logs/profile_vram_training.log")
-        print("  python -u src/utils/profile_vram.py --inference 2>&1 | tee logs/profile_vram_inference.log")
-        print("  python -u src/utils/profile_vram.py --dinov2 2>&1 | tee logs/profile_vram_dinov2.log")
-        sys.exit(1)
-    elif sys.argv[1] == "--training":
-        main()
-    elif sys.argv[1] == "--inference":
-        profile_inference()
-    elif sys.argv[1] == "--dinov2":
-        profile_dinov2()
+    # iter16 (2026-05-20): replaced sys.argv hand-parsing with argparse — `--config`
+    # and `--local-data` now REQUIRED per CLAUDE.md "Every path arrives via
+    # argparse.add_argument(..., required=True) with NO default=". No more
+    # module-level DEFAULT_CONFIG / "data/full_local" hardcoded fallbacks.
+    import argparse
+    _parser = argparse.ArgumentParser(description="V-JEPA / DINOv2 VRAM profiler. GPU-only.")
+    _mode = _parser.add_mutually_exclusive_group(required=True)
+    _mode.add_argument("--training", action="store_true",
+                       help="Profile training (with backward) VRAM curve")
+    _mode.add_argument("--inference", action="store_true",
+                       help="Profile inference (forward-only + torch.compile) VRAM curve")
+    _mode.add_argument("--dinov2", action="store_true",
+                       help="Profile DINOv2-giant single-image inference VRAM")
+    _parser.add_argument("--config", required=True,
+                         help="Path to train yaml (e.g., configs/legacy2/ch10_pretrain.yaml). "
+                              "Profiler reads data.num_frames + data.crop_size from this.")
+    _parser.add_argument("--local-data", required=True,
+                         help="Path to local WebDataset dir holding *.tar shards "
+                              "(e.g., data/full_local or data/eval_10k_local).")
+    _args = _parser.parse_args()
+    if _args.training:
+        main(local_data=_args.local_data, config_path=_args.config)
+    elif _args.inference:
+        profile_inference(local_data=_args.local_data, config_path=_args.config)
+    elif _args.dinov2:
+        profile_dinov2(local_data=_args.local_data, config_path=_args.config)

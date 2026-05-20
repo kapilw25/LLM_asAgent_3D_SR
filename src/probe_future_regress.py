@@ -78,14 +78,22 @@ from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metr
 # ── Constants ─────────────────────────────────────────────────────────
 
 _PCFG = get_pipeline_config()
-NUM_FRAMES_DEFAULT = 16
-CROP = 384
-EMBED_DIM = 1664              # V-JEPA 2.1 ViT-G output dim
-REGRESSOR_LR = 1e-3
-REGRESSOR_WD = 0.05
-REGRESSOR_EPOCHS = 50
-REGRESSOR_BATCH = 64
-REGRESSOR_MLP_HIDDEN = 4096
+# iter16 (2026-05-20): architecture + regressor hyperparams moved per CLAUDE.md
+# "No hardcoded values in Python":
+#   - CROP / EMBED_DIM → configs/model/vjepa2_1.yaml
+#   - NUM_FRAMES_DEFAULT → configs/pipeline.yaml > probe.num_frames
+#   - REGRESSOR_* → configs/pipeline.yaml > probe.future_regress
+from utils.config import get_model_config as _get_mcfg
+_MODEL_CFG     = _get_mcfg(None)["model"]              # None → default vjepa2_1.yaml
+_FR_CFG        = _PCFG["probe"]["future_regress"]
+NUM_FRAMES_DEFAULT = _PCFG["probe"]["num_frames"]      # was 16 literal
+CROP                 = _MODEL_CFG["crop_size"]          # was 384 literal
+EMBED_DIM            = _MODEL_CFG["embed_dim"]          # was 1664 literal (V-JEPA 2.1 ViT-G)
+REGRESSOR_LR         = _FR_CFG["lr"]                    # was 1e-3 literal
+REGRESSOR_WD         = _FR_CFG["wd"]                    # was 0.05 literal
+REGRESSOR_EPOCHS     = _FR_CFG["epochs"]                # was 50 literal
+REGRESSOR_BATCH      = _FR_CFG["batch_size"]            # was 64 literal
+REGRESSOR_MLP_HIDDEN = _FR_CFG["mlp_hidden"]            # was 4096 literal
 
 # Variants understood by paired_per_variant. iter15 adds 4 head-only variants
 # alongside iter14's 4 encoder-update variants. Stage `forward` runs ONE variant
@@ -529,7 +537,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-root", type=Path, required=True)
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT,
                      help="total frames per clip; split in half → context (first half) + target (second half)")
-    p.add_argument("--seed", type=int, default=99)
+    p.add_argument("--seed", type=int, default=_PCFG["probe"]["seed"])   # was 99 literal
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p

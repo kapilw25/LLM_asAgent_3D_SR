@@ -621,13 +621,11 @@ print('SUCCESS: All GPU components verified')
     echo "GPU Setup Complete! (UV)"
     echo "============================================"
     echo ""
-    echo "Two venvs:"
-    echo "  source venv_walkindia/bin/activate   # m04-m09 pipeline (FAISS, cuML, V-JEPA)"
-    echo "  source venv_vllm/bin/activate        # m04 vLLM tagging (optional, 3-5x faster)"
+    echo "Venv:"
+    echo "  source venv_walkindia/bin/activate   # m00-m11 pipeline (FAISS, cuML, V-JEPA, SAM 3.1)"
     echo ""
     echo "Usage:"
-    echo "  ./scripts/run_evaluate.sh --FULL            # transformers (always works)"
-    echo "  ./scripts/run_evaluate.sh --FULL --vllm     # vLLM (faster, if available)"
+    echo "  ./scripts/run_evaluate.sh --FULL            # transformers VLM tagging (m04)"
     echo ""
     exit 0
 fi

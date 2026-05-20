@@ -32,7 +32,7 @@ import torch
 import torch.nn.functional as F
 
 from utils.checkpoint import save_array_checkpoint
-from utils.config import get_pipeline_config
+from utils.config import get_pipeline_config, get_model_config
 from utils.data_download import iter_clips_parallel
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.progress import make_pbar
@@ -43,19 +43,23 @@ from utils.vjepa2_imports import get_vit_by_arch
 # ── Constants ─────────────────────────────────────────────────────────
 
 _PCFG = get_pipeline_config()
-PATCH_SIZE = 16
-TUBELET_SIZE = 2
-# Mid-extract flush cadence. Lower = finer-grained crash resume but more I/O;
-# higher = less I/O but bigger re-extract on crash. Probe extraction is a
-# ~30-min job — at the legacy m04/m05 default of 500, that's ~13 flushes
-# during a single FULL train-split extraction. Probe-specific override to
-# `streaming.probe_features_checkpoint_every` lets us cut to ~1-2 flushes
-# without affecting m04/m05 (which keep their finer cadence for hour-long
-# extractions). Falls back to the global value if the probe key is absent.
-CHECKPOINT_EVERY = _PCFG["streaming"].get(
-    "probe_features_checkpoint_every",
-    _PCFG["streaming"]["checkpoint_every"],
-)
+
+# iter16 (2026-05-20): PATCH_SIZE + TUBELET_SIZE moved to configs/model/vjepa2_1.yaml
+# (already present there). frozen_features is V-JEPA-coupled (builds ViT-G predictor)
+# so it reads from the primary model config.
+_MODEL_CFG    = get_model_config(None)["model"]   # None → default vjepa2_1.yaml
+PATCH_SIZE    = _MODEL_CFG["patch_size"]            # was 16 literal
+TUBELET_SIZE  = _MODEL_CFG["tubelet_size"]          # was 2 literal
+
+# Mid-extract flush cadence. Probe extraction is a ~30-min job — at the m04/m05
+# default of 500, that's ~13 flushes during one FULL train-split extraction.
+# Probe-specific override to `streaming.probe_features_checkpoint_every` lets us
+# cut to ~1-2 flushes without affecting m04/m05 (which keep their finer cadence
+# for hour-long extractions).
+# iter16 (2026-05-20): the prior `.get(..., fallback)` form violated CLAUDE.md
+# "No `.get(key, default)` on YAML — use cfg[key] so missing keys crash".
+# probe_features_checkpoint_every is REQUIRED in pipeline.yaml (line 62).
+CHECKPOINT_EVERY = _PCFG["streaming"]["probe_features_checkpoint_every"]
 
 # ImageNet normalization — both V-JEPA 2.1 + DINOv2 expect this.
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
@@ -429,12 +433,11 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
     # even larger). AdaptiveBatchSizer ramps from initial → max based on actual
     # VRAM utilisation. DINOv2 (300M params) tolerates BS=96.
     if encoder_kind == "vjepa":
-        # iter13: probe-specific initial BS (yaml key inference_vjepa_probe_initial_bs).
-        # Falls back to the m05 64-frame default (8) if probe key is absent.
-        initial_bs = _PCFG["gpu"].get(
-            "inference_vjepa_probe_initial_bs",
-            _PCFG["gpu"]["inference_vjepa_initial_bs"],
-        )
+        # iter13: probe-specific initial BS — required in pipeline.yaml > gpu.
+        # iter16 (2026-05-20): replaced `.get(key, fallback)` form per CLAUDE.md
+        # "No .get(key, default) on YAML — use cfg[key] so missing keys crash".
+        # Both yaml keys exist (line ~127 + 132); fall-back idiom was unnecessary.
+        initial_bs = _PCFG["gpu"]["inference_vjepa_probe_initial_bs"]
         max_bs     = _PCFG["gpu"]["inference_adapted_probe_bs"]   # 44
     else:
         initial_bs = _PCFG["gpu"]["inference_dinov2_initial_bs"]  # 16

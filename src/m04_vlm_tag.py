@@ -774,7 +774,7 @@ CHECKPOINT_EVERY = _pcfg["streaming"]["checkpoint_every"]
 ENGINE_RESTART_EVERY = _pcfg["streaming"]["engine_restart_every"]
 MAX_STREAM_RETRIES = _pcfg["streaming"]["max_retries"]
 PREFETCH_QUEUE_SIZE = _pcfg["streaming"]["prefetch_queue_vlm"]
-PROMPT_VERSION = "v1.0"
+PROMPT_VERSION = _pcfg["vlm"]["prompt_version"]   # iter16 (2026-05-20): moved to configs/pipeline.yaml > vlm.prompt_version per CLAUDE.md "No hardcoded values in Python"
 
 
 def get_batch_size(model_name: str, override: int = None) -> int:

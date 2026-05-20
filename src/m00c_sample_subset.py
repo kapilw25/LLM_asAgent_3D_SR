@@ -22,7 +22,9 @@ from utils.config import get_pipeline_config
 CLIP_DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / "clip_durations.json"
 OUTPUT_DIR = PROJECT_ROOT / "data"
 DEFAULT_N = get_pipeline_config()["poc"]["default_n"]
-SEED = 42
+# iter16 (2026-05-20): moved to configs/pipeline.yaml > data_prep.default_seed
+# per CLAUDE.md "No hardcoded values in Python".
+SEED = get_pipeline_config()["data_prep"]["default_seed"]   # was 42 literal
 
 
 def load_clips_by_video(clip_durations: dict) -> dict:

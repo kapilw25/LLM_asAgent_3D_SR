@@ -22,6 +22,21 @@ from collections import defaultdict
 from pathlib import Path
 
 
+# iter16 (2026-05-20): sweet-spot thresholds + top_n + pre_select_n moved to
+# configs/pipeline.yaml > curate_verify: per CLAUDE.md "No hardcoded values
+# in Python". The WEIGHTS dict stays here — it encodes the algorithm's policy
+# (relative importance of each quality signal), not a tunable configuration.
+# Try direct import first (works when called from m10/m11); on ImportError
+# (run as standalone `python src/utils/curate_verify.py`), prepend src/ to
+# sys.path so the import succeeds.
+try:
+    from utils.config import get_pipeline_config
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from utils.config import get_pipeline_config
+
+_cvcfg = get_pipeline_config()["curate_verify"]
+
 # Composite quality score per clip — weights sum to 1.0
 WEIGHTS = {
     "has_D_I": 0.40,    # D_I is the hardest to get right; having it = good mask quality
@@ -29,10 +44,10 @@ WEIGHTS = {
     "has_D_A": 0.20,    # agent factor present
     "agent_pct": 0.20,  # sweet spot 0.01-0.15 (tiny = ghost masks, full = layout invisible)
 }
-AGENT_PCT_SWEET_MIN = 0.01
-AGENT_PCT_SWEET_MAX = 0.15
-TOP_N = 20
-PRE_SELECT_N = 100        # cap on per-clip verify plots written by m10/m11 upfront
+AGENT_PCT_SWEET_MIN = _cvcfg["agent_pct_sweet_min"]   # was 0.01 literal
+AGENT_PCT_SWEET_MAX = _cvcfg["agent_pct_sweet_max"]   # was 0.15 literal
+TOP_N               = _cvcfg["top_n"]                 # was 20 literal
+PRE_SELECT_N        = _cvcfg["pre_select_n"]          # was 100 literal — cap on per-clip verify plots
 MIN_DISTINCT_CITIES = 3
 MIN_DISTINCT_ACTIVITIES = 3
 

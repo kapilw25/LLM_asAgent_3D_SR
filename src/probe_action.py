@@ -73,6 +73,7 @@ from utils.config import (
     add_local_data_arg,
     check_gpu,
     get_paired_deltas,
+    get_pipeline_config,
 )
 from utils.data_download import ensure_local_data
 from utils.frozen_features import (
@@ -87,9 +88,10 @@ from utils.vjepa2_imports import get_attentive_classifier
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 
 
-# ── Constants ─────────────────────────────────────────────────────────
-
-NUM_FRAMES_DEFAULT = 16
+# ── Constants (iter16 2026-05-20: yaml-resolved per CLAUDE.md) ──────
+# All probe hyperparams now live in configs/pipeline.yaml > probe:.
+_PROBE_CFG = get_pipeline_config()["probe"]
+NUM_FRAMES_DEFAULT = _PROBE_CFG["num_frames"]   # was 16 literal
 
 
 # ── Probe head training ──────────────────────────────────────────────
@@ -864,12 +866,12 @@ def build_parser() -> argparse.ArgumentParser:
                         "post-Phase-0). Required for --stage labels. Companion .paths.npy "
                         "must exist next to it. Default location: "
                         "<local_data>/m04d_motion_features/motion_features.npy.")
-    p.add_argument("--min-clips-per-class", type=int, default=34,
+    p.add_argument("--min-clips-per-class", type=int, default=_PROBE_CFG["min_clips_per_class"],
                    help="Drop motion-flow classes with fewer than this many clips. "
-                        "Default 34 = ≥5 clips per split at 70/15/15 stratification.")
-    p.add_argument("--min-per-split", type=int, default=5,
+                        "yaml probe.min_clips_per_class (was 34 literal) = ≥5/split at 70/15/15 stratification.")
+    p.add_argument("--min-per-split", type=int, default=_PROBE_CFG["min_per_split"],
                    help="Minimum clips per split (train/val/test) per class for BCa CI floor. "
-                        "Default 5. SANITY runs may need a lower value if class data is sparse.")
+                        "yaml probe.min_per_split (was 5 literal). SANITY may need lower if class data is sparse.")
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT)
     # iter13 (2026-05-05): lazy-feature-extraction. Stage 2 saves only the listed
     # splits as features_<split>.npy. train+val are NOT durable by default —
@@ -881,12 +883,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Which splits Stage 2 (--stage features) saves to disk as "
                         "features_<split>.npy. Default: 'test' only — train/val are "
                         "extracted lazily in Stage 3 to save ~80 GB durable disk per FULL eval.")
-    p.add_argument("--pool-tokens", type=int, default=16,
+    p.add_argument("--pool-tokens", type=int, default=_PROBE_CFG["pool_tokens"],
                    help="Adaptive-avg-pool encoder output to N tokens BEFORE storage / probe. "
-                        "Default 16 (V-JEPA paper §4 attentive-probe regime; 290× smaller .npy "
-                        "and 290× less probe-head attention compute). Use 0 to disable pooling "
-                        "(legacy 4608-token storage; needs ~21 MB/clip and 43 GB attention matrix "
-                        "at BS=64 — see iter13 OOM diagnosis).")
+                        "yaml probe.pool_tokens (was 16 literal — V-JEPA paper §4 attentive-probe "
+                        "regime; 290× smaller .npy and 290× less probe-head attention compute). "
+                        "Use 0 to disable pooling (legacy 4608-token storage; needs ~21 MB/clip "
+                        "and 43 GB attention matrix at BS=64 — see iter13 OOM diagnosis).")
     p.add_argument("--stream-train", action="store_true",
                    help="Stream-and-discard Stage 3 training: no .npy persistence; per-batch "
                         "TAR-decode → encoder forward (no_grad) → pool → head → loss → backward. "
@@ -903,16 +905,17 @@ def build_parser() -> argparse.ArgumentParser:
                         "downstream stage (e.g. probe_taxonomy --stage train) can reuse the "
                         "resume cache. Caller MUST invoke '--stage cleanup_lazy' "
                         "after the last consumer. See run_eval.sh post-Stage-3.5 cleanup.")
-    p.add_argument("--epochs", type=int, default=50)
-    p.add_argument("--probe-lr", type=float, default=5e-4)
-    p.add_argument("--probe-wd", type=float, default=0.05)
-    p.add_argument("--warmup-pct", type=float, default=0.10,
-                   help="Fraction of total_steps for linear LR warmup. "
-                        "0.10 = our single-LR default. 0.0 = Meta's published recipe (deps/vjepa2/configs/eval/vitg-384/ssv2.yaml).")
-    p.add_argument("--probe-depth", type=int, default=4,
-                   help="N attentive-pool layers (V-JEPA 2.1 published: 4)")
-    p.add_argument("--train-batch-size", type=int, default=64)
-    p.add_argument("--seed", type=int, default=99)
+    p.add_argument("--epochs", type=int, default=_PROBE_CFG["epochs"])
+    p.add_argument("--probe-lr", type=float, default=_PROBE_CFG["lr"])
+    p.add_argument("--probe-wd", type=float, default=_PROBE_CFG["wd"])
+    p.add_argument("--warmup-pct", type=float, default=_PROBE_CFG["warmup_pct"],
+                   help="Fraction of total_steps for linear LR warmup. yaml probe.warmup_pct "
+                        "(was 0.10 literal — our single-LR default; 0.0 = Meta's published recipe "
+                        "deps/vjepa2/configs/eval/vitg-384/ssv2.yaml).")
+    p.add_argument("--probe-depth", type=int, default=_PROBE_CFG["depth"],
+                   help="N attentive-pool layers. yaml probe.depth (was 4 literal — V-JEPA 2.1 published).")
+    p.add_argument("--train-batch-size", type=int, default=_PROBE_CFG["batch_size"])
+    p.add_argument("--seed", type=int, default=_PROBE_CFG["seed"])
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p

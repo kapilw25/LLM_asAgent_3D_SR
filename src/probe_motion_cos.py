@@ -51,7 +51,11 @@ from utils.cache_policy import (
     resolve_cache_policy_interactive,
 )
 from utils.checkpoint import save_array_checkpoint, save_json_checkpoint
-from utils.config import add_local_data_arg, check_gpu
+from utils.config import add_local_data_arg, check_gpu, get_pipeline_config
+
+# iter16 (2026-05-20): probe hyperparams moved to configs/pipeline.yaml > probe:
+# per CLAUDE.md "No hardcoded values in Python".
+_PROBE_CFG = get_pipeline_config()["probe"]
 from utils.data_download import ensure_local_data
 from utils.frozen_features import (
     ENCODERS,
@@ -383,12 +387,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--action-probe-root", type=Path, default=None,
                    help="probe_action output dir (provides action_labels.json + share-features cache)")
     p.add_argument("--output-root", type=Path, required=True)
-    p.add_argument("--pool-tokens", type=int, default=16,
+    p.add_argument("--pool-tokens", type=int, default=_PROBE_CFG["pool_tokens"],
                    help="Adaptive-avg-pool encoder output to N tokens before storage. "
-                        "Default 16. Mean-of-pool ≡ mean-of-raw, so motion_cos's "
+                        "yaml probe.pool_tokens (was 16 literal). Mean-of-pool ≡ mean-of-raw, so motion_cos's "
                         "downstream `feats.mean(axis=1)` is unaffected. Use 0 to disable.")
-    p.add_argument("--num-frames", type=int, default=16,
-                   help="Frames per clip (must match action_probe when --share-features)")
+    p.add_argument("--num-frames", type=int, default=_PROBE_CFG["num_frames"],
+                   help="Frames per clip (must match action_probe when --share-features). "
+                        "yaml probe.num_frames (was 16 literal).")
     p.add_argument("--share-features", action="store_true", default=True,
                    help="Default ON: mean-pool probe_action features. Falls back to fresh extract if cache absent.")
     p.add_argument("--no-share-features", dest="share_features", action="store_false",

@@ -45,7 +45,10 @@ INDIAN_SPECIFIC_OBJECTS = {
 
 # Confidence threshold below which we treat the VLM tag as unreliable
 # (fails open: low-conf tag does not contribute to Hard or Easy classification).
-CONFIDENCE_FLOOR = 0.7
+# iter16 (2026-05-20): moved to configs/pipeline.yaml > data_prep.confidence_floor
+# per CLAUDE.md "No hardcoded values in Python".
+from utils.config import get_pipeline_config as _get_pcfg
+CONFIDENCE_FLOOR = _get_pcfg()["data_prep"]["confidence_floor"]   # was 0.7 literal
 
 
 def is_high_conf(tag: dict, field: str) -> bool:
@@ -116,7 +119,7 @@ def main():
     parser.add_argument("--exclude", type=str, nargs="*", default=[],
                         help="Optional path(s) to subset JSON whose clip_keys must be EXCLUDED "
                              "(e.g., --exclude data/val_1k_local/val_1k.json data/eval_10k_local/eval_10k.json)")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=_get_pcfg()["data_prep"]["default_seed"])   # was 42 literal
     parser.add_argument("--no-wandb", action="store_true",
                         help="(no-op flag for pipeline consistency)")
     args = parser.parse_args()

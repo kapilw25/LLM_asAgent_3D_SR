@@ -127,6 +127,7 @@ gpu:
   inference_dinov2_initial_bs: 16      # m05b DINOv2-L (300M fp16) — safe start, max=inference_dinov2_bs
   inference_clip_initial_bs: 16        # m05b CLIP-L (400M fp16) — safe start, max=inference_dinov2_bs (same tier)
   training_initial_bs: 30              # iter13 (2026-05-05): 16 → 30. v9 measured AdaptiveBatch ramped 16→32 over 15 steps (~6.5 min cold ramp wasted). VRAM at BS=32 was ~50% (target 85%), so 30 is safely below the actual ceiling. Skips ~6 min of cold ramp per training run. Surprise OOM still recovered via AdaptiveBatchSizer.on_oom().
+  motion_initial_bs: 8                 # iter16 (2026-05-20): safe start for m04d RAFT-Large. Decouples `initial_size` from `motion_batch_size` (max=32) so AdaptiveBatchSizer can actually GROW toward 0.85×VRAM ceiling per GPU pipeline checklist §11. 8 clips × 16 pairs = 128 pairs is Pro 4000 24 GB safe; Pro 6000 96 GB ramps to 32 (=512 pairs) over a few batches. Before fix: initial_size==max_size==512 meant the sizer could ONLY shrink on OOM, never grow — wasted Pro 6000 headroom on every FULL run.
   # Probe BS — two contexts (probe = model.eval() forward to encode 1000 val_1k clips):
   # 1. inference_adapted_probe_bs: probe runs in pure-inference context (full 96 GB free).
   #    Same envelope as inference_adapted_bs → 44 is the established safe ceiling.
@@ -244,6 +245,7 @@ vlm:
   qwen: Qwen/Qwen3-VL-8B-Instruct
   videollama: DAMO-NLP-SG/VideoLLaMA3-7B
   llava: llava-hf/LLaVA-NeXT-Video-7B-hf
+  prompt_version: "v1.0"                # iter16 (2026-05-20): moved from src/m04_vlm_tag.py:777 module constant per CLAUDE.md "No hardcoded values in Python". Stamped into tags.json output for provenance.
 
 # -- Scene detection --
 scene_detection:
@@ -254,3 +256,77 @@ scene_detection:
 verify:
   sanity_min_clips: 5            # run_evaluate.sh / run_pretrain.sh: min clips for SANITY pass
   full_min_clips: 1000           # run_evaluate.sh / run_pretrain.sh: min clips for FULL pass
+
+# ═════════════════════════════════════════════════════════════════════════
+# iter16 (2026-05-20) — hardcoded-value migration per CLAUDE.md
+# "No hardcoded values in Python — YAML or runtime discovery only".
+# All blocks below were previously module-level constants or argparse defaults
+# in src/*.py — now centralised here as single source of truth. Consumer code
+# reads via cfg[key] (FAIL LOUD on missing; never `.get(key, default)`).
+# ═════════════════════════════════════════════════════════════════════════
+
+# -- Train / val / test split ratio (canonical rule — used by probe_action,
+# probe_train_subset, and every script that partitions a clip pool).
+# Flat (mode-invariant) per CLAUDE.md POC↔FULL parity: only N_clips and
+# max_epochs may differ between SANITY/POC/FULL. Same ratios everywhere else.
+# iter16 (2026-05-20): single source of truth for the split — m00f ultra_hard
+# (with its asymmetric 80/10/10 split) retired to src/legacy/ same day.
+probe_split:
+  train_pct: 0.75
+  val_pct:   0.05      # test_pct = 1 − train − val = 0.20
+
+# -- Probe-trio defaults (probe_action / probe_taxonomy / probe_motion_cos /
+# probe_future_mse / probe_future_regress). argparse uses these as fall-through
+# defaults via `default=None`; explicit CLI flag overrides for ablation sweeps.
+probe:
+  seed:                99            # was src/probe_*.py:--seed default
+  num_frames:          16            # was src/probe_{action,taxonomy,motion_cos,future_*}.py NUM_FRAMES_DEFAULT
+  pool_tokens:         16            # was src/probe_{action,taxonomy,motion_cos}.py:--pool-tokens default
+  epochs:              50            # was src/probe_{action,taxonomy}.py:--epochs default
+  lr:                  5.0e-4        # was src/probe_{action,taxonomy}.py:--probe-lr default
+  wd:                  0.05          # was src/probe_{action,taxonomy}.py:--probe-wd default
+  warmup_pct:          0.10          # was src/probe_{action,taxonomy}.py:--warmup-pct default
+  depth:               4             # was src/probe_{action,taxonomy}.py:--probe-depth default (linear MLP depth)
+  batch_size:          64            # was src/probe_{action,taxonomy}.py:--train-batch-size default
+  min_clips_per_class: 34            # was src/probe_action.py:--min-clips-per-class default (stratified-split threshold)
+  min_per_split:       5             # was src/probe_action.py:--min-per-split default
+  future_regress:                    # probe_future_regress.py: future-frame regressor MLP
+    epochs:            50            # was REGRESSOR_EPOCHS module constant
+    batch_size:        64            # was REGRESSOR_BATCH
+    lr:                1.0e-3        # was REGRESSOR_LR
+    wd:                0.05          # was REGRESSOR_WD
+    mlp_hidden:        4096          # was REGRESSOR_MLP_HIDDEN
+
+# -- Bootstrap 95% CI (utils/bootstrap.py) --
+bootstrap:
+  n_iterations:        10000         # was N_BOOTSTRAP module constant
+  ci_level:            0.95          # was CI_LEVEL module constant
+
+# -- m10/m11 per-clip verify-plot curation (utils/curate_verify.py) --
+curate_verify:
+  agent_pct_sweet_min: 0.01          # was AGENT_PCT_SWEET_MIN: ≥1% pixels must be agent
+  agent_pct_sweet_max: 0.15          # was AGENT_PCT_SWEET_MAX: ≤15% (avoid frame-dominating masks)
+  top_n:               20            # was TOP_N: top-N verify clips per category
+  pre_select_n:        100           # was PRE_SELECT_N: cap on per-clip verify plots written
+
+# -- Data prep constants (m00 family + utils/config.py file-storage settings) --
+data_prep:
+  default_seed:        42            # was m00c.SEED + m00e/m00f --seed argparse defaults
+  confidence_floor:    0.7           # was m00e/m00f CONFIDENCE_FLOOR module constant
+  avg_clip_duration_sec: 7.85        # was m00b AVG_CLIP_DURATION (measured over 500 sampled clips × 168 videos)
+  hf_repo_size_limit_gb: 300         # was utils/config.HF_REPO_SIZE_LIMIT_GB
+  reencode_crf:        28            # was utils/config.REENCODE_CRF
+
+# -- HuggingFace repository identities (was hardcoded in src/utils/config.py + hf_outputs.py).
+# iter16 (2026-05-20): centralized per CLAUDE.md "No hardcoded values in Python".
+# Single public repo — the older private part1/part2 split approach is RETIRED
+# (replaced by the public `walkindia-200k` repo). To fork this project for a new
+# org, change THESE strings here (one place), not src/utils/config.py module-level.
+hf_repos:
+  dataset: anonymousML123/walkindia-200k         # single public repo (was 3-repo split: part1+part2+single)
+  outputs: anonymousML123/factorjepa-outputs     # m04-m11 + m09 training outputs
+
+# -- Motion features (m04d_motion_features.py) --
+motion:
+  feature_dim:         23            # was FEATURE_DIM: 13 global + 10 fg-camera-subtracted (Phase 0, iter15)
+  n_frame_pairs:       16            # was N_FRAME_PAIRS: frame pairs per clip for RAFT inference

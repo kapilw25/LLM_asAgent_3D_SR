@@ -1259,6 +1259,34 @@
   </div>
 </section>
 
+<!-- ==================== §5 MOTION-CLASS SPECTRUM (placeholder) ==================== -->
+<section class="section">
+  <div class="container" style="max-width: 1100px;">
+    <h2 class="title is-3 has-text-centered">Motion-Class Spectrum</h2>
+    <p class="has-text-centered" style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+      8 motion classes from 23-D camera-subtracted optical-flow features. Each class shows 5 representative clips
+      (closest to class centroid in 23-D space). Top row of each cell: original mp4. Bottom row: RAFT optical flow
+      rendered via the Middlebury color wheel &mdash; hue = direction, saturation = magnitude.
+    </p>
+
+    <div class="plot-container placeholder" style="min-height: 360px;">
+      <div class="placeholder-icon">🎬</div>
+      <div class="placeholder-label">Motion-Class Spectrum Gallery (8 classes &times; 5 clips + RAFT color-wheel viz)</div>
+      <div class="placeholder-eta">
+        pending: <code>src/utils/motion_spectrum_gallery.py</code> (planCODE_html.md Stage G &mdash; ~250 LoC).
+        Inputs: <code>data/eval_10k_local/motion_features.npy</code> (9297, 23) &plus;
+        <code>outputs/full/probe_action/action_labels.json</code> (8 surviving classes).
+        Outputs: 40 clip mp4s + 40 RAFT flow mp4s (~30 min GPU).
+        <br><br>
+        Within each row, all 5 clips will share a CONSISTENT color signature in the RAFT viz column &mdash;
+        e.g., <em>fast__rightward</em> tints red, <em>still__downward</em> stays light with faint cyan.
+        That visual constancy is the visceral proof that the 23-D feature actually captures direction +
+        magnitude, even when the scenes differ (market vs drive vs walking).
+      </div>
+    </div>
+  </div>
+</section>
+
 </div><!-- end tab-training -->
 
 

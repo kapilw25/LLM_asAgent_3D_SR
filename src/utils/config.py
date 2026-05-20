@@ -36,23 +36,20 @@ for d in [VIDEOS_DIR, CLIPS_DIR, SHARDS_DIR, OUTPUTS_DIR, OUTPUTS_DATA_PREP_DIR,
           OUTPUTS_PROFILE_DIR, LOGS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
-# HuggingFace dataset config
-HF_DATASET_REPO = "anonymousML123/walkindia-200k"
-
-# HuggingFace private split repos (50GB limit per repo)
-HF_DATASET_REPO_PART1 = "anonymousML123/walkindia-200k-part1"
-HF_DATASET_REPO_PART2 = "anonymousML123/walkindia-200k-part2"
-HF_DATASET_REPOS = [HF_DATASET_REPO_PART1, HF_DATASET_REPO_PART2]
-HF_REPO_SIZE_LIMIT_GB = 300
-
-# Re-encoding config (CRF 28 on 480p shrinks ~40-50%)
-REENCODE_CRF = 28
+# iter16 (2026-05-20): HF dataset/outputs repo IDs moved to configs/pipeline.yaml
+# > hf_repos: per CLAUDE.md "No hardcoded values in Python". The earlier private
+# part1/part2 split repos are RETIRED — single public repo `walkindia-200k` only.
+# Yaml-resolved values bound AFTER get_pipeline_config() is defined (~line 130
+# below) — search "data_prep yaml-resolved binding" anchor.
 
 
 def ensure_clips_exist() -> bool:
     """
-    Check if clips exist locally. If not, download from HuggingFace (both split repos).
-    Returns True if clips are available, False otherwise.
+    Check if clips exist locally. If not, download from the public HF dataset
+    repo (`hf_repos.dataset` in pipeline.yaml). Returns True if available.
+
+    iter16 (2026-05-20): private part1/part2 split repos retired — single public
+    `walkindia-200k` repo is the only source.
     """
     # Check if clips already exist (recursive search for hierarchical structure)
     clip_count = len(list(CLIPS_DIR.rglob("*.mp4"))) if CLIPS_DIR.exists() else 0
@@ -61,34 +58,25 @@ def ensure_clips_exist() -> bool:
         print(f"Found {clip_count} clips locally in {CLIPS_DIR}")
         return True
 
-    # Auto-download from HuggingFace (try split repos, then fallback to single repo)
-    repos_to_try = HF_DATASET_REPOS + [HF_DATASET_REPO]
-
     try:
         from huggingface_hub import snapshot_download
 
-        for repo in repos_to_try:
-            print(f"Downloading from HuggingFace: {repo}")
-            try:
-                local_dir = snapshot_download(
-                    repo_id=repo,
-                    repo_type="dataset",
-                    local_dir=DATA_DIR / "hf_download",
-                    allow_patterns=["clips/**/*.mp4"],
-                )
+        print(f"Downloading from HuggingFace: {HF_DATASET_REPO}")
+        local_dir = snapshot_download(
+            repo_id=HF_DATASET_REPO,
+            repo_type="dataset",
+            local_dir=DATA_DIR / "hf_download",
+            allow_patterns=["clips/**/*.mp4"],
+        )
 
-                # Mirror entire clips tree (hierarchical structure)
-                hf_clips_dir = Path(local_dir) / "clips"
-                if hf_clips_dir.exists():
-                    shutil.copytree(hf_clips_dir, CLIPS_DIR, dirs_exist_ok=True)
+        # Mirror entire clips tree (hierarchical structure)
+        hf_clips_dir = Path(local_dir) / "clips"
+        if hf_clips_dir.exists():
+            shutil.copytree(hf_clips_dir, CLIPS_DIR, dirs_exist_ok=True)
 
-                # Cleanup temp download
-                shutil.rmtree(DATA_DIR / "hf_download", ignore_errors=True)
-                print(f"  Downloaded clips from {repo}")
-
-            except Exception as e:
-                print(f"  Skipping {repo}: {e}")
-                continue
+        # Cleanup temp download
+        shutil.rmtree(DATA_DIR / "hf_download", ignore_errors=True)
+        print(f"  Downloaded clips from {HF_DATASET_REPO}")
 
         # Verify
         clip_count = len(list(CLIPS_DIR.rglob("*.mp4")))
@@ -114,6 +102,20 @@ def get_pipeline_config() -> dict:
         with open(PIPELINE_CONFIG_PATH) as f:
             _pipeline_cfg = yaml.safe_load(f)
     return _pipeline_cfg
+
+
+# ── data_prep + hf_repos yaml-resolved binding ──────────────────────────
+# iter16 (2026-05-20): values moved out of module-level literals per CLAUDE.md
+# "No hardcoded values in Python". Must bind AFTER get_pipeline_config() is
+# defined because Python evaluates top-to-bottom.
+_dp_cfg = get_pipeline_config()["data_prep"]
+HF_REPO_SIZE_LIMIT_GB = _dp_cfg["hf_repo_size_limit_gb"]   # was 300 literal
+REENCODE_CRF          = _dp_cfg["reencode_crf"]              # was 28 literal
+
+# HuggingFace repo IDs — single public repo (private part1/part2 split retired).
+_hf_cfg = get_pipeline_config()["hf_repos"]
+HF_DATASET_REPO = _hf_cfg["dataset"]                          # was "anonymousML123/walkindia-200k" literal
+# (HF_DATASET_REPO_PART1/PART2/HF_DATASET_REPOS removed in iter16 — single public repo only.)
 
 
 # ── Paired-Δ definitions (paper hypothesis tests, loaded from YAML) ──
@@ -318,9 +320,18 @@ def add_train_config_arg(parser):
 
 
 def get_sanity_clip_limit(module: str) -> int:
-    """Get SANITY clip limit for a module from configs/pipeline.yaml."""
-    cfg = get_pipeline_config()
-    return cfg["sanity"].get(module, cfg["sanity"]["default"])
+    """Get SANITY clip limit for a module from configs/pipeline.yaml.
+
+    iter16 (2026-05-20): replaced `.get(module, default)` form per CLAUDE.md
+    "No .get(key, default) on YAML — use cfg[key] so missing keys crash".
+    Explicit `in`-check then bracket-access ensures: module-specific value is
+    used when listed, else the explicit `default` key (which itself FAIL LOUDs
+    if removed from yaml).
+    """
+    sanity = get_pipeline_config()["sanity"]
+    if module in sanity:
+        return sanity[module]
+    return sanity["default"]   # KeyError if `default:` removed from yaml — by design
 
 
 def get_poc_clip_limit(module: str) -> int:
@@ -330,9 +341,14 @@ def get_poc_clip_limit(module: str) -> int:
     sits between SANITY (n=20 — code correctness) and FULL (n=10K+ — paper),
     giving statistically meaningful per-clip quality distributions for ~10×
     less wall time than FULL. Per-module overrides in pipeline.yaml `poc:` block.
+
+    iter16 (2026-05-20): same .get() → explicit-branch refactor as
+    get_sanity_clip_limit above (per CLAUDE.md).
     """
-    cfg = get_pipeline_config()
-    return cfg["poc"].get(module, cfg["poc"]["default"])
+    poc = get_pipeline_config()["poc"]
+    if module in poc:
+        return poc[module]
+    return poc["default"]   # KeyError if `default:` removed from yaml — by design
 
 
 def get_total_clips(local_data: str = None, subset_file: str = None) -> int:

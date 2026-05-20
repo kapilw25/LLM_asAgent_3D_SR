@@ -17,15 +17,14 @@ Research benchmark testing whether V-JEPA 2.1 (Meta's video foundation model, tr
 - **m00c_sample_subset.py**: Video-level uniform stratified sampling → `data/subset_*.json`.
 - **m00d_download_subset.py**: WebDataset TAR pre-download from HF (8 workers, streaming, resume-safe).
 - **m00e_difficulty_split.py**: Easy/Medium/Hard bucket stratification using m04 VLM-tag triggers + confidence ≥ 0.7.
-- **m00f_category_subsets.py**: 8 single-condition subsets + `ultra_hard_3066` intersection (≥4 hard triggers AND ≥4 Indian objects); 80/10/10 train/val/eval split via seeded shuffle (2,452 / 306 / 308 clips).
+- **m00f_category_subsets.py**: RETIRED to src/legacy/ on 2026-05-20 — iter11 ultra_hard 3066-clip 80/10/10 split was asymmetric with iter16's `probe_split` (75:5:20) canonical rule. iter16's `full_local.json` (M3) + `clip_pool_ratio` (100:10:1) handle all subset sizing dynamically; no per-criterion-filter subsets needed in the active flow.
 - **m01_download.py**: yt-dlp + aria2c at 480p, resumable.
 - **m02_scene_detect.py**: PySceneDetect → greedy [4-10s] cuts → libx264 CRF 28.
 - **m02b_scene_fetch_duration.py**: ffprobe scan → `clip_durations.json` + `docs/static/stats.json`.
 - **m03_pack_shards.py**: Streaming TAR packing → HF upload → delete; generates README on HF.
 
 ### m04-m08b: Evaluation Pipeline (probe trio added in iter13 for the motion-centric P1 gate)
-- **m04_vlm_tag.py**: 3 VLM backends (Qwen3-VL default / VideoLLaMA3 / LLaVA-NeXT). Orchestrator/worker for VRAM, AdaptiveBatchSizer, checkpoint/resume. 16 closed-vocab fields per clip.
-- **m04_vlm_tag_vllm.py**: vLLM (Qwen3-VL only) variant for full 115K — separate `venv_vllm`.
+- **m04_vlm_tag.py**: 3 VLM backends (Qwen3-VL default / VideoLLaMA3 / LLaVA-NeXT). Orchestrator/worker for VRAM, AdaptiveBatchSizer, checkpoint/resume. 16 closed-vocab fields per clip. Model ID + prompt_version read from `configs/pipeline.yaml > vlm:` block (iter16, 2026-05-20). m04_vlm_tag_vllm retired to src/legacy/ on 2026-05-20 (vLLM path was never used, no `venv_vllm` ever existed).
 - **m04b_vlm_select.py**: CPU 5-criterion bake-off scoring (parse rate, agreement, speed, taxonomy fit, confidence cal).
 - **m04c_sanity_compare.py**: CPU 4-metric sanity dashboard between VLM backends.
 - **m04d_motion_features.py**: GPU-RAFT optical flow → 13D motion vector per clip. AdaptiveBatchSizer.
@@ -71,7 +70,7 @@ Research benchmark testing whether V-JEPA 2.1 (Meta's video foundation model, tr
 - **build_faiss_sm120.sh**: Source-build FAISS-GPU 1.14.1 for Blackwell sm_120. `--install` reuses `/tmp/faiss_build`.
 
 ### Utils (`src/utils/`)
-- **`action_labels.py`** (218 LoC, iter13) — `parse_action_from_clip_key` (path-prefix `tier1/<city>/<activity>`; `rain → walking`; optional 4-class monument override via `tags.scene_type=="heritage_tourist"`). `load_subset_with_labels`, `stratified_split` (rejects classes <5 per split — BCa CI floor), `write_action_labels_json` + `class_counts.json`. CPU self-test CLI. Used by probe_action + probe_motion_cos + probe_future_mse.
+- **`action_labels.py`** (iter13 → iter16 M5 2026-05-20) — `parse_action_from_clip_key` (path-prefix `tier1/<city>/<activity>`; `rain → walking`; optional 4-class monument override via `tags.scene_type=="heritage_tourist"`). `load_subset_with_labels`, `write_action_labels_json` + `class_counts.json`. **`stratified_split` rewritten iter16 M5 (2026-05-20)** — was clip-key-level shuffle that leaked clips from the same `video_id` across {train,val,test}; now uses sklearn `StratifiedGroupKFold` (outer for test, inner for train↔val with renormalised val ratio) so every `video_id` lands in EXACTLY one split. New `_extract_video_id(clip_key)` helper handles both 5-part (tier1/tier2) and 4-part (goa/monuments) clip_key formats via `parts[-2]`. FAIL LOUD when any class has <min_per_split clips in any split (SANITY may trigger this — operator action: raise sanity input pool, NEVER branch on mode). Tests at `tests/test_action_labels.py` (10/10 pass on Pro 4000 incl. eval_10k integration: 9,274 clips → 637 videos → 0 straddlers). Plan: `iter/iter16_train_115kclips/legacy/plan_video_disjoint_stratified_split.md`. Used by probe_action + probe_motion_cos + probe_future_mse.
 - **`frozen_features.py`** (327 LoC, iter13) — Shared encoder loaders + extractor for the probe trio. `ENCODERS = {vjepa_2_1_frozen, dinov2}`. `load_vjepa_2_1_frozen` (mirrors m05:629-670 — bf16, RoPE patch, SDPA monkey-patch). `load_dinov2_frozen` (fp16, FA2). `decode_to_tensor` (PyAV + ImageNet normalize + resize-shorter-side + center-crop). `forward_vjepa` (B,T,3,H,W → permute B,3,T,H,W; deep-supervision unwrap to last layer). `forward_dinov2` (B*T flatten → tile + concat over T, matches V-JEPA 2 paper §4.1 "tile + temporal pool"). `extract_features_for_keys` producer-consumer with AdaptiveBatchSizer + atomic `.probe_<label>_ckpt.npz` resume.
 - **`bootstrap.py`** — BCa 10K-iter `scipy.stats.bootstrap`, vectorized.
 - **`cache_policy.py`** — **SOLE cross-module destructive-delete guard**. `add_cache_policy_arg`, `resolve_cache_policy_interactive`, `guarded_delete`. Replaces removed `output_guard.py` (2026-04-26).

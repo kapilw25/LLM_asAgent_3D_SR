@@ -1,6 +1,11 @@
 """Grounded-SAM video segmentation: Grounding DINO + HF Sam3TrackerVideoModel. GPU-only.
 Gold standard: https://github.com/IDEA-Research/Grounded-SAM-2 | https://github.com/facebookresearch/sam3
-Claude Code: re-WebSearch both URLs on every read of this file.
+SAM 3.1 release (2026-03-27): https://github.com/facebookresearch/sam3/blob/main/RELEASE_SAM3p1.md
+Claude Code: re-WebSearch all 3 URLs on every read of this file.
+
+iter16 (2026-05-20) — upgraded sam_hf_model: facebook/sam3 → facebook/sam3.1 (Object
+Multiplex joint multi-object tracking, drop-in API per Meta release notes — ~7× faster
+at 128 objects on H100, ½ VRAM, better accuracy in crowded scenes).
 
 4-anchor re-seed: DINO detects boxes on frames [0, 4, 8, 12]; HF Sam3TrackerVideoModel
 propagates per-anchor within its 4-frame segment via `max_frame_num_to_track=3` (raw sam3
@@ -21,7 +26,7 @@ USAGE (every path arg required — CLAUDE.md no-default rule):
     python -u src/m10_sam_segment.py --SANITY --plot \
         --train-config configs/train/surgery_3stage_DI_encoder.yaml    # re-generate plots only (no GPU)
 
-HF model download: `facebook/sam3` (~12 GB, first-run only) is pre-cached by `setup_env_uv.sh` step [10/10]
+HF model download: `facebook/sam3.1` (~12 GB, first-run only) is pre-cached by `setup_env_uv.sh` step [10/10]
 via `hf download` which respects `HF_HUB_ENABLE_HF_TRANSFER=1` (Rust multi-stream, 1.5-3× per file).
 """
 import argparse
@@ -130,8 +135,11 @@ DINO_TO_TAG = {
 
 # ── Model Loading ───────────────────────────────────────────────────
 
-def load_sam3_hf(model_id: str = "facebook/sam3"):
+def load_sam3_hf(model_id: str):
     """HF Sam3TrackerVideoModel (box/point/mask-prompted video tracker). Returns (model, processor).
+
+    iter16 (2026-05-20): default removed per CLAUDE.md "No hardcoded values in Python".
+    Caller MUST pass `model_id=factor_cfg["sam_hf_model"]` from configs/train/surgery_base.yaml.
 
     Replaces raw `sam3.build_sam3_predictor` to unlock `max_frame_num_to_track` +
     `start_frame_idx` in `propagate_in_video_iterator` (raw pkg crashed #34/#35 with
