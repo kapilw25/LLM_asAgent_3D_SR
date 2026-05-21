@@ -57,7 +57,10 @@ cd "$(dirname "$0")/.."
 source venv_walkindia/bin/activate
 mkdir -p logs
 
-LOCAL_DATA="${LOCAL_DATA:-data/eval_10k_local}"
+# iter16 M9 (2026-05-21): default from yaml-keyed data.local_data_dir. Env var
+# LOCAL_DATA still overrides for ad-hoc runs on alternate corpora.
+_LOCAL_DATA_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
+LOCAL_DATA="${LOCAL_DATA:-$_LOCAL_DATA_M9}"
 CACHE_POLICY="${CACHE_POLICY_ALL:-2}"
 
 if [ ! -d "$LOCAL_DATA" ]; then

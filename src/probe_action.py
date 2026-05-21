@@ -16,8 +16,8 @@ USAGE (sequence — every path arg required, no defaults):
     # Stage 1: labels (CPU, ~1 min). --motion-features is m04d's output,
     # default location <local_data>/m04d_motion_features/motion_features.npy.
     python -u src/probe_action.py --SANITY \\
-        --stage labels --eval-subset data/eval_10k_local/eval_10k.json \\
-        --motion-features data/eval_10k_local/m04d_motion_features/motion_features.npy \\
+        --stage labels --eval-subset ${LOCAL_DATA}/eval_10k.json \\
+        --motion-features ${LOCAL_DATA}/m04d_motion_features/motion_features.npy \\
         --output-root outputs/sanity/probe_action \\
         --cache-policy 1 2>&1 | tee logs/probe_action_labels_sanity.log
 
@@ -25,7 +25,7 @@ USAGE (sequence — every path arg required, no defaults):
     python -u src/probe_action.py --FULL \\
         --stage features --encoder vjepa_2_1_frozen \\
         --encoder-ckpt checkpoints/vjepa2_1_vitG_384.pt \\
-        --eval-subset data/eval_10k_local/eval_10k.json --local-data data/eval_10k_local \\
+        --eval-subset ${LOCAL_DATA}/eval_10k.json --local-data ${LOCAL_DATA} \\
         --output-root outputs/full/probe_action \\
         --cache-policy 1 2>&1 | tee logs/probe_action_features_vjepa.log
 
@@ -56,6 +56,7 @@ from utils.action_labels import (
     load_action_labels,
     load_subset_with_labels,
     stratified_split,
+    subsample_manifest_for_mode,
     write_action_labels_json,
 )
 from utils.bootstrap import bootstrap_ci, paired_bca
@@ -74,6 +75,7 @@ from utils.config import (
     check_gpu,
     get_paired_deltas,
     get_pipeline_config,
+    get_probe_split,
 )
 from utils.data_download import ensure_local_data
 from utils.frozen_features import (
@@ -277,20 +279,59 @@ def run_labels_stage(args, wb) -> None:
     # iter13 v12 (2026-05-05): MOTION-flow labels (RAFT optical-flow → 16 classes
     # of <magnitude>__<direction>, filter to ≥34 clips/class). Drops the legacy
     # path-derived 3-class action probe (saturated frozen V-JEPA at 0.94+).
+
+    # iter16 M1 Option X (2026-05-21 PM): mode-keyed clip-pool subsampling
+    # via the shared subsample_manifest_for_mode() helper. Symmetric with
+    # probe_labels.ensure_probe_labels_for_mode (in-process bootstrap) so
+    # action_labels.json schema is identical regardless of which entry-point
+    # generated it.
+    #   SANITY → sorted(clip_keys)[:n]                  (code check)
+    #   POC    → stratified_by_motion_class_subset      (POC↔FULL parity)
+    #   FULL   → identity (ratio=1.0)
+    mode = "sanity" if args.SANITY else ("poc" if args.POC else "full")
+    manifest = json.loads(Path(args.eval_subset).read_text())
+    n_motion_classes = get_pipeline_config()["probe_action_labels"]["n_motion_classes"]
+    pool_keys = subsample_manifest_for_mode(
+        mode, manifest["clip_keys"], args.motion_features, n_motion_classes)
+    print(f"[M1 Opt X] mode={mode}: subsampled {len(pool_keys):,}/"
+          f"{len(manifest['clip_keys']):,} clips "
+          f"({len(pool_keys)/len(manifest['clip_keys']):.2%})")
+
     records, class_names = load_subset_with_labels(
         args.eval_subset, args.motion_features,
-        min_clips_per_class=args.min_clips_per_class)
+        min_clips_per_class=args.min_clips_per_class,
+        clip_keys=pool_keys)
     print(f"Loaded {len(records)} labeled clips from {args.eval_subset} "
           f"({len(class_names)} motion-flow classes)")
-    splits = stratified_split(records, seed=args.seed,
-                              min_per_split=args.min_per_split)
+
+    # iter16 M1: probe_split mode-keyed from yaml (POC↔FULL parity-locked at
+    # 75/5/20; SANITY laxer 60/20/20 because M5 video-disjoint SGKF needs
+    # n_splits ≤ min_videos_per_class — SANITY's tiny corpus can't satisfy
+    # k_val=16 from val_pct=0.05).
+    split_cfg = get_probe_split(mode)
+    splits = stratified_split(records,
+                              train_pct=split_cfg["train_pct"],
+                              val_pct=split_cfg["val_pct"],
+                              seed=args.seed,
+                              min_per_split=args.min_per_split,
+                              mode=mode)
     write_action_labels_json(records, splits, labels_path)
 
     counts = load_json_checkpoint(args.output_root / "class_counts.json")
     for cls, c in counts.items():
         if c["test"] < args.min_per_split or c["val"] < args.min_per_split:
-            sys.exit(f"FATAL: class '{cls}' val={c['val']}/test={c['test']} "
-                     f"(need >= {args.min_per_split} each)")
+            # SANITY: tiny per-class clip counts make val=0 or test=0 possible
+            # even with clip-level stratified shuffle. Downgrade to WARN per
+            # CLAUDE.md "SANITY validates code, not paper-grade splits".
+            # POC/FULL still FATAL — they're parity-locked at 75/5/20 with
+            # enough corpus to never trip this.
+            if mode == "sanity":
+                print(f"  WARN [SANITY]: class '{cls}' val={c['val']}/"
+                      f"test={c['test']} (need >= {args.min_per_split} each "
+                      f"for POC/FULL; SANITY only validates code paths)")
+            else:
+                sys.exit(f"FATAL: class '{cls}' val={c['val']}/test={c['test']} "
+                         f"(need >= {args.min_per_split} each)")
         if c["train"] < 30:
             print(f"  WARN: class '{cls}' train={c['train']} (recommended >=30)")
     log_metrics(wb, {"n_clips_labeled": len(records), "n_classes": len(counts)})

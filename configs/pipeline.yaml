@@ -33,6 +33,18 @@ poc:
 
 # -- Data processing --
 data:
+  # iter16 M9 (2026-05-21): single source of truth for the ACTIVE local data
+  # dir + master manifest filename. Flip these two keys (one-line each) to
+  # migrate the whole pipeline from eval_10k_local (iter15/iter16 SANITY+POC)
+  # to full_local (iter16 FULL). All shell scripts read via yaml_extract.py;
+  # all Python callers read via cfg["data"]["local_data_dir"] +
+  # cfg["data"]["master_manifest_name"]. Retires 30+ hardcoded
+  # "data/eval_10k_local/" refs across yaml + shells + src.
+  local_data_dir:        "data/eval_10k_local"     # iter15 / iter16 SANITY+POC
+  # local_data_dir:      "data/full_local"         # iter16 FULL (when m04/m10/m11 ready)
+  master_manifest_name:  "eval_10k.json"           # iter15 / iter16 SANITY+POC master
+  # master_manifest_name: "full_local.json"        # iter16 FULL (after M3 generates it)
+
   clips_per_shard: 1000       # m03/m00d: WebDataset shard size (≈1 GB each at 480p MP4 × 1000 clips)
   data_prep_workers: 10       # m00b: concurrent duration fetchers
   clip_duration_sec: 10       # m06: default clip length for ±30s exclusion
@@ -272,8 +284,111 @@ verify:
 # iter16 (2026-05-20): single source of truth for the split — m00f ultra_hard
 # (with its asymmetric 80/10/10 split) retired to src/legacy/ same day.
 probe_split:
-  train_pct: 0.75
-  val_pct:   0.05      # test_pct = 1 − train − val = 0.20
+  # iter16 (2026-05-21): mode-keyed train/val/test split ratios.
+  # POC↔FULL parity-locked at 75/5/20 (paper recipe — tight val for trajectory
+  # plots). SANITY uses laxer 60/20/20 because M5 video-disjoint SGKF needs
+  # n_splits ≤ min_videos_per_class — at SANITY scale (~100 clips × 11 classes
+  # × ~14 clips/video ≈ 5 videos/class), k_val=16 from val_pct=0.05 is
+  # infeasible. SANITY only validates code paths, not paper-grade splits, so
+  # laxer ratios are appropriate (CLAUDE.md POC↔FULL parity rule applies to
+  # POC↔FULL — NOT to SANITY).
+  sanity:
+    train_pct: 0.60
+    val_pct:   0.20      # test_pct = 0.20; k_val = 4 — fits ~5 videos/class
+  poc:
+    train_pct: 0.75      # paper-locked (cross-recipe parity with FULL)
+    val_pct:   0.05      # test_pct = 0.20; k_val = 16 — needs ≥16 vids/class
+  full:
+    train_pct: 0.75
+    val_pct:   0.05
+
+# iter16 M1 (2026-05-21): mode-keyed FRACTION of FULL corpus. N_full read at
+# runtime from data/full_local/full_local.json (or args.eval_subset for older
+# manifests). All POC/SANITY clip counts are derived; NO hardcoded literals
+# anywhere in src/*.py.
+clip_pool_ratio:
+  full:   1.00      # 100% — every clip in the master manifest
+  poc:    0.10      # 10%  → ~11,500 @ N_full = 115,000
+  sanity: 0.01      # 1%   → ~ 1,150 @ N_full = 115,000
+
+# iter16 M8 / R4 (2026-05-21): torch.compile gate for m04d RAFT-Large.
+#
+# WebSearch-validated recipe (NOT the speculative "same as M7" copy from
+# the original plan draft):
+#   • mode="default"  — NO cudagraphs → no 70 GB CUDA Graph Trees workspace
+#                        (PyTorch #120733 + iter13 m04d:225-235 evidence)
+#   • dynamic=False   — static shapes; each unique batch size recompiles
+#                        fresh (~30-60 s × 4-5 sizes = ~3-5 min one-time
+#                        per run). Avoids the CantSplit dynamic-shape bug
+#                        (PyTorch #105279, #176653) that crashed iter13.
+#   • fullgraph=False — tolerate graph breaks at non-tensor ops.
+#
+# AdaptiveBatchSizer interaction (the original iter13 crash trigger):
+# with mode="default" + dynamic=False, batch-size shrinks just trigger a
+# fresh compile for the new size, NOT a CantSplit crash. The 70 GB cudagraphs
+# memory pool is eliminated, so Pro 4000 (24 GB) fits comfortably.
+#
+# Cost vs eager: ~1.5-2× faster RAFT inference (compile amortizes after the
+# first ~3-5 min of per-shape compiles). m04d Stage-2 wall on Pro 6000:
+# ~8 hr → ~3-4 hr. Acceptable per iter13 design — m04d is one-shot per dataset.
+#
+# FAIL LOUD: if compile raises Inductor errors on warmup, the script MUST exit
+# non-zero. No try/except eager-fallback. The operator either fixes the bug
+# upstream or sets m04d_compile.enabled=false in this yaml.
+m04d_compile:
+  enabled:        true              # iter16 (was iter13-disabled). WebSearch-validated.
+  mode:           "default"         # NOT reduce-overhead — saves ~70 GB cudagraphs pool
+  dynamic:        false             # NON-NEGOTIABLE — iter13 CantSplit root cause was dynamic=True
+  fullgraph:      false             # tolerate graph breaks at non-tensor ops
+
+# iter16 M7 / R5 (2026-05-21): torch.compile gate for Grounding DINO.
+#
+# Default OFF — flip to true after Stage 3 migrates to Pro 6000 96 GB box.
+# Recipe inherits M8's WebSearch-validated lessons:
+#   • mode="default"  — NOT reduce-overhead (avoid 70 GB cudagraphs pool).
+#                        Smaller VRAM footprint; compile cost still ~30-60 s.
+#   • dynamic=False   — fixed pixel_values shape (M6 batched uses (4,H,W,3)
+#                        with constant H,W). Avoids CantSplit-class bugs.
+#                        Compound_prompt is identical across batch (HF #32206).
+#   • fullgraph=False — tolerate graph breaks at non-tensor ops.
+#
+# Expected gain on Pro 6000: ~1.3-1.5× DINO speedup atop M6's 4-anchor
+# batching gain. Pro 4000 default OFF — m10 batch size per worker is small,
+# compile overhead may not amortize. Operator flips after Pro 6000 migration.
+#
+# FAIL LOUD on Inductor errors per CLAUDE.md "No CPU/eager fallback in
+# inference scripts" — operator either fixes upstream or sets enabled=false.
+dino_compile:
+  enabled:        false             # Pro 4000 default — flip to true on Pro 6000
+  mode:           "default"         # NOT reduce-overhead — same M8 lesson re cudagraphs pool
+  dynamic:        false             # fixed pixel_values shape — HF #34556
+  fullgraph:      false             # tolerate graph breaks at non-tensor ops
+
+# -- probe_action labels bootstrap (iter14 recipe-v3, 2026-05-09) --
+# Read by src/probe_action.py (CLI via get_pipeline_config()) AND by
+# src/utils/probe_labels.ensure_probe_labels_for_mode() (in-process via merged
+# cfg). iter16 M9 followup (2026-05-21): MOVED from base_optimization.yaml to
+# pipeline.yaml so the CLI path sees the same values as the in-process path
+# (probe_action.py CLI doesn't go through load_merged_config).
+probe_action_labels:
+  # m04d 13-D RAFT features × 4-mag × 4-dir = 16 possible · 8 surviving after
+  # the 34-clip filter on the FULL pool. Drives target_per_class for the POC
+  # stratified subsampler (utils.eval_subset.stratified_by_motion_class_subset).
+  n_motion_classes: 8
+  # iter16 M9 (2026-05-21): eval_subset_in DELETED. Master manifest path now
+  # derived from data.local_data_dir + data.master_manifest_name above via
+  # utils.config.get_master_manifest_path().
+  # iter16 M1 Option X (2026-05-21): subsample_manifest_for_mode() applies
+  # per-mode mechanism (sorted[:N] for SANITY, stratified_by_motion_class for
+  # POC, identity for FULL) on top of the master manifest.
+  min_clips_per_class:
+    sanity: 5                   # 600 / 16 ≈ 37 → relaxed for code-correctness only
+    poc:    34                  # iter13 v12: 34 → ≥5 per split @ 70/15/15
+    full:   34
+  min_per_split:
+    sanity: 1                   # min clips per stratified train/val/test split
+    poc:    5
+    full:   5
 
 # -- Probe-trio defaults (probe_action / probe_taxonomy / probe_motion_cos /
 # probe_future_mse / probe_future_regress). argparse uses these as fall-through

@@ -65,6 +65,17 @@ case "$MODE_FLAG" in
     *) echo "FATAL: mode flag must be --SANITY|--POC|--FULL (got: $MODE_FLAG)" >&2; exit 2 ;;
 esac
 
+# iter16 M9 (2026-05-21): active local data dir + master manifest from yaml.
+# Single source of truth — flip configs/pipeline.yaml > data.local_data_dir +
+# data.master_manifest_name to migrate the whole pipeline from eval_10k_local
+# (iter15 / iter16 SANITY+POC) to full_local (iter16 FULL).
+LOCAL_DATA=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
+MASTER_MANIFEST_NAME=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.master_manifest_name)
+MASTER_MANIFEST="${LOCAL_DATA}/${MASTER_MANIFEST_NAME}"
+[ -d "$LOCAL_DATA" ] || { echo "❌ FATAL: \$LOCAL_DATA=$LOCAL_DATA missing"; exit 3; }
+[ -f "$MASTER_MANIFEST" ] || { echo "❌ FATAL: \$MASTER_MANIFEST=$MASTER_MANIFEST missing"; exit 3; }
+echo "[M9] LOCAL_DATA=$LOCAL_DATA · MASTER_MANIFEST=$MASTER_MANIFEST"
+
 # ── Probe Stage 1 (action_labels.json) — auto-bootstrap before split ─────
 # iter14 recipe-v3 (2026-05-09): TECH-DEBT — this shell-level bootstrap is
 # REDUNDANT with src/utils/probe_labels.ensure_probe_labels_for_mode(cfg=cfg),
@@ -79,48 +90,25 @@ esac
 ACTION_LABELS="outputs/${mode_dir}/probe_action/action_labels.json"
 if [ ! -f "$ACTION_LABELS" ]; then
     echo "  [run_probe_train] $ACTION_LABELS missing — auto-bootstrapping via probe_action.py --stage labels (CPU, ~1 min)"
-    LOCAL_DATA_BOOTSTRAP="data/eval_10k_local"
-    MOTION_FEATURES_BOOTSTRAP="${LOCAL_DATA_BOOTSTRAP}/m04d_motion_features/motion_features.npy"
+    MOTION_FEATURES_BOOTSTRAP="${LOCAL_DATA}/m04d_motion_features/motion_features.npy"
     if [ ! -f "$MOTION_FEATURES_BOOTSTRAP" ]; then
         echo "❌ FATAL: $MOTION_FEATURES_BOOTSTRAP not found — run m04d_motion_features.py first" >&2
         exit 3
     fi
+    # iter16 M1 Option X (2026-05-21 PM): all 3 modes feed off the master
+    # manifest. The Python helper subsample_manifest_for_mode — called from
+    # probe_action.run_labels_stage — applies per-mode subsample (sorted[:N]
+    # for SANITY, stratified_by_motion_class for POC, identity for FULL).
+    # Shell stays thin (CLAUDE.md "no logic in shell"). The legacy mode-
+    # specific subset selection + POC eval_subset.py call were retired in
+    # this same pass; eval_10k_{sanity,poc}.json moved to legacy/ per M1.
+    EVAL_SUBSET_BOOTSTRAP="$MASTER_MANIFEST"
     if [ "$MODE" = "SANITY" ]; then
-        EVAL_SUBSET_BOOTSTRAP="data/eval_10k_local/eval_10k_sanity.json"
-        # iter13 v13 (2026-05-07): floor=3 is the absolute minimum that
-        # stratified_split's greedy allocation supports (val=1/test=1/train=1).
+        # SANITY: stratified_split floors (val=1/test=1/train=1) for tiny pool.
         MIN_CLIPS_BOOTSTRAP=3
         MIN_SPLIT_BOOTSTRAP=1
-    elif [ "$MODE" = "POC" ]; then
-        # iter14 v2 (2026-05-09): POC = STRATIFIED by motion class (RAFT optical
-        # flow → 8 classes), guarantees POC labels file matches FULL schema (all
-        # 8 classes preserved). Replaces buggy --first-n which caused iter14 D₂
-        # 855/7-class label file. Per-class target = POC_TOTAL / 8 (8 surviving
-        # motion classes from m04d 13-D RAFT × magnitude-quartile × direction).
-        # Source: src/CLAUDE.md POC↔FULL parity rule + plan_surgery_wins.md §12.7.
-        POC_SUBSET="data/eval_10k_local/eval_10k_poc.json"
-        POC_TOTAL=$(scripts/lib/yaml_extract.py configs/train/base_optimization.yaml data.poc_total_clips)
-        TARGET_PER_CLASS=$((POC_TOTAL / 8))
-        MOTION_FEATURES_FULL="data/eval_10k_local/m04d_motion_features/motion_features.npy"
-        if [ ! -f "$MOTION_FEATURES_FULL" ]; then
-            echo "❌ FATAL: $MOTION_FEATURES_FULL missing — run m04d --FULL first." >&2
-            exit 4
-        fi
-        if [ ! -f "$POC_SUBSET" ] || [ "data/eval_10k_local/eval_10k.json" -nt "$POC_SUBSET" ] || [ "$MOTION_FEATURES_FULL" -nt "$POC_SUBSET" ]; then
-            python -u src/utils/eval_subset.py \
-                --eval-subset data/eval_10k_local/eval_10k.json \
-                --stratified-by-motion-class \
-                --motion-features "$MOTION_FEATURES_FULL" \
-                --target-per-class "$TARGET_PER_CLASS" \
-                --output "$POC_SUBSET"
-        fi
-        EVAL_SUBSET_BOOTSTRAP="$POC_SUBSET"
-        # POC↔FULL parity (CLAUDE.md, 2026-05-09): POC uses SAME min_clips_per_class
-        # as FULL (34) so identical class set survives the post-stratification filter.
-        MIN_CLIPS_BOOTSTRAP=34
-        MIN_SPLIT_BOOTSTRAP=5
     else
-        EVAL_SUBSET_BOOTSTRAP="data/eval_10k_local/eval_10k.json"
+        # POC + FULL: paper-final thresholds (≥34 clips/class, ≥5 per split).
         MIN_CLIPS_BOOTSTRAP=34
         MIN_SPLIT_BOOTSTRAP=5
     fi
@@ -148,11 +136,14 @@ fi
 # ── Generate train/val/test split JSONs from action_labels.json ──────────
 # action_labels.json carries 70/15/15 split (train=6964, val=1491, test=1496)
 # — paper-final m06d trio uses TEST clips that m09a never sees during pretrain_encoder.
-# iter13 Task #23 (2026-05-04): added test split externalisation here so eval
-# stages downstream can reference data/eval_10k_local/eval_10k_test_split.json directly.
-TRAIN_SPLIT="data/eval_10k_local/eval_10k_train_split.json"
-VAL_SPLIT="data/eval_10k_local/eval_10k_val_split.json"
-TEST_SPLIT="data/eval_10k_local/eval_10k_test_split.json"
+# iter13 Task #23 (2026-05-04): test split externalised here so eval stages
+# downstream can reference ${LOCAL_DATA}/test_split.json directly.
+# iter16 M9 (2026-05-21): paths derived from $LOCAL_DATA (yaml-keyed) AND
+# filenames are corpus-agnostic ({train,val,test}_split.json — no "eval_10k_"
+# prefix) so flipping LOCAL_DATA → data/full_local works without re-renaming.
+TRAIN_SPLIT="${LOCAL_DATA}/train_split.json"
+VAL_SPLIT="${LOCAL_DATA}/val_split.json"
+TEST_SPLIT="${LOCAL_DATA}/test_split.json"
 echo "═══ $(date '+%H:%M:%S') · Generating train/val/test split JSONs ═══"
 python -u src/utils/probe_train_subset.py \
     --action-labels "$ACTION_LABELS" --split train --output "$TRAIN_SPLIT"
@@ -161,8 +152,7 @@ python -u src/utils/probe_train_subset.py \
 python -u src/utils/probe_train_subset.py \
     --action-labels "$ACTION_LABELS" --split test --output "$TEST_SPLIT"
 
-LOCAL_DATA="data/eval_10k_local"
-[ -d "$LOCAL_DATA" ] || { echo "❌ FATAL: $LOCAL_DATA missing"; exit 3; }
+# (LOCAL_DATA defined earlier via M9 yaml_extract — no re-declaration needed)
 MODEL_CFG="configs/model/vjepa2_1.yaml"
 P_M09="${CACHE_POLICY_ALL:-1}"
 
@@ -195,12 +185,9 @@ SURGERY_INIT="${SURGERY_INIT:-hf://anonymousML123/factorjepa-pretrain-vjepa21-vi
 # are missing, we fall back to silent-disable + a fix-it hint.
 TAXONOMY_LABELS="outputs/${mode_dir}/probe_taxonomy/taxonomy_labels.json"
 TAG_TAXONOMY="configs/tag_taxonomy.json"
-# eval_subset path mirrors run_eval.sh's mode-gated convention.
-if [ "$MODE" = "SANITY" ]; then
-    EVAL_SUBSET_TX="data/eval_10k_local/eval_10k_sanity.json"
-else
-    EVAL_SUBSET_TX="data/eval_10k_local/eval_10k.json"
-fi
+# iter16 M9 (2026-05-21): master manifest for all modes; M1 Option X
+# subsamples in-process. No more per-mode pre-made JSONs.
+EVAL_SUBSET_TX="$MASTER_MANIFEST"
 TAGS_JSON_TX="${LOCAL_DATA}/tags.json"
 TAXONOMY_ARGS=()
 if [ ! -f "$TAXONOMY_LABELS" ]; then

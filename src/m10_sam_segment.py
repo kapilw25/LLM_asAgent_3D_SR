@@ -160,9 +160,31 @@ def load_grounding_dino(model_id: str):
     → text_enhancer_layer) produces fp32 activations that hit fp16 Linear weights
     → crash. Full autocast wrapping is too invasive; fp32 DINO (+500 MB VRAM,
     negligible vs SAM3's 12 GB) avoids all dtype issues for 4 forwards/clip.
+
+    iter16 M7 / R5 (2026-05-21): yaml-gated torch.compile wrapper. Default OFF
+    (Pro 4000); flip dino_compile.enabled=true in configs/pipeline.yaml for
+    Pro 6000 runs. Recipe inherits M8's WebSearch-validated mode="default" +
+    dynamic=False (avoid 70 GB cudagraphs pool + CantSplit bug). Expected gain
+    ~1.3-1.5× DINO speedup atop M6's 4-anchor batching. FAIL LOUD on Inductor
+    errors (no eager fallback per CLAUDE.md).
     """
+    from utils.config import get_pipeline_config
     processor = AutoProcessor.from_pretrained(model_id)
     model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to("cuda").eval()
+    _cfg = get_pipeline_config()["dino_compile"]                # FAIL LOUD
+    if _cfg["enabled"]:
+        print(f"[M7 dino_compile] mode={_cfg['mode']} "
+              f"dynamic={_cfg['dynamic']} fullgraph={_cfg['fullgraph']} — "
+              f"compiling Grounding DINO (~30-60 s one-time per worker)")
+        model = torch.compile(
+            model,
+            mode=_cfg["mode"],
+            dynamic=_cfg["dynamic"],
+            fullgraph=_cfg["fullgraph"],
+        )
+    else:
+        print("[M7 dino_compile] disabled — running Grounding DINO in eager mode "
+              "(flip dino_compile.enabled=true in configs/pipeline.yaml for Pro 6000)")
     return processor, model
 
 
@@ -275,6 +297,92 @@ def detect_boxes_grounding_dino(dino_processor, dino_model,
     }
 
 
+def detect_boxes_grounding_dino_batched(dino_processor, dino_model,
+                                         frames_batch: np.ndarray,
+                                         compound_prompt: str,
+                                         box_threshold: float,
+                                         text_threshold: float) -> list:
+    """Batched Grounding DINO across N frames in one forward pass.
+
+    iter16 M6 / R3 (2026-05-21): collapses N sequential DINO forwards (one
+    per anchor frame) into a single batched call. Drop-in companion to
+    detect_boxes_grounding_dino — same return-dict schema, returned as a
+    list of N dicts (one per input frame). Used by the m10 anchor loop with
+    N=4 (anchor frames 0/4/8/12). ~18% per-clip speedup; compounds atop the
+    SAM3.1 R1 upgrade.
+
+    Safety note (HF Transformers #32206): batched DINO inference is only
+    safe when ALL images share the SAME caption (compound_prompt). The m10
+    case satisfies this — every anchor frame uses the IDENTICAL compound
+    prompt built from the taxonomy. Cross-clip batching would NOT be safe.
+
+    Args:
+        dino_processor:    HF AutoProcessor for IDEA-Research/grounding-dino-base
+        dino_model:        HF Grounding DINO model on CUDA
+        frames_batch:      np.ndarray (N, H, W, 3) uint8 RGB
+        compound_prompt:   single caption string used for ALL N frames
+        box_threshold:     post-process box confidence floor
+        text_threshold:    post-process text-match confidence floor
+
+    Returns:
+        list of N dicts, each matching detect_boxes_grounding_dino()'s
+        return schema: {boxes_by_cat, scores_by_cat, detected_cats, H, W}.
+    """
+    N, H, W = frames_batch.shape[:3]
+    pils = [Image.fromarray(frames_batch[i]) for i in range(N)]
+
+    # Replicate compound_prompt across the batch. transformers >=4.51 pairs
+    # each image with its corresponding text element; identical text per
+    # batch entry is the only safe HF-supported batching mode for DINO.
+    inputs = dino_processor(
+        images=pils,
+        text=[compound_prompt] * N,
+        return_tensors="pt",
+        padding=True,
+    )
+    inputs = {k: v.to("cuda") for k, v in inputs.items()}
+    # transformers 5.x: cast floating tensors to model dtype (int tensors
+    # — attention masks, input_ids — must stay int).
+    model_dtype = next(dino_model.parameters()).dtype
+    for k, v in inputs.items():
+        if v.dtype.is_floating_point and v.dtype != model_dtype:
+            inputs[k] = v.to(model_dtype)
+    with torch.no_grad():
+        outputs = dino_model(**inputs)
+
+    # Post-process: HF accepts target_sizes as a list of (H, W) tuples, one
+    # per batch element. Returns a list of N result-dicts.
+    target_sizes = [(H, W)] * N
+    all_results = dino_processor.post_process_grounded_object_detection(
+        outputs,
+        inputs["input_ids"],
+        threshold=box_threshold,
+        text_threshold=text_threshold,
+        target_sizes=target_sizes,
+    )
+
+    out_list = []
+    for results in all_results:
+        boxes_by_cat = {}
+        scores_by_cat = {}
+        for box, label, score in zip(results["boxes"].cpu().tolist(),
+                                     results["text_labels"],
+                                     results["scores"].cpu().tolist()):
+            cat = _canonicalize_label(label)
+            if cat is None:
+                continue
+            boxes_by_cat.setdefault(cat, []).append(box)
+            scores_by_cat.setdefault(cat, []).append(score)
+        out_list.append({
+            "boxes_by_cat":   boxes_by_cat,
+            "scores_by_cat":  scores_by_cat,
+            "detected_cats":  list(boxes_by_cat.keys()),
+            "H": H,
+            "W": W,
+        })
+    return out_list
+
+
 def _canonicalize_label(raw_label: str) -> str:
     """Map Grounding DINO's raw matched-span label to canonical taxonomy key.
 
@@ -330,18 +438,23 @@ def segment_clip(sam_model, sam_processor, dino_processor, dino_model,
         end = anchors[i + 1] if i + 1 < len(anchors) else T
         anchor_segments[a] = set(range(a, end))
 
-    # Step 1: DINO on each anchor frame
-    dino_per_anchor = {}
-    H = W = 0
+    # Step 1: DINO across all anchor frames in ONE batched forward pass.
+    # iter16 M6 / R3 (2026-05-21): replaces N sequential single-frame calls
+    # with one batched call (~18% per-clip speedup; compounds with SAM3.1 R1).
+    # HF #32206 safety: all anchors share the SAME compound_prompt — that's
+    # the only batched mode HF supports for Grounding DINO without quality
+    # regression. Cross-clip batching would NOT be safe.
+    frames_batch = frames_np[anchors]            # (N=4, H, W, 3) uint8
+    dino_outs = detect_boxes_grounding_dino_batched(
+        dino_processor, dino_model, frames_batch, compound_prompt,
+        box_threshold, text_threshold,
+    )
+    H, W = dino_outs[0]["H"], dino_outs[0]["W"]
+    dino_per_anchor = {a: dino_outs[i]["boxes_by_cat"]
+                       for i, a in enumerate(anchors)}
     all_detected_categories = set()
-    for a in anchors:
-        dino_out = detect_boxes_grounding_dino(
-            dino_processor, dino_model, frames_np[a], compound_prompt,
-            box_threshold, text_threshold,
-        )
-        H, W = dino_out["H"], dino_out["W"]
-        dino_per_anchor[a] = dino_out["boxes_by_cat"]
-        all_detected_categories.update(dino_out["boxes_by_cat"].keys())
+    for out in dino_outs:
+        all_detected_categories.update(out["boxes_by_cat"].keys())
 
     if not any(dino_per_anchor[a] for a in anchors):
         empty_mask = np.zeros((T, H if H else 384, W if W else 384), dtype=bool)

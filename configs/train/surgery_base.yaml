@@ -86,15 +86,9 @@ optimization:
   # compute-matched against arm C long-pretrain at 10 ep. If arm B (factor surgery)
   # > arm C (long-pretrain) with non-overlapping 95% CIs, gain is causal to factor
   # patching, not extra training steps. See plan_surgery_on_pretrain.md § Q3.
-  max_epochs:
-    sanity: 1
-    poc:    2                       # iter15 audit (2026-05-15): bumped 1 → 2 to match pretrain
-                                    # POC budget (pretrain_encoder.yaml: poc=2). Uniform POC:FULL =
-                                    # 2:5 across all 6 iter15 cells → fair cross-recipe comparison
-                                    # within head-family AND within encoder-family. Paired-Δ Δ5/Δ6/Δ7
-                                    # were already same-pair matched; this fix closes the cross-recipe
-                                    # asymmetry (pretrain=2 vs surgery=1) flagged in high_level_outputs.md.
-    full:   5                       # iter14 — was inherited 15
+  # iter16 M2 (2026-05-21): max_epochs DELETED — inherited from
+  # base_optimization.yaml (single source of truth). yaml_extract.py walks
+  # the extends chain, so run_train.sh:250 still resolves the value.
 
   # Memory saver flags — MODE-GATED (#57).
   #
@@ -365,13 +359,15 @@ monitoring:
 # -- Probe: surgery-specific overrides only (universal probe config in base) --
 # Surgery-specific extras (m09c reads these via merge_config_with_args at line 94-129):
 probe:
-  # iter14 (2026-05-08): override base_optimization.yaml's legacy
-  # `ultra_hard_3066_val.json` to match m09a's gold-standard val pool path
-  # (pretrain_encoder.yaml:149). Both encoders now use the same auto-generated
-  # 70:15:15 stratified split from action_labels.json — at POC: 125 clips,
-  # at FULL: ~1388 clips. Cross-encoder mid-training metrics now comparable.
-  subset:           data/eval_10k_local/eval_10k_val_split.json
-  local_data:       data/eval_10k_local
-  tags_path:        data/eval_10k_local/tags.json
+  # iter16 M9 (2026-05-21): subset / local_data / tags_path DELETED — now
+  # injected by src/utils/config.py:load_merged_config from cfg.data.
+  # local_data_dir (configs/pipeline.yaml). Flipping that one yaml key
+  # migrates the whole pipeline to data/full_local. Consumers
+  # (m09c1/c2 cfg["probe"][...]) unchanged. Derived values:
+  #   probe.subset     = ${local_data_dir}/val_split.json    (corpus-agnostic)
+  #   probe.local_data = ${local_data_dir}
+  #   probe.tags_path  = ${local_data_dir}/tags.json
+  # All encoders (m09a + m09c) now use the same auto-generated 75:5:20
+  # video-disjoint stratified split from action_labels.json (iter16 M5 ratios).
   n_points: 30                    # kept for every_n_steps backward-compat (unused when cadence=saves_per_epoch).
   bwt_tolerance_pct: 0.5          # DEPRECATED — kept to not break older configs; unused when new keys present.

@@ -21,9 +21,9 @@ OUTPUT ROUTING (iter15, 2026-05-15):
 
 USAGE (per-dataset; one run per local_data dir, durable artifact thereafter):
     # eval_10k (FULL eval target) — outputs land in
-    # data/eval_10k_local/m04d_motion_features/ by default:
+    # ${LOCAL_DATA}/m04d_motion_features/ by default:
     CACHE_POLICY_ALL=2 python -u src/m04d_motion_features.py --FULL \
-        --subset data/eval_10k_local/eval_10k.json --local-data data/eval_10k_local \
+        --subset ${LOCAL_DATA}/eval_10k.json --local-data ${LOCAL_DATA} \
         --no-wandb 2>&1 | tee logs/m04d_full_eval10k_$(date +%Y%m%d_%H%M%S).log
 
     # subset_10k (POC):
@@ -222,18 +222,39 @@ def load_raft_model(device):
 
     weights = Raft_Large_Weights.C_T_SKHT_V2
     model = raft_large(weights=weights).to(device).eval()
-    # iter13 v12 fix (2026-05-05): torch.compile DISABLED for RAFT.
-    # Reason: AdaptiveBatchSizer preemptively shrinks the batch (e.g. 512 → 511)
-    # when post-batch VRAM > cap, which triggers torch._inductor recompilation
-    # under dynamic shapes. Recompile hits a known PyTorch bug:
-    #   InductorError: CantSplit: 1123200*s11+1123200*s15 not divisible by 96*s11+96*s15
-    # (see logs/m04d_full_eval10k_v1_$(date +%Y%m%d_%H%M%S).log:96). torch.compile is also what pushes
-    # VRAM to the cap in the first place (compile workspace ~70 GB on Blackwell),
-    # so disabling it ALSO eliminates the trigger for AdaptiveBatch shrink.
-    # Cost: ~1.5-2× slower RAFT inference. Acceptable: m04d is one-time-per-
-    # dataset (durable artifact, runs once on each <local_data>/).
+    # iter16 M8 / R4 (2026-05-21): torch.compile UNPARKED with revised recipe.
+    #
+    # Iter13's disable was correct for its recipe (mode="reduce-overhead",
+    # dynamic=True) — see iter13 m04d:225-235 + InductorError CantSplit log.
+    # The fix discovered via WebSearch (PyTorch #105279, #120733, #176653):
+    #   • mode="default" → no cudagraphs → no 70 GB CUDA Graph Trees workspace.
+    #     iter13's "torch.compile pushes VRAM to cap" was caused by cudagraphs
+    #     pool (mode="reduce-overhead"); mode="default" eliminates it entirely.
+    #   • dynamic=False → static shapes → no SymInt → no CantSplit crash.
+    #     AdaptiveBatchSizer shrinks just trigger fresh compiles (~30-60s each
+    #     × ~4-5 unique sizes = ~3-5 min one-time amortized cost).
+    # Cost vs eager: ~1.5-2× faster RAFT inference (Stage 2 wall ~8 hr → ~3-4 hr
+    # on Pro 6000). Fits Pro 4000 (24 GB) — Inductor cache ~1-5 GB, not 70 GB.
+    # FAIL LOUD: no try/except eager-fallback per CLAUDE.md "No CPU/eager
+    # fallback in inference scripts". Operator either fixes upstream or sets
+    # m04d_compile.enabled=false in pipeline.yaml.
+    from utils.config import get_pipeline_config
+    _cfg = get_pipeline_config()["m04d_compile"]                    # FAIL LOUD
+    if _cfg["enabled"]:
+        print(f"[M8 m04d_compile] mode={_cfg['mode']} "
+              f"dynamic={_cfg['dynamic']} fullgraph={_cfg['fullgraph']} — "
+              f"compiling RAFT-Large (~30-60s × ~4-5 batch sizes; one-time)")
+        model = torch.compile(
+            model,
+            mode=_cfg["mode"],
+            dynamic=_cfg["dynamic"],
+            fullgraph=_cfg["fullgraph"],
+        )
+    else:
+        print("[M8 m04d_compile] disabled — running RAFT in eager mode")
     transforms = weights.transforms()
-    print(f"RAFT-Large loaded on {device} (weights: C_T_SKHT_V2, eager, fp16)")
+    _mode_tag = "compiled" if _cfg["enabled"] else "eager"
+    print(f"RAFT-Large loaded on {device} (weights: C_T_SKHT_V2, {_mode_tag}, fp16)")
     return model, transforms
 
 

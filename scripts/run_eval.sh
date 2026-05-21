@@ -106,47 +106,26 @@ EPOCHS="${EPOCHS:-$DEFAULT_EPOCHS}"
 WARMUP_PCT="${WARMUP_PCT:-$DEFAULT_WARMUP_PCT}"
 LR_SWEEP="${LR_SWEEP:-$DEFAULT_LR_SWEEP}"
 
+# iter16 M9 (2026-05-21): all 3 modes feed off the master manifest from
+# pipeline.yaml > data.local_data_dir + data.master_manifest_name. M1
+# Option X's subsample_manifest_for_mode helper (called inside probe_action /
+# probe_labels) applies per-mode subsampling in-memory (sorted[:N] for SANITY,
+# stratified_by_motion_class for POC, identity for FULL). No more per-mode
+# pre-made eval_10k_{sanity,poc}.json — retired to data/eval_10k_local/legacy/.
+LOCAL_DATA_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
+MASTER_MANIFEST_NAME_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.master_manifest_name)
+DEFAULT_EVAL_SUBSET="${LOCAL_DATA_M9}/${MASTER_MANIFEST_NAME_M9}"
 if [ "$MODE" = "SANITY" ]; then
-    # iter13 v12 (2026-05-06): bumped 50 → 200 because motion-flow class scheme
-    # uses 16 classes (vs old 3-class action). 50/action × 3 = 150 clips → ~9/
-    # motion-class avg → stratified_split crashes even at MIN_PER_SPLIT=1.
-    # 200/action × 3 = 600 clips → ~37/motion-class avg → splits cleanly.
-    SANITY_N_PER_CLASS="${SANITY_N_PER_CLASS:-200}"
-    SANITY_SUBSET="data/eval_10k_local/eval_10k_sanity.json"
-    # Regenerate if missing OR older than the source eval_10k.json (idempotent + cheap).
-    # Logic lives in src/utils/eval_subset.py (importable + CLI; per CLAUDE.md
-    # "shell scripts are THIN wrappers — all logic in Python").
-    if [ ! -f "$SANITY_SUBSET" ] || [ "data/eval_10k_local/eval_10k.json" -nt "$SANITY_SUBSET" ]; then
-        python -u src/utils/eval_subset.py \
-            --eval-subset data/eval_10k_local/eval_10k.json \
-            --n-per-class "$SANITY_N_PER_CLASS" \
-            --output "$SANITY_SUBSET"
-    fi
-    DEFAULT_EVAL_SUBSET="$SANITY_SUBSET"
     DEFAULT_OUTPUT_PREFIX="outputs/sanity"
 elif [ "$MODE" = "POC" ]; then
-    # iter14 (2026-05-08): POC mode — first N keys of eval_10k.json (N from yaml,
-    # default 500), then probe_action.py --stage labels applies 70:15:15
-    # stratified_split → ~350/75/75 train/val/test. Same subset that
-    # run_train.sh generates so train→eval reads consistent splits.
-    POC_SUBSET="data/eval_10k_local/eval_10k_poc.json"
-    POC_TOTAL=$(python "$EX" configs/train/base_optimization.yaml data.poc_total_clips)
-    if [ ! -f "$POC_SUBSET" ] || [ "data/eval_10k_local/eval_10k.json" -nt "$POC_SUBSET" ]; then
-        python -u src/utils/eval_subset.py \
-            --eval-subset data/eval_10k_local/eval_10k.json \
-            --first-n "$POC_TOTAL" \
-            --output "$POC_SUBSET"
-    fi
-    DEFAULT_EVAL_SUBSET="$POC_SUBSET"
     DEFAULT_OUTPUT_PREFIX="outputs/poc"
 else                                   # FULL
-    DEFAULT_EVAL_SUBSET="data/eval_10k_local/eval_10k.json"
     DEFAULT_OUTPUT_PREFIX="outputs/full"
 fi
 
 # ── Configurables (env-overridable; mode-gated defaults) ────────────────
 EVAL_SUBSET="${EVAL_SUBSET:-$DEFAULT_EVAL_SUBSET}"
-LOCAL_DATA="${LOCAL_DATA:-data/eval_10k_local}"
+LOCAL_DATA="${LOCAL_DATA:-$LOCAL_DATA_M9}"
 TAGS_JSON="${TAGS_JSON:-${LOCAL_DATA}/tags.json}"
 ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
 OUTPUT_ACTION="${OUTPUT_ACTION:-${DEFAULT_OUTPUT_PREFIX}/probe_action}"

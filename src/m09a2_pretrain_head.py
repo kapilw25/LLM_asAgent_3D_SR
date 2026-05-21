@@ -18,14 +18,14 @@ USAGE (every path arg required — CLAUDE.md no-default rule):
     python -u src/m09a2_pretrain_head.py --POC \
         --model-config configs/model/vjepa2_1.yaml \
         --train-config configs/train/pretrain_head.yaml \
-        --subset data/eval_10k_local/eval_10k_train_split.json --local-data data/eval_10k_local \
-        --val-subset data/eval_10k_local/eval_10k_val_split.json --val-local-data data/eval_10k_local \
+        --subset ${LOCAL_DATA}/train_split.json --local-data ${LOCAL_DATA} \
+        --val-subset ${LOCAL_DATA}/val_split.json --val-local-data ${LOCAL_DATA} \
         --no-wandb 2>&1 | tee logs/m09a2_poc_$(date +%Y%m%d_%H%M%S).log
     python -u src/m09a2_pretrain_head.py --FULL \
         --model-config configs/model/vjepa2_1.yaml \
         --train-config configs/train/pretrain_head.yaml \
-        --subset data/eval_10k_local/eval_10k_train_split.json --local-data data/eval_10k_local \
-        --val-subset data/eval_10k_local/eval_10k_val_split.json --val-local-data data/eval_10k_local \
+        --subset ${LOCAL_DATA}/train_split.json --local-data ${LOCAL_DATA} \
+        --val-subset ${LOCAL_DATA}/val_split.json --val-local-data ${LOCAL_DATA} \
         --no-wandb 2>&1 | tee logs/m09a2_full_$(date +%Y%m%d_%H%M%S).log
 """
 import os

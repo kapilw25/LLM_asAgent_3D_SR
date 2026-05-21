@@ -104,6 +104,50 @@ def get_pipeline_config() -> dict:
     return _pipeline_cfg
 
 
+def get_probe_split(mode: str) -> dict:
+    """Return {train_pct, val_pct} for the given mode.
+
+    iter16 (2026-05-21): mode-keyed. POC + FULL are parity-locked at 75/5/20
+    (paper recipe). SANITY uses laxer 60/20/20 because M5 video-disjoint
+    SGKF's n_splits is incompatible with SANITY's tiny per-class video
+    coverage. test_pct is derived as 1 − train_pct − val_pct (kept out of
+    yaml to avoid 3-way drift). FAIL LOUD on unknown mode via KeyError.
+    """
+    return get_pipeline_config()["probe_split"][mode.lower()]
+
+
+def get_clip_pool_size(mode: str, n_full: int) -> int:
+    """Mode-keyed clip count: round(n_full × clip_pool_ratio[mode]).
+
+    iter16 M1: derives POC/SANITY clip counts from the FULL corpus size at
+    runtime. mode ∈ {sanity, poc, full} (case-insensitive). FAIL LOUD on
+    unknown mode via dict KeyError per CLAUDE.md.
+    """
+    ratio = get_pipeline_config()["clip_pool_ratio"][mode.lower()]
+    return int(round(n_full * ratio))
+
+
+def get_local_data_dir() -> Path:
+    """Return the ACTIVE local data dir (iter16 M9, 2026-05-21).
+
+    Single source of truth — flip cfg.data.local_data_dir in pipeline.yaml to
+    migrate the whole pipeline between eval_10k_local (iter15/iter16 SANITY+POC)
+    and full_local (iter16 FULL). FAIL LOUD on missing key per CLAUDE.md.
+    """
+    return PROJECT_ROOT / get_pipeline_config()["data"]["local_data_dir"]
+
+
+def get_master_manifest_path() -> Path:
+    """Return the ACTIVE master manifest path = local_data_dir / master_manifest_name.
+
+    iter16 M9: composed from two yaml keys (data.local_data_dir +
+    data.master_manifest_name). Flips together for eval_10k_local →
+    full_local migration. FAIL LOUD on missing keys per CLAUDE.md.
+    """
+    data_cfg = get_pipeline_config()["data"]
+    return get_local_data_dir() / data_cfg["master_manifest_name"]
+
+
 # ── data_prep + hf_repos yaml-resolved binding ──────────────────────────
 # iter16 (2026-05-20): values moved out of module-level literals per CLAUDE.md
 # "No hardcoded values in Python". Must bind AFTER get_pipeline_config() is
@@ -287,6 +331,27 @@ def load_merged_config(model_config: str, train_config: str) -> dict:
         for _k in ("crop_size", "patch_size", "tubelet_size"):
             if _k in _model_section and _k not in _data_section:
                 _data_section[_k] = _model_section[_k]
+
+    # iter16 M9 (2026-05-21): inject derived probe paths from
+    # cfg.data.local_data_dir. Single source of truth — flipping that one
+    # yaml key (configs/pipeline.yaml) migrates the pipeline from
+    # eval_10k_local (iter15 / iter16 SANITY+POC) to full_local (iter16 FULL)
+    # without touching code. Consumers (m09a1/a2, m09c1/c2) read
+    # cfg["probe"]["subset"] etc. as before — values are now derived, not
+    # hardcoded. FAIL LOUD if local_data_dir missing (per CLAUDE.md "no
+    # .get(default) on yaml"). The 3 keys we inject (subset / local_data /
+    # tags_path) DELETED from pretrain_encoder.yaml + surgery_base.yaml in
+    # the same pass.
+    _data_cfg = merged["data"]                              # FAIL LOUD
+    _local_data_dir = _data_cfg["local_data_dir"]           # FAIL LOUD
+    # Handle the case where probe: yaml block exists but has only comments
+    # (yaml.safe_load returns None). setdefault would return None there, not
+    # an empty dict — guard explicitly.
+    if merged.get("probe") is None:
+        merged["probe"] = {}
+    merged["probe"]["subset"]     = f"{_local_data_dir}/val_split.json"
+    merged["probe"]["local_data"] = _local_data_dir
+    merged["probe"]["tags_path"]  = f"{_local_data_dir}/tags.json"
 
     return merged
 

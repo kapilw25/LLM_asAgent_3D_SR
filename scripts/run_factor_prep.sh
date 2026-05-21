@@ -71,7 +71,10 @@ mkdir -p logs
 #
 # TRAIN_SUBSET stays optional. When unset, m10/m11 iterate ALL clips in
 # $TRAIN_LOCAL; consumer caps at the mode's clip-limit.
-TRAIN_LOCAL="${LOCAL_DATA:-data/eval_10k_local}"
+# iter16 M9 (2026-05-21): default from yaml-keyed data.local_data_dir. Env var
+# LOCAL_DATA still overrides for ad-hoc runs on alternate corpora.
+_LOCAL_DATA_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
+TRAIN_LOCAL="${LOCAL_DATA:-$_LOCAL_DATA_M9}"
 TRAIN_SUBSET="${TRAIN_SUBSET:-}"
 
 if [ ! -d "$TRAIN_LOCAL" ]; then

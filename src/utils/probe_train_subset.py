@@ -12,7 +12,10 @@ USAGE (called by scripts/run_train.sh; also a standalone CLI):
     python -u src/utils/probe_train_subset.py \\
         --action-labels outputs/full/probe_action/action_labels.json \\
         --split train \\
-        --output data/eval_10k_local/eval_10k_train_split.json
+        --output ${LOCAL_DATA}/train_split.json
+    # LOCAL_DATA = data.local_data_dir (configs/pipeline.yaml). iter16 M9
+    # (2026-05-21): corpus-agnostic filename — no "eval_10k_" prefix — so
+    # flipping LOCAL_DATA → data/full_local works without re-renaming.
 """
 import argparse
 import json

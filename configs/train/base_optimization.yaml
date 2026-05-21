@@ -37,33 +37,20 @@ data:
 # (per CLAUDE.md "No hardcoded values in Python — YAML or runtime discovery only").
 # Replaces shell-side bootstrap in scripts/run_train.sh + run_recipe_v3_sweep.sh
 # (per CLAUDE.md "Shell scripts are THIN wrappers — all logic in Python").
-probe_action_labels:
-  # m04d 13-D RAFT features × 4-mag × 4-dir = 16 possible · 8 surviving after
-  # the 34-clip filter on the FULL pool. Drives target_per_class for the POC
-  # stratified subsampler (utils.eval_subset.stratified_by_motion_class_subset).
-  n_motion_classes: 8
-  # Per-mode source pool fed into probe_action.py --stage labels (or
-  # stratified_by_motion_class_subset for POC).
-  eval_subset_in:
-    sanity: "data/eval_10k_local/eval_10k_sanity.json"
-    poc:    "data/eval_10k_local/eval_10k.json"
-    full:   "data/eval_10k_local/eval_10k.json"
-  # POC stratified-by-motion-class subset destination (only used in POC mode).
-  poc_subset_out: "data/eval_10k_local/eval_10k_poc.json"
-  min_clips_per_class:
-    sanity: 5                   # 600 / 16 ≈ 37 → relaxed for code-correctness only
-    poc: 34                     # iter13 v12: 34 → ≥5 per split @ 70/15/15
-    full: 34
-  min_per_split:
-    sanity: 1                   # min clips per stratified train/val/test split
-    poc: 5
-    full: 5
+# iter16 M9 followup (2026-05-21): probe_action_labels block MOVED to
+# configs/pipeline.yaml so probe_action.py CLI (which reads via
+# get_pipeline_config(), not load_merged_config) sees the same values as
+# m09a/c bootstrap. Merged cfg unchanged (deep_merge sees both files).
 
 # -- probe_taxonomy labels bootstrap (multi-task supervision source) --
 probe_taxonomy_labels:
-  tags_json:    "data/eval_10k_local/tags.json"
+  # iter16 M9 (2026-05-21): tags_json + local_data DELETED. Derived in Python
+  # from cfg.data.local_data_dir (pipeline.yaml):
+  #   tags_json  = local_data_dir / "tags.json"
+  #   local_data = local_data_dir
+  # Only tag_taxonomy stays as a separate key (it's in configs/, not in the
+  # active local data dir).
   tag_taxonomy: "configs/tag_taxonomy.json"
-  local_data:   "data/eval_10k_local"     # parent of m04d_motion_features/ + tar shards
 
   # iter11 v3 hard-pivot (2026-04-25): 80/10/10 train/val/eval split inside
   # ultra_hard_3066.json — 3,066 clips with ≥4 Hard triggers AND ≥4 Indian-specific
@@ -194,9 +181,16 @@ optimization:
   lr: 5.0e-5
   batch_size: 32                  # Research-LOCKED effective (macro) BS — V-JEPA 2.1 published recipe. AdaptiveBatchSizer picks MICRO sub-batch (start=16→max=32) for VRAM adaptation; 32 grads always accumulate before optimizer.step().
   max_epochs:
-    sanity: 1
-    poc: 1                        # code-path validation only.
-    full: 15                      # iter11 v2 (2026-04-26): bumped 5→15 — surgery_2stage_noDI v2 showed val-loss still descending at epoch 5 (0.494→0.466) while probe Prec@K plateaued (+0.22 over 27 probes). More steps to let val-loss flatten before plateau-patience fires. Matches SSL canon (V-JEPA 2 / DINOv2 / ExPLoRA paper) fixed-budget training.
+    sanity: 1                     # code-path validation only
+    poc:    2                     # POC↔FULL parity exception per CLAUDE.md (only
+                                  # poc_total_clips + max_epochs.poc may diverge)
+    full:   1                     # iter16 (2026-05-21): was 15. Iter16 trains on
+                                  # 115K clips × 75% ≈ 86K train clips/epoch — 1
+                                  # epoch is the budgeted FULL run; pretrain_2X
+                                  # gets 2 via run_train.sh:250-251 shell override
+                                  # (yaml_extract walks extends chain, so the value
+                                  # here is now the single source of truth for
+                                  # pretrain_encoder + surgery_base inheritance).
 
   # LR schedule — single cosine decay from peak `lr` to `min_lr` after warmup.
   # `build_scheduler` (utils/training.py:503-516) is unconditionally cosine — there
@@ -312,7 +306,13 @@ checkpoint:
   # ~50 min wall (1 val ≈ 50% epoch) while saving ~4.4 hrs/run. Plateau-patience
   # math: was patience=5 vals = 1 epoch; now patience=5 = 2.5 epochs (acceptable
   # given v8 layer_freeze + lr=1e-4 should not need long plateau detection).
-  saves_per_epoch: 2
+  # iter16 M4 (2026-05-21): 2 → 9. Iter16 FULL = 1 epoch × ~86K train clips
+  # (M2: max_epochs.full=1; M1: clip_pool_ratio.full=1.00 × 115K corpus =
+  # 75% × 115K ≈ 86K train clips). At 2/epoch only 2 trajectory points/cell —
+  # too sparse to plot a meaningful val curve. 9/epoch → 1 validation every
+  # ~9.6K train clips → 9 trajectory data points/cell, matching the rest of
+  # the iter16 trajectory-plot design. Mode-invariant per POC↔FULL parity.
+  saves_per_epoch: 9
   # iter13 v11 (2026-05-05): 2 → 5. v10 lost the peak-top1 ckpt at step 323
   # because anchor pullback continued into epochs 2-4 and step rotation
   # discarded it. 5 step ckpts × ~7 GB = 35 GB, fits 200 GB budget.

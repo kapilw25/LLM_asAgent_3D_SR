@@ -243,7 +243,15 @@
       "Bash(nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv)",
       "Bash(nvidia-smi -q)",
       "Bash(/workspace/factorjepa/venv_walkindia/bin/ruff check *)",
-      "Bash(grep -A1 -B0 '^- \\\\*\\\\*`action_labels.py`' /workspace/factorjepa/src/MEMORY.md)"
+      "Bash(grep -A1 -B0 '^- \\\\*\\\\*`action_labels.py`' /workspace/factorjepa/src/MEMORY.md)",
+      "Bash(CACHE_POLICY_ALL=2 venv_walkindia/bin/python -u src/probe_action.py --FULL --stage labels --eval-subset data/eval_10k_local/eval_10k.json --motion-features data/eval_10k_local/m04d_motion_features/motion_features.npy --min-clips-per-class 34 --min-per-split 5 --output-root outputs/full/probe_action --no-wandb)",
+      "Bash(nvidia-smi --query-gpu=name,memory.used,memory.free,utilization.gpu --format=csv)",
+      "Bash(scripts/lib/yaml_extract.py configs/train/pretrain_encoder.yaml data.train_subset)",
+      "Bash(scripts/lib/yaml_extract.py configs/train/pretrain_encoder.yaml data.val_subset)",
+      "Bash(scripts/lib/yaml_extract.py configs/train/surgery_base.yaml data.train_subset)",
+      "Bash(scripts/lib/yaml_extract.py configs/train/base_optimization.yaml checkpoint.saves_per_epoch)",
+      "Bash(sed -i 's|local_data_dir:        \"data/eval_10k_local\"|local_data_dir:        \"data/full_local\"|; s|master_manifest_name:  \"eval_10k.json\"|master_manifest_name:  \"full_local.json\"|' configs/pipeline.yaml)",
+      "Bash(sed -i 's|local_data_dir:        \"data/full_local\"|local_data_dir:        \"data/eval_10k_local\"|; s|master_manifest_name:  \"full_local.json\"|master_manifest_name:  \"eval_10k.json\"|' configs/pipeline.yaml)"
     ]
   }
 }

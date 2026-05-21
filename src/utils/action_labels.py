@@ -146,7 +146,8 @@ def parse_optical_flow_class(clip_key, flow_features_by_key, magnitude_quartiles
 
 
 def load_subset_with_labels(subset_path, motion_features_path, *,
-                             min_clips_per_class=MIN_CLIPS_PER_CLASS_DEFAULT):
+                             min_clips_per_class=MIN_CLIPS_PER_CLASS_DEFAULT,
+                             clip_keys=None):
     """Load eval subset + m04d motion features, return per-clip records with
     optical-flow-derived motion-class labels.
 
@@ -155,6 +156,11 @@ def load_subset_with_labels(subset_path, motion_features_path, *,
         motion_features_path:  <local_data>/m04d_motion_features/motion_features.npy from m04d (23D × N_clips, post-Phase-0)
         min_clips_per_class:   drop classes with fewer than this many clips (default 34
                                → ≥5 per split at 70/15/15)
+        clip_keys:             iter16 M1 — when supplied, OVERRIDES the clip_keys read
+                               from subset_path. Used by probe_action to inject a
+                               clip_pool_ratio-derived subsample WITHOUT writing a
+                               temp JSON file. subset_path existence is still checked
+                               (it's the canonical reference for cache fingerprints).
 
     Returns:
         (records, class_names):
@@ -169,8 +175,9 @@ def load_subset_with_labels(subset_path, motion_features_path, *,
     subset_path = Path(subset_path)
     if not subset_path.exists():
         sys.exit(f"FATAL: --eval-subset not found: {subset_path}")
-    subset = json.loads(subset_path.read_text())
-    clip_keys = subset["clip_keys"]   # fail-loud — no .get(default)
+    if clip_keys is None:
+        subset = json.loads(subset_path.read_text())
+        clip_keys = subset["clip_keys"]   # fail-loud — no .get(default)
 
     motion_features_path = Path(motion_features_path)
     paths_path = motion_features_path.with_name(
@@ -261,33 +268,128 @@ def _extract_video_id(clip_key: str) -> str:
     return parts[-2]
 
 
+def subsample_manifest_for_mode(mode: str, clip_keys: list,
+                                 motion_features_path,
+                                 n_motion_classes: int) -> list:
+    """Per-mode subsample of master manifest. iter16 M1 Option X (2026-05-21).
+
+    Mode-keyed mechanism:
+      SANITY → sorted(clip_keys)[:n]                        (code check; class-
+                                                              imbalance OK)
+      POC    → stratified_by_motion_class_subset()          (POC↔FULL parity
+                                                              REQUIRED — every
+                                                              motion class
+                                                              represented)
+      FULL   → identity (clip_pool_ratio.full = 1.0)        (no subsampling)
+
+    Replaces the original Phase-1 ``sorted(clip_keys)[:n_clips]`` which
+    violated POC↔FULL parity (alphabetical slicing yields 1-3 motion classes
+    for POC instead of 8). Used by BOTH probe_action.run_labels_stage AND
+    probe_labels.ensure_probe_labels_for_mode → symmetric subsampling
+    across CLI and in-process bootstrap paths.
+
+    Args:
+        mode:                  "sanity" / "poc" / "full" (case-insensitive).
+        clip_keys:             clip_keys list from the master manifest.
+        motion_features_path:  m04d motion_features.npy (POC needs this for
+                               class assignment; SANITY/FULL ignore it but it
+                               must be a valid path either way for symmetry).
+        n_motion_classes:      target class count (yaml-keyed, e.g. 8 post the
+                               34-clip filter on the FULL pool).
+
+    Returns:
+        list of clip_keys (length depends on mode + clip_pool_ratio).
+
+    Raises:
+        KeyError: unknown mode (via clip_pool_ratio dict lookup).
+    """
+    # Lazy imports to avoid circular: action_labels ← config; eval_subset ←
+    # action_labels (compute_magnitude_quartiles + parse_optical_flow_class).
+    from utils.config import get_clip_pool_size
+    mode = mode.lower()
+    if mode == "full":
+        return list(clip_keys)                            # identity (ratio=1.0)
+    n_target = get_clip_pool_size(mode, len(clip_keys))
+    if mode == "sanity":
+        return sorted(clip_keys)[:n_target]              # code check only
+    # mode == "poc" — stratified by motion class (POC↔FULL parity)
+    from utils.eval_subset import stratified_by_motion_class_subset
+    target_per_class = max(1, n_target // n_motion_classes)
+    out = stratified_by_motion_class_subset(
+        {"clip_keys": list(clip_keys)},
+        motion_features_path,
+        target_per_class,
+    )
+    return out["clip_keys"]
+
+
 def stratified_split(records, train_pct=0.70, val_pct=0.15, seed=99,
-                     *, min_per_split=MIN_PER_SPLIT_DEFAULT):
-    """Class-stratified + VIDEO-DISJOINT train/val/test split.
+                     *, min_per_split=MIN_PER_SPLIT_DEFAULT,
+                     mode="full"):
+    """Class-stratified train/val/test split.
 
-    Returns ``{clip_key: "train"|"val"|"test"}``. Every clip from a given
-    ``video_id`` (parsed via ``_extract_video_id``) lands in EXACTLY ONE of
-    the three splits — no leakage of visual style / background across splits.
+    Returns ``{clip_key: "train"|"val"|"test"}``.
 
-    iter16 M5 (2026-05-20) — hard replacement of the previous clip-key-level
-    shuffle, which let clips from the same source video straddle train↔val↔
-    test. See ``iter/iter16_train_115kclips/legacy/
-    plan_video_disjoint_stratified_split.md`` for the full rationale.
+    Mode-keyed split mechanism (iter16, 2026-05-21):
+      - POC + FULL (paper-grade): VIDEO-DISJOINT via sklearn
+        ``StratifiedGroupKFold`` (groups = video_id). Every clip from a
+        given ``video_id`` lands in EXACTLY ONE split — no visual-style /
+        background leakage. See M5 plan for full rationale.
+      - SANITY (code-correctness only): clip-level stratified shuffle via
+        ``sklearn.StratifiedShuffleSplit``. Per CLAUDE.md, SANITY validates
+        code paths, not paper-grade splits; the video-disjoint guarantee is
+        only enforced for POC/FULL where corpus size supports it. SANITY's
+        tiny per-class video coverage (often 2-3 videos/class) cannot
+        satisfy SGKF's n_splits constraint at iter16's val_pct=0.05.
 
-    Algorithm (hybrid sklearn ``StratifiedGroupKFold`` + inner split):
+    Algorithm (POC/FULL — video-disjoint):
       Phase 1: outer SGKF on (class_ids, video_ids) → peel off TEST set
       Phase 2: inner SGKF on remaining train+val pool, renormalised
-               val_inner_pct = val_pct / (train_pct + val_pct), random_state
-               = seed + 1 to decorrelate outer/inner shuffles
+               val_inner_pct = val_pct / (train_pct + val_pct)
       Phase 3: vectorised per-class per-split count + min_per_split assert
       Phase 4: defense-in-depth assert — NO video straddles splits
 
+    Algorithm (SANITY — clip-level):
+      Two sklearn StratifiedShuffleSplit passes: peel test set, then
+      train/val from remainder. Stratifies by class_id only (groups
+      ignored — no video-disjoint guarantee).
+
     FAIL LOUD on infeasibility (per src/CLAUDE.md): if any class has <
     min_per_split clips in any split, ValueError with per-class diagnostic.
-    SANITY mode (≤1,150 clips × 16 classes) MAY trigger this — that is
-    correct behavior; raise sanity.default in pipeline.yaml or relax
-    min_per_split via CLI, do not branch on mode (POC↔FULL parity rule).
+    POC↔FULL parity rule applies to POC↔FULL, NOT to SANITY.
     """
+    # SANITY fast path — clip-level stratified shuffle (no video-disjoint).
+    if mode == "sanity":
+        from sklearn.model_selection import StratifiedShuffleSplit
+        clip_keys = [r["clip_key"] for r in records]
+        class_ids = np.array([r["class_id"] for r in records])
+        test_pct = 1.0 - train_pct - val_pct
+        # Outer split: peel off test
+        sss_test = StratifiedShuffleSplit(n_splits=1, test_size=test_pct,
+                                          random_state=seed)
+        trainval_idx, test_idx = next(sss_test.split(np.zeros_like(class_ids),
+                                                       class_ids))
+        # Inner split: train/val on remainder
+        val_inner_pct = val_pct / (train_pct + val_pct)
+        sss_val = StratifiedShuffleSplit(n_splits=1, test_size=val_inner_pct,
+                                          random_state=seed + 1)
+        inner_train, inner_val = next(sss_val.split(
+            np.zeros_like(class_ids[trainval_idx]),
+            class_ids[trainval_idx]))
+        train_idx = trainval_idx[inner_train]
+        val_idx   = trainval_idx[inner_val]
+        splits = {}
+        for i in train_idx: splits[clip_keys[i]] = "train"
+        for i in val_idx:   splits[clip_keys[i]] = "val"
+        for i in test_idx:  splits[clip_keys[i]] = "test"
+        n_v = len({_extract_video_id(k) for k in clip_keys})
+        print(f"[stratified_split] SANITY clip-level (NOT video-disjoint): "
+              f"N_clips={len(records)}, N_videos={n_v}, "
+              f"N_classes={len(set(class_ids))}; train/val/test = "
+              f"{len(train_idx)}/{len(val_idx)}/{len(test_idx)}")
+        return splits
+
+    # POC/FULL — video-disjoint SGKF (existing M5 algorithm)
     # 1 — Build parallel arrays (vectorised on 115K records).
     clip_keys = np.array([r["clip_key"] for r in records])
     class_ids = np.array([r["class_id"] for r in records])

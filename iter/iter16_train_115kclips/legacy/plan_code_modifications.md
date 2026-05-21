@@ -1,9 +1,9 @@
-# 🛠️ iter16 Code Modifications — M1 + M2 + M3 + M4 + M6 + M7 + M8 (NEW)
+# 🛠️ iter16 Code Modifications — M1 + M2 + M3 + M4 + M6 + M7 + M8 + M9 (NEW)
 
 > **Status legend** (update each task as it moves through the lifecycle):
 > ⏳ pending · 🟡 in-progress · ✅ done · ❌ blocked · ⏭️ skipped
 >
-> When ALL T35-T39 (+ T18 + T41 + T42) below are ✅, this file moves to
+> When ALL T35-T39 (+ T18 + T41 + T42 + T43) below are ✅, this file moves to
 > `iter/iter16_train_115kclips/legacy/` per T40.
 
 ---
@@ -187,25 +187,69 @@ Stage 3 (m10 DINO+SAM3)
 ┌──────┬───────────────────────────────────────────────────────────────────┬────────┐
 │  #   │ Task                                                                │ Status │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T35  │ 🅼1 — clip_pool_ratio yaml + get_probe_split + get_clip_pool_size + │ ⏳     │
-│      │      load_subset_with_labels kwarg + probe_action caller            │        │
+│ T35  │ 🅼1 — clip_pool_ratio yaml + helpers + caller wiring                │ ✅     │
+│      │      Phase 1 (sorted[:N] CLI path) ✅ landed 2026-05-21 AM.           │ done   │
+│      │      Option X (o-z) ✅ — subsample_manifest_for_mode + symmetric    │ Opt X  │
+│      │      probe_action/probe_labels wiring + mode-keyed probe_split       │        │
+│      │      (SANITY 60/20/20 clip-level; POC/FULL 75/5/20 video-disjoint). │        │
+│      │      End-to-end SANITY smoke 2026-05-21 PM: ✅ M1+M2+M5+M9 code     │        │
+│      │      paths all verified through m09a startup (subsampled 100/10K,   │        │
+│      │      11 motion classes, 57/20/20 split, max_epochs.sanity=1 read).  │        │
+│      │      m09a OOM at V-JEPA load = dev-box 36 GB cgroup cap (not        │        │
+│      │      M1/M2/M5/M9 bug); full SANITY training validation lands on     │        │
+│      │      Pro 6000 96 GB box (241 GB cgroup) per CLAUDE.md.              │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T36  │ 🅼2 — max_epochs single source of truth in base_optimization.yaml   │ ⏳     │
-│      │      (delete duplicates in pretrain/surgery yamls)                  │        │
+│ T36  │ 🅼2 — max_epochs single source of truth in base_optimization.yaml   │ ✅     │
+│      │      (delete duplicates in pretrain/surgery yamls)                  │ done   │
+│      │      Verified 2026-05-21: yaml_extract walks extends chain — all 5  │ 05-21  │
+│      │      train configs resolve to (sanity:1, poc:2, full:1).            │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T37  │ 🅼3 — gen_full_local_manifest.py (NEW, ~30 LoC)                     │ ⏳     │
+│ T37  │ 🅼3 — gen_full_local_manifest.py (NEW)                              │ ✅     │
+│      │      Landed 2026-05-21: src/utils/gen_full_local_manifest.py + ran  │ done   │
+│      │      against data/full_local/tags.json → wrote full_local.json with │ 05-21  │
+│      │      n=115,687 clips, num_videos=1,559, ~74 clips/video. Schema     │        │
+│      │      matches eval_10k.json. CLAUDE.md-compliant: argparse required  │        │
+│      │      paths, FAIL LOUD on missing fields, no .get() defaults.        │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T38  │ 🅼4 — checkpoint.saves_per_epoch: 2 → 9                             │ ⏳     │
+│ T38  │ 🅼4 — checkpoint.saves_per_epoch: 2 → 9                             │ ✅     │
+│      │      Verified 2026-05-21: base_optimization.yaml:315 saves_per_      │ done   │
+│      │      epoch=9. pretrain_encoder + surgery_base both resolve to 9      │ 05-21  │
+│      │      via load_merged_config + yaml_extract.                          │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T18  │ 🅼6 — DINO 4-anchor batched inference in m10_sam_segment.py        │ ⏳     │
+│ T18  │ 🅼6 — DINO 4-anchor batched inference in m10_sam_segment.py        │ ✅     │
+│      │      Landed 2026-05-21: detect_boxes_grounding_dino_batched added   │ done   │
+│      │      (~75 LoC); per-anchor loop replaced with single batched call.  │ 05-21  │
+│      │      ~18% per-clip speedup expected; compounds with SAM3.1 (R1).    │        │
+│      │      HF #32206 safety: identical compound_prompt across anchors.    │        │
+│      │      Code-level verified; full GPU smoke deferred to T19 / Pro 6000.│        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T42  │ 🅼8 — torch.compile m04d RAFT (R4 unparked) — pin shapes + yaml    │ ⏳     │
-│      │      gate; iter13 InductorError fix is dynamic=False + fixed shape │        │
+│ T42  │ 🅼8 — torch.compile m04d RAFT (R4 unparked) — WebSearch validated   │ ✅     │
+│      │      Landed 2026-05-21: mode="default" (NOT reduce-overhead — saves│ done   │
+│      │      ~70 GB cudagraphs pool) + dynamic=False (avoids CantSplit bug │ 05-21  │
+│      │      that crashed iter13). Recipe sources: PyTorch #105279,         │        │
+│      │      #120733, #176653. Stage 2 wall: ~8 hr → ~3-4 hr on Pro 6000.   │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T41  │ 🅼7 — torch.compile DINO on Pro 6000 (R5) — POST-M6 + post-migrate │ ⏳     │
-│      │      (only relevant once Stage 3 runs on Pro 6000)                  │        │
+│ T41  │ 🅼7 — torch.compile DINO yaml gate + m10 wrapper                    │ ✅     │
+│      │      Landed 2026-05-21: dino_compile block in pipeline.yaml +       │ done   │
+│      │      load_grounding_dino wraps with torch.compile when enabled.    │ 05-21  │
+│      │      Recipe inherits M8 lessons: mode="default" + dynamic=False    │        │
+│      │      (avoids 70 GB cudagraphs pool + CantSplit). Pro 4000 default  │        │
+│      │      OFF; flip enabled=true post-migration to Pro 6000 96 GB.       │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
-│ T39  │ 📒 Runbook: flip ⏳ M1/M2/M3 → ✅ + add ⏳ M4 + ⏳ M6 + ⏳ M7 + ⏳ M8 │ ⏳     │
+│ T43  │ 🅼9 — yaml-keyed local_data_dir (single source for data path)       │ ✅     │
+│      │      Option III LANDED 2026-05-21 PM: cfg.data.local_data_dir +     │ done   │
+│      │      cfg.data.master_manifest_name in pipeline.yaml; load_merged_   │ Opt III│
+│      │      config injects probe.{subset,local_data,tags_path} post-merge. │        │
+│      │      0 consumer changes. Verified: flip yaml → all paths flip.       │        │
+│      │      USAGE docstrings refreshed (5 train yamls + 3 src/*.py); split │        │
+│      │      filenames corpus-agnostic ({train,val,test}_split.json); 5    │        │
+│      │      retired files moved to data/eval_10k_local/legacy/.            │        │
+├──────┼───────────────────────────────────────────────────────────────────┼────────┤
+│ T39  │ 📒 Runbook: flip ⏳ M1/M2/M3 → ✅ + add ✅ M4 + M6 + M7 + M8 + M9    │ ✅     │
+│      │      Landed 2026-05-21: M1/M2/M3 status flipped + LANDED notes      │ done   │
+│      │      added; M4/M6/M7/M8/M9 sections appended after M5 with status,  │ 05-21  │
+│      │      design summary, code refs, recipe sources. M9 flip-ready ops   │        │
+│      │      block + pre-flight checklist documented inline.                 │        │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
 │ T40  │ 🪦 Move this plan → iter16/legacy/ after all above ✅              │ ⏳     │
 ├──────┼───────────────────────────────────────────────────────────────────┼────────┤
@@ -352,6 +396,146 @@ def run_labels_stage(args, wb):
         min_per_split=args.min_per_split,
     )
     ...
+```
+
+### 🔄 M1 Revision — Option X (2026-05-21 PM, post-T36 SANITY pre-flight)
+
+🚨 **Trigger**: T36 SANITY pre-flight invoked `./scripts/run_train.sh --SANITY
+pretrain_encoder` and surfaced two design conflicts in the original M1:
+
+```
+┌────┬──────────────────────────────────────────────────────────────────────┐
+│ 🧪 │ M1 Phase 1 (sorted[:N]) — conflicts surfaced 2026-05-21 PM            │
+├────┼──────────────────────────────────────────────────────────────────────┤
+│ 1  │ POC↔FULL parity violation — sorted(clip_keys)[:n_clips] returns       │
+│    │ alphabetically-first n clips. Top 1000 of eval_10k = all goa/* tier   │
+│    │ = 1-3 motion classes only. CLAUDE.md mandates POC schema = FULL       │
+│    │ schema (all 8 motion classes after the 34-clip filter).               │
+├────┼──────────────────────────────────────────────────────────────────────┤
+│ 2  │ Asymmetric wiring — M1 lives in probe_action.run_labels_stage (CLI    │
+│    │ path) but probe_labels.ensure_probe_labels_for_mode (in-process       │
+│    │ bootstrap called by m09a/m09c at startup) BYPASSES it. Same           │
+│    │ action_labels.json generation, two different subsamplers.             │
+├────┼──────────────────────────────────────────────────────────────────────┤
+│ 3  │ run_train.sh:88-126 still passes pre-made eval_10k_{sanity,poc}.json  │
+│    │ — violates plan user-decision #1 ("no per-mode pre-made shortcuts").  │
+└────┴──────────────────────────────────────────────────────────────────────┘
+```
+
+🎯 **Revised mechanism per mode** — observation: SANITY validates code, not
+class balance; POC + FULL are the costly modes that need parity:
+
+```
+┌────────┬─────────────────────────────────────────────────────────────────┐
+│ Mode    │ Subsample mechanism (Option X)                                   │
+├────────┼─────────────────────────────────────────────────────────────────┤
+│ SANITY  │ sorted(clip_keys)[:n] — class-imbalanced OK, code check only    │
+│ POC     │ stratified_by_motion_class_subset — POC↔FULL parity REQUIRED   │
+│ FULL    │ identity (clip_pool_ratio.full = 1.0)                            │
+└────────┴─────────────────────────────────────────────────────────────────┘
+```
+
+📐 **Scope** (~30 LoC + yaml + shell + retire 2 JSONs):
+
+**(o) NEW shared helper `src/utils/action_labels.py:subsample_manifest_for_mode()`**:
+
+```python
+def subsample_manifest_for_mode(mode: str, clip_keys: list,
+                                 motion_features_path,
+                                 n_motion_classes: int) -> list:
+    """Per-mode subsample of master manifest. iter16 M1 Option X.
+
+      SANITY → sorted(clip_keys)[:n]  (class-imbalance OK; code check)
+      POC    → stratified_by_motion_class_subset (POC↔FULL parity)
+      FULL   → identity (clip_pool_ratio.full = 1.0)
+    """
+    from utils.config import get_clip_pool_size
+    if mode == "full":
+        return clip_keys
+    n_target = get_clip_pool_size(mode, len(clip_keys))
+    if mode == "sanity":
+        return sorted(clip_keys)[:n_target]
+    # mode == "poc"
+    from utils.eval_subset import stratified_by_motion_class_subset
+    target_per_class = max(1, n_target // n_motion_classes)
+    out = stratified_by_motion_class_subset(
+        {"clip_keys": clip_keys}, motion_features_path, target_per_class)
+    return out["clip_keys"]
+```
+
+**(p) `src/probe_action.py:run_labels_stage`** — replace Phase 1's
+`sorted(manifest["clip_keys"])[:n_clips]` with
+`subsample_manifest_for_mode(mode, manifest["clip_keys"],
+args.motion_features, n_motion_classes)`.
+
+**(q) `src/utils/probe_labels.py:ensure_probe_labels_for_mode`** — replace
+the existing POC-specific stratified path (L145-176) with the same helper
+call for ALL 3 modes. Eliminates asymmetric subsampling between CLI and
+in-process bootstrap paths.
+
+**(r) `configs/train/base_optimization.yaml`**:
+- `eval_subset_in.sanity`: `eval_10k_sanity.json` → `eval_10k.json` (master)
+- `poc_subset_out`: DELETED (no longer pre-made on disk)
+
+**(s) Shell simplification**:
+- `scripts/run_train.sh:80-137` — drop per-mode subset selection;
+  always pass `data/eval_10k_local/eval_10k.json`
+- `scripts/run_train.sh:199-203` — `EVAL_SUBSET_TX` always = master
+- `scripts/run_eval.sh:109-145` — drop SANITY+POC subset generation calls
+
+**(t) File retirement**:
+- `mv data/eval_10k_local/eval_10k_sanity.json → data/eval_10k_local/legacy/`
+- `mv data/eval_10k_local/eval_10k_poc.json → data/eval_10k_local/legacy/`
+- `src/utils/hf_outputs.py:579` — drop `eval_10k_poc.json` from ignore_patterns
+
+**(u) Docstring/comment cleanup (NO DEFER)** — refresh stale refs in:
+`src/utils/eval_subset.py:26`, `src/probe_taxonomy.py:26`,
+`src/utils/probe_labels.py:14`, `src/m09a1:511`, `src/m09c1:630`.
+
+🧪 **Verification** for Option X:
+
+```bash
+# Helper unit smoke
+venv_walkindia/bin/python -c "
+import sys; sys.path.insert(0, 'src')
+import json
+from utils.action_labels import subsample_manifest_for_mode
+keys = sorted(json.load(open('data/eval_10k_local/eval_10k.json'))['clip_keys'])
+m04d = 'data/eval_10k_local/m04d_motion_features/motion_features.npy'
+print('SANITY:', len(subsample_manifest_for_mode('sanity', keys, m04d, 8)))
+print('POC   :', len(subsample_manifest_for_mode('poc',    keys, m04d, 8)))
+print('FULL  :', len(subsample_manifest_for_mode('full',   keys, m04d, 8)))
+"
+# Expected: SANITY ≈ 100; POC ≈ 8 × (1000//8) = 1000 (stratified); FULL = N_master
+
+# End-to-end SANITY smoke (validates M2 max_epochs too)
+./scripts/run_train.sh pretrain_encoder --SANITY 2>&1 | \
+    tee logs/m09a_sanity_$(date +%Y%m%d_%H%M%S).log | \
+    grep -E '\[M1|max_epochs|epochs=|epoch [0-9]/1'
+# Expected: [M1 ...] line; max_epochs.sanity=1 read; 1-epoch run completes
+```
+
+📐 **Critical-files delta from Option X** (additive to the table above):
+
+```
+┌──────────────────────────────────────────────────┬────────────────────────────┬─────────┐
+│ 📄 Path                                           │ ✏️ Change                   │ 📐 LoC   │
+├──────────────────────────────────────────────────┼────────────────────────────┼─────────┤
+│ 🔧 src/utils/action_labels.py                     │ + subsample_manifest_for_   │ +25     │
+│                                                   │   mode() helper             │         │
+│ 🔧 src/probe_action.py                            │ Replace Phase 1 sorted[:N]  │ +5/−7   │
+│                                                   │   with helper call          │         │
+│ 🔧 src/utils/probe_labels.py                      │ Replace POC stratified path │ +6/−24  │
+│                                                   │   with helper (all modes)   │         │
+│ 🔧 configs/train/base_optimization.yaml           │ eval_subset_in.sanity →     │ +1/−2   │
+│                                                   │   master; DELETE poc_subset_│         │
+│                                                   │   out                       │         │
+│ 🔧 scripts/run_train.sh:80-137,199-203            │ Drop per-mode subset gen    │ +6/−45  │
+│ 🔧 scripts/run_eval.sh:109-145                    │ Drop SANITY+POC subset gen  │ +4/−35  │
+│ 🔧 src/utils/hf_outputs.py:579                    │ Drop eval_10k_poc.json      │ −1      │
+│ 🪦 data/eval_10k_local/{sanity,poc}.json          │ mv → legacy/                │ 0       │
+│ 🔧 5× docstring/comment refs                      │ Refresh stale refs          │ +5/−5   │
+└──────────────────────────────────────────────────┴────────────────────────────┴─────────┘
 ```
 
 ### 🅼2 — max_epochs single source of truth
@@ -570,6 +754,189 @@ fallback in inference scripts".
 📊 **Expected impact**: Stage 2 wall (m04d motion features) ~8 hr → ~3 hr
 on Pro 6000 = 5 GPU-hr saved per training cell.
 
+### 🅼9 (NEW) — yaml-keyed `local_data_dir` (single-source data path)
+
+🚨 **Trigger**: `data/eval_10k_local/` is hardcoded 118+ times across yaml +
+shells + src. Blocks the planned full_local migration (iter15 results came
+from eval_10k_local; iter16 FULL must land on data/full_local once m04/m10/m11
+outputs exist there).
+
+🧠 **Audit (2026-05-21 PM, post-grep across active code)**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🔍 Hardcoded "data/eval_10k_local/" refs still active                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ configs/train/pretrain_encoder.yaml:148-150 — probe.{subset,local_data,    │
+│   tags_path} block (read by m09a1/m09a2 cfg["probe"][...])                  │
+│ configs/train/surgery_base.yaml:367-369 — probe.{subset,local_data,        │
+│   tags_path} block (read by m09c1/m09c2 cfg["probe"][...])                  │
+│ configs/train/{pretrain_head,pretrain_encoder,surgery_2stage_noDI_head}    │
+│   .yaml — docstring USAGE blocks (~12 comment refs)                         │
+│ src/m09{a1,a2,c1,c2}*.py — docstring USAGE blocks (~8 comment refs)        │
+│ base_optimization.yaml — probe_taxonomy_labels.{train,val,eval}_subset      │
+│   etc. (LEGACY ultra_hard_3066 paths — separate concern from M9)            │
+│ src/utils/probe_labels.py:99,193 — already migrated to cfg["data"][...]    │
+│   (M9 partial Option X — was eval_subset_in[mode_dir] hardcoded in yaml)    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+🎯 **Design — Option III: zero consumer changes, single-source-of-truth**:
+
+YAML has no cross-file variable interpolation (anchors are single-file only).
+Instead: DELETE hardcoded yaml keys + inject derived values in
+`load_merged_config` post-processing. Consumers (m09a1/a2/c1/c2) read
+`cfg["probe"]["subset"]` etc. as before — but values are now derived from
+`cfg["data"]["local_data_dir"]` at runtime.
+
+**(v) `configs/pipeline.yaml`** — `data` block with both keys (LANDED):
+
+```yaml
+# iter16 M9 (2026-05-21): single source of truth for active local data dir.
+data:
+  local_data_dir:        "data/eval_10k_local"     # iter15 / iter16 SANITY+POC
+  # local_data_dir:      "data/full_local"         # iter16 FULL — flip when ready
+  master_manifest_name:  "eval_10k.json"           # iter15 / iter16 SANITY+POC master
+  # master_manifest_name: "full_local.json"        # iter16 FULL (after M3)
+```
+
+**(w) `configs/train/pretrain_encoder.yaml:148-150`** — DELETE probe block
+hardcoded keys:
+
+```yaml
+# Before:
+probe:
+  subset:     data/eval_10k_local/eval_10k_val_split.json    # HARDCODED ❌
+  local_data: data/eval_10k_local                             # HARDCODED ❌
+  tags_path:  data/eval_10k_local/tags.json                   # HARDCODED ❌
+
+# After (Option III) — keys DELETED; load_merged_config injects derived
+# values from cfg.data.local_data_dir + cfg.data.master_manifest_name:
+probe:
+  # iter16 M9 (2026-05-21): subset / local_data / tags_path DELETED — now
+  # injected by src/utils/config.py:load_merged_config from cfg.data.
+  # local_data_dir (configs/pipeline.yaml). Flipping that one yaml key
+  # migrates the whole pipeline to data/full_local.
+  enabled: true
+  # ...other probe keys unchanged...
+```
+
+**(x) `configs/train/surgery_base.yaml:367-369`** — same DELETE pattern.
+
+**(y) `src/utils/config.py:load_merged_config`** — POST-PROCESSING injection
+(~10 LoC after the extends-chain merge loop):
+
+```python
+# iter16 M9 (2026-05-21): inject derived probe paths from cfg.data.local_data_dir.
+# Single source of truth — flipping that one yaml key migrates the pipeline.
+# Consumers (m09a1/a2/c1/c2) read cfg["probe"]["subset"] etc. unchanged.
+data_cfg = merged.get("data", {})
+local_data_dir = data_cfg.get("local_data_dir")
+if local_data_dir:                                   # FAIL LOUD if probe needs it
+    merged.setdefault("probe", {})
+    merged["probe"]["subset"]     = f"{local_data_dir}/val_split.json"
+    merged["probe"]["local_data"] = local_data_dir
+    merged["probe"]["tags_path"]  = f"{local_data_dir}/tags.json"
+```
+
+**(z) Consumers (m09a1, m09a2, m09c1, m09c2)** — NO CHANGE. Continue reading
+`cfg["probe"]["subset"]`, `cfg["probe"]["local_data"]`, `cfg["probe"]["tags_path"]`.
+
+**(aa) USAGE docstring refresh** (NO DEFER per CLAUDE.md) — update to
+template syntax `${LOCAL_DATA}/{train,val,test}_split.json`:
+- `configs/train/pretrain_encoder.yaml:31-34`
+- `configs/train/pretrain_head.yaml:27-30`
+- `configs/train/surgery_2stage_noDI_head.yaml:28-31`
+- `src/m09a1_pretrain_encoder.py`, `src/m09a2_pretrain_head.py`,
+  `src/m09c1_surgery_encoder.py`, `src/m09c2_surgery_head.py` USAGE blocks
+- `src/m09a1_pretrain_encoder.py:511`, `src/m09c1_surgery_encoder.py:612,632`
+  inline comments
+
+**(bb) Existing eval_10k_*_split.json file retirement** — `mv` to
+`data/eval_10k_local/legacy/` (per CLAUDE.md DELETE PROTECTION — never `rm`).
+Splits regenerate fresh under corpus-agnostic names (`train_split.json`,
+`val_split.json`, `test_split.json`) on next run_train.sh invocation.
+
+🧪 **M9 verification — full_local flip dry-run**:
+
+```bash
+# Step 1 (verify Python resolves correctly with current yaml):
+venv_walkindia/bin/python -c "
+import sys; sys.path.insert(0, 'src')
+from utils.config import load_merged_config
+cfg = load_merged_config('configs/model/vjepa2_1.yaml',
+                          'configs/train/pretrain_encoder.yaml')
+print('local_data_dir   :', cfg['data']['local_data_dir'])
+print('probe.subset     :', cfg['probe']['subset'])
+print('probe.local_data :', cfg['probe']['local_data'])
+print('probe.tags_path  :', cfg['probe']['tags_path'])
+"
+# Expected:
+#   local_data_dir   : data/eval_10k_local
+#   probe.subset     : data/eval_10k_local/val_split.json
+#   probe.local_data : data/eval_10k_local
+#   probe.tags_path  : data/eval_10k_local/tags.json
+
+# Step 2 (flip yaml + re-verify; revert after):
+sed -i 's|local_data_dir:        "data/eval_10k_local"|local_data_dir:        "data/full_local"|' \
+    configs/pipeline.yaml
+# (re-run Step 1 — expect all paths under data/full_local/)
+sed -i 's|local_data_dir:        "data/full_local"|local_data_dir:        "data/eval_10k_local"|' \
+    configs/pipeline.yaml
+# (revert until m04/m10/m11 outputs land at full_local)
+```
+
+📋 **Activation gate** (M9 yaml flip eval_10k_local → full_local):
+
+```
+┌─────┬──────────────────────────────────────────────────────────────────────┐
+│ Pre │ data/full_local/ must contain BEFORE flipping local_data_dir          │
+├─────┼──────────────────────────────────────────────────────────────────────┤
+│ 1   │ tags.json (already present — 155 MB; Stage 1 metadata done)          │
+│ 2   │ full_local.json (generated by M3 / T37)                              │
+│ 3   │ m04d_motion_features/motion_features.npy + .paths.npy (Stage 2 GPU)  │
+│ 4   │ m10_sam_segment/masks/ (Stage 3 GPU)                                  │
+│ 5   │ m11_factor_datasets/ (Stage 4 — m11 streaming or pre-computed)       │
+│ 6   │ subset-*.tar shards from data download (Stage 1 — RUNNING NOW)       │
+└─────┴──────────────────────────────────────────────────────────────────────┘
+```
+
+> 🛑 **Until items 3-6 land at full_local/**, keep `local_data_dir:
+> "data/eval_10k_local"`. M9's value is the 1-line flip when FULL data +
+> outputs are ready — no code edits needed at migration time.
+
+📐 **Critical-files delta from M9 Option III**:
+
+```
+┌──────────────────────────────────────────────────┬────────────────────────────┬─────────┐
+│ 📄 Path                                           │ ✏️ Change                   │ 📐 LoC   │
+├──────────────────────────────────────────────────┼────────────────────────────┼─────────┤
+│ ✅ configs/pipeline.yaml                          │ data.local_data_dir +       │ +8      │
+│                                                   │   master_manifest_name      │ (done)  │
+│ 🔧 configs/train/pretrain_encoder.yaml            │ DELETE probe.{subset,       │ +3/−3   │
+│                                                   │   local_data,tags_path}     │         │
+│ 🔧 configs/train/surgery_base.yaml                │ DELETE probe.{subset,       │ +3/−3   │
+│                                                   │   local_data,tags_path}     │         │
+│ 🔧 src/utils/config.py                            │ load_merged_config post-    │ +10     │
+│                                                   │   processing injection      │         │
+│ 🔧 src/utils/config.py                            │ + get_local_data_dir() +    │ +20     │
+│                                                   │   get_master_manifest_path()│ (done)  │
+│ ✅ src/utils/probe_labels.py                      │ Read cfg["data"][...] for   │ +3/−6   │
+│                                                   │   eval_subset + tags_json   │ (done)  │
+│ ✅ scripts/run_train.sh                           │ yaml_extract LOCAL_DATA +   │ +8/−15  │
+│                                                   │   MASTER_MANIFEST early     │ (done)  │
+│ 🔧 scripts/run_eval.sh                            │ Same yaml_extract pattern   │ +5/−10  │
+│ 🔧 src/utils/hf_outputs.py                        │ ✅ split filenames corpus-   │ +5/−4   │
+│                                                   │   agnostic (M9 partial)      │ (done)  │
+│ 🔧 5× USAGE docstring refs                        │ Refresh to ${LOCAL_DATA}/   │ +5/−5   │
+│ 🪦 data/eval_10k_local/eval_10k_{sanity,poc,     │ mv → legacy/                │ 0       │
+│   train_split,val_split,test_split}.json          │                              │         │
+└──────────────────────────────────────────────────┴────────────────────────────┴─────────┘
+```
+
+⏱️ **Estimated wall**: ~45 min — DELETE 6 yaml lines + ADD 10 LoC in
+load_merged_config + USAGE docstring sweep + verification.
+
 ---
 
 ## 📒 Runbook updates
@@ -735,36 +1102,164 @@ venv_walkindia/bin/python tests/test_action_labels.py    # expect 10/10 pass
 ## 🚀 Execution order
 
 ```
-1. T35 — 🅼1 — clip_pool_ratio yaml + helpers + load_subset_with_labels kwarg
-              + probe_action caller update + smoke-test
-2. T36 — 🅼2 — base_optimization.yaml max_epochs update + DELETE blocks from
-              pretrain_encoder.yaml + surgery_base.yaml + verify shell still works
-3. T37 — 🅼3 — write gen_full_local_manifest.py + run + verify
-              full_local.json output (~120 MB)
-4. T38 — 🅼4 — base_optimization.yaml saves_per_epoch 2 → 9
-5. T18 — 🅼6 — refactor m10_sam_segment.py:326-336 to batched DINO + smoke-test
-6. T42 — 🅼8 — torch.compile m04d RAFT (yaml + m04d:222-230 + WebSearch
-              + SANITY smoke confirming no NaN regression)
-7. T41 — 🅼7 — torch.compile DINO yaml gate + m10 wrapper (Pro 4000 lands
-              gate as OFF; Pro 6000 flips ON post-migration)
-8. T39 — 📒 — flip ⏳ M1/M2/M3 → ✅ in runbook + add ⏳ M4 + ⏳ M6 + ⏳ M7 + ⏳ M8
-9. T40 — 🪦 — move this plan → iter16/legacy/
-10.T19 — (separate) 3-check gate + GPU SANITY smoke test on Pro 4000
+1.  T35 — 🅼1 — clip_pool_ratio + Option X redesign 🟡 SMOKE PENDING
+                (helper + wiring ✅; final SANITY end-to-end smoke remains)
+2.  T36 — 🅼2 — max_epochs single source ✅ DONE 2026-05-21
+3.  T43 — 🅼9 — yaml-keyed local_data_dir Option III ✅ DONE 2026-05-21
+                (PROMOTED — landed before remaining T35 smoke due to overlap;
+                absorbed T35 remaining items s/t/u/v)
+4.  T37 — 🅼3 — write gen_full_local_manifest.py + run + verify
+                full_local.json output (~120 MB) ⏳ PENDING
+5.  T38 — 🅼4 — base_optimization.yaml saves_per_epoch 2 → 9 ⏳ PENDING
+6.  T18 — 🅼6 — refactor m10_sam_segment.py to batched DINO + smoke ⏳ PENDING
+7.  T42 — 🅼8 — torch.compile m04d RAFT (yaml + WebSearch + SANITY) ⏳ PENDING
+8.  T41 — 🅼7 — torch.compile DINO yaml gate + m10 wrapper ⏳ PENDING
+9.  T39 — 📒 — flip ✅ M1/M2/M3 in runbook + add M4/M6/M7/M8/M9 ⏳ PENDING
+10. T40 — 🪦 — move this plan → iter16/legacy/ ⏳ PENDING
+11. T19 — 3-check + GPU SANITY end-to-end on Pro 4000 24 GB ⏳ PENDING
+                (validates M1+M2+M5+M9 wired correctly — T35 smoke folded here)
 ```
 
-🕒 **Estimated wall**: ~5-6 hours including verification.
-   M1 ~1.5h · M2/M3/M4 ~minutes each · M6 ~1h · M7 ~30 min (yaml + wrapper) ·
-   M8 ~1.5h (WebSearch + SANITY smoke) · runbook/cleanup ~10 min.
+🕒 **Estimated wall**: ~4-5 hours remaining (M1+M2+M9 done; ~3.5 hrs of work
+on M3/M4/M6/M7/M8 + final SANITY/runbook/cleanup).
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ✅ Landed 2026-05-21 (sessions AM + PM)                                       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ M1 Phase 1 ✅ : clip_pool_ratio yaml + helpers in config.py + load_subset_   │
+│   with_labels kwarg + probe_action.run_labels_stage sorted[:N] wiring         │
+│ M1 Option X ✅: subsample_manifest_for_mode helper (sorted SANITY +           │
+│   stratified POC + identity FULL) + probe_labels.ensure_probe_labels_for_    │
+│   mode symmetric wiring                                                       │
+│ M2 ✅         : max_epochs.{sanity:1, poc:2, full:1} in base_optimization.    │
+│   yaml; DELETED from pretrain_encoder + surgery_base; yaml_extract extends   │
+│   chain resolution verified on all 5 train configs                            │
+│ M9 ✅         : cfg.data.local_data_dir + master_manifest_name in pipeline.   │
+│   yaml; load_merged_config injects derived probe.* values; pretrain_encoder │
+│   + surgery_base probe blocks DELETED; USAGE docstrings → ${LOCAL_DATA}/     │
+│   template; corpus-agnostic split filenames; 5 retired files → legacy/       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 📦 Commit message (when all M1-M8 + runbook caught up)
+## 📚 Runbook code-mod archive (consolidated from runbook 2026-05-21)
+
+Operator-flavored summaries + Stage design sidebars, extracted from the
+runbook during T40 prep so the runbook becomes terminal-command focused.
+
+### Cross-mode clip counts (M1 design table)
 
 ```
-iter16 M1+M2+M3+M4+M6+M7+M8 — close runbook code-mod gaps + throughput R1-R5
+┌────────┬────────┬──────────┬──────────┬─────────┬──────────┐
+│ Mode   │ Ratio  │ N_clips  │ N_train  │ N_val   │ N_test   │
+├────────┼────────┼──────────┼──────────┼─────────┼──────────┤
+│ FULL   │ 100 %  │ 115,000  │  86,250  │  5,750  │  23,000  │
+│ POC    │  10 %  │  11,500  │   8,625  │    575  │   2,300  │
+│ SANITY │   1 %  │   1,150  │     862  │     58  │     230  │
+└────────┴────────┴──────────┴──────────┴─────────┴──────────┘
+```
+- POC val = 575 clips → stable val metric at the parity ratio.
+- SANITY val = 58 → fine for code-correctness. Post-Option-X, SANITY uses
+  60/20/20 (NOT 75/5/20) because M5 video-disjoint SGKF is infeasible at
+  SANITY scale.
 
-M1: clip_pool_ratio + probe_split helpers + load_subset_with_labels kwarg +
-    probe_action wires both for runtime mode-keyed subsampling
+### M2 exception — `pretrain_2X_encoder.yaml` retains override
+
+This variant intentionally doubles the pretrain budget (compute-matched Δ3
+control). Implementation: `run_train.sh:248-252` passes `--max-epochs
+$((_BASE_EP * 2))` via shell-level override (no new yaml). With M2's
+base.full=1 → shell passes 2 epochs.
+
+### M5 — SANITY clip-level fallback (added post-Option X)
+
+M5's video-disjoint SGKF requires `n_splits ≤ min_videos_per_class`.
+SANITY's tiny pool (~5 videos/class) cannot satisfy k_val=16 from
+val_pct=0.05. Mode-aware stratified_split:
+- SANITY: clip-level `StratifiedShuffleSplit` (no video-disjoint guarantee)
+- POC/FULL: M5 video-disjoint SGKF (paper-grade)
+
+Justified per CLAUDE.md: POC↔FULL parity rule applies to POC↔FULL only.
+SANITY validates code, not paper splits.
+
+### Expected research impact (M5 + M1 Option X)
+
+Probe metrics (top-1 / mAP@K / future-MSE) will drop ≈ 1-3 pp absolute vs
+iter15 because visual-style leakage between train/val/test is gone. This
+is research-correct, not regression. Re-baseline iter15 with the new
+split BEFORE publishing iter16↔iter15 deltas.
+
+### Stage 2 — m04d wall-time extrapolation
+
+- eval_10k (9,297 clips) took 6,974 s previously (see
+  `data/eval_10k_local/m04d_motion_features/motion_features.meta.json`).
+- Scaling: 115,687 × 0.75 sec/clip ≈ 24 hr on iter13 hardware.
+- Pro 4000 24 GB with AdaptiveBatchSizer + fp16 RAFT autocast: 10-15 hr.
+- WITH M8 torch.compile (mode=default + dynamic=False): additional ~1.5-2×
+  speedup → Stage 2 wall ≈ 3-4 hr on Pro 6000.
+
+### Stage 3 — GPU sizing extrapolation
+
+```
+┌─────────────┬─────────────────┬──────────────────┐
+│ Config       │ Pro 6000 96 GB  │ Pro 4000 24 GB   │
+├─────────────┼─────────────────┼──────────────────┤
+│ Serial m10   │ ~180 hr (~8 d)  │ ~540 hr (~22 d)  │
+│ Parallel × 4 │ ~ 92 hr (~4 d)  │ ~230 hr (~10 d)  │
+│ Parallel × 6 │ ~ 75 hr (~3 d)  │  N/A (VRAM tight)│
+└─────────────┴─────────────────┴──────────────────┘
+```
+Each worker holds DINO (~500 MB) + SAM3.1 (~3.5 GB) ≈ 4 GB VRAM. With
+M6 (DINO batched) + M7 (torch.compile DINO, Pro 6000): compounded ~12.5×
+speedup → Stage 3 ≈ 6 hr on Pro 6000.
+
+### Stage 2 ↔ Stage 3 GPU sharing note
+
+m04d (Stage 2) and m10 (Stage 3) want the same GPU. Run **sequentially**:
+Stage 2 on Pro 4000 (~10-15 hr) → migrate to Pro 6000 → Stage 3 (~6-9 hr).
+Total data-prep wall ≈ 16-24 hr (was ~90 hr pre-M6/M7/M8).
+
+### Condensed yaml/python excerpts (runbook M-section snippets)
+
+```yaml
+# (M1) configs/pipeline.yaml
+clip_pool_ratio: {full: 1.00, poc: 0.10, sanity: 0.01}
+probe_split:
+  sanity: {train_pct: 0.60, val_pct: 0.20}   # clip-level shuffle
+  poc:    {train_pct: 0.75, val_pct: 0.05}   # video-disjoint (M5)
+  full:   {train_pct: 0.75, val_pct: 0.05}   # video-disjoint (M5)
+```
+
+```yaml
+# (M2) configs/train/base_optimization.yaml:196 — SOLE max_epochs site
+max_epochs: {sanity: 1, poc: 2, full: 1}
+# pretrain_encoder.yaml + surgery_base.yaml overrides DELETED
+```
+
+```yaml
+# (M9) configs/pipeline.yaml — single source of truth for data dir
+data:
+  local_data_dir:        "data/eval_10k_local"  # flip → "data/full_local"
+  master_manifest_name:  "eval_10k.json"        # flip → "full_local.json"
+```
+
+```yaml
+# (M7/M8) configs/pipeline.yaml — torch.compile gates
+m04d_compile: {enabled: true,  mode: "default", dynamic: false, fullgraph: false}
+dino_compile: {enabled: false, mode: "default", dynamic: false, fullgraph: false}
+```
+
+---
+
+## 📦 Commit message (when all M1-M9 + runbook caught up)
+
+```
+iter16 M1+M2+M3+M4+M6+M7+M8+M9 — runbook gaps + throughput R1-R5 + path refactor
+
+M1: clip_pool_ratio + probe_split helpers + Option X stratified-for-POC
+    redesign + load_subset_with_labels kwarg + symmetric wiring in
+    probe_action.run_labels_stage + probe_labels.ensure_probe_labels_for_mode
 M2: max_epochs consolidated to base_optimization.yaml (single source);
     duplicates DELETED from pretrain_encoder + surgery_base yamls
 M3: src/utils/gen_full_local_manifest.py — manifest writer for 115K corpus
@@ -773,6 +1268,9 @@ M6: m10_sam_segment.py DINO batched 4-anchor inference (~18% per-clip; R3)
 M7: m10 torch.compile DINO yaml gate (Pro 6000 only; ~1.3-1.5× DINO; R5)
 M8: m04d torch.compile RAFT-Large (dynamic=False + reduce-overhead; R4
     unparked from iter13; Stage 2 wall ~8 hr → ~3 hr)
+M9: yaml-keyed data.local_data_dir → 30+ hardcoded "data/eval_10k_local/"
+    refs derive from cfg. One-line yaml flip migrates SANITY+POC pipeline
+    to data/full_local (FULL) when m04/m10/m11 outputs land there.
 
 All 5 throughput recommendations addressed in iter16:
   R1 ✅ SAM3 → SAM3.1 (surgery_base.yaml:156, landed earlier)

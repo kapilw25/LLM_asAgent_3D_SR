@@ -576,10 +576,13 @@ def upload_data(data_root: Path = None):
                     "**/m11_factor_datasets/D_A/**",
                     "**/m11_factor_datasets/D_I/**",
                     "**/m11_factor_datasets/m11_per_clip_verify/**",
-                    "**/eval_10k_poc.json",
-                    "**/eval_10k_train_split.json",
-                    "**/eval_10k_val_split.json",
-                    "**/eval_10k_test_split.json",
+                    # iter16 M9 (2026-05-21): corpus-agnostic split filenames
+                    # (no "eval_10k_" prefix — derived from probe Stage 1).
+                    # eval_10k_poc.json + eval_10k_sanity.json retired to
+                    # data/eval_10k_local/legacy/ in the same pass.
+                    "**/train_split.json",
+                    "**/val_split.json",
+                    "**/test_split.json",
                 ],
             )
         pbar.update(1)

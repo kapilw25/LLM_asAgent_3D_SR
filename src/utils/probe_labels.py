@@ -30,9 +30,11 @@ from pathlib import Path
 from utils.action_labels import (
     load_subset_with_labels,
     stratified_split,
+    subsample_manifest_for_mode,
     write_action_labels_json,
 )
-from utils.eval_subset import stratified_by_motion_class_subset
+# stratified_by_motion_class_subset is now called inside
+# subsample_manifest_for_mode (Option X). No direct import needed here.
 
 
 def _mode_dir_from_flag(mode_flag: str) -> str:
@@ -57,15 +59,17 @@ def ensure_probe_labels_for_mode(
     """Ensure action_labels.json + taxonomy_labels.json exist; bootstrap in-process if not.
 
     Reads ALL paths + numbers from cfg (CLAUDE.md "no hardcoded values in Python"):
-      cfg["probe_action_labels"]["eval_subset_in"][mode_dir]      → source eval pool
-      cfg["probe_action_labels"]["poc_subset_out"]                → POC stratified subset path
+      cfg["data"]["local_data_dir"]                               → active data dir (iter16 M9)
+      cfg["data"]["master_manifest_name"]                          → master JSON filename (iter16 M9)
       cfg["probe_action_labels"]["min_clips_per_class"][mode_dir] → label filter floor
       cfg["probe_action_labels"]["min_per_split"][mode_dir]       → split floor
       cfg["probe_action_labels"]["n_motion_classes"]              → POC target_per_class divisor
-      cfg["data"]["poc_total_clips"]                              → POC clip budget
-      cfg["probe_taxonomy_labels"]["tags_json"]                   → taxonomy source
-      cfg["probe_taxonomy_labels"]["tag_taxonomy"]                → taxonomy schema
-      cfg["probe_taxonomy_labels"]["local_data"]                  → m04d output dir
+      cfg["probe_taxonomy_labels"]["tag_taxonomy"]                → taxonomy schema (configs/)
+
+    Derived paths (iter16 M9 — flip local_data_dir to migrate):
+      eval_subset = local_data_dir / master_manifest_name
+      tags_json   = local_data_dir / "tags.json"
+      motion_features = local_data_dir / "m04d_motion_features" / "motion_features.npy"
 
     Args:
         mode_flag:        argparse mode (--SANITY | --POC | --FULL).
@@ -90,11 +94,16 @@ def ensure_probe_labels_for_mode(
     # ─── All paths/numbers from cfg (no module-level constants) ─────────
     pal = cfg["probe_action_labels"]                 # FAIL LOUD on missing
     ptl = cfg["probe_taxonomy_labels"]
-    eval_subset = project_root / pal["eval_subset_in"][mode_dir]
+    # iter16 M9 (2026-05-21): master manifest + local_data dir derived from
+    # cfg.data.local_data_dir + cfg.data.master_manifest_name (pipeline.yaml).
+    # Single source of truth — flipping the 2 yaml keys migrates the whole
+    # pipeline from eval_10k_local → full_local.
+    data_cfg = cfg["data"]                            # FAIL LOUD on missing
+    local_data = project_root / data_cfg["local_data_dir"]
+    eval_subset = local_data / data_cfg["master_manifest_name"]
     min_clips_per_class = pal["min_clips_per_class"][mode_dir]
     min_per_split       = pal["min_per_split"][mode_dir]
 
-    local_data = project_root / ptl["local_data"]
     if motion_features is None:
         motion_features = local_data / "m04d_motion_features" / "motion_features.npy"
     else:
@@ -142,48 +151,46 @@ def ensure_probe_labels_for_mode(
                 f"at {paths_companion} (must be alongside .npy)"
             )
 
-        # iter14 recipe-v3: POC stratified-by-motion-class subsampling, in-process.
-        # SANITY + FULL skip this step (use the source pool directly).
-        labels_input = eval_subset
-        if mode_dir == "poc":
-            poc_subset_out = project_root / pal["poc_subset_out"]
-            n_motion_classes = pal["n_motion_classes"]
-            poc_total_clips  = cfg["data"]["poc_total_clips"]
-            target_per_class = max(1, poc_total_clips // n_motion_classes)
-            poc_stale = (
-                not poc_subset_out.exists()
-                or eval_subset.stat().st_mtime > poc_subset_out.stat().st_mtime
-                or motion_features.stat().st_mtime > poc_subset_out.stat().st_mtime
-            )
-            if poc_stale:
-                print(
-                    f"  [probe_labels] POC stratified-by-motion-class subset → "
-                    f"{poc_subset_out}  (target_per_class={target_per_class}, "
-                    f"n_motion_classes={n_motion_classes})"
-                )
-                src = json.loads(eval_subset.read_text())
-                out = stratified_by_motion_class_subset(
-                    src, motion_features, target_per_class
-                )
-                out["source"] = (
-                    f"stratified_by_motion_class_{target_per_class}_per_class_"
-                    f"of_{eval_subset.name}"
-                )
-                poc_subset_out.parent.mkdir(parents=True, exist_ok=True)
-                poc_subset_out.write_text(json.dumps(out, indent=2))
-            else:
-                print(f"  [probe_labels] POC subset fresh: {poc_subset_out}")
-            labels_input = poc_subset_out
+        # iter16 M1 Option X (2026-05-21 PM): per-mode subsampling via the
+        # shared subsample_manifest_for_mode() helper. Symmetric with
+        # probe_action.run_labels_stage (CLI entry-point) so action_labels.json
+        # schema is identical regardless of caller.
+        #   SANITY → sorted(clip_keys)[:n]               (code check)
+        #   POC    → stratified_by_motion_class_subset   (POC↔FULL parity)
+        #   FULL   → identity (ratio=1.0)
+        # No more per-mode pre-made eval_10k_{poc,sanity}.json on disk
+        # (plan user-decision #1 — single master, runtime subsampling).
+        n_motion_classes = pal["n_motion_classes"]
+        src = json.loads(eval_subset.read_text())
+        pool_keys = subsample_manifest_for_mode(
+            mode_dir, src["clip_keys"], motion_features, n_motion_classes
+        )
+        print(
+            f"  [probe_labels Opt X] mode={mode_dir}: subsampled "
+            f"{len(pool_keys):,}/{len(src['clip_keys']):,} clips "
+            f"({len(pool_keys)/max(len(src['clip_keys']),1):.2%})"
+        )
 
         print(
             f"  [probe_labels] generating {action_path}  "
-            f"(eval_subset={labels_input.name}, "
+            f"(eval_subset={eval_subset.name}, "
             f"min_clips_per_class={min_clips_per_class}, min_per_split={min_per_split})"
         )
         records, class_names = load_subset_with_labels(
-            labels_input, motion_features, min_clips_per_class=min_clips_per_class
+            eval_subset, motion_features,
+            min_clips_per_class=min_clips_per_class,
+            clip_keys=pool_keys,
         )
-        splits = stratified_split(records, seed=99, min_per_split=min_per_split)
+        # iter16 M1: mode-keyed probe_split — SANITY 60/20/20, POC/FULL 75/5/20.
+        # Symmetric with probe_action.run_labels_stage CLI path.
+        from utils.config import get_probe_split
+        _split_cfg = get_probe_split(mode_dir)
+        splits = stratified_split(records,
+                                  train_pct=_split_cfg["train_pct"],
+                                  val_pct=_split_cfg["val_pct"],
+                                  seed=99,
+                                  min_per_split=min_per_split,
+                                  mode=mode_dir)
         output_action_dir.mkdir(parents=True, exist_ok=True)
         write_action_labels_json(records, splits, action_path)
         result["action_generated"] = True
@@ -199,7 +206,10 @@ def ensure_probe_labels_for_mode(
         print(f"  [probe_labels] cached: {taxonomy_path}")
         return result
 
-    tags_json = project_root / ptl["tags_json"]
+    # iter16 M9 (2026-05-21): tags_json derived from local_data (M9 yaml flip
+    # migrates eval_10k_local → full_local). tag_taxonomy stays as separate
+    # cfg key (lives in configs/, not in the active local data dir).
+    tags_json = local_data / "tags.json"
     tag_taxonomy = project_root / ptl["tag_taxonomy"]
     if not tag_taxonomy.exists():
         reason = f"{tag_taxonomy} not found"
