@@ -394,8 +394,12 @@ def main():
     start_time = time.time()
     last_window_count = len(all_keys)
     last_window_time = start_time
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). Producer-consumer queue + sub-batched GPU
+    # forward = same burst/wait shape as m04d.
     pbar = tqdm(total=clip_limit, initial=len(all_keys),
-                desc="m05c true overlap", unit="clip")
+                desc="m05c true overlap", unit="clip", smoothing=0)
     try:
         while True:
             try:

@@ -19,12 +19,32 @@
 #   ./scripts/run_factor_prep_parallel.sh configs/train/surgery_3stage_DI_encoder.yaml 4 --FULL
 #   N_WORKERS=6 ./scripts/run_factor_prep_parallel.sh configs/train/surgery_3stage_DI_encoder.yaml
 #
-# Env-var overrides (same as run_factor_prep.sh):
-#   LOCAL_DATA       Override hardcoded data/eval_10k_local
-#   CACHE_POLICY_ALL 1=keep / 2=recompute. Per-worker scratch dirs are empty so
-#                    cache-policy=2 is effectively a no-op for workers (canonical
-#                    dir is NEVER wiped — its existing segments.json drives the
-#                    "already-done" filter in m10_split_subset.py).
+# Env-var overrides (full parity with run_factor_prep.sh):
+#   LOCAL_DATA       Override the active data dir (default: yaml-keyed
+#                    cfg.data.local_data_dir from configs/pipeline.yaml).
+#   TRAIN_SUBSET     Optional subset JSON to filter clip set further. Unset →
+#                    use ${LOCAL_DATA}/manifest.json (all clips). When set,
+#                    must point at a JSON with "clip_keys" list (e.g.
+#                    train_split.json, val_split.json, eval_10k.json).
+#                    m10_split_subset.py accepts both "saved_keys" + "clip_keys".
+#   CACHE_POLICY_ALL 1=keep / 2=recompute. Applied to worker scratch dirs
+#                    (uniform across workers; heterogeneous would yield
+#                    inconsistent merge state). m11 inherits worker policy
+#                    via dep-prop (m10 recompute → m11 recompute) per serial
+#                    wrapper semantics. If UNSET on a TTY, prompts per-key
+#                    for each existing cache; on non-TTY, defaults to 1=keep
+#                    (safe-resume).
+#
+# ⚠️ Resume semantics — IMPORTANT for partial-run recovery:
+#   • First run, empty disk      → policy=1 effectively (no caches exist).
+#   • Re-run after killed partial:
+#       CACHE_POLICY_ALL=1 (or interactive Enter) → workers RESUME from
+#         each worker's own .m10_checkpoint_*_<fp>.npz (saves ~25-30 min).
+#       CACHE_POLICY_ALL=2 → workers WIPE scratch + restart from clip 0 of
+#         their slice. Use only when you want a fresh restart.
+#   • Canonical segments.json is NEVER wiped by this script. To force a
+#     fully fresh m10 run, manually `rm canonical_dir/segments.json` and
+#     run with CACHE_POLICY_ALL=2.
 
 set -euo pipefail
 
@@ -61,7 +81,8 @@ mkdir -p logs
 # LOCAL_DATA still overrides for ad-hoc runs on alternate corpora.
 _LOCAL_DATA_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
 LOCAL_DATA="${LOCAL_DATA:-$_LOCAL_DATA_M9}"
-CACHE_POLICY="${CACHE_POLICY_ALL:-2}"
+# iter15 plan gap #1 fix (2026-05-21): TRAIN_SUBSET env var parity with serial.
+TRAIN_SUBSET="${TRAIN_SUBSET:-}"
 
 if [ ! -d "$LOCAL_DATA" ]; then
     echo "FATAL: LOCAL_DATA=$LOCAL_DATA is not a directory." >&2
@@ -69,6 +90,11 @@ if [ ! -d "$LOCAL_DATA" ]; then
 fi
 if [ ! -f "$LOCAL_DATA/manifest.json" ]; then
     echo "FATAL: $LOCAL_DATA/manifest.json missing — needed for clip key universe." >&2
+    exit 3
+fi
+if [ -n "$TRAIN_SUBSET" ] && [ ! -e "$TRAIN_SUBSET" ]; then
+    echo "FATAL: TRAIN_SUBSET=$TRAIN_SUBSET set but file not found." >&2
+    echo "  Unset TRAIN_SUBSET to iterate all clips in $LOCAL_DATA/manifest.json." >&2
     exit 3
 fi
 
@@ -80,46 +106,120 @@ VARIANT_TAG="$(basename "$FACTOR_YAML" .yaml)"
 T0=$(date +%s)
 stamp() { echo -e "\n═══ $(date '+%H:%M:%S') · $1 ═══"; }
 
+# ── iter15 plan gap #3 fix (2026-05-21) — interactive cache-policy prompt ──
+# Mirror of serial's _check_and_prompt from scripts/run_factor_prep.sh:103-136.
+# Probes each worker scratch dir + canonical for existing caches; if any
+# found, prompts (TTY) or applies CACHE_POLICY_ALL (env) or defaults to
+# 1=keep (non-TTY). Replaces the prior silent CACHE_POLICY="${CACHE_POLICY_ALL:-2}"
+# default which silently wiped 25-30 min of worker scratch progress on
+# resume-after-kill.
+declare -A POLICY
+_check_and_prompt() {
+    local key="$1"; shift
+    local found=""
+    for path in "$@"; do
+        # NOTE: single-statement `local hit=$(...)` is required — split form
+        # propagates compgen's exit 1 under set -e + pipefail (see serial
+        # wrapper comment at run_factor_prep.sh:107-114).
+        local hit=$(compgen -G "$path" 2>/dev/null | head -n1)
+        if [ -n "$hit" ]; then found="$hit"; break; fi
+    done
+    if [ -z "$found" ]; then POLICY[$key]=1; return; fi
+    if [ -n "${CACHE_POLICY_ALL:-}" ]; then
+        POLICY[$key]=$CACHE_POLICY_ALL
+        echo "  $key: cache at $found -> policy=${POLICY[$key]} (CACHE_POLICY_ALL)"
+        return
+    fi
+    if [ ! -t 0 ]; then
+        POLICY[$key]=1
+        echo "  $key: cache at $found -> policy=1 (non-TTY default)"
+        return
+    fi
+    local ans
+    read -p "  $key cache at $found [1=keep / 2=recompute] (Enter=1): " ans
+    case "${ans:-1}" in
+        2|recompute) POLICY[$key]=2 ;;
+        *)           POLICY[$key]=1 ;;
+    esac
+    return 0
+}
+
 echo "──────────────────────────────────────────────"
 echo "factor-prep parallel · mode=${MODE} · N_WORKERS=${N_WORKERS} · variant=${VARIANT_TAG}"
 echo "  LOCAL_DATA:    $LOCAL_DATA"
+if [ -n "$TRAIN_SUBSET" ]; then
+    echo "  TRAIN_SUBSET:  $TRAIN_SUBSET  (filtering clip set)"
+else
+    echo "  TRAIN_SUBSET:  <unset>  (using \$LOCAL_DATA/manifest.json — all clips)"
+fi
 echo "  CANONICAL_DIR: $CANONICAL_DIR"
 echo "  SUBSET_DIR:    $SUBSET_DIR (auto-cleaned at exit)"
-echo "  CACHE_POLICY:  $CACHE_POLICY (per-worker scratch — does not touch canonical)"
+echo "──────────────────────────────────────────────"
+
+# Probe each worker scratch dir + canonical + m11 (resume-anchor heuristic).
+echo
+echo "Cache-policy probe (set CACHE_POLICY_ALL=1|2 to bypass prompts):"
+for i in $(seq 0 $((N_WORKERS - 1))); do
+    _check_and_prompt "worker_$i" "${LOCAL_DATA}/m10_sam_segment_w${i}/*"
+done
+_check_and_prompt "canonical" "${CANONICAL_DIR}/segments.json"
+_check_and_prompt "m11"       "${LOCAL_DATA}/m11_factor_datasets/*"
+
+# Workers share a uniform policy (heterogeneous across slices would yield
+# inconsistent merge state). m11 gets its own probed policy, then dep-prop:
+# m10 (workers) recompute MUST force m11 recompute (m11 reads m10's segments
+# + masks). Matches serial wrapper's m10→m11 dep prop semantics (gap fix
+# 2026-05-21, was uniform-policy-only).
+WORKER_POLICY="${POLICY[worker_0]:-1}"
+M11_POLICY="${POLICY[m11]:-1}"
+if [ "$WORKER_POLICY" = "2" ]; then
+    if [ "$M11_POLICY" != "2" ]; then
+        echo "  ⚠️  dep-prop: m10 workers recompute → forcing m11 recompute too"
+    fi
+    M11_POLICY=2
+fi
+echo "  → workers CACHE_POLICY=$WORKER_POLICY · m11 CACHE_POLICY=$M11_POLICY"
 echo "──────────────────────────────────────────────"
 
 stamp "Step 1/5 — split clips into ${N_WORKERS} disjoint subsets"
+# iter15 plan gap #1 fix (2026-05-21): TRAIN_SUBSET overrides manifest.json
+# as the input clip universe. m10_split_subset.py accepts both "saved_keys"
+# (manifest.json) and "clip_keys" (subset JSON) schemas.
+SPLITTER_INPUT="${TRAIN_SUBSET:-${LOCAL_DATA}/manifest.json}"
 python -u src/utils/m10_split_subset.py \
-    --manifest "${LOCAL_DATA}/manifest.json" \
+    --manifest "$SPLITTER_INPUT" \
     --existing-segments "${CANONICAL_DIR}/segments.json" \
     --n-workers "$N_WORKERS" \
     --out-dir "$SUBSET_DIR"
 
 stamp "Step 2/5 — spawn ${N_WORKERS} m10 workers (parallel)"
+# iter15 plan cosmetic fix (2026-05-21): log filename includes ${MODE,,} so
+# SANITY/POC/FULL logs land in distinct files (was hardcoded "factor_full_*"
+# regardless of mode — misleading at SANITY/POC).
 PIDS=()
 for i in $(seq 0 $((N_WORKERS - 1))); do
     SUBSET_JSON="${SUBSET_DIR}/subset_w${i}.json"
     OUTPUT_DIR="${LOCAL_DATA}/m10_sam_segment_w${i}"
-    LOG="logs/factor_full_${VARIANT_TAG}_w${i}.log"
+    LOG="logs/factor_${MODE,,}_${VARIANT_TAG}_w${i}.log"
 
     echo "  worker $i:"
     echo "    subset:  $SUBSET_JSON"
     echo "    output:  $OUTPUT_DIR"
     echo "    log:     $LOG"
 
-    CACHE_POLICY_ALL="$CACHE_POLICY" \
+    CACHE_POLICY_ALL="$WORKER_POLICY" \
         python -u src/m10_sam_segment.py "$MODE_FLAG" \
         --train-config "$FACTOR_YAML" \
         --subset "$SUBSET_JSON" \
         --local-data "$LOCAL_DATA" \
         --output-dir "$OUTPUT_DIR" \
         --no-wandb \
-        --cache-policy "$CACHE_POLICY" \
+        --cache-policy "$WORKER_POLICY" \
         > "$LOG" 2>&1 &
     PIDS+=($!)
 done
 echo "  spawned PIDs: ${PIDS[*]}"
-echo "  monitor:  tail -f logs/factor_full_${VARIANT_TAG}_w*.log"
+echo "  monitor:  tail -f logs/factor_${MODE,,}_${VARIANT_TAG}_w*.log"
 echo "  GPU watch: nvtop  (or: watch -n2 nvidia-smi)"
 
 stamp "Step 3/5 — wait for all ${N_WORKERS} workers"
@@ -155,18 +255,29 @@ python -u src/utils/m10_merge.py \
 rm -rf "$SUBSET_DIR"
 
 stamp "Step 5/5 — m11 --streaming (factor materialization on merged canonical)"
-M11_LOG="logs/run_factor_prep_parallel_${VARIANT_TAG}_m11.log"
+# iter15 plan cosmetic fix (2026-05-21): m11 log filename includes ${MODE,,}
+# matching the serial wrapper's `logs/run_factor_prep_*_${MODE,,}_m11.log`
+# convention so SANITY/POC/FULL runs land in distinct files.
+M11_LOG="logs/run_factor_prep_parallel_${VARIANT_TAG}_${MODE,,}_m11.log"
 echo "  log: $M11_LOG"
 # m11 streaming reads merged segments.json + masks/ from canonical dir, materializes
 # the verify-100 cap subset into D_L/D_A/D_I + factor_manifest. Wall ~1 min at FULL.
-# Pass --cache-policy=2 explicitly so prior m11 outputs (POC v4 leftovers, .npy files)
-# are wiped — keeps the bundle clean for hf_outputs.py upload-data later.
-CACHE_POLICY_ALL="$CACHE_POLICY" \
+# iter15 plan functional fix (2026-05-21): pass --subset $TRAIN_SUBSET to m11
+# when set, so m11 filters to the same clip universe the workers operated on.
+# Without this, m11 over-processes any stale prior-run data in canonical.
+# Matches serial wrapper's $SUBSET_FLAG threading.
+SUBSET_FLAG=""
+if [ -n "$TRAIN_SUBSET" ]; then
+    SUBSET_FLAG="--subset $TRAIN_SUBSET"
+fi
+# Unquoted $SUBSET_FLAG expansion is intentional — expands to 2 tokens when
+# set, 0 tokens when empty (same pattern as serial run_factor_prep.sh:162).
+CACHE_POLICY_ALL="$M11_POLICY" \
     python -u src/m11_factor_datasets.py "$MODE_FLAG" --streaming \
     --train-config "$FACTOR_YAML" \
-    --local-data "$LOCAL_DATA" \
+    $SUBSET_FLAG --local-data "$LOCAL_DATA" \
     --no-wandb \
-    --cache-policy "$CACHE_POLICY" \
+    --cache-policy "$M11_POLICY" \
     2>&1 | tee "$M11_LOG"
 
 DUR=$(( $(date +%s) - T0 ))

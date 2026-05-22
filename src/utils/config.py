@@ -148,6 +148,89 @@ def get_master_manifest_path() -> Path:
     return get_local_data_dir() / data_cfg["master_manifest_name"]
 
 
+def get_cgroup_memory_gb() -> float:
+    """Return the cgroup CPU-RAM cap in GB. FAIL LOUD if neither cgroup v1 nor v2
+    file is readable on this host.
+
+    iter16 M10 (2026-05-21): mirror of AdaptiveBatchSizer's VRAM probe but for
+    CPU-RAM. Reads /sys/fs/cgroup/memory.max (cgroup v2) or .../memory/
+    memory.limit_in_bytes (cgroup v1). Returns float('inf') when the file
+    contains "max" (cgroup v2 unbounded) or a sentinel > 100 TB (cgroup v1
+    no-limit marker).
+    """
+    for path in ("/sys/fs/cgroup/memory.max",                         # cgroup v2
+                 "/sys/fs/cgroup/memory/memory.limit_in_bytes"):       # cgroup v1
+        try:
+            raw = Path(path).read_text().strip()
+        except FileNotFoundError:
+            continue
+        if raw == "max":
+            return float("inf")
+        try:
+            n = int(raw)
+        except ValueError:
+            continue
+        # cgroup v1 sentinel for "no limit" is a huge number (~2^63 - 1 page-aligned)
+        if n > (1 << 50):                                              # >1 PB → no real limit
+            return float("inf")
+        return n / (1024 ** 3)
+    raise RuntimeError(
+        "iter16 M10 get_cgroup_memory_gb: no cgroup memory file readable "
+        "(/sys/fs/cgroup/memory.max + /sys/fs/cgroup/memory/memory.limit_in_bytes "
+        "both missing). FAIL LOUD per CLAUDE.md — set decode_workers_motion + "
+        "producer_queue_motion as MANUAL OVERRIDES in configs/pipeline.yaml "
+        "streaming block to bypass auto-tuning."
+    )
+
+
+def get_motion_decode_config() -> dict:
+    """Auto-resolve m04d's decode_workers + producer_queue from CPU-RAM cgroup.
+
+    iter16 M10 (2026-05-21): probes cgroup CPU-RAM cap at runtime and picks
+    the appropriate row from configs/pipeline.yaml > motion_decode_scaling.
+    Honors manual overrides in streaming.decode_workers_motion +
+    streaming.producer_queue_motion if either is set (escape hatch — but
+    BOTH must be set together to avoid asymmetric override).
+
+    Returns:
+        dict with keys `decode_workers` (int) and `producer_queue` (int).
+
+    Raises:
+        RuntimeError: cgroup unreadable AND no manual override.
+        KeyError:     yaml missing motion_decode_scaling or required row keys.
+    """
+    cfg = get_pipeline_config()
+    streaming = cfg.get("streaming", {})
+    manual_w = streaming.get("decode_workers_motion")
+    manual_q = streaming.get("producer_queue_motion")
+    if manual_w is not None and manual_q is not None:
+        print(f"[M10 motion_decode_scaling] manual override active: "
+              f"decode_workers={manual_w}, producer_queue={manual_q}")
+        return {"decode_workers": manual_w, "producer_queue": manual_q}
+    if manual_w is not None or manual_q is not None:
+        raise RuntimeError(
+            "iter16 M10 get_motion_decode_config: asymmetric manual override — "
+            "BOTH decode_workers_motion + producer_queue_motion must be set "
+            "together in streaming block, or BOTH commented out (auto-pick)."
+        )
+    cap_gb = get_cgroup_memory_gb()
+    table = cfg["motion_decode_scaling"]                              # FAIL LOUD
+    # Rows ordered ascending by cpu_ram_gb_max; first row where cap ≤ threshold wins.
+    for row in table:
+        threshold = row["cpu_ram_gb_max"]                              # FAIL LOUD on missing key
+        if cap_gb <= float(threshold):
+            print(f"[M10 motion_decode_scaling] cgroup CPU-RAM={cap_gb:.1f} GB → "
+                  f"row[cpu_ram_gb_max={threshold}]: decode_workers="
+                  f"{row['decode_workers']}, producer_queue={row['producer_queue']}")
+            return {"decode_workers": row["decode_workers"],
+                    "producer_queue": row["producer_queue"]}
+    raise RuntimeError(
+        f"iter16 M10 get_motion_decode_config: cgroup CPU-RAM={cap_gb:.1f} GB "
+        f"exceeded the largest motion_decode_scaling row — yaml table malformed? "
+        f"Ensure the LAST row has cpu_ram_gb_max: .inf as a catch-all."
+    )
+
+
 # ── data_prep + hf_repos yaml-resolved binding ──────────────────────────
 # iter16 (2026-05-20): values moved out of module-level literals per CLAUDE.md
 # "No hardcoded values in Python". Must bind AFTER get_pipeline_config() is
@@ -902,7 +985,12 @@ def setup_ram_cache(clip_paths: list, use_cache: bool = True, cache_subdir: str 
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     cached_paths = []
-    for src_path in tqdm(clip_paths, desc="Caching to RAM", unit="clip"):
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). shutil.copy2 is filesystem-bursty (cold reads
+    # stall, warm reads sprint) over 10K+ clips → exactly the EWMA-misleading
+    # pattern.
+    for src_path in tqdm(clip_paths, desc="Caching to RAM", unit="clip", smoothing=0):
         src_path = Path(src_path)
         # Use relative path from CLIPS_DIR with __ separator for hierarchical dirs
         try:

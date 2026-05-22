@@ -43,12 +43,20 @@ def main():
 
     with open(args.manifest) as f:
         manifest = json.load(f)
-    if "saved_keys" not in manifest:
-        print(f"FATAL: {args.manifest} has no 'saved_keys' field")
+    # iter15 plan gap #1 fix (2026-05-21): accept both schemas so callers can
+    # pass either the canonical manifest.json (has "saved_keys") or any
+    # TRAIN_SUBSET filter JSON (has "clip_keys", e.g. train_split.json,
+    # val_split.json, eval_10k.json). Same downstream contract — flat list of
+    # clip_key strings, split into N worker subsets.
+    if "saved_keys" in manifest:
+        all_keys = manifest["saved_keys"]                # manifest.json (canonical)
+    elif "clip_keys" in manifest:
+        all_keys = manifest["clip_keys"]                 # subset JSON (TRAIN_SUBSET)
+    else:
+        print(f"FATAL: {args.manifest} has neither 'saved_keys' nor 'clip_keys' field")
         sys.exit(2)
-    all_keys = manifest["saved_keys"]
     if not isinstance(all_keys, list) or not all_keys:
-        print("FATAL: manifest['saved_keys'] is empty or wrong type")
+        print(f"FATAL: {args.manifest} key list is empty or wrong type")
         sys.exit(2)
 
     done_keys = set()

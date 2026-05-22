@@ -55,8 +55,8 @@ sed -i \
 ```bash
 # Pre-req: data/full_local/tags.json exists (115,687 entries; 156 MB) — already on disk
 python -u src/m00d_download_subset.py --FULL \
-    --master-tags data/full_local/tags.json \
-    --no-wandb 2>&1 | tee logs/iter16_m00d_full_$(date +%Y%m%d_%H%M%S).log
+--master-tags data/full_local/tags.json \
+--no-wandb 2>&1 | tee logs/iter16_m00d_full_$(date +%Y%m%d_%H%M%S).log
 
 # Pull auxiliary outputs (if any exist on HF)
 HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data 2>&1 \
@@ -73,9 +73,9 @@ HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data 2>&1
 ```bash
 # 2a) Generate full_local.json (M3 — already done; idempotent re-run if needed)
 python -u src/utils/gen_full_local_manifest.py \
-    --tags-json data/full_local/tags.json \
-    --output    data/full_local/full_local.json 2>&1 \
-  | tee logs/iter16_gen_full_local_manifest_$(date +%Y%m%d_%H%M%S).log
+--tags-json data/full_local/tags.json \
+--output    data/full_local/full_local.json 2>&1 \
+| tee logs/iter16_gen_full_local_manifest_$(date +%Y%m%d_%H%M%S).log
 
 # 2b) m04d motion features → data/full_local/m04d_motion_features/
 #     M8 torch.compile active (mode=default + dynamic=False). Auto-resumes via
@@ -86,11 +86,24 @@ CACHE_POLICY_ALL=2 python -u src/m04d_motion_features.py --FULL \
     --no-wandb 2>&1 | tee logs/iter16_m04d_full_$(date +%Y%m%d_%H%M%S).log
 ```
 
+# 🔬 Verification post-2b (run after m04d completes):
+```bash
+ls -la data/full_local/m04d_motion_features/
+venv_walkindia/bin/python -c "
+import numpy as np
+f = np.load('data/full_local/m04d_motion_features/motion_features.npy')
+p = np.load('data/full_local/m04d_motion_features/motion_features.paths.npy', allow_pickle=True)
+print(f'features shape: {f.shape}   dtype: {f.dtype}')
+print(f'paths shape   : {p.shape}   first: {p[0]}')
+```
+# Expected: features (115687, 23) float32 · paths (115687,) · first key starts with goa/walking/04YK...
+
 ### ⏳ Stage 3 — m10 + m11 factor prep [⚠️ migrate to Pro 6000 for FULL]
 
 ```bash
 # 3a) SANITY parallel smoke (Pro 4000 OK, ~5 min, 20 clips × 2 workers)
-LOCAL_DATA=data/full_local \
+#     CACHE_POLICY_ALL=2 = fresh smoke each time (no resume from prior smoke).
+CACHE_POLICY_ALL=2 LOCAL_DATA=data/full_local \
 ./scripts/run_factor_prep_parallel.sh \
     configs/train/surgery_3stage_DI_encoder.yaml 2 --SANITY
 
@@ -99,12 +112,17 @@ LOCAL_DATA=data/full_local \
 sed -i 's|enabled:        false             # Pro 4000 default|enabled:        true              # Pro 6000|' \
     configs/pipeline.yaml
 
-LOCAL_DATA=data/full_local \
+# CACHE_POLICY_ALL=1 = SAFE RESUME (default — keeps per-worker checkpoints
+# so a kill+restart resumes from .m10_checkpoint_*_<fp>.npz; saves ~25-30
+# min per worker). Use =2 only when you want a fresh restart.
+# (Interactive prompts also available if env var unset on a TTY — see
+# `scripts/run_factor_prep_parallel.sh` docstring "Resume semantics".)
+CACHE_POLICY_ALL=1 LOCAL_DATA=data/full_local \
 ./scripts/run_factor_prep_parallel.sh \
     configs/train/surgery_3stage_DI_encoder.yaml 6 --FULL
 
 # 3c) FALLBACK serial m10 (~180 hr Pro 6000)
-LOCAL_DATA=data/full_local \
+CACHE_POLICY_ALL=1 LOCAL_DATA=data/full_local \
 ./scripts/run_factor_prep.sh configs/train/surgery_3stage_DI_encoder.yaml --FULL
 ```
 

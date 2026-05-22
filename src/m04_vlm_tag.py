@@ -1034,7 +1034,11 @@ def stream_and_tag(backend: VLMBackend, args,
     start_time = time.time()
     last_window_time = start_time
     last_window_count = 0
-    pbar = tqdm(total=clip_limit, desc=f"m04_{backend.model_name}", unit="clip")
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). VLM tagging = same producer-queue / GPU-burst
+    # / decode-wait pattern as m04d.
+    pbar = tqdm(total=clip_limit, desc=f"m04_{backend.model_name}", unit="clip", smoothing=0)
 
     try:
         while True:

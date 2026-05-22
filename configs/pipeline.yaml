@@ -103,10 +103,51 @@ streaming:
   # Pre-flight on every new instance:
   #   cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null \
   #     || cat /sys/fs/cgroup/memory.max
-  decode_workers_motion: 16   # m04d: optical flow video decode threads (16 cores × OMP=1 → 16 threads)
+  # iter16 M10 (2026-05-21 PM): decode_workers_motion + producer_queue_motion
+  # AUTO-DERIVED at runtime from CPU RAM cap (cgroup limit in container — this
+  # is host-side system RAM, INDEPENDENT of GPU VRAM) via the
+  # motion_decode_scaling block below. Mirror of AdaptiveBatchSizer pattern
+  # (yaml = scaling table, Python = probe + select). One code path runs
+  # unchanged on any (GPU × CPU-RAM) combination; the row picked depends ONLY
+  # on CPU-RAM (cgroup cap), not on GPU class. Static yaml fields below remain
+  # as MANUAL OVERRIDE escape hatches; when both are commented out, the
+  # auto-selected row from motion_decode_scaling wins. See
+  # src/utils/config.py:get_motion_decode_config() for the resolver.
   decode_workers_train: 16    # m09: video decode threads (256 CPU cores)
   augment_workers: 8          # m05c: augmentation thread workers (was 4)
-  producer_queue_motion: 16   # m04d: preprocessed clip batches buffered ahead — DO NOT scale > 16 (see "KEY INSIGHT" above)
+  # decode_workers_motion: 4    # ← uncomment to force-override the auto pick
+  # producer_queue_motion: 8    # ← uncomment to force-override the auto pick
+
+# iter16 M10 (2026-05-21 PM): CPU-RAM-keyed scaling table for m04d producer
+# threads + queue depth. NOT VRAM-keyed — VRAM is sized separately by
+# AdaptiveBatchSizer. Rows ordered by `cpu_ram_gb_max` ascending; the resolver
+# picks the FIRST row where (cgroup_cap_gb <= cpu_ram_gb_max). ".inf" matches
+# any cap. Replaces the manual yaml-edit-per-box pattern that bit us in iter16
+# Stage 2 (queue=16 on a 36 GB CPU-RAM cgroup ≈ 37 GB worst case → SIGKILL
+# during M8 compile).
+#
+# Why these numbers (operator-tuned plateaus, not pure math):
+#   • each queue slot ≈ 2.3 GB preprocessed batch (32 clips × 16 frame pairs ×
+#     ~72 MB fp32 after preprocessing).
+#   • decode_workers caps at 16 because CPU saturates past that on most hosts.
+#   • producer_queue plateaus at 16 because the GPU sustains its target
+#     throughput before more lookahead helps — past 16 buys nothing.
+#
+# The row picked depends ONLY on CPU-RAM (cgroup cap). GPU class is irrelevant
+# here — same row applies whether the box has Pro 4000 / Pro 6000 / anything.
+motion_decode_scaling:
+  - cpu_ram_gb_max:  36       # small cgroup (e.g. current dev box: 36 GB CPU RAM)
+    decode_workers:  4
+    producer_queue:  8
+  - cpu_ram_gb_max:  64       # medium cgroup
+    decode_workers:  8
+    producer_queue:  16
+  - cpu_ram_gb_max:  96       # larger cgroup
+    decode_workers:  12
+    producer_queue:  32
+  - cpu_ram_gb_max:  .inf     # any host without a tight cgroup limit
+    decode_workers:  16
+    producer_queue:  16       # plateau — past 16 buys nothing once GPU saturated
 
 # -- GPU defaults (from VRAM profiling with real data on RTX PRO 6000 96GB) --
 # Re-profile on different GPU: python -u src/utils/profile_vram.py --training/--inference/--dinov2

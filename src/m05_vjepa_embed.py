@@ -745,7 +745,11 @@ def worker_main(args):
     last_window_count = 0
     failed_count = 0
     checkpoint_thread = None
-    pbar = tqdm(total=clip_limit, desc="m05_vjepa", unit="clip")
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). V-JEPA embed = producer-queue + GPU forward
+    # bursts + decode wait = same shape as m04d.
+    pbar = tqdm(total=clip_limit, desc="m05_vjepa", unit="clip", smoothing=0)
 
     try:
         while True:

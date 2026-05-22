@@ -301,8 +301,12 @@ def download_subset(args):
     tmp_dir = Path("/tmp/hf_shard_tmp")
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). HF shard processing alternates parallel
+    # download + sequential scan → same burst/wait pattern.
     pbar = tqdm(total=len(pending_shards), desc="Processing HF shards",
-                unit="shard", initial=0)
+                unit="shard", initial=0, smoothing=0)
 
     try:
         # Process in batches of DOWNLOAD_WORKERS to maintain backpressure

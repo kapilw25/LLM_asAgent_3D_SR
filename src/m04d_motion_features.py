@@ -125,10 +125,16 @@ _pcfg = get_pipeline_config()
 FEATURE_DIM         = _pcfg["motion"]["feature_dim"]       # iter16: was 23 literal
 N_FRAME_PAIRS       = _pcfg["motion"]["n_frame_pairs"]     # iter16: was 16 literal
 CHECKPOINT_INTERVAL = _pcfg["eval"]["motion_checkpoint_every"]
-PRODUCER_QUEUE_SIZE = _pcfg["streaming"]["producer_queue_motion"]
+# iter16 M10 (2026-05-21): decode_workers + producer_queue AUTO-RESOLVED at
+# runtime from cgroup CPU-RAM cap via the motion_decode_scaling table in
+# pipeline.yaml. Mirror of AdaptiveBatchSizer's VRAM-keyed pattern but for
+# CPU RAM. Eliminates the per-box manual yaml-edit-before-each-run pattern.
+from utils.config import get_motion_decode_config
+_motion_cfg = get_motion_decode_config()
+PRODUCER_QUEUE_SIZE = _motion_cfg["producer_queue"]
+DECODE_WORKERS      = _motion_cfg["decode_workers"]
 CLIPS_PER_GPU_BATCH = _pcfg["gpu"]["motion_batch_size"]    # max for AdaptiveBatchSizer
 MOTION_INITIAL_BS   = _pcfg["gpu"]["motion_initial_bs"]    # iter16: safe start; sizer grows to max
-DECODE_WORKERS      = _pcfg["streaming"]["decode_workers_motion"]
 
 
 # ── HF Streaming (reuse m05 pattern) ────────────────────────────────
@@ -657,8 +663,19 @@ def main():
 
     # ── GPU consumer loop ──
     total = clip_limit if clip_limit < 999_999_999 else 0
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed for the
+    # displayed `clip/s` rate + ETA. Default smoothing (0.3) was an EWMA
+    # over the last few clips, which on bursty decode-bound workloads
+    # captured the intra-burst rate (~4.7 clip/s) and HID the real
+    # inter-burst aggregate (~1.2 clip/s). 2026-05-21 m04d run displayed
+    # "4.70clip/s, ETA 5:52" while the real ETA was ~25 hr — that's the
+    # exact "dynamic prints / no false advertising" violation flagged in
+    # src/CLAUDE.md (CODE STANDARDS bullet). The postfix `rate=` below
+    # stays as a second-opinion windowed rate (every CHECKPOINT_INTERVAL
+    # clips ≈ minute-scale window).
     pbar = tqdm(total=total, initial=start_count,
-                desc="m04d motion features", unit="clip")
+                desc="m04d motion features", unit="clip",
+                smoothing=0)
     processed = start_count
     t_start = time.time()
     last_window_count = start_count

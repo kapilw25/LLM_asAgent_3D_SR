@@ -436,8 +436,12 @@ def generate_dinov2(output_dir: Path, args, clip_limit: int, subset_keys: set):
     start_time = time.time()
     last_window_count = len(all_embeddings)
     last_window_time = start_time
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). DINOv2 baseline = producer-queue + GPU forward
+    # bursts + decode wait = same shape as m04d.
     pbar = tqdm(total=clip_limit, initial=resume_count,
-                desc="m05b dinov2", unit="clip")
+                desc="m05b dinov2", unit="clip", smoothing=0)
     try:
         while True:
             try:
@@ -585,8 +589,12 @@ def generate_clip(output_dir: Path, args, clip_limit: int, subset_keys: set):
     start_time = time.time()
     last_window_count = len(all_embeddings)
     last_window_time = start_time
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). CLIP baseline = producer-queue + GPU forward
+    # bursts + decode wait = same shape as m04d.
     pbar = tqdm(total=clip_limit, initial=resume_count,
-                desc="m05b clip", unit="clip")
+                desc="m05b clip", unit="clip", smoothing=0)
     try:
         while True:
             try:
@@ -865,8 +873,12 @@ def generate_shuffled_vjepa(output_dir: Path, args, clip_limit: int, subset_keys
     start_time = time.time()
     last_window_count = len(all_embeddings)
     last_window_time = start_time
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline
+    # hid 1.10 clip/s reality). Shuffled V-JEPA baseline = producer-queue +
+    # GPU forward bursts + decode wait = same shape as m04d.
     pbar = tqdm(total=clip_limit, initial=resume_count,
-                desc="m05b vjepa_shuffled", unit="clip")
+                desc="m05b vjepa_shuffled", unit="clip", smoothing=0)
     try:
         while True:
             try:

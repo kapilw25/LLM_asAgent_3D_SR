@@ -27,11 +27,19 @@ def make_pbar(total: int, desc: str, unit: str = "item",
     Returns:
         tqdm progress bar instance. Caller must call .update(n) and .close().
     """
+    # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed → honest
+    # aggregate ETA on bursty workloads (m04d incident: 4.70clip/s headline hid
+    # 1.10 clip/s reality + ~25 hr ETA shown as 5:52). Default smoothing=0.3 is
+    # an EWMA over recent samples that captures intra-burst rate when the GPU
+    # alternates with I/O / decode / disk waits — banned by src/CLAUDE.md
+    # "no false advertising / windowed rate" rules. Applies to every make_pbar
+    # caller (m04*, m09*, m10*, m11*, probe_*) in one place.
     return tqdm(
         total=total,
         initial=initial,
         desc=desc,
         unit=unit,
         dynamic_ncols=True,
+        smoothing=0,
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
     )
