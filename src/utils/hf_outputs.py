@@ -425,20 +425,29 @@ def _discover_data_uploads(data_root: Path) -> list:
     """Discover everything under data_root that should be uploaded — dynamic.
 
     iter13 v12+ (2026-05-06): replaces the hardcoded uploads list.
-    Rules (NO hardcoded subfolder names):
-      - every *.json directly under data_root             → upload as file
-      - every subdirectory of data_root                   → upload as folder (bundle)
+    iter16 (2026-05-22): generalized to discover ANY top-level file extension
+    (was *.json only). Without this, invoking `upload-data data/full_local`
+    directly silently SKIPPED the 116 × subset-*.tar shards (~120 GB) at the
+    data/full_local/ root level — they're neither *.json nor subdirs, so the
+    old globs missed them. Only `upload-data` (no arg, parent dir) covered
+    them by treating data/full_local/ as a subdir → upload_folder grabbed all
+    files inside. The asymmetric behavior was a UX trap. Now ALL top-level
+    entries are discovered uniformly — files via upload_file, subdirs via
+    upload_folder. Banned ignore_patterns (m10/m11 regenerables) still apply
+    inside upload_folder calls per the existing list at upload_data:572-586.
+
+    Rules:
+      - every FILE  directly under data_root → upload as file (upload_file)
+      - every SUBDIR        under data_root → upload as folder (upload_folder)
 
     Returns: [(local_path: str, repo_path: str), ...].
     """
     if not data_root.is_dir():
         return []
     pairs: list = []
-    for f in sorted(data_root.glob("*.json")):
-        pairs.append((str(f), str(f)))
-    for d in sorted(data_root.iterdir()):
-        if d.is_dir():
-            pairs.append((str(d), str(d)))
+    for entry in sorted(data_root.iterdir()):
+        if entry.is_file() or entry.is_dir():
+            pairs.append((str(entry), str(entry)))
     return pairs
 
 

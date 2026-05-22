@@ -68,25 +68,56 @@ HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data 2>&1
 #   tags.json                               115,687 entries (unchanged from input)
 ```
 
-### ⏳ Stage 2 — m04d motion features (~3-4 hr Pro 6000 with M8 compile)
+### 🟡 Stage 2 — m04d motion features (Pro 6000 ONLY · ~30-60 min RESUME from 85%)
+
+⚠️ **Pro 4000 (36 GB cgroup) STRUCTURALLY TOO SMALL** for this stage. The 2026-05-22 attempt
+ran 23 hr to 85% (clip 98,400 / 115,687) before kernel SIGKILL'd it on cgroup OOM (memory
+slowly crept from 80% → 100% as Inductor cache + producer queue + page cache + Python heap
+accumulated). Restart on the same box → same crash within 12-24 hr. **Migrate to Pro 6000.**
+The 14.42 MB `.m04d_checkpoint.npz` (98,400 clips processed) is on HF for cross-box resume.
+
+#### 🚀 Pro 6000 migration recipe — paste ONE line at a time (avoid bracketed-paste corruption)
 
 ```bash
-# 2a) Generate full_local.json (M3 — already done; idempotent re-run if needed)
-python -u src/utils/gen_full_local_manifest.py \
---tags-json data/full_local/tags.json \
---output    data/full_local/full_local.json 2>&1 \
-| tee logs/iter16_gen_full_local_manifest_$(date +%Y%m%d_%H%M%S).log
-
-# 2b) m04d motion features → data/full_local/m04d_motion_features/
-#     M8 torch.compile active (mode=default + dynamic=False). Auto-resumes via
-#     .m04d_checkpoint.npz on interrupt (CLAUDE.md DELETE PROTECTION).
-CACHE_POLICY_ALL=2 python -u src/m04d_motion_features.py --FULL \
-    --local-data data/full_local \
-    --subset data/full_local/full_local.json \
-    --no-wandb 2>&1 | tee logs/iter16_m04d_full_$(date +%Y%m%d_%H%M%S).log
+# Setup (5-10 min)
+git clone https://github.com/kapilw25/factorjepa.git && cd factorjepa
+bash setup_env_uv.sh
 ```
 
-# 🔬 Verification post-2b (run after m04d completes):
+```bash
+# Re-fetch the 116 subset-*.tar shards from walkindia-200k (~10 min on Pro 6000's fat I/O)
+python -u src/m00d_download_subset.py --FULL --master-tags data/full_local/tags.json --no-wandb
+```
+
+```bash
+# Pull tags.json + manifest.json + full_local.json + m04d_motion_features/ (~30 sec, ~160 MB)
+HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data data/full_local
+```
+
+```bash
+# Confirm checkpoint landed (must be ~14.42 MB; otherwise resume falls back to fresh start)
+ls -la data/full_local/m04d_motion_features/.m04d_checkpoint.npz
+```
+
+```bash
+# Resume m04d on Pro 6000. M10 auto-picks the 256 GB cgroup row (decode=16, queue=16).
+# M8 torch.compile stays ON — Pro 6000's 96 GB VRAM lets AdaptiveBatchSizer converge
+# instead of thrashing (the failure mode that hit Pro 4000).
+CACHE_POLICY_ALL=1 python -u src/m04d_motion_features.py --FULL --local-data data/full_local --subset data/full_local/full_local.json --no-wandb 2>&1 | tee logs/iter16_m04d_resume_$(date +%Y%m%d_%H%M%S).log
+```
+
+Expected startup log lines (sanity-check before walking away):
+```
+[M10 motion_decode_scaling] cgroup CPU-RAM=241.0 GB → row[cpu_ram_gb_max=inf]: decode_workers=16, producer_queue=16
+[M8 m04d_compile] mode=default dynamic=False fullgraph=False — compiling RAFT-Large
+RAFT-Large loaded on cuda (weights: C_T_SKHT_V2, compiled, fp16)
+Checkpoint loaded: 98,400 clips from .m04d_checkpoint.npz
+Resuming: 98,400 clips already processed
+m04d motion features:  85%|████████▌ | 98400/115687 [00:00<?, ?clip/s]
+```
+
+#### 🔬 Verification post-2b (run after m04d completes)
+
 ```bash
 ls -la data/full_local/m04d_motion_features/
 venv_walkindia/bin/python -c "
@@ -95,8 +126,9 @@ f = np.load('data/full_local/m04d_motion_features/motion_features.npy')
 p = np.load('data/full_local/m04d_motion_features/motion_features.paths.npy', allow_pickle=True)
 print(f'features shape: {f.shape}   dtype: {f.dtype}')
 print(f'paths shape   : {p.shape}   first: {p[0]}')
-```
+"
 # Expected: features (115687, 23) float32 · paths (115687,) · first key starts with goa/walking/04YK...
+```
 
 ### ⏳ Stage 3 — m10 + m11 factor prep [⚠️ migrate to Pro 6000 for FULL]
 
