@@ -9,13 +9,14 @@ USAGE:
 
     # Upload/download: from outputs/full/ ONLY
     python -u src/utils/hf_outputs.py upload outputs/full 2>&1 | tee logs/hf_upload_$(date +%Y%m%d_%H%M%S).log
-    HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload outputs/full  2>&1 | tee logs/upload_outputs_full_$(date +%Y%m%d_%H%M%S).log
-    HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload outputs/poc  2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py upload outputs/full  2>&1 | tee logs/upload_outputs_full_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py upload outputs/poc  2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download outputs/full 2>&1 | tee logs/download_outputs_full_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log    # ~15 min upload
     python -u src/utils/hf_outputs.py download-data 2>&1 | tee logs/download_data_$(date +%Y%m%d_%H%M%S).log # ~3 min measured
+    python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/iter16_dl_full_local_resume3_$(date +%Y%m%d_%H%M%S).log # "only full_local" 
 
 
 
@@ -32,13 +33,17 @@ try:
 except ImportError:
     load_dotenv = None
 
+# iter16 (2026-05-22): env vars MUST be set BEFORE the huggingface_hub import.
+# huggingface_hub reads HF_HUB_DISABLE_XET + HF_HUB_ENABLE_HF_TRANSFER at module
+# import time and caches the config — setting them later (after import) is too
+# late and Xet stays active. The 2026-05-22 incident: setdefault placed AFTER
+# the import still hit "File size mismatch: expected 14418227 vs downloaded
+# 14446279" on .m04d_checkpoint.npz because Xet was already loaded.
+os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")  # Rust multi-stream transfer
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")          # Xet has a size-validation bug
+
 from huggingface_hub import HfApi, repo_exists, snapshot_download
 from utils.progress import make_pbar
-
-# Enable Rust-based HF transfer (1.5-3x faster per file).
-# Safe here — upload_folder/snapshot_download are single-call APIs, no worker conflict.
-# (m00d disables this because its 8 parallel workers + hf_transfer = CDN throttling)
-os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
 # iter16 (2026-05-20): moved to configs/pipeline.yaml > hf_repos.outputs per
 # CLAUDE.md "No hardcoded values in Python". To fork for a new org, change yaml.
@@ -674,12 +679,65 @@ def _post_download_unpack_masks(data_root: Path) -> None:
                 _delete_shards_after_unpack(shards, f"{factor}-*.tar")
 
 
-def download_data(data_root: Path = None):
-    """Download data_root/ from HF — dynamic, no hardcoded subfolder allow-list.
+def _download_one_file(rpath: str, base_url: str, headers: dict) -> tuple:
+    """Worker: GET one HF file via plain HTTP, stream to disk. Idempotent.
 
-    iter13 v12+ (2026-05-06): pulls everything under <repo>/data_root/, then
-    unpacks any m10 masks-*.tar shards back into masks/ (for runtime random
-    access by m11 + m09c).
+    iter16 (2026-05-22): per-file helper used by `download_data`'s ThreadPool.
+    Bypasses huggingface_hub entirely (which has a broken Xet validator for
+    some files). Returns (rpath, status, error_or_None) where status is one
+    of "skipped", "downloaded", "failed".
+
+    Idempotent skip: if local file exists + non-empty, assume it was already
+    downloaded (the bytes are the truth, not HF metadata). Re-download only
+    on missing/empty.
+    """
+    import requests
+    local = Path(rpath)
+    if local.exists() and local.stat().st_size > 0:
+        return (rpath, "skipped", None)
+    local.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with requests.get(f"{base_url}/{rpath}",
+                          headers=headers,
+                          stream=True,
+                          timeout=600,
+                          allow_redirects=True) as r:
+            r.raise_for_status()
+            content_length = r.headers.get("Content-Length")
+            bytes_written = 0
+            with open(local, "wb") as f:
+                # 32 MB chunks (was 8 MB) — fewer syscalls per file, ~4×
+                # higher throughput on 1 GB+ files.
+                for chunk in r.iter_content(chunk_size=32 << 20):
+                    if chunk:
+                        f.write(chunk)
+                        bytes_written += len(chunk)
+            if content_length is not None and int(content_length) != bytes_written:
+                raise RuntimeError(
+                    f"incomplete: {bytes_written} written but "
+                    f"Content-Length was {content_length}")
+        return (rpath, "downloaded", None)
+    except Exception as e:
+        if local.exists():
+            local.unlink()
+        return (rpath, "failed", f"{type(e).__name__}: {str(e)[:120]}")
+
+
+def download_data(data_root: Path = None):
+    """Download data_root/ from HF — parallel plain HTTP. Bypasses HF lib.
+
+    iter16 (2026-05-22): rewritten to skip huggingface_hub's download stack
+    entirely. The HF lib's consistency-validator + Xet integration is broken
+    for some uploaded files (poisoned expected_size metadata) — the validator
+    rejects the correct bytes that the HTTP layer just delivered.
+
+    Approach: list remote files via HfApi, then 8-way ThreadPoolExecutor fans
+    out `requests.get` per file. Same wire-level approach as `wget` — proven
+    to work for the Xet-poisoned checkpoint earlier in this session.
+    Single-threaded raw HTTP measured ~8 MB/s on this network (single TCP
+    stream + small chunks); 8-way parallel reaches ~50-80 MB/s.
+
+    Idempotent: existing non-empty files at the same path are skipped.
     """
     if data_root is None:
         data_root = Path("data")
@@ -699,28 +757,50 @@ def download_data(data_root: Path = None):
     remote_files = _list_remote_files(api, subfolder)
     total_bytes = sum(size for _, size in remote_files)
     print(f"Downloading {HF_OUTPUTS_REPO}/{subfolder}/ → {data_root}/")
-    print(f"  {len(remote_files)} files ({_fmt_size(total_bytes)}) on HF:")
-    for rpath, size in remote_files:
-        rel = rpath[len(subfolder):].lstrip("/") if rpath.startswith(subfolder) else rpath
-        print(f"    {rel} ({_fmt_size(size)})")
+    print(f"  {len(remote_files)} files ({_fmt_size(total_bytes)}) on HF "
+          f"— 8-way parallel HTTP GET")
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    base_url = f"https://huggingface.co/datasets/{HF_OUTPUTS_REPO}/resolve/main"
+    headers = {"Authorization": f"Bearer {token}"}
 
     t0 = time.time()
-
-    snapshot_download(
-        repo_id=HF_OUTPUTS_REPO,
-        repo_type="dataset",
-        local_dir=".",
-        allow_patterns=[f"{subfolder}/*"],
-        token=token,
-        max_workers=16,
-    )
+    skipped = 0
+    downloaded = 0
+    fails = []
+    pbar = make_pbar(total=len(remote_files), desc="download_data", unit="file")
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = {
+            ex.submit(_download_one_file, rpath, base_url, headers): rpath
+            for rpath, _expected in remote_files
+        }
+        for fut in as_completed(futures):
+            rpath, status, err = fut.result()
+            if status == "skipped":
+                skipped += 1
+            elif status == "downloaded":
+                downloaded += 1
+            else:
+                print(f"  ❌ {rpath}: {err}")
+                fails.append((rpath, err))
+            pbar.update(1)
+    pbar.close()
 
     # iter13 v13 FIX-25: restore m10 masks/*.npz + m11 D_L/D_A/D_I/*.npy from
     # the four tar-shard families (HF only stored the shards, raws were deleted
     # pre-upload). Discovery is dynamic — no hardcoded subdir list.
     _post_download_unpack_masks(data_root)
 
-    print(f"Data download complete: {time.time() - t0:.0f}s")
+    elapsed = time.time() - t0
+    print(f"\nData download complete: {elapsed:.0f}s")
+    print(f"  skipped (already on disk): {skipped:>5} / {len(remote_files)}")
+    print(f"  newly downloaded         : {downloaded:>5} / {len(remote_files)}")
+    print(f"  failed                   : {len(fails):>5} / {len(remote_files)}")
+    if fails:
+        print("\nFailed files (re-run download-data to retry — idempotent):")
+        for rpath, err in fails:
+            print(f"  ❌ {rpath} — {err}")
+        return False
     return True
 
 

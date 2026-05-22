@@ -50,23 +50,28 @@ sed -i \
     configs/pipeline.yaml
 ```
 
-### ⏳ Stage 1 — HF download walkindia-200k via m00d (~10-15 min, Pro 4000 OK)
+### ⏳ Stage 1 — HF download (~15-20 min, single command)
+
+iter16 (2026-05-22): `hf_outputs.py upload-data` fix now uploads top-level files
+(was *.json only). The 116 subset-*.tar shards (~120 GB) now live in
+`anonymousML123/factorjepa-outputs/data/full_local/` so we no longer need m00d as
+a separate step. ONE command pulls everything.
 
 ```bash
-# Pre-req: data/full_local/tags.json exists (115,687 entries; 156 MB) — already on disk
-python -u src/m00d_download_subset.py --FULL \
---master-tags data/full_local/tags.json \
---no-wandb 2>&1 | tee logs/iter16_m00d_full_$(date +%Y%m%d_%H%M%S).log
+python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 \
+  | tee logs/iter16_dl_full_local_$(date +%Y%m%d_%H%M%S).log
 
-# Pull auxiliary outputs (if any exist on HF)
-HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data 2>&1 \
-  | tee logs/iter16_dl_factorjepa_data_$(date +%Y%m%d_%H%M%S).log
-
-# Expected under data/full_local/:
-#   subset-00000.tar … subset-00115.tar     ~115 shards × ~1 GB ≈ 120 GB total
-#   manifest.json                           {n, shards, saved_keys, processed_hf_shards}
-#   tags.json                               115,687 entries (unchanged from input)
+# Expected under data/full_local/ after download:
+#   subset-00000.tar … subset-00115.tar       116 shards × ~1 GB ≈ 120 GB total
+#   tags.json                                 115,687 entries (~149 MB)
+#   manifest.json + full_local.json           metadata
+#   m04d_motion_features/.m04d_checkpoint.npz iter16 resume token (14.42 MB)
 ```
+
+> **Fallback** — if `download-data` fails (HF API issue, repo permissions), the
+> legacy 2-step still works: `python -u src/m00d_download_subset.py --FULL
+> --master-tags data/full_local/tags.json --no-wandb` then `hf_outputs.py
+> download-data data/full_local` for the metadata.
 
 ### 🟡 Stage 2 — m04d motion features (Pro 6000 ONLY · ~30-60 min RESUME from 85%)
 
@@ -85,13 +90,8 @@ bash setup_env_uv.sh
 ```
 
 ```bash
-# Re-fetch the 116 subset-*.tar shards from walkindia-200k (~10 min on Pro 6000's fat I/O)
-python -u src/m00d_download_subset.py --FULL --master-tags data/full_local/tags.json --no-wandb
-```
-
-```bash
 # Pull tags.json + manifest.json + full_local.json + m04d_motion_features/ (~30 sec, ~160 MB)
-HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download-data data/full_local
+python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/iter16_dl_full_local_resume3_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
@@ -137,7 +137,8 @@ print(f'paths shape   : {p.shape}   first: {p[0]}')
 #     CACHE_POLICY_ALL=2 = fresh smoke each time (no resume from prior smoke).
 CACHE_POLICY_ALL=2 LOCAL_DATA=data/full_local \
 ./scripts/run_factor_prep_parallel.sh \
-    configs/train/surgery_3stage_DI_encoder.yaml 2 --SANITY
+configs/train/surgery_3stage_DI_encoder.yaml 2 --SANITY \
+2>&1 | tee logs/iter16_stage3_sanity_$(date +%Y%m%d_%H%M%S).log
 
 # 3b) FULL parallel — Pro 6000 96 GB recommended (~6 hr with M6 + M7 enabled)
 #     Enable M7 (torch.compile DINO) on Pro 6000:
@@ -151,7 +152,8 @@ sed -i 's|enabled:        false             # Pro 4000 default|enabled:        t
 # `scripts/run_factor_prep_parallel.sh` docstring "Resume semantics".)
 CACHE_POLICY_ALL=1 LOCAL_DATA=data/full_local \
 ./scripts/run_factor_prep_parallel.sh \
-    configs/train/surgery_3stage_DI_encoder.yaml 6 --FULL
+configs/train/surgery_3stage_DI_encoder.yaml 6 --FULL \
+2>&1 | tee logs/iter16_stage3_full_$(date +%Y%m%d_%H%M%S).log
 
 # 3c) FALLBACK serial m10 (~180 hr Pro 6000)
 CACHE_POLICY_ALL=1 LOCAL_DATA=data/full_local \
@@ -186,7 +188,7 @@ CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_head --FULL 2>&1 \
 # Pre-req on Pro 6000: pull pretrain_encoder ckpt from previous box
 #   rsync -av outputs/full/m09a_pretrain_encoder/ <pro6000>:outputs/full/m09a_pretrain_encoder/
 # OR: push to HF here, pull on Pro 6000
-#   HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload outputs/full
+#   python -u src/utils/hf_outputs.py upload outputs/full
 
 # 5a) pretrain_2X_encoder (2 ep total = 2 × max_epochs.full=1 via shell override)
 CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_2X_encoder --FULL 2>&1 \
@@ -207,7 +209,7 @@ CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_encoder --FULL 2>&1 \
 
 ```bash
 # Pre-req: pull all 7 cell ckpts to whichever box runs eval
-#   HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py download outputs/full
+#   python -u src/utils/hf_outputs.py download outputs/full
 
 CACHE_POLICY_ALL=1 ./scripts/run_eval.sh --FULL 2>&1 \
   | tee logs/iter16_post_full_eval_$(date +%Y%m%d_%H%M%S).log
@@ -225,9 +227,9 @@ python -u src/probe_plot.py --FULL --training-side \
 ### ⏳ Stage 8 — Persist to HF (after all 7 cells + eval complete)
 
 ```bash
-HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload outputs/full 2>&1 \
+python -u src/utils/hf_outputs.py upload outputs/full 2>&1 \
   | tee logs/upload_outputs_full_$(date +%Y%m%d_%H%M%S).log
 
-HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload-data data/full_local 2>&1 \
+python -u src/utils/hf_outputs.py upload-data data/full_local 2>&1 \
   | tee logs/upload_data_full_$(date +%Y%m%d_%H%M%S).log
 ```

@@ -505,13 +505,14 @@ print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cu
         echo "Grounding DINO cached at ${DINO_CACHE}"
     fi
 
-    # 10. Pre-download HF SAM 3 weights for m10_sam_segment_v2_HF.py (Path B speedup).
-    #     `facebook/sam3` hosts BOTH Sam3TrackerVideoModel (P-5a, our primary) and
+    # 10. Pre-download HF SAM 3 weights — PRIMARY model loaded by m10_sam_segment.py.
+    #     `facebook/sam3` hosts the full Transformers integration (config.json +
+    #     model.safetensors): Sam3TrackerVideoModel (P-5a, our primary) and
     #     Sam3VideoModel (P-3a text-only probe). ~12 GB total. HF_TRANSFER (set above)
     #     parallel-streams the download in Rust, 1.5-3× faster than wget per file.
     #     Gated model: user must accept access at hf.co/facebook/sam3 once (HF_TOKEN in .env).
     echo ""
-    echo "[10/10] Pre-downloading HF SAM 3 (facebook/sam3, ~12 GB, HF_TRANSFER parallel)..."
+    echo "[10/11] Pre-downloading HF SAM 3 (facebook/sam3, ~12 GB, HF_TRANSFER parallel)..."
     SAM3_HF_CACHE="${HF_HOME}/hub/models--facebook--sam3"
     SAM3_HF_SNAP=$(ls "${SAM3_HF_CACHE}/snapshots" 2>/dev/null | head -1 || echo "")
     if [ -n "$SAM3_HF_SNAP" ] \
@@ -526,6 +527,45 @@ print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cu
             --exclude "*.bin" \
             || { echo "FATAL: facebook/sam3 download failed. Accept access at hf.co/facebook/sam3 with your HF_TOKEN, then re-run."; exit 1; }
         echo "HF SAM 3 cached at ${SAM3_HF_CACHE}"
+    fi
+
+    # 11. Pre-download SAM 3.1 checkpoint — FUTURE UPGRADE PATH.
+    #     iter16 (2026-05-22): SAM 3.1 (Object Multiplex, joint multi-object tracking
+    #     ~7× faster on H100 + ½ VRAM, Meta release 2026-03-27, RELEASE_SAM3p1.md) is
+    #     ready as a standalone checkpoint, but Meta has NOT yet shipped the HF
+    #     Transformers config files for it — `facebook/sam3.1` HF repo hosts ONLY the
+    #     `.pt` checkpoint (no config.json / model.safetensors with HF naming).
+    #     `Sam3TrackerVideoModel.from_pretrained("facebook/sam3.1")` fails OSError
+    #     "does not appear to have a file named pytorch_model.bin or model.safetensors".
+    #     Until transformers ships sam3.1 integration, the pipeline runs sam3 (via
+    #     surgery_base.yaml `sam_hf_model: facebook/sam3`). This step pre-caches the
+    #     sam3.1 checkpoint so the upgrade is a YAML-flip away once transformers
+    #     supports it — no re-download wait at upgrade time. Non-fatal if the download
+    #     fails (e.g., gating not accepted) — sam3 is the active path.
+    echo ""
+    echo "[11/11] Pre-downloading SAM 3.1 checkpoint (facebook/sam3.1, future-upgrade path, non-fatal)..."
+    SAM3P1_HF_CACHE="${HF_HOME}/hub/models--facebook--sam3.1"
+    SAM3P1_HF_SNAP=$(ls "${SAM3P1_HF_CACHE}/snapshots" 2>/dev/null | head -1 || echo "")
+    if [ -n "$SAM3P1_HF_SNAP" ] \
+       && ls "${SAM3P1_HF_CACHE}/snapshots/${SAM3P1_HF_SNAP}"/*.pt >/dev/null 2>&1; then
+        echo "SAM 3.1 already cached: ${SAM3P1_HF_CACHE}"
+    else
+        mkdir -p "${HF_HOME}"
+        # `hf download` is non-fatal here — sam3.1 may not be HF-readable yet on every
+        # account (gated). Pipeline still works on sam3 if this fails. Explicit `set +e`
+        # / `set -e` to avoid the outer `set -e` killing the whole setup on a non-blocking
+        # cache miss.
+        set +e
+        HF_HUB_ENABLE_HF_TRANSFER=1 hf download facebook/sam3.1
+        SAM3P1_RC=$?
+        set -e
+        if [ "$SAM3P1_RC" -eq 0 ]; then
+            echo "SAM 3.1 cached at ${SAM3P1_HF_CACHE}"
+        else
+            echo "WARN: facebook/sam3.1 fetch failed (rc=${SAM3P1_RC}). Non-fatal —"
+            echo "      pipeline runs on facebook/sam3. Accept access at hf.co/facebook/sam3.1"
+            echo "      and re-run to pre-cache the future-upgrade checkpoint."
+        fi
     fi
 
     # Final verification

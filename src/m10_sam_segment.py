@@ -3,9 +3,17 @@ Gold standard: https://github.com/IDEA-Research/Grounded-SAM-2 | https://github.
 SAM 3.1 release (2026-03-27): https://github.com/facebookresearch/sam3/blob/main/RELEASE_SAM3p1.md
 Claude Code: re-WebSearch all 3 URLs on every read of this file.
 
-iter16 (2026-05-20) — upgraded sam_hf_model: facebook/sam3 → facebook/sam3.1 (Object
-Multiplex joint multi-object tracking, drop-in API per Meta release notes — ~7× faster
-at 128 objects on H100, ½ VRAM, better accuracy in crowded scenes).
+iter16 (2026-05-22) — ROLLBACK from sam3.1 → sam3. The 2026-05-20 yaml upgrade to
+`facebook/sam3.1` was wrong: WebSearch (HF page + RELEASE_SAM3p1.md) confirms that
+`facebook/sam3.1` hosts ONLY a standalone `.pt` checkpoint with NO HF Transformers
+config files (no config.json + model.safetensors with HF naming). The call
+`Sam3TrackerVideoModel.from_pretrained("facebook/sam3.1")` raises OSError "does not
+appear to have a file named pytorch_model.bin or model.safetensors". Meta has not yet
+shipped sam3.1 transformers integration as of 2026-05-22. Pipeline runs on
+`facebook/sam3` (sam_hf_model in surgery_base.yaml:150). setup_env_uv.sh step [11/11]
+pre-caches the sam3.1 checkpoint for the day transformers ships sam3.1 support — the
+upgrade is then a yaml-flip away. The original Object Multiplex perf claim (~7× faster
+joint tracking at 128 objects on H100 + ½ VRAM) remains the target for a follow-up iter.
 
 4-anchor re-seed: DINO detects boxes on frames [0, 4, 8, 12]; HF Sam3TrackerVideoModel
 propagates per-anchor within its 4-frame segment via `max_frame_num_to_track=3` (raw sam3
@@ -26,8 +34,10 @@ USAGE (every path arg required — CLAUDE.md no-default rule):
     python -u src/m10_sam_segment.py --SANITY --plot \
         --train-config configs/train/surgery_3stage_DI_encoder.yaml    # re-generate plots only (no GPU)
 
-HF model download: `facebook/sam3.1` (~12 GB, first-run only) is pre-cached by `setup_env_uv.sh` step [10/10]
-via `hf download` which respects `HF_HUB_ENABLE_HF_TRANSFER=1` (Rust multi-stream, 1.5-3× per file).
+HF model download: `facebook/sam3` (~12 GB, full transformers integration) is pre-cached by
+`setup_env_uv.sh` step [10/11]. The future-upgrade `facebook/sam3.1` checkpoint is pre-cached
+by step [11/11] (non-fatal if the fetch fails — sam3 is the active path). Both downloads use
+`hf download` which respects `HF_HUB_ENABLE_HF_TRANSFER=1` (Rust multi-stream, 1.5-3× per file).
 """
 import argparse
 import gc

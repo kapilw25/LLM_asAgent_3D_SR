@@ -180,7 +180,7 @@ gpu:
   inference_dinov2_initial_bs: 16      # m05b DINOv2-L (300M fp16) — safe start, max=inference_dinov2_bs
   inference_clip_initial_bs: 16        # m05b CLIP-L (400M fp16) — safe start, max=inference_dinov2_bs (same tier)
   training_initial_bs: 30              # iter13 (2026-05-05): 16 → 30. v9 measured AdaptiveBatch ramped 16→32 over 15 steps (~6.5 min cold ramp wasted). VRAM at BS=32 was ~50% (target 85%), so 30 is safely below the actual ceiling. Skips ~6 min of cold ramp per training run. Surprise OOM still recovered via AdaptiveBatchSizer.on_oom().
-  motion_initial_bs: 8                 # iter16 (2026-05-20): safe start for m04d RAFT-Large. Decouples `initial_size` from `motion_batch_size` (max=32) so AdaptiveBatchSizer can actually GROW toward 0.85×VRAM ceiling per GPU pipeline checklist §11. 8 clips × 16 pairs = 128 pairs is Pro 4000 24 GB safe; Pro 6000 96 GB ramps to 32 (=512 pairs) over a few batches. Before fix: initial_size==max_size==512 meant the sizer could ONLY shrink on OOM, never grow — wasted Pro 6000 headroom on every FULL run.
+  motion_initial_bs: 30                # iter16 (2026-05-22 v2): bumped 16 → 30 clips. Each clip = 16 frame pairs → AdaptiveBatchSizer initial size = 30 × 16 = 480 pairs. Targets ~80% VRAM on Pro 6000 (96 GB) from batch 1 — empirical: 258 pairs → 45% VRAM, so 480 pairs ≈ 84% (just under the 85% cap). Skips ~220 +1-growth-steps that the 16-clip start needed (~110 min saved at 30 sec/step). Sizer can still grow to max_size = motion_batch_size × 16 = 512 pairs (32 clips) if there's headroom. Pro 4000 NOTE: 30 clips × 16 pairs = 480 pairs will OOM on a 24 GB GPU (need >40 GB). If running on Pro 4000, drop back to motion_initial_bs: 8 (128 pairs) BEFORE launching. Bumping is safe on any GPU ≥48 GB VRAM (Pro 5000+).
   # Probe BS — two contexts (probe = model.eval() forward to encode 1000 val_1k clips):
   # 1. inference_adapted_probe_bs: probe runs in pure-inference context (full 96 GB free).
   #    Same envelope as inference_adapted_bs → 44 is the established safe ceiling.
@@ -400,7 +400,7 @@ m04d_compile:
 # FAIL LOUD on Inductor errors per CLAUDE.md "No CPU/eager fallback in
 # inference scripts" — operator either fixes upstream or sets enabled=false.
 dino_compile:
-  enabled:        false             # Pro 4000 default — flip to true on Pro 6000
+  enabled:        true              # Pro 6000 — flip to true on Pro 6000
   mode:           "default"         # NOT reduce-overhead — same M8 lesson re cudagraphs pool
   dynamic:        false             # fixed pixel_values shape — HF #34556
   fullgraph:      false             # tolerate graph breaks at non-tensor ops

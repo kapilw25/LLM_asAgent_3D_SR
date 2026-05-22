@@ -146,8 +146,19 @@ factor_datasets:
   # Grounded-SAM pipeline: Grounding DINO (text → boxes) → SAM 3.1 (box → masks + propagation)
   # Replaces SAM 3.1 native text grounding (too weak on Indian objects: 10/15 clips had
   # n_agents=0 on SANITY). DINO trained on Objects365+GoldG (365 open-vocab categories).
-  sam_model: facebook/sam3.1            # raw sam3 pkg (m10_sam_segment.py): SAM 3.1 weights
-  sam_hf_model: facebook/sam3.1         # HF transformers wrapper (m10_sam_segment.py): Sam3TrackerVideoModel. iter16 (2026-05-20): upgraded sam3 → sam3.1 (Object Multiplex, joint multi-object tracking ~7× faster on H100 + ½ VRAM, drop-in API per Meta release 2026-03-27). See https://github.com/facebookresearch/sam3/blob/main/RELEASE_SAM3p1.md.
+  sam_model: facebook/sam3              # raw sam3 pkg (m10_sam_segment.py)
+  sam_hf_model: facebook/sam3           # HF transformers wrapper (m10_sam_segment.py): Sam3TrackerVideoModel.
+                                        # iter16 (2026-05-22) ROLLBACK from sam3.1 → sam3: WebSearch (HF page +
+                                        # RELEASE_SAM3p1.md) confirms facebook/sam3.1 hosts ONLY the standalone
+                                        # checkpoint .pt file with NO HF Transformers integration (no config.json +
+                                        # model.safetensors with HF naming). Sam3TrackerVideoModel.from_pretrained
+                                        # raises OSError "does not appear to have a file named pytorch_model.bin or
+                                        # model.safetensors" against facebook/sam3.1. The 2026-05-20 yaml upgrade
+                                        # ("sam3.1 drop-in") was wrong — Meta has not yet shipped the transformers
+                                        # config for sam3.1. The improved sam3.1 Object Multiplex weights ARE
+                                        # pre-cached by setup_env_uv.sh step [11/11] for the day transformers ships
+                                        # sam3.1 support — until then, run sam3. See iter/iter16_train_115kclips/
+                                        # legacy/plan_code_modifications.md M6 for the original upgrade rationale.
   grounding_dino:
     model_id: "IDEA-Research/grounding-dino-base"   # Swin-B, 233M params, ~1.2 GB VRAM
     # iter13 v13 FIX-18 (2026-05-07): box/text thresholds REVERTED to v10 defaults
