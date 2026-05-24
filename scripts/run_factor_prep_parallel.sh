@@ -223,6 +223,50 @@ echo "  monitor:  tail -f logs/factor_${MODE,,}_${VARIANT_TAG}_w*.log"
 echo "  GPU watch: nvtop  (or: watch -n2 nvidia-smi)"
 
 stamp "Step 3/5 — wait for all ${N_WORKERS} workers"
+
+# iter16 (2026-05-22): heartbeat loop — every 60s, scrape latest tqdm progress
+# from each worker's log and print a consolidated summary to the orchestrator
+# log. Without this, the orchestrator goes silent for ~4-6 hr on a FULL run
+# (just "Step 3/5 — wait for all workers" with no updates until the first
+# worker exits). The operator had to tail 6 separate worker logs to see any
+# progress — terrible UX for tmux-detached overnight runs.
+HEARTBEAT_INTERVAL=60
+_heartbeat() {
+    while sleep "$HEARTBEAT_INTERVAL"; do
+        local alive=0
+        for pid in "${PIDS[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                alive=$((alive + 1))
+            fi
+        done
+        if [ "$alive" -eq 0 ]; then
+            return
+        fi
+        echo
+        echo "─── $(date '+%H:%M:%S') · heartbeat ($alive/$N_WORKERS workers alive) ───"
+        for i in $(seq 0 $((N_WORKERS - 1))); do
+            local log="logs/factor_${MODE,,}_${VARIANT_TAG}_w${i}.log"
+            if [ ! -f "$log" ]; then
+                echo "  w$i: (log not yet created)"
+                continue
+            fi
+            # Extract latest tqdm progress line. Fallback to last non-blank
+            # line if no tqdm progress visible yet (e.g., still in warmup).
+            local prog
+            prog=$(grep -aoE '[0-9]+%\|[^|]*\| *[0-9]+/[0-9]+ ?\[[^]]+\]' "$log" 2>/dev/null | tail -1)
+            if [ -n "$prog" ]; then
+                echo "  w$i: $prog"
+            else
+                local last
+                last=$(tail -n 20 "$log" 2>/dev/null | grep -avE '^[[:space:]]*$' | tail -1 | head -c 180)
+                echo "  w$i: (warmup) $last"
+            fi
+        done
+    done
+}
+_heartbeat &
+HEARTBEAT_PID=$!
+
 EXIT_CODES=()
 FAILED_WORKERS=()
 for idx in "${!PIDS[@]}"; do
@@ -236,6 +280,14 @@ for idx in "${!PIDS[@]}"; do
     EXIT_CODES+=("$ec")
     echo "  worker $idx (pid $pid): exit=$ec"
 done
+
+# Stop heartbeat once all workers have exited. kill/wait may return non-zero
+# if the heartbeat already exited (race) — set +e/-e to allow that, matching
+# the idiom at setup_env_uv.sh:595-597.
+set +e
+kill "$HEARTBEAT_PID" 2>/dev/null
+wait "$HEARTBEAT_PID" 2>/dev/null
+set -e
 echo "  All workers done. Exit codes: ${EXIT_CODES[*]}"
 if [ ${#FAILED_WORKERS[@]} -gt 0 ]; then
     echo "  WARN: ${#FAILED_WORKERS[@]} worker(s) exited non-zero: ${FAILED_WORKERS[*]}"

@@ -251,7 +251,15 @@
       "Bash(scripts/lib/yaml_extract.py configs/train/surgery_base.yaml data.train_subset)",
       "Bash(scripts/lib/yaml_extract.py configs/train/base_optimization.yaml checkpoint.saves_per_epoch)",
       "Bash(sed -i 's|local_data_dir:        \"data/eval_10k_local\"|local_data_dir:        \"data/full_local\"|; s|master_manifest_name:  \"eval_10k.json\"|master_manifest_name:  \"full_local.json\"|' configs/pipeline.yaml)",
-      "Bash(sed -i 's|local_data_dir:        \"data/full_local\"|local_data_dir:        \"data/eval_10k_local\"|; s|master_manifest_name:  \"full_local.json\"|master_manifest_name:  \"eval_10k.json\"|' configs/pipeline.yaml)"
+      "Bash(sed -i 's|local_data_dir:        \"data/full_local\"|local_data_dir:        \"data/eval_10k_local\"|; s|master_manifest_name:  \"full_local.json\"|master_manifest_name:  \"eval_10k.json\"|' configs/pipeline.yaml)",
+      "Bash(npm install *)",
+      "Bash(awk '/^```mermaid$/{flag=1;next}/^```$/{flag=0}flag' /workspace/factorjepa/iter/iter17_ablations/plan1.md)",
+      "Bash(PUPPETEER_SKIP_DOWNLOAD=false npx mmdc -i /tmp/diag.mmd -o /tmp/diag.svg)",
+      "Bash(apt list *)",
+      "Bash(apt-get install *)",
+      "Bash(npx mmdc *)",
+      "Bash(awk '/^```mermaid$/{f=1;next}/^```$/{if\\(f\\){f=0;exit}}f' /workspace/factorjepa/iter/iter17_ablations/plan1.md)",
+      "Bash(grep -n '^```' /workspace/factorjepa/iter/iter17_ablations/plan1.md)"
     ]
   }
 }

@@ -67,3 +67,19 @@ flowchart LR
 Per the outer-LR / inner-TB rule, every atomic node should live inside a subgraph. A bare atom at the top level (not wrapped in any subgraph) gets laid out by the outer LR engine, which can produce ambiguous flow when mixed with sibling subgraphs.
 
 **Solution:** wrap every atom in a subgraph (even single-atom subgraphs are fine — the subgraph acts as the labeled container). Top-level edges then connect subgraph IDs to subgraph IDs, never to bare atoms.
+
+## Compile-and-view loop (paper figures)
+
+1. ALWAYS compile + view PNG before committing — grep audit misses dimension blowouts.
+2. Target: ≤1400×800 px for 2-col half-page · ≤700×500 px for 1-col half-page.
+3. If too tall: flip leaf subgraphs TB→LR, shorten labels, switch to ELK renderer.
+4. Multi-row layouts: prepend `%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%` for clean grids (no zig-zag).
+5. Keep recompiling until `file diag.png` shows W×H within target — never ship a render that overflows page.
+6. ELK clips last char of every subgraph header → pad with trailing ` ······` so dots take the clip, not your text (e.g. `subgraph X["📚 SOTA continual-FT ······"]`).
+7. Compile with `-w 1400 --scale 2` for readable text at paper scale; render <2× small with default canvas can hide truncation bugs.
+
+```bash
+awk '/^```mermaid$/{f=1;next}/^```$/{f=0}f' file.md > /tmp/diag.mmd
+npx mmdc -i /tmp/diag.mmd -o /tmp/diag.png -p /tmp/puppeteer-config.json
+file /tmp/diag.png   # check W×H; Read tool to view
+```
