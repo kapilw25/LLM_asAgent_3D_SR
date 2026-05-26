@@ -35,7 +35,6 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 import argparse
-import csv
 import gc
 import json
 import queue
@@ -64,13 +63,13 @@ from utils.wandb_utils import (
 )
 from utils.cache_policy import resolve_cache_policy_interactive, wipe_output_dir
 from utils.m09_common import add_m09_common_args, merge_m09_common_config
-from utils.vjepa2_imports import (
-    get_vit_by_arch, get_vit_predictor, get_vit_predictor_2_1,
-)
+# iter17 DRY #31: ViT/predictor constructors now live behind utils.training.build_student_predictor
 from utils.training import (
     load_config, producer_thread,
     build_optimizer, build_scheduler,
-    assert_encoder_frozen, export_student_for_eval,
+    assert_encoder_frozen, finalize_outputs,   # iter17 DRY #34: export+ckpt+summary
+    build_student_predictor,       # iter17 DRY #31: shared student+predictor construction
+    TrainLogWriter,                # iter17 DRY #32: crash-safe jsonl+csv loss log
     compute_val_motion_aux_loss,   # iter17 DRY: shared with m09c2 (was local _compute_…)
     # iter15 Phase 6 C1+C2 (2026-05-16): trio + head-drift wiring for head cells.
     build_probe_clips, run_trio_at_val, track_head_drift_at_val,
@@ -79,10 +78,7 @@ from utils.training import (
 from utils.action_labels import load_action_labels
 # iter15 Phase 6 audit (2026-05-16): emit-parity with m09a1 — add plot calls so
 # outputs/{poc,full}/m09a_pretrain_head/ has same file layout as encoder cells.
-from utils.plots import (
-    plot_training_curves, plot_combined_losses,
-    plot_probe_trajectory_trio, plot_val_loss_with_kill_switch_overlay,
-)
+from utils.plots import render_val_plots   # iter17 DRY #33: shared 4-plot per-val render
 from utils.motion_aux_loss import (
     build_motion_aux_head_from_cfg,
     attach_motion_aux_to_optimizer, run_motion_aux_step,
@@ -130,24 +126,11 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     """Build student encoder + predictor, BOTH FROZEN. Returns dict; head built in train()."""
     model_cfg = cfg["model"]
     data_cfg = cfg["data"]
-    arch = model_cfg["arch"]
-
-    vit_constructor = get_vit_by_arch(arch)
-    vit_predictor = get_vit_predictor()
-
-    crop_size = model_cfg["crop_size"]
-    student = vit_constructor(
-        img_size=(crop_size, crop_size),
-        patch_size=model_cfg["patch_size"],
-        num_frames=data_cfg["num_frames"],
-        tubelet_size=model_cfg["tubelet_size"],
-        use_sdpa=True,
-        use_silu=False,
-        wide_silu=True,
-        uniform_power=False,
-        use_rope=model_cfg["use_rope"],
-        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
-    )
+    # iter17 DRY #31: shared student+predictor construction via utils.training (kwargs
+    # identical across m09a1/a2/c1/c2). Predictor is built here too — it was constructed
+    # lower; behaviour-neutral (construction is deterministic + independent of ckpt-load).
+    # This cell still owns the load/freeze logic below.
+    student, predictor = build_student_predictor(model_cfg, data_cfg)
 
     project_root = Path(__file__).parent.parent
     ckpt_path = project_root / model_cfg["checkpoint_path"]
@@ -198,28 +181,7 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     student.eval()  # disable dropout during the frozen forward
     print("[m09a2 STRICT HEAD-ONLY] encoder FROZEN: 0 trainable block params (asserted)")
 
-    # === Predictor: load Meta weights, FROZEN ===
-    pred_constructor = get_vit_predictor_2_1() if model_cfg["predict_all"] else vit_predictor
-    predictor = pred_constructor(
-        img_size=(crop_size, crop_size),
-        patch_size=model_cfg["patch_size"],
-        num_frames=data_cfg["num_frames"],
-        tubelet_size=model_cfg["tubelet_size"],
-        embed_dim=model_cfg["embed_dim"],
-        predictor_embed_dim=model_cfg["pred_embed_dim"],
-        depth=model_cfg["pred_depth"],
-        num_heads=model_cfg["pred_num_heads"],
-        use_mask_tokens=True,
-        num_mask_tokens=model_cfg["num_mask_tokens"],
-        zero_init_mask_tokens=True,
-        use_rope=model_cfg["use_rope"],
-        uniform_power=False,
-        use_sdpa=True,
-        use_silu=False,
-        wide_silu=True,
-        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
-        return_all_tokens=model_cfg["predict_all"],
-    )
+    # === Predictor: load Meta weights, FROZEN === (constructed above via build_student_predictor)
     if "predictor" not in ckpt:
         print("FATAL: ckpt has no 'predictor' key — V-JEPA 2.1 distribution must include it")
         sys.exit(1)
@@ -408,18 +370,12 @@ def train(cfg: dict, args) -> None:
     # with the m09a1 column schema so plot_training_curves / plot_combined_losses
     # render correctly for head cells too. Encoder-frozen fields (loss_jepa,
     # loss_drift, loss_multi_task) emit NaN/0 — plot functions handle gracefully.
-    jsonl_path = output_dir / "loss_log.jsonl"
-    summary_path = output_dir / "training_summary.json"
-    train_log_f = jsonl_path.open("a", buffering=1)
-    csv_path = output_dir / "loss_log.csv"
-    csv_exists = csv_path.exists()
-    csv_file = open(csv_path, "a", newline="")
-    csv_writer = csv.writer(csv_file)
-    if not csv_exists:
-        csv_writer.writerow(["step", "epoch", "loss_jepa", "loss_drift", "loss_total",
-                             "loss_multi_task", "loss_motion_aux",
-                             "lr", "grad_norm", "throughput", "val_loss"])
-        csv_file.flush()
+    jsonl_path = output_dir / "loss_log.jsonl"   # kept: render_val_plots reads this path
+    csv_path = output_dir / "loss_log.csv"        # kept: render_val_plots reads this path
+    logw = TrainLogWriter(output_dir, columns=[   # iter17 DRY #32 (jsonl+csv mechanics)
+        "step", "epoch", "loss_jepa", "loss_drift", "loss_total",
+        "loss_multi_task", "loss_motion_aux",
+        "lr", "grad_norm", "throughput", "val_loss"])
 
     best_val_loss = float("inf")
     best_epoch = -1
@@ -487,13 +443,10 @@ def train(cfg: dict, args) -> None:
                         "lr": cur_lr,
                         "branch": per_branch,
                     }
-                    train_log_f.write(json.dumps(row) + "\n")
-                    train_log_f.flush()
-                    os.fsync(train_log_f.fileno())
-                    csv_writer.writerow([step, epoch, "", "0", f"{float(loss_val):.6f}",
-                                          "", f"{float(loss_val):.6f}",
-                                          f"{cur_lr:.6e}", "", "", ""])
-                    csv_file.flush()
+                    logw.log_jsonl(row)
+                    logw.log_csv([step, epoch, "", "0", f"{float(loss_val):.6f}",
+                                  "", f"{float(loss_val):.6f}",
+                                  f"{cur_lr:.6e}", "", "", ""])
                     log_metrics(wb_run, {"train/loss": float(loss_val),
                                          "train/lr": cur_lr},
                                 step=step)
@@ -523,12 +476,9 @@ def train(cfg: dict, args) -> None:
                           f"wall={elapsed:.0f}s")
                     row = {"epoch": epoch, "train_loss": mean_train, "val_loss": val_loss,
                            "wall_sec": elapsed, "step": step}
-                    train_log_f.write(json.dumps(row) + "\n")
-                    train_log_f.flush()
-                    os.fsync(train_log_f.fileno())
-                    csv_writer.writerow([step, epoch, "", "", "", "", "",
-                                          "", "", "", f"{val_loss:.6f}"])
-                    csv_file.flush()
+                    logw.log_jsonl(row)
+                    logw.log_csv([step, epoch, "", "", "", "", "",
+                                  "", "", "", f"{val_loss:.6f}"])
                     log_metrics(wb_run, {"val/loss": val_loss,
                                          "train/epoch_mean_loss": mean_train,
                                          "epoch": epoch}, step=step)
@@ -587,135 +537,76 @@ def train(cfg: dict, args) -> None:
                         "probe_top1": float(probe_record.get("probe_top1", -1.0)),
                     }
                     kill_state_live = {"triggered": False, "reason": None}
-                    try:
-                        plot_training_curves(
-                            runs=[{"csv_path": str(csv_path),
-                                   "label": "m09a2 head-only (motion_aux)",
-                                   "color": "blue",
-                                   "batch_size": batch_size}],
-                            output_dir=str(output_dir),
-                            title_prefix=f"m09a2 head-only · {len(train_keys):,} train × {max_epochs} ep × "
-                                         f"BS={batch_size} · step={step}\n",
-                            file_prefix="m09a2",
-                        )
-                        plot_combined_losses(
-                            jsonl_path=jsonl_path,
-                            output_dir=output_dir,
-                            title_prefix=f"m09a2 head-only · LR={cfg['optimization']['lr']:.1e} · step={step} · ",
-                            file_prefix="m09a2",
-                        )
-                        plot_val_loss_with_kill_switch_overlay(
-                            probe_history, output_dir,
-                            best_state=best_state_live, kill_state=kill_state_live,
-                            title_prefix=f"m09a2 head-only · val_total (motion_aux × weight) · step={step}\n",
-                            file_prefix="m09a2",
-                        )
-                        plot_probe_trajectory_trio(
-                            probe_history, output_dir,
-                            title_prefix=f"m09a2 head-only · step={step} · ",
-                            file_prefix="m09a2",
-                        )
-                    except Exception as _e:
-                        print(f"  [plot] FATAL: per-val plot render failed at step {step}: {_e}", flush=True)
-                        print("  [plot] traceback follows; aborting per CLAUDE.md FAIL HARD:", flush=True)
-                        raise
+                    render_val_plots(
+                        csv_path=csv_path, jsonl_path=jsonl_path,
+                        probe_history=probe_history, output_dir=output_dir,
+                        file_prefix="m09a2", label="m09a2 head-only (motion_aux)",
+                        color="blue", batch_size=batch_size,
+                        curves_title=f"m09a2 head-only · {len(train_keys):,} train × {max_epochs} ep × "
+                                     f"BS={batch_size} · step={step}\n",
+                        combined_title=f"m09a2 head-only · LR={cfg['optimization']['lr']:.1e} · step={step} · ",
+                        kill_title=f"m09a2 head-only · val_total (motion_aux × weight) · step={step}\n",
+                        trio_title=f"m09a2 head-only · step={step} · ",
+                        best_state=best_state_live, kill_state=kill_state_live,
+                    )
 
         stop_event.set()
         producer.join(timeout=10)
     finally:
-        train_log_f.close()
-        csv_file.close()
+        logw.close()
 
     pbar.close()
 
-    # iter15 Phase 6 audit (2026-05-16): emit-parity plots — m09a1 sibling
-    # already emits these via plot_training_curves + plot_combined_losses; head
-    # cells now match. Encoder-frozen rows have NaN loss_jepa → plot_combined_
-    # losses skips them gracefully (looks for `loss_jepa` key per plots.py:602).
-    # plot_training_curves reads loss_log.csv and renders train_loss / val_loss
-    # curves; works for head cells regardless of frozen encoder.
-    try:
-        plot_training_curves(
-            runs=[{"csv_path": str(csv_path),
-                   "label": "m09a2 head-only (motion_aux)",
-                   "color": "blue",
-                   "batch_size": batch_size}],
-            output_dir=str(output_dir),
-            title_prefix=f"m09a2 head-only · {len(train_keys):,} train × {max_epochs} ep × "
-                         f"BS={batch_size} · POC:FULL=2:5\n",
-            file_prefix="m09a2",
-        )
-    except Exception as e:
-        print(f"  [plot] WARN train_loss render skipped: {type(e).__name__}: {e}", flush=True)
-    try:
-        plot_combined_losses(
-            jsonl_path=jsonl_path,
-            output_dir=output_dir,
-            title_prefix=f"m09a2 head-only · LR={cfg['optimization']['lr']:.1e} · ",
-            file_prefix="m09a2",
-        )
-    except Exception as e:
-        print(f"  [plot] WARN loss_decomposition render skipped: {type(e).__name__}: {e}", flush=True)
-    # iter15 Phase 6 C1+C3 (2026-05-16): probe_trajectory_trio + val_loss_jepa
-    # plots from probe_history. After the iter15 audit (2026-05-16) collapsed
-    # probe.enabled to scalar `true` (POC↔FULL parity), probe ALWAYS runs across
-    # SANITY/POC/FULL → probe_history is always non-empty here. No mode-gated
-    # fallback. track_head_drift_at_val (C2) already emits m09a_block_drift.
-    # {png,pdf} + m09a_block_drift_history.json per val cycle.
-    plot_probe_trajectory_trio(
-        probe_history, output_dir,
-        title_prefix="m09a2 head-only · ",
-        file_prefix="m09a2",
-    )
-    kill_state = {"triggered": False, "reason": None}
-    # D4 fix (2026-05-16): plot reads "val_loss_at_best" (plots.py:857), not
-    # "val_jepa_loss_at_best". Use the schema the plot expects.
-    best_state = {"step": -1, "val_loss_at_best": float("inf"), "probe_top1": -1.0}
-    plot_val_loss_with_kill_switch_overlay(
-        probe_history, output_dir,
-        best_state=best_state, kill_state=kill_state,
-        title_prefix="m09a2 head-only · val_total (motion_aux × weight)\n",
-        file_prefix="m09a2",
+    # === Finalization FIRST (iter17 DRY #34 + #33 reorder) — save the ckpt BEFORE the
+    # end-of-train plots so a plot-render failure (now FAIL-LOUD via render_val_plots)
+    # can't lose a trained model. student_encoder.pt is bit-identical to the Meta init by
+    # contract (requires_grad False end-to-end). Divergent payload/summary keys built locally.
+    finalize_outputs(
+        student=student,
+        output_dir=output_dir,
+        ckpt_prefix=CHECKPOINT_PREFIX,
+        ckpt_payload={
+            "student_state_dict": student.state_dict(),
+            "predictor_state_dict": predictor.state_dict(),
+            "motion_aux_head_state_dict": ma_head.state_dict(),
+            "n_motion_classes": ma_head.n_motion_classes,
+            "n_motion_dims": ma_head.n_motion_dims,
+            "best_epoch": best_epoch,
+            "best_val_loss": best_val_loss,
+            "type": "m09a2_head_only",
+        },
+        summary={
+            "mode": mode_key,
+            "n_train": len(train_keys),
+            "n_val": len(val_keys),
+            "max_epochs": max_epochs,
+            "batch_size": batch_size,
+            "total_steps": step,
+            "best_epoch": best_epoch,
+            "best_val_loss": best_val_loss if best_val_loss != float("inf") else None,
+            "wall_sec": round(time.time() - t_start, 1),
+            "head_params": head_params,
+            "init_ckpt_path": init_ckpt_path,
+        },
     )
 
-    # === Finalization ===
-    # 1. student_encoder.pt — COPY (NOT symlink) of the Meta init checkpoint.
-    #    Per CLAUDE.md #49, downstream eval expects a regular file.
-    student_export = output_dir / "student_encoder.pt"
-    # Re-export from the live student state (it's bit-identical to Meta init by
-    # contract, since requires_grad was False end-to-end).
-    export_student_for_eval(student, student_export, explora_enabled=False)
-
-    # 2. m09a_ckpt_best.pt — combined ckpt for paired-Δ eval (encoder + predictor + head).
-    combined_ckpt = output_dir / f"{CHECKPOINT_PREFIX}_best.pt"
-    torch.save({
-        "student_state_dict": student.state_dict(),
-        "predictor_state_dict": predictor.state_dict(),
-        "motion_aux_head_state_dict": ma_head.state_dict(),
-        "n_motion_classes": ma_head.n_motion_classes,
-        "n_motion_dims": ma_head.n_motion_dims,
-        "best_epoch": best_epoch,
-        "best_val_loss": best_val_loss,
-        "type": "m09a2_head_only",
-    }, combined_ckpt)
-    print(f"Saved: {combined_ckpt}")
-
-    # 3. Summary JSON
-    summary = {
-        "mode": mode_key,
-        "n_train": len(train_keys),
-        "n_val": len(val_keys),
-        "max_epochs": max_epochs,
-        "batch_size": batch_size,
-        "total_steps": step,
-        "best_epoch": best_epoch,
-        "best_val_loss": best_val_loss if best_val_loss != float("inf") else None,
-        "wall_sec": round(time.time() - t_start, 1),
-        "head_params": head_params,
-        "init_ckpt_path": init_ckpt_path,
-    }
-    summary_path.write_text(json.dumps(summary, indent=2))
-    print(f"Saved: {summary_path}")
+    # End-of-train plots (iter17 DRY #33: shared render_val_plots, FAIL-LOUD now safe — ckpt
+    # already saved above). Encoder-frozen rows have NaN loss_jepa → plot_combined_losses
+    # skips them gracefully. probe ALWAYS runs (POC↔FULL parity) → probe_history non-empty.
+    # track_head_drift_at_val already emits m09a_block_drift.{png,pdf} per val cycle.
+    render_val_plots(
+        csv_path=csv_path, jsonl_path=jsonl_path,
+        probe_history=probe_history, output_dir=output_dir,
+        file_prefix="m09a2", label="m09a2 head-only (motion_aux)",
+        color="blue", batch_size=batch_size,
+        curves_title=f"m09a2 head-only · {len(train_keys):,} train × {max_epochs} ep × "
+                     f"BS={batch_size} · POC:FULL=2:5\n",
+        combined_title=f"m09a2 head-only · LR={cfg['optimization']['lr']:.1e} · ",
+        kill_title="m09a2 head-only · val_total (motion_aux × weight)\n",
+        trio_title="m09a2 head-only · ",
+        best_state={"step": -1, "val_loss_at_best": float("inf"), "probe_top1": -1.0},
+        kill_state={"triggered": False, "reason": None},
+    )
 
     finish_wandb(wb_run)
 

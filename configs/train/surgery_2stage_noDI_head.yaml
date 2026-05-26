@@ -41,10 +41,8 @@ data:
   variant_tag: noDI_head    # single source for output subdir (was m09c2 .replace("vjepa_2_1_surgical_",""))
   output_dir: outputs/full/m09c_surgery_noDI_head    # auto-overridden by run_train.sh per mode
 
-# -- Head-only surgery is streaming-ONLY (no legacy FactorSampler) → streaming MANDATORY
-#    in every mode. Override surgery_base's sanity:false; m09c2 FAILs LOUD if false.
-factor_streaming:
-  sanity: true
+# -- Head-only surgery is streaming-ONLY; factor_streaming (incl. sanity:true) inherited
+#    from surgery_base.yaml — single source, no local override (iter17 2026-05-26).
 
 # -- Interaction mining: keep disabled (parent default; noDI variant skips D_I tubes) --
 interaction_mining:

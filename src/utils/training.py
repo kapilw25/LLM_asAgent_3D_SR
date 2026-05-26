@@ -7,7 +7,7 @@ argparse flags (explora / surgery) or config technique keys — mode-specific
 behavior is configured via explicit parameters (e.g. `init_params=None`,
 `drift_cfg=None`, `explora_enabled=False`).
 """
-import csv  # noqa: F401 — retained for future logging helpers
+import csv
 import glob
 import json
 import math  # noqa: F401 — retained for future scheduler helpers
@@ -210,6 +210,78 @@ def compute_val_motion_aux_loss(student, ma_head, ma_cfg, ma_lookup,
         print("FATAL: val cycle saw 0 clips — val_subset / val_local_data mismatch?")
         sys.exit(1)
     return total_loss / total_n
+
+
+def build_student_predictor(model_cfg: dict, data_cfg: dict):
+    """Construct (student ViT, predictor), UNLOADED + UNFROZEN — shared by m09a1/a2/c1/c2
+    (iter17 DRY #31). Construction kwargs are identical across all 4 trainers (verified).
+    Caller owns ckpt-load (Meta target_encoder vs init_from_ckpt dispatcher), freeze
+    (requires_grad=False vs set_trainable_prefix), and EMA-teacher (a1/c1 only). Building
+    both upfront is behaviour-neutral: construction is deterministic + independent of load."""
+    crop = model_cfg["crop_size"]
+    student = get_vit_by_arch(model_cfg["arch"])(
+        img_size=(crop, crop), patch_size=model_cfg["patch_size"],
+        num_frames=data_cfg["num_frames"], tubelet_size=model_cfg["tubelet_size"],
+        use_sdpa=True, use_silu=False, wide_silu=True, uniform_power=False,
+        use_rope=model_cfg["use_rope"],
+        use_activation_checkpointing=model_cfg["use_activation_checkpointing"])
+    pred_ctor = get_vit_predictor_2_1() if model_cfg["predict_all"] else get_vit_predictor()
+    predictor = pred_ctor(
+        img_size=(crop, crop), patch_size=model_cfg["patch_size"],
+        num_frames=data_cfg["num_frames"], tubelet_size=model_cfg["tubelet_size"],
+        embed_dim=model_cfg["embed_dim"], predictor_embed_dim=model_cfg["pred_embed_dim"],
+        depth=model_cfg["pred_depth"], num_heads=model_cfg["pred_num_heads"],
+        use_mask_tokens=True, num_mask_tokens=model_cfg["num_mask_tokens"],
+        zero_init_mask_tokens=True, use_rope=model_cfg["use_rope"], uniform_power=False,
+        use_sdpa=True, use_silu=False, wide_silu=True,
+        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
+        return_all_tokens=model_cfg["predict_all"])
+    return student, predictor
+
+
+def finalize_outputs(*, student, output_dir: Path, ckpt_prefix: str,
+                     ckpt_payload: dict, summary: dict, explora_enabled: bool = False):
+    """student_encoder.pt export + <prefix>_best.pt combined ckpt + training_summary.json
+    (iter17 DRY #34, shared by m09a2/c2 head trainers). ckpt_payload / summary carry the
+    per-module divergent fields — caller builds them. Preserves the two 'Saved:' log lines."""
+    student_export = output_dir / "student_encoder.pt"
+    export_student_for_eval(student, student_export, explora_enabled=explora_enabled)
+    combined_ckpt = output_dir / f"{ckpt_prefix}_best.pt"
+    torch.save(ckpt_payload, combined_ckpt)
+    print(f"Saved: {combined_ckpt}")
+    summary_path = output_dir / "training_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2))
+    print(f"Saved: {summary_path}")
+
+
+class TrainLogWriter:
+    """Crash-safe loss log: JSONL (write+flush+fsync) + CSV mirror (iter17 DRY #32, shared
+    by m09a2/c2 head trainers). Schema via `columns` — the head cells share the 11-col
+    schema; the encoder cells (m09a1/c1) keep their own _log_step + distinct columns + csv
+    truncate-mode, so they are NOT routed through here. CSV opens in append mode and writes
+    the header only when the file is new (checkpoint-resume safe)."""
+    def __init__(self, output_dir: Path, columns: list):
+        self.jsonl = (output_dir / "loss_log.jsonl").open("a", buffering=1)
+        self.csv_path = output_dir / "loss_log.csv"
+        new = not self.csv_path.exists()
+        self._cf = open(self.csv_path, "a", newline="")
+        self._cw = csv.writer(self._cf)
+        if new:
+            self._cw.writerow(columns)
+            self._cf.flush()
+
+    def log_jsonl(self, record: dict):
+        self.jsonl.write(json.dumps(record) + "\n")
+        self.jsonl.flush()
+        os.fsync(self.jsonl.fileno())
+
+    def log_csv(self, row: list):
+        self._cw.writerow(row)
+        self._cf.flush()
+
+    def close(self):
+        self.jsonl.close()
+        self._cf.close()
 
 
 def producer_thread(cfg: dict, q: queue.Queue, stop_event: threading.Event,

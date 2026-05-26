@@ -44,12 +44,12 @@ test -f "$LD/m11_factor_datasets/factor_manifest.json" && echo "m11 factor manif
 # (DI + noDI) yaml variants. CACHE_POLICY_ALL=2 is MANDATORY here — without it the .py
 # blocks on resolve_cache_policy_interactive's input() prompt (non-TTY → hang); 2=recompute
 # gives each SANITY cell a clean slate (SANITY is throwaway).
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/sanity_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log          # m09a1
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/sanity_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log          # m09a2
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/sanity_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log          # m09c1 DI yaml
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/sanity_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log     # m09c1 noDI yaml
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/sanity_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log          # m09c2 DI head yaml
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/sanity_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log     # m09c2 noDI head yaml
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/sanity_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log && \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/sanity_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log && \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/sanity_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log && \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/sanity_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log && \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/sanity_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log && \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/sanity_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log
 
 # ── VALIDATION GATE (each grep confirms a specific change; last one MUST be empty) ──
 grep -E "recipe-v3 receipts" logs/sanity_c1*.log                    # m09c1 (DI+noDI): subset-mode recipe_v3, no legacy

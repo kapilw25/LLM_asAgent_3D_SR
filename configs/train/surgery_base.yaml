@@ -63,7 +63,12 @@ data:
 # the legacy FactorSampler ignored REPLAY_OVERRIDE=on, silently 4-of-5
 # interventions instead of 5-of-5 → invalid R1 ablation result.
 factor_streaming:
-  sanity: false                   # legacy .npy path (iter8 SANITY reproducible)
+  sanity: true                    # iter17 (2026-05-26): was false (legacy .npy). recipe-v3
+                                  #   default replay.raw_pretrain_pct=0.5 needs the streaming
+                                  #   path (raw-replay lives in StreamingFactorDataset only);
+                                  #   legacy .npy silently drops replay → m09c1 FATAL guard.
+                                  #   Per POC↔SANITY parity (CLAUDE.md) SANITY must exercise the
+                                  #   SAME streaming+replay path as POC/FULL — not disable replay.
   poc:    true                    # iter14: parity with FULL → CLEAR replay #5 fires
   full:   true                    # 🎯 unlocks scale ladder
   num_workers:

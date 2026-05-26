@@ -970,6 +970,36 @@ def plot_probe_trajectory_trio(probe_history: list, output_dir, title_prefix: st
     save_fig(fig, str(output_dir / f"{file_prefix}_probe_trajectory_trio"))
 
 
+def render_val_plots(*, csv_path, jsonl_path, probe_history, output_dir,
+                     file_prefix: str, label: str, color: str, batch_size: int,
+                     curves_title: str, combined_title: str,
+                     kill_title: str, trio_title: str,
+                     best_state: dict, kill_state: dict):
+    """The 4 per-val plots in one FAIL-LOUD call (iter17 DRY #33, shared by m09a2/c2 +
+    the common-4 of m09a1/c1). Each plot's title is passed fully-formed by the caller
+    (the divergent part — same pattern as finalize_outputs #34). Renders, in fixed order:
+    training_curves · combined_losses · val_loss_kill_overlay · probe_trajectory_trio.
+    FAIL LOUD on any render exception (CLAUDE.md FAIL HARD) — callers that need checkpoint
+    preservation MUST save the ckpt BEFORE calling this (end-of-train sites reorder so)."""
+    try:
+        plot_training_curves(
+            runs=[{"csv_path": str(csv_path), "label": label,
+                   "color": color, "batch_size": batch_size}],
+            output_dir=str(output_dir), title_prefix=curves_title, file_prefix=file_prefix)
+        plot_combined_losses(
+            jsonl_path=jsonl_path, output_dir=output_dir,
+            title_prefix=combined_title, file_prefix=file_prefix)
+        plot_val_loss_with_kill_switch_overlay(
+            probe_history, output_dir, best_state=best_state, kill_state=kill_state,
+            title_prefix=kill_title, file_prefix=file_prefix)
+        plot_probe_trajectory_trio(
+            probe_history, output_dir, title_prefix=trio_title, file_prefix=file_prefix)
+    except Exception as _e:
+        print(f"  [plot] FATAL: render_val_plots failed ({file_prefix}): {_e}", flush=True)
+        print("  [plot] traceback follows; aborting per CLAUDE.md FAIL HARD:", flush=True)
+        raise
+
+
 def compute_block_drift(student, init_params: dict) -> list:
     """Per-block relative L2 norm of (current θ − init θ).
 

@@ -11,13 +11,44 @@ ckpt-LOAD diverges — a1/a2 Meta `target_encoder`, c1/c2 `init_from_ckpt` hf://
 ├─────┼────────────────────────────────────────────────┼──────────┼──────────────┤
 │ 29  │ compute_val_motion_aux_loss → utils.training   │ ✅ DONE  │ —            │
 │ 30  │ build_model ckpt-LOAD → shared                 │ ❌ DROP  │ false premise │
-│ 35  │ GPU-SANITY checkpoint (validate session edits) │ ◻ OPEN  │ new instance  │
-│ 31  │ build_student_predictor (construction) → util  │ ◻ OPEN  │ #35           │
-│ 32  │ TrainLogWriter (jsonl+csv setup) → util         │ ◻ OPEN  │ #35           │
-│ 33  │ render_val_plots (4 plot calls) → utils.plots   │ ◻ OPEN  │ #35           │
-│ 34  │ finalize_outputs (export+ckpt+summary) → util   │ ◻ OPEN  │ #35           │
+│ 31  │ build_student_predictor (construction) → util  │ ✅ DONE  │ all 4 cells   │
+│ 34  │ finalize_outputs (export+ckpt+summary) → util   │ ✅ DONE  │ a2/c2 (head)  │
+│ 33  │ render_val_plots (4 plot calls) → utils.plots   │ ✅ DONE  │ a2/c2 (head)  │
+│ 32  │ TrainLogWriter (jsonl+csv setup) → util         │ ✅ DONE  │ a2/c2 (head)  │
+│ 35  │ GPU-SANITY re-validate (all session edits)     │ ◻ OPEN  │ RE-run §0.5   │
 └─────┴────────────────────────────────────────────────┴──────────┴──────────────┘
 ```
+
+## Outcome (2026-05-26) — landed + CPU-verified
+
+```text
+┌─────┬───────────────────────────────────────────────────────────────────────────┐
+│  #  │ WHAT LANDED + why the scope                                              │
+├─────┼───────────────────────────────────────────────────────────────────────────┤
+│ 31  │ build_student_predictor → utils.training; wired a1/a2/c1/c2 (build-both-   │
+│     │ upfront, behaviour-neutral); dead vit imports removed. Construction kwargs │
+│     │ were byte-identical across all 4 → clean shared extract.                  │
+│ 34  │ finalize_outputs → utils.training; wired a2+c2. a1/c1 already share        │
+│     │ finalize_training (encoder finalize) → no inline dup to extract there.     │
+│ 33  │ render_val_plots → utils.plots; wired a2+c2 (FAIL-LOUD). REORDER applied:  │
+│     │ finalize_outputs now runs BEFORE the end plots so a FAIL-LOUD plot glitch │
+│     │ can't lose a trained ckpt. a1/c1 EXEMPT: they render curves+combined       │
+│     │ pre-probe and kill+trio post-probe (best_state depends on the probe trio   │
+│     │ computed between them) → a single 4-in-one call can't span without         │
+│     │ restructuring the early-stop flow; they already use _render_m09a_probe_    │
+│     │ plots + finalize_training.                                                 │
+│ 32  │ TrainLogWriter → utils.training; wired a2+c2 (identical inline idiom +     │
+│     │ csv mode "a"). a1/c1 EXEMPT: they use _log_step + csv mode "w" (truncate) │
+│     │ + dual close-site (normal/error exit) — divergent idiom, would change      │
+│     │ encoder resume-time csv behaviour. Behavioural test: header written once   │
+│     │ across re-open (append-safe).                                              │
+└─────┴───────────────────────────────────────────────────────────────────────────┘
+```
+
+CPU verify: py_compile + ruff F,E9 (0 unused imports) on all 6 files; import-test all 4
+trainers + 4 new symbols; TrainLogWriter behavioural test. GPU validation (#35) STILL
+REQUIRED before FULL — these touch all 4 trainers; runbook §0.5, output file-sets must
+match pre-refactor.
 
 ---
 

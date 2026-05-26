@@ -41,12 +41,9 @@ data:
   variant_tag: 3stage_DI_head    # single source for output subdir (was m09c2 .replace("vjepa_2_1_surgical_",""))
   output_dir: outputs/full/m09c_surgery_3stage_DI_head    # auto-overridden by run_train.sh per mode
 
-# -- Head-only surgery has ONLY a streaming data path (StreamingFactorDataset; no
-#    legacy FactorSampler). Streaming is therefore MANDATORY in every mode — override
-#    surgery_base's sanity:false (which targets the legacy .npy encoder path). m09c2
-#    reads factor_streaming[mode] + FAILs LOUD if false. Deep-merge keeps num_workers etc.
-factor_streaming:
-  sanity: true
+# -- Head-only surgery is streaming-ONLY (no legacy FactorSampler). factor_streaming
+#    (incl. sanity:true) is now inherited from surgery_base.yaml — single source; no local
+#    override needed (iter17 2026-05-26: surgery_base.sanity flipped false→true for all cells).
 
 # -- Interaction mining: still required to materialize D_I tubes for the head's training data --
 interaction_mining:

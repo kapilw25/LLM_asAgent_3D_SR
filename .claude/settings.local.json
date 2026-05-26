@@ -264,7 +264,8 @@
       "Bash(grep -niE 'train_keys *=|all_keys *=|load_subset\\\\\\(args\\\\.subset|manifest\\\\.keys\\\\\\(\\\\\\)|not in val_set|not in test|val_set|test_set|test_split|test_keys' src/__TRACKED_VAR__.py)",
       "Bash(grep -nA12 \"def load_subset\" src/utils/config.py)",
       "Bash(awk '/torch.save\\\\\\(\\\\{/,/\\\\}, combined_ckpt\\\\\\)/' src/__TRACKED_VAR__.py)",
-      "Bash(grep -nE 'sanity_train_clips|sanity_val_clips|args\\\\.SANITY' src/__TRACKED_VAR__.py)"
+      "Bash(grep -nE 'sanity_train_clips|sanity_val_clips|args\\\\.SANITY' src/__TRACKED_VAR__.py)",
+      "Bash(cd *)"
     ]
   }
 }

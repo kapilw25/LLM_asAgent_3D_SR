@@ -361,6 +361,19 @@ clip_pool_ratio:
   poc:    0.10      # 10%  → ~11,500 @ N_full = 115,000
   sanity: 0.01      # 1%   → ~ 1,150 @ N_full = 115,000
 
+# ── Surgery init source (iter17 2026-05-26) ──────────────────────────────
+# Each m09c surgery variant (DI/noDI x encoder/head) inits its encoder+predictor
+# from the LOCAL m09a pretrain_encoder output for the SAME run-mode — NOT a remote
+# hf:// ckpt. A remote base of unknown provenance is a paired-Δ confound; surgery
+# must build on the exact local pretrain it is compared against, per mode. SINGLE
+# SOURCE: run_train.sh composes BOTH the m09a write-dir (OUT_DIR) AND the surgery
+# read-path from `pretrain_namespace`, so they can never drift (SHARED DERIVATION,
+# src/CLAUDE.md). Resolves per mode to:
+#   outputs/{sanity|poc|full}/<pretrain_namespace>/<ckpt_filename>
+surgery_init:
+  pretrain_namespace: m09a_pretrain_encoder   # local dir under outputs/<mode>/ (m09a writes here)
+  ckpt_filename:      m09a_ckpt_best.pt        # combined student+predictor+teacher (schema="student")
+
 # iter16 M8 / R4 (2026-05-21): torch.compile gate for m04d RAFT-Large.
 #
 # WebSearch-validated recipe (NOT the speculative "same as M7" copy from

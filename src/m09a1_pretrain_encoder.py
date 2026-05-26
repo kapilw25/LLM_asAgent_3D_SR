@@ -86,9 +86,7 @@ from utils.m09_common import add_m09_common_args, merge_m09_common_config
 import torch
 
 # vjepa2 imports via shim (avoids src/ namespace collision)
-from utils.vjepa2_imports import (
-    get_vit_by_arch, get_vit_predictor, get_vit_predictor_2_1,
-)
+# iter17 DRY #31: ViT/predictor constructors now live behind utils.training.build_student_predictor
 
 # Shared video I/O from utils (Rule 32: no cross-imports between m*.py)
 from utils.video_io import get_clip_key, create_stream, decode_video_bytes
@@ -101,6 +99,7 @@ _create_stream = create_stream
 from utils import data_paths   # iter17: canonical local-data path accessors (single source)
 from utils.training import (
     MAX_STREAM_RETRIES,
+    build_student_predictor,       # iter17 DRY #31: shared student+predictor construction
     load_config, load_val_subset, augment_clip_consistent,
     producer_thread,
     build_mask_generators,
@@ -210,25 +209,11 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     """Build student encoder, teacher encoder (EMA), and predictor. Vanilla (no LoRA)."""
     model_cfg = cfg["model"]
     data_cfg = cfg["data"]
-    arch = model_cfg["arch"]
-
-    vit_constructor = get_vit_by_arch(arch)
-    vit_predictor = get_vit_predictor()
-
-    # Student encoder — arch from model config YAML (vit_giant_xformers or vit_gigantic_xformers)
-    crop_size = model_cfg["crop_size"]
-    student = vit_constructor(
-        img_size=(crop_size, crop_size),
-        patch_size=model_cfg["patch_size"],
-        num_frames=data_cfg["num_frames"],
-        tubelet_size=model_cfg["tubelet_size"],
-        use_sdpa=True,
-        use_silu=False,
-        wide_silu=True,
-        uniform_power=False,
-        use_rope=model_cfg["use_rope"],
-        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
-    )
+    # iter17 DRY #31: shared student+predictor construction via utils.training (kwargs
+    # identical across m09a1/a2/c1/c2). Predictor is built here too — it was constructed
+    # lower; behaviour-neutral (construction is deterministic + independent of ckpt-load).
+    # This cell still owns the Meta-ckpt load + EMA-teacher + predictor-load logic below.
+    student, predictor = build_student_predictor(model_cfg, data_cfg)
 
     # Load pretrained weights — checkpoint path from model config YAML
     project_root = Path(__file__).parent.parent
@@ -334,29 +319,7 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     teacher.eval()
     print("Teacher created (deepcopy of student, hierarchical output enabled)")
 
-    # Predictor: use 2.1 version if predict_all (supports return_all_tokens + proj_context)
-    pred_constructor = get_vit_predictor_2_1() if model_cfg["predict_all"] else vit_predictor
-    predictor = pred_constructor(
-        img_size=(model_cfg["crop_size"], model_cfg["crop_size"]),
-        patch_size=model_cfg["patch_size"],
-        num_frames=data_cfg["num_frames"],
-        tubelet_size=model_cfg["tubelet_size"],
-        embed_dim=model_cfg["embed_dim"],
-        predictor_embed_dim=model_cfg["pred_embed_dim"],
-        depth=model_cfg["pred_depth"],
-        num_heads=model_cfg["pred_num_heads"],
-        use_mask_tokens=True,
-        num_mask_tokens=model_cfg["num_mask_tokens"],
-        zero_init_mask_tokens=True,
-        use_rope=model_cfg["use_rope"],
-        uniform_power=False,
-        use_sdpa=True,
-        use_silu=False,
-        wide_silu=True,
-        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
-        return_all_tokens=model_cfg["predict_all"],
-    )
-
+    # Predictor constructed above via build_student_predictor (2.1 version when predict_all).
     # Q3: Load predictor weights if available
     if "predictor" in ckpt:
         pred_state = {k.replace("module.", "").replace("backbone.", ""): v

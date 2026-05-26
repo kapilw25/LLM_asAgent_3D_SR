@@ -184,22 +184,27 @@ python -u src/utils/clip_splits.py \
 MODEL_CFG="configs/model/vjepa2_1.yaml"
 P_M09="${CACHE_POLICY_ALL:-1}"
 
-# iter15 (2026-05-17): surgery init source — accepts ANY path or URI for ANY mode.
-# Override via env var SURGERY_INIT, e.g.:
+# iter17 (2026-05-26): surgery init source — LOCAL per-mode m09a pretrain_encoder
+# output. SINGLE SOURCE: pretrain_namespace + ckpt_filename from pipeline.yaml drive
+# BOTH the m09a write-dir (OUT_DIR below) AND this surgery read-path, so they can
+# never drift (SHARED DERIVATION, src/CLAUDE.md). Removed the prior hf:// default:
+# a remote base of unknown provenance was a paired-Δ confound — surgery must build
+# on the exact LOCAL pretrain it is compared against, per run-mode.
+#
+# DEPENDENCY: pretrain_encoder MUST have run+succeeded for this mode first (it writes
+# outputs/<mode>/<ns>/<ckpt>). If absent, m09c FATALs loud on the missing init ckpt.
+#
+# Why m09a_ckpt_best.pt NOT student_encoder.pt: m09c needs BOTH student weights
+# (key="student") AND predictor weights (key="predictor"). student_encoder.pt has
+# only the encoder (schema="student_state_dict"); m09a_ckpt_best.pt bundles student
+# + predictor + teacher (schema="student") — single artifact covers full init.
+#
+# Override (advanced; m09c1 dispatcher still accepts local paths AND hf:// URIs):
 #   SURGERY_INIT=outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
 #     bash scripts/run_train.sh surgery_3stage_DI_encoder --POC
-#   SURGERY_INIT=hf://owner/repo/file.pt \
-#     bash scripts/run_train.sh surgery_3stage_DI_encoder --FULL
-# Default = HF FULL 5-ep anchor (iter14 reproducibility baseline). The m09c1
-# dispatcher (src/m09c1_surgery_encoder.py) handles both hf:// URIs and local
-# filesystem paths transparently — mode-agnostic.
-#
-# Why m09a_ckpt_best.pt (14 GB) NOT student_encoder.pt (7 GB):
-# m09c needs BOTH student weights (key="student", 588 dims) AND predictor weights
-# (key="predictor", 300 dims). student_encoder.pt has only encoder
-# (schema="student_state_dict"); m09a_ckpt_best.pt has student + predictor +
-# teacher in one bundle (schema="student") — single artifact covers full init.
-SURGERY_INIT="${SURGERY_INIT:-hf://anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep/m09a_ckpt_best.pt}"
+PRETRAIN_NS=$(scripts/lib/yaml_extract.py configs/pipeline.yaml surgery_init.pretrain_namespace)
+PRETRAIN_CKPT=$(scripts/lib/yaml_extract.py configs/pipeline.yaml surgery_init.ckpt_filename)
+SURGERY_INIT="${SURGERY_INIT:-outputs/${mode_dir}/${PRETRAIN_NS}/${PRETRAIN_CKPT}}"
 
 # ── Multi-task probe-loss labels (iter13) ────────────────────────────────
 # When base_optimization.yaml `multi_task_probe.enabled` is true for this
@@ -266,7 +271,8 @@ case "$SUBCMD" in
                 EPOCHS_OVERRIDE_FLAG="--max-epochs $((_BASE_EP * 2))"
             fi
         else
-            OUT_DIR="outputs/${mode_dir}/m09a_pretrain_encoder"
+            # iter17: single source with surgery read-path (pipeline.yaml surgery_init.pretrain_namespace)
+            OUT_DIR="outputs/${mode_dir}/${PRETRAIN_NS}"
             EPOCHS_OVERRIDE_FLAG=""
         fi
         # Read lambda_reg from YAML so it stays the single source of truth.

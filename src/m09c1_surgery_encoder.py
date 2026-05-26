@@ -108,7 +108,7 @@ from utils.progress import make_pbar
 
 # vjepa2 imports via shim (avoids src/ namespace collision)
 from utils.vjepa2_imports import (
-    get_vit_by_arch, get_vit_predictor, get_vit_predictor_2_1,
+    # iter17 DRY #31: ViT/predictor constructors moved to utils.training.build_student_predictor
     get_mask_generator, get_apply_masks,  # noqa: F401 — consumed via utils.training helpers
 )
 
@@ -119,6 +119,7 @@ CHECKPOINT_PREFIX = "m09c_ckpt"
 # Shared training primitives — utils/training.py (Phase 1 of iter8 split).
 from utils import data_paths   # iter17: canonical local-data path accessors (single source)
 from utils.training import (
+    build_student_predictor,       # iter17 DRY #31: shared student+predictor construction
     load_config,
     build_mask_generators,
     compute_jepa_loss, _train_step_grad_accum, compute_total_loss, UncertaintyWeights,  # noqa: F401 — _train_step_grad_accum kept for future grad-accum wiring
@@ -295,25 +296,11 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     """
     model_cfg = cfg["model"]
     data_cfg = cfg["data"]
-    arch = model_cfg["arch"]
-
-    vit_constructor = get_vit_by_arch(arch)
-    vit_predictor = get_vit_predictor()
-
-    # Student encoder — arch from model config YAML (vit_giant_xformers or vit_gigantic_xformers)
-    crop_size = model_cfg["crop_size"]
-    student = vit_constructor(
-        img_size=(crop_size, crop_size),
-        patch_size=model_cfg["patch_size"],
-        num_frames=data_cfg["num_frames"],
-        tubelet_size=model_cfg["tubelet_size"],
-        use_sdpa=True,
-        use_silu=False,
-        wide_silu=True,
-        uniform_power=False,
-        use_rope=model_cfg["use_rope"],
-        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
-    )
+    # iter17 DRY #31: shared student+predictor construction via utils.training (kwargs
+    # identical across m09a1/a2/c1/c2). Predictor is built here too — it was constructed
+    # lower; behaviour-neutral (construction is deterministic + independent of ckpt-load).
+    # This cell still owns the init_from_ckpt dispatcher + teacher + set_trainable_prefix below.
+    student, predictor = build_student_predictor(model_cfg, data_cfg)
 
     # Load pretrained weights — iter14 sequential SSL: HF model-repo download via
     # hf_hub_download (HF_TOKEN from .env). SINGLE source, SINGLE schema, FAIL LOUD
@@ -373,7 +360,7 @@ def build_model(cfg: dict, device: torch.device) -> dict:
             and isinstance(ckpt["student"], dict)
             and "predictor" in ckpt
             and isinstance(ckpt["predictor"], dict)):
-        print(f"FATAL: HF ckpt missing 'student' + 'predictor' schema: {init_path}")
+        print(f"FATAL: init ckpt missing 'student' + 'predictor' schema: {init_path}")
         top_keys = list(ckpt.keys()) if isinstance(ckpt, dict) else type(ckpt).__name__
         print(f"  Top-level: {top_keys}")
         print("  iter14 accepts ONLY full m09a_ckpt_best.pt schema "
@@ -440,29 +427,7 @@ def build_model(cfg: dict, device: torch.device) -> dict:
         print(f"Teacher created (deepcopy of student) — mode=EMA "
               f"(legacy; τ={cfg['optimization']['ema_momentum']}, hierarchical output enabled)")
 
-    # Predictor: use 2.1 version if predict_all (supports return_all_tokens + proj_context)
-    pred_constructor = get_vit_predictor_2_1() if model_cfg["predict_all"] else vit_predictor
-    predictor = pred_constructor(
-        img_size=(model_cfg["crop_size"], model_cfg["crop_size"]),
-        patch_size=model_cfg["patch_size"],
-        num_frames=data_cfg["num_frames"],
-        tubelet_size=model_cfg["tubelet_size"],
-        embed_dim=model_cfg["embed_dim"],
-        predictor_embed_dim=model_cfg["pred_embed_dim"],
-        depth=model_cfg["pred_depth"],
-        num_heads=model_cfg["pred_num_heads"],
-        use_mask_tokens=True,
-        num_mask_tokens=model_cfg["num_mask_tokens"],
-        zero_init_mask_tokens=True,
-        use_rope=model_cfg["use_rope"],
-        uniform_power=False,
-        use_sdpa=True,
-        use_silu=False,
-        wide_silu=True,
-        use_activation_checkpointing=model_cfg["use_activation_checkpointing"],
-        return_all_tokens=model_cfg["predict_all"],
-    )
-
+    # Predictor constructed above via build_student_predictor (2.1 version when predict_all).
     # Q3: Load predictor weights if available
     if "predictor" in ckpt:
         pred_state = {k.replace("module.", "").replace("backbone.", ""): v
