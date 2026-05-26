@@ -143,21 +143,18 @@ monitoring:
   knn_min_accuracy: null
 
 # -- Mid-training probe (action-classification top-1 accuracy via leave-one-out
-#    kNN-centroid). Inherits the SCHEMA from base_optimization.yaml:probe but
-#    overrides paths to point at the eval_10k val split (not ultra_hard_3066).
-#    Per iter13 pivot, the probe metric is TOP-1 ACCURACY (NOT Prec@K).
-#    SANITY: disabled (n=21 too small for stable BCa CI). POC/FULL: enabled.
-probe:
-  # iter16 M9 (2026-05-21): subset / local_data / tags_path DELETED — now
-  # injected by src/utils/config.py:load_merged_config from cfg.data.
-  # local_data_dir + cfg.data.master_manifest_name (configs/pipeline.yaml).
-  # Flipping data.local_data_dir migrates the whole pipeline to data/full_local.
-  # Derived values (read by m09a1/a2):
-  #   probe.subset     = ${local_data_dir}/val_split.json    (corpus-agnostic)
-  #   probe.local_data = ${local_data_dir}
-  #   probe.tags_path  = ${local_data_dir}/tags.json
-  # All other knobs (enabled, k, bootstrap_iter, kill_switch_*, plateau_*, etc.)
-  # inherited from base_optimization.yaml:249-283. SANITY mode disables probe.
+#    kNN-centroid). Probe metric = TOP-1 ACCURACY (iter13 pivot, NOT Prec@K).
+#    NO `probe:` block here ON PURPOSE — the FULL probe config (enabled, k,
+#    bootstrap_iter, plateau_*, ...) is INHERITED from base_optimization.yaml:367+,
+#    and config.py:load_merged_config injects the derived paths on top
+#    (probe.subset=${local_data_dir}/val_split.json, probe.local_data, probe.tags_path).
+#    iter17 FIX (2026-05-26): a comments-only `probe:` block here evaluated to YAML
+#    null → _deep_merge CLOBBERED base's probe dict to None → config.py rebuilt it as
+#    {subset,local_data,tags_path} WITHOUT `enabled` → FATAL [probe] missing 'enabled'
+#    (the m09_common guard). Dropping the local `probe:` key makes pretrain inherit base
+#    cleanly — exactly how the surgery_*_encoder yamls work (they never had a probe block).
+#    `enabled` is scalar true for ALL modes (iter15 POC↔FULL parity); in SANITY the top@1
+#    plateau early-stop just can't fire (needs patience+1=6 probes) — no-op by data-count.
 
 # -- Multi-task probe-loss supervision (taxonomy 15 RETRIEVAL tag dims) — DISABLED v12.
 # iter13 v12 (2026-05-06): downstream metric is motion-flow top-1, NOT retrieval.

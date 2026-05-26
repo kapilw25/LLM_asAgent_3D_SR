@@ -167,11 +167,18 @@ python -u src/utils/probe_train_subset.py \
 # src/utils/clip_splits.py (CLAUDE.md "SHARED DERIVATION VIA CLI" — shell stays thin).
 TRAIN_POOL="${LOCAL_DATA}/train_pool.json"
 UNIVERSE=$(scripts/lib/yaml_extract.py configs/train/base_optimization.yaml training_pool.universe)
-echo "═══ $(date '+%H:%M:%S') · Building leakage-safe train pool (universe=${UNIVERSE}) ═══"
+# iter17 (2026-05-26): scale the pool by clip_pool_ratio[mode] of the corpus — works on
+# eval_10k_local (10k) AND full_local (115k). The per-mode fractions live ONLY in
+# configs/pipeline.yaml clip_pool_ratio (single source; NOT hardcoded here) — we yaml_extract
+# the mode's value. Replaces the fixed in-trainer sanity_train_clips cap (removed). Deterministic
+# via data.seed so all 7 matrix cells draw the SAME ratio-scaled pool. mode_dir = sanity|poc|full.
+POOL_RATIO=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "clip_pool_ratio.${mode_dir}")
+POOL_SEED=$(scripts/lib/yaml_extract.py configs/train/base_optimization.yaml data.seed)
+echo "═══ $(date '+%H:%M:%S') · Building leakage-safe train pool (universe=${UNIVERSE} · ratio=${POOL_RATIO} [${MODE}]) ═══"
 python -u src/utils/clip_splits.py \
     --manifest "$MASTER_MANIFEST" \
     --train-split "$TRAIN_SPLIT" --val-split "$VAL_SPLIT" --test-split "$TEST_SPLIT" \
-    --universe "$UNIVERSE" --out "$TRAIN_POOL"
+    --universe "$UNIVERSE" --pool-ratio "$POOL_RATIO" --seed "$POOL_SEED" --out "$TRAIN_POOL"
 
 # (LOCAL_DATA defined earlier via M9 yaml_extract — no re-declaration needed)
 MODEL_CFG="configs/model/vjepa2_1.yaml"

@@ -41,19 +41,21 @@ test -f "$LD/m11_factor_datasets/factor_manifest.json" && echo "m11 factor manif
 # getattr/.get removal→dtype whitelist, --subset-mode legacy retired, refactor #29 shared
 # compute_val_motion_aux_loss) end-to-end on GPU. ~3–10 min each. Run BEFORE §1; if any FATAL,
 # fix before trusting §1-4 numbers. 6 subcmds cover all touched code: m09a1/a2/c1/c2 ×
-# (DI + noDI) yaml variants.
-./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/sanity_a1.log          # m09a1
-./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/sanity_a2.log          # m09a2
-./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/sanity_c1.log          # m09c1 DI yaml
-./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/sanity_c1_noDI.log     # m09c1 noDI yaml
-./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/sanity_c2.log          # m09c2 DI head yaml
-./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/sanity_c2_noDI.log     # m09c2 noDI head yaml
+# (DI + noDI) yaml variants. CACHE_POLICY_ALL=2 is MANDATORY here — without it the .py
+# blocks on resolve_cache_policy_interactive's input() prompt (non-TTY → hang); 2=recompute
+# gives each SANITY cell a clean slate (SANITY is throwaway).
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/sanity_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log          # m09a1
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/sanity_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log          # m09a2
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/sanity_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log          # m09c1 DI yaml
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/sanity_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log     # m09c1 noDI yaml
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/sanity_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log          # m09c2 DI head yaml
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/sanity_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log     # m09c2 noDI head yaml
 
 # ── VALIDATION GATE (each grep confirms a specific change; last one MUST be empty) ──
 grep -E "recipe-v3 receipts" logs/sanity_c1*.log                    # m09c1 (DI+noDI): subset-mode recipe_v3, no legacy
-grep -E "leakage-guard.*train pool" logs/sanity_c2.log              # m09c2: streaming + leakage filter (sanity=true)
+grep -E "leakage-guard.*train pool" logs/sanity_c2*.log             # m09c2: streaming + leakage filter (sanity=true)
 grep -E "variant_tag|3stage_DI_head|noDI_head" logs/sanity_c2*.log  # m09c2: data.variant_tag read (was .replace)
-grep -E "val_loss=" logs/sanity_a2.log logs/sanity_c2.log           # a2/c2: shared compute_val_motion_aux_loss ran ≥1 val
+grep -E "val_loss=" logs/sanity_a2*.log logs/sanity_c2*.log         # a2/c2: shared compute_val_motion_aux_loss ran ≥1 val
 grep -iE "FATAL|Traceback|KeyError|AttributeError|invalid choice" logs/sanity_*.log   # MUST be empty
 # NOTE: m09c2 SANITY uses StreamingFactorDataset (factor_streaming.sanity now config-true) —
 #   unchanged vs old force-True behavior; logs should match prior SANITY. Once green → run §1.

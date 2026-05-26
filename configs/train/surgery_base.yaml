@@ -74,8 +74,17 @@ factor_streaming:
   persistent_workers:  true       # amortize worker-fork cost within a stage
   pin_memory:          true
 
-# -- Optimization: surgery-specific overrides only (lr/BS/max_epochs from base) --
+# -- Optimization: surgery-specific overrides (BS/max_epochs inherited from base) --
 optimization:
+  # iter17 (2026-05-26): surgery now OWNS its peak lr explicitly. It previously
+  # SILENTLY inherited base_optimization.yaml's lr=5e-5 — but that 5e-5 is the ORPHANED
+  # iter11 pretrain value: pretrain_encoder.yaml:75 later moved to 1e-4, leaving base's
+  # 5e-5 used only by whoever didn't declare. Surgery is a surgical-FT regime; its peak
+  # is 5e-5 + layer-wise decay 0.75 (value UNCHANGED — this only makes the choice OWNED,
+  # like teacher_mode/spd/saliency/replay/warmup are). Now a base-lr edit can't silently
+  # move surgery, and lr is single-sourced per technique. (Whether 5e-5 is the optimal
+  # surgical peak is a separate research question — this fix is ownership, not retuning.)
+  lr: 5.0e-5
   # Layer-wise LR decay — surgery-only, smaller LR for earlier (already-frozen) layers.
   layer_wise_lr_decay: true
   layer_wise_lr_decay_factor: 0.75

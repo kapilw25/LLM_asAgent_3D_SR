@@ -178,6 +178,13 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
         if k in cfg["optimization"] and isinstance(cfg["optimization"][k], dict):
             cfg["optimization"][k] = cfg["optimization"][k][mode_key]
 
+    # iter17 (2026-05-26): checkpoint.saves_per_epoch is mode-gated {sanity,poc,full} (val +
+    # ckpt + probe cadence). Flatten per-mode here (mirrors max_epochs) so every trainer +
+    # probe.cadence reads a scalar. isinstance guard → backward-compatible with a scalar yaml.
+    spe = cfg["checkpoint"]["saves_per_epoch"]
+    if isinstance(spe, dict):
+        cfg["checkpoint"]["saves_per_epoch"] = spe[mode_key]
+
     # 3) drift_control: --lambda-reg CLI + auto-disable on λ=0
     if getattr(args, "lambda_reg", None) is not None:
         cfg["drift_control"]["lambda_reg"] = args.lambda_reg

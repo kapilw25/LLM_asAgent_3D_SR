@@ -1,1 +1,1 @@
-# Date & daily udpate in 3 line (bullet) progress
+# Date & daily udpate in 2 line for daily progress && 1 line for next step. Each line covers max 10 words

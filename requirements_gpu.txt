@@ -73,6 +73,17 @@ wandb>=0.15.0
 # =============================================================================
 # cuml-cu12 installed via setup_env_uv.sh --gpu (RAPIDS PyPI)
 #
+# pytest: NOT a test dep here — it's a hard runtime requirement of cupy 14.1.0.
+# cuml pulls cupy, and cupy/__init__.py registers `cupy.testing` as a LAZY module
+# (cupy/__init__.py:1173). cupy/testing/_random.py:11 does an unconditional top-level
+# `import pytest`. wandb's pydantic 2.13.4 models trigger attribute-docstring
+# extraction, which walks sys.modules via inspect.getmodule → hasattr(mod,'__file__'),
+# forcing that lazy cupy.testing stub to fully import → ModuleNotFoundError: pytest.
+# Any process doing `import cuml` then `import wandb` (all m09 trainers, the setup
+# verify step) crashes without this. Regressed when cupy 14.0.1→14.1.0 (transitive,
+# unpinned via cuml-cu12 26.4.0). See logs/setup_env_gpu_20260526_060202.log:703-748.
+pytest>=8.0.0
+#
 # DO NOT add an explicit `nvidia-nvjitlink-cu12` pin here. We tried (logs/setup_env_gpu_v2.log)
 # to silence the cu12-version ping-pong between PyTorch and cuML, and it freed uv's
 # resolver to swap torch nightly+cu128 → torch stable 2.11.0+cu130, producing a mixed

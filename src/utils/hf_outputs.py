@@ -646,9 +646,12 @@ def _post_download_unpack_masks(data_root: Path) -> None:
     from utils.tar_shard import unpack_shards_to_dir
     if not data_root.is_dir():
         return
-    for d in sorted(data_root.iterdir()):
-        if not d.is_dir():
-            continue
+
+    def _unpack_one_subset(d: Path) -> None:
+        """Unpack the m10/m11 tar families inside ONE subset dir `d` — i.e. the
+        dir that DIRECTLY contains m10_sam_segment/ and m11_factor_datasets/.
+        No-op when neither family has tars; skip_existing makes it idempotent.
+        """
         # m10 masks
         seg_dir = d / "m10_sam_segment"
         masks_shards = list(seg_dir.glob("masks-*.tar")) if seg_dir.is_dir() else []
@@ -677,6 +680,20 @@ def _post_download_unpack_masks(data_root: Path) -> None:
                     skip_existing=True,
                 )
                 _delete_shards_after_unpack(shards, f"{factor}-*.tar")
+
+    # data_root may be EITHER the top-level `data/` (subset dirs are children,
+    # m10/m11 are grandchildren) OR a single subset dir like data/eval_10k_local
+    # (m10/m11 are DIRECT children — the form the iter15_v2 runbook passes).
+    # Unpack data_root itself AND each child so BOTH granularities work; a given
+    # tar lives at exactly one level, so there is no double-unpack.
+    # iter17 FIX (2026-05-26): the prior child-only loop silently no-op'd when
+    # handed a subset dir directly — masks/ D_L/ D_A/ D_I/ were left EMPTY while
+    # masks-*.tar / D_*-*.tar sat un-extracted alongside. See
+    # logs/iter15_v2_data_eval_10k_local_20260526_061931.log (zero unpack lines).
+    _unpack_one_subset(data_root)
+    for d in sorted(data_root.iterdir()):
+        if d.is_dir():
+            _unpack_one_subset(d)
 
 
 def _download_one_file(rpath: str, base_url: str, headers: dict) -> tuple:

@@ -26,6 +26,7 @@
 - **95% CI MANDATORY**: Every metric needs bootstrap 95% CI (BCa, 10K iter via `utils/bootstrap.py`). No point estimates without CI.
 - **Vectorize**: Replace Python for-loops with NumPy when iterating 1K+ items. Incident: m06 bootstrap 88 min → <1 min vectorized.
 - **Organize outputs** into clean subdirectories. Each logical group owns its own dir + JSON. Never flatten structures.
+- **Timestamped logs.** Every log path ends with `_$(date +%Y%m%d_%H%M%S).log` (shell) / `time.strftime("%Y%m%d_%H%M%S")` (py) — never a static name; re-runs must NOT silently overwrite a prior log.
 - Each `print` must be dynamic (no static false advertising). Throughput: use windowed rate, not `total/elapsed`.
 - vjepa2 imports via `utils/vjepa2_imports.py` shim. Use `get_vit_by_arch(arch)`. NEVER import `from models.` directly.
 

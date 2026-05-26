@@ -29,6 +29,7 @@ data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for oth
         --output-dir           outputs/<M>/m09c_surgery_3stage_DI_head \
         --cache-policy         <1=keep|2=recompute> \
         --no-wandb 2>&1 | tee logs/m09c2_surgery_3stage_DI_head_full.log
+        
     # HEAD-ONLY surgery: encoder+predictor FROZEN. --subset = leakage-safe pool
     #   (clip_splits, iter17); _build_factor_loader restricts the streaming universe to it
     #   (test excluded). factor_manifest + masks derived from --local-data via data_paths
@@ -453,6 +454,9 @@ def train(cfg: dict, args) -> None:
 
     train_keys = load_subset(args.subset)
     val_keys = load_subset(args.val_subset)
+    # iter17 (2026-05-26): clip-count per mode is governed by clip_pool_ratio[mode] (pipeline.yaml)
+    # applied in clip_splits.py → the --subset train_pool is already ratio-scaled (SANITY/POC/FULL),
+    # which also shrinks _build_factor_loader's streaming universe. No fixed in-trainer cap.
     print(f"Train: {len(train_keys):,} keys · Val: {len(val_keys):,} keys")
 
     mode_key = "sanity" if args.SANITY else ("poc" if args.POC else "full")

@@ -495,24 +495,12 @@ def train(cfg: dict, args):
     else:
         train_keys = set()
 
-    # SANITY: cap train and val to small clip counts from config
-    if args.SANITY:
-        sanity_train = cfg["data"]["sanity_train_clips"]
-        sanity_val = cfg["data"]["sanity_val_clips"]
-        if train_keys:
-            train_keys = set(list(train_keys)[:sanity_train])
-        else:
-            local_data = cfg["data"]["local_data"]
-            ds = _create_stream(0, local_data=local_data)
-            collected = []
-            for example in ds:
-                collected.append(get_clip_key(example))
-                if len(collected) >= sanity_train + sanity_val:
-                    break
-            train_keys = set(collected[:sanity_train])
-            val_key_set = set(collected[sanity_train:sanity_train + sanity_val])
-        if val_key_set:
-            val_key_set = set(list(val_key_set)[:sanity_val])
+    # iter17 (2026-05-26): SANITY/POC clip-count is now governed by clip_pool_ratio[mode]
+    # (configs/pipeline.yaml) applied in clip_splits.py — the --subset train_pool is ALREADY
+    # ratio-scaled (FULL=all, POC/SANITY = the per-mode fraction, scaling with corpus size on
+    # both eval_10k_local 10k AND full_local 115k). The old fixed in-trainer sanity_train_clips
+    # cap was removed: it would override the ratio-scaled pool AND can't scale to 115k. val_key_set
+    # stays the (ratio-scaled) val_split as loaded — no separate cap.
 
     # iter14 (2026-05-08): POC mode pool capping happens UPSTREAM via the shell
     # generating data/eval_10k_local/eval_10k_poc.json (first N keys of eval_10k.json) →

@@ -321,13 +321,18 @@ checkpoint:
   # ~50 min wall (1 val ≈ 50% epoch) while saving ~4.4 hrs/run. Plateau-patience
   # math: was patience=5 vals = 1 epoch; now patience=5 = 2.5 epochs (acceptable
   # given v8 layer_freeze + lr=1e-4 should not need long plateau detection).
-  # iter16 M4 (2026-05-21): 2 → 9. Iter16 FULL = 1 epoch × ~86K train clips
-  # (M2: max_epochs.full=1; M1: clip_pool_ratio.full=1.00 × 115K corpus =
-  # 75% × 115K ≈ 86K train clips). At 2/epoch only 2 trajectory points/cell —
-  # too sparse to plot a meaningful val curve. 9/epoch → 1 validation every
-  # ~9.6K train clips → 9 trajectory data points/cell, matching the rest of
-  # the iter16 trajectory-plot design. Mode-invariant per POC↔FULL parity.
-  saves_per_epoch: 9
+  # iter16 M4 (2026-05-21): FULL = 1 epoch × ~86K train clips → 9/epoch = 1 val every
+  # ~9.6K clips → 9 trajectory points (M2 max_epochs.full=1; M1 clip_pool_ratio.full=1.0).
+  # iter17 (2026-05-26, user decision): MODE-GATED cadence. POC is a quick proxy (10K
+  # corpus, 2 epochs) — 2 checkpoints/epoch suffices; FULL (86K train) keeps 9 (≈1 ckpt
+  # per 10K clips). This is an OBSERVABILITY knob (val + ckpt + probe fire on this tick) —
+  # it does NOT change gradients/data/order, only HOW OFTEN we measure + sample best-ckpt
+  # (so POC's best-ckpt is sampled coarser than FULL's — fine, POC is a proxy not the paper
+  # result). Flattened per-mode in utils.m09_common.merge_m09_common_config (mirrors max_epochs).
+  saves_per_epoch:
+    sanity: 2                     # SANITY = 1 step → val fires once regardless (cadence moot)
+    poc:    2                     # quick proxy run: 2 trajectory points/epoch
+    full:   9                     # paper run: ~1 ckpt per 10K of the 86K train clips
   # iter13 v11 (2026-05-05): 2 → 5. v10 lost the peak-top1 ckpt at step 323
   # because anchor pullback continued into epochs 2-4 and step rotation
   # discarded it. 5 step ckpts × ~7 GB = 35 GB, fits 200 GB budget.

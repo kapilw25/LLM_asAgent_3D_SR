@@ -270,6 +270,9 @@ def train(cfg: dict, args) -> None:
 
     train_keys = load_subset(args.subset)
     val_keys = load_subset(args.val_subset)
+    # iter17 (2026-05-26): clip-count per mode is governed by clip_pool_ratio[mode] (pipeline.yaml)
+    # applied in clip_splits.py → the --subset train_pool is already ratio-scaled (SANITY/POC/FULL).
+    # No in-trainer cap (the fixed sanity_train_clips cap was removed — it couldn't scale to 115k).
     print(f"Train: {len(train_keys):,} keys · Val: {len(val_keys):,} keys")
 
     # Mode-gated action_labels.json must exist (motion_aux's CE branch needs it).

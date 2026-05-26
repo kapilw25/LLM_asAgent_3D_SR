@@ -93,7 +93,12 @@ def resolve_universe_keys(cfg: dict, train_split_keys, corpus_manifest_path) -> 
                 f"FATAL clip_splits: universe=broad_manifest needs corpus manifest at {p} "
                 f"— not found."
             )
-        return list(json.load(open(p)).keys()), label
+        # FIX (iter17 2026-05-26): use _read_keys (extracts manifest["clip_keys"]) — NOT
+        # json.load(...).keys() which returned the manifest's TOP-LEVEL metadata keys
+        # ("n","seed","source","sampling","clips_per_video","num_videos","clip_keys") → a
+        # 7-key garbage pool that matched ZERO corpus clips → m09a producer spun forever
+        # (epoch 1000+, GPU 0%). See logs/m09a_pretrain_encoder_sanity.log.
+        return sorted(_read_keys(p)), label
     if label == "labeled_train":
         return list(train_split_keys), label
     raise ValueError(
@@ -114,13 +119,37 @@ def main() -> None:
     ap.add_argument("--val-split", required=True, help="val_split.json (held out).")
     ap.add_argument("--test-split", required=True, help="test_split.json (held out).")
     ap.add_argument("--universe", required=True, choices=["broad_manifest", "labeled_train"])
+    ap.add_argument("--pool-ratio", type=float, required=True,
+                    help="Fraction of the universe to keep. The per-mode VALUES live ONLY in "
+                         "configs/pipeline.yaml clip_pool_ratio[mode] (single source) — run_train.sh "
+                         "yaml_extracts them; never hardcode here. 1.0 = no subsample; <1.0 = "
+                         "deterministic seeded subsample so all matrix cells + re-runs share one pool.")
+    ap.add_argument("--seed", type=int, required=True,
+                    help="Deterministic subsample seed (data.seed). Identical across the 7-cell "
+                         "matrix so every trainer draws the same ratio-scaled pool.")
     ap.add_argument("--out", required=True, help="Output train_pool.json ({\"clip_keys\": [...]}).")
     args = ap.parse_args()
+
+    if not (0.0 < args.pool_ratio <= 1.0):
+        sys.exit(f"FATAL clip_splits: --pool-ratio must be in (0, 1]; got {args.pool_ratio}.")
 
     train_keys, val_keys, test_keys = load_canonical_splits(
         args.train_split, args.val_split, args.test_split)
     universe_keys, label = resolve_universe_keys(
         {"training_pool": {"universe": args.universe}}, train_keys, args.manifest)
+    # iter17 (2026-05-26): scale the universe by clip_pool_ratio[mode] BEFORE excluding val/test.
+    # The per-mode fractions live ONLY in configs/pipeline.yaml clip_pool_ratio (single source);
+    # ratio=1.0 → no subsample, ratio<1.0 → deterministic seeded subsample. The fraction scales
+    # with corpus size on BOTH eval_10k_local (10k) AND full_local (115k) — no fixed in-trainer cap.
+    if args.pool_ratio < 1.0:
+        import random
+        n_full = len(universe_keys)
+        n_target = max(1, round(n_full * args.pool_ratio))
+        uk = sorted(universe_keys)
+        random.Random(args.seed).shuffle(uk)
+        universe_keys = uk[:n_target]
+        print(f"  [clip_splits] clip_pool_ratio={args.pool_ratio}: universe subsampled "
+              f"{n_full} → {n_target} (seed={args.seed}, deterministic)", flush=True)
     pool = build_training_pool(universe_keys, val_keys, test_keys,
                                universe_label=label, log_prefix="  ")
     Path(args.out).write_text(json.dumps({"clip_keys": pool}, indent=2))
