@@ -525,19 +525,24 @@ def plot_training_curves(runs: list, output_dir: str, title_prefix: str = "",
             summary_path = Path(first_run["csv_path"]).parent / "training_summary.json"
             if summary_path.exists():
                 s = json.load(open(summary_path))
-                n_unique = s["total_factor_clips"]
-                n_steps = s["steps"]
+                # iter17: support BOTH summary schemas — encoder cells (finalize_training)
+                # write clips_seen/steps; head cells (finalize_outputs) write n_train/
+                # total_steps. The dual "samples seen" axis is a cosmetic annotation, so
+                # skip it (don't crash the core plot) when a summary lacks the counts.
+                n_unique = next((s[k] for k in ("total_factor_clips", "clips_seen", "n_train") if k in s), None)
+                n_steps = next((s[k] for k in ("steps", "total_steps") if k in s), None)
                 bs = s["batch_size"]
-                n_epochs = round(n_steps * bs / n_unique) if n_unique else 0
-                total_samples = n_unique * n_epochs
-                ax2 = ax.twiny()
-                ax2.set_xlim([v * bs for v in ax.get_xlim()])
-                ax2.set_xlabel(
-                    f"Training samples seen  (= {n_unique:,} unique clips × "
-                    f"{n_epochs} epochs = {total_samples:,})", fontsize=9)
+                if n_unique and n_steps:
+                    n_epochs = round(n_steps * bs / n_unique) if n_unique else 0
+                    total_samples = n_unique * n_epochs
+                    ax2 = ax.twiny()
+                    ax2.set_xlim([v * bs for v in ax.get_xlim()])
+                    ax2.set_xlabel(
+                        f"Training samples seen  (= {n_unique:,} unique clips × "
+                        f"{n_epochs} epochs = {total_samples:,})", fontsize=9)
         except Exception as e:
             # iter13 (2026-05-05): per CLAUDE.md FAIL HARD.
-            print(f"  [plots] FATAL: dual-axis on m09_train_loss failed: {e}", flush=True)
+            print(f"  [plots] FATAL: dual-axis on train_loss failed: {e}", flush=True)
             raise
 
     # iter13 (2026-05-05): LR overlay on right y-axis. Reads `lr` per step from

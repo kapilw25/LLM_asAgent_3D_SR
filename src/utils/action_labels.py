@@ -310,9 +310,15 @@ def subsample_manifest_for_mode(mode: str, clip_keys: list,
     if mode == "full":
         return list(clip_keys)                            # identity (ratio=1.0)
     n_target = get_clip_pool_size(mode, len(clip_keys))
+    if n_target >= len(clip_keys):                        # iter17: clip_pool_ratio≥1.0 → full
+        return list(clip_keys)                            # corpus = identity (matches FULL). POC=1.0
+                                                          # on eval_10k → the 8 robust classes, NOT
+                                                          # the stratified booster's 13 (which lifted
+                                                          # a 38-video class past the clip filter →
+                                                          # video-disjoint split couldn't give ≥5/val)
     if mode == "sanity":
         return sorted(clip_keys)[:n_target]              # code check only
-    # mode == "poc" — stratified by motion class (POC↔FULL parity)
+    # mode == "poc" (ratio<1.0) — stratified by motion class (POC↔FULL parity)
     from utils.eval_subset import stratified_by_motion_class_subset
     target_per_class = max(1, n_target // n_motion_classes)
     out = stratified_by_motion_class_subset(

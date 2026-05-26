@@ -114,9 +114,10 @@ if [ ! -f "$ACTION_LABELS" ]; then
         MIN_CLIPS_BOOTSTRAP=3
         MIN_SPLIT_BOOTSTRAP=1
     else
-        # POC + FULL: paper-final thresholds (≥34 clips/class, ≥5 per split).
-        MIN_CLIPS_BOOTSTRAP=34
-        MIN_SPLIT_BOOTSTRAP=5
+        # POC + FULL: thresholds from pipeline.yaml (single source; calibrated to the
+        # 75/5/20 probe split — see probe_action_labels.min_clips_per_class comment).
+        MIN_CLIPS_BOOTSTRAP=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_clips_per_class.${mode_dir}")
+        MIN_SPLIT_BOOTSTRAP=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_per_split.${mode_dir}")
     fi
     python -u src/probe_action.py "${MODE_FLAG}" \
         --stage labels \
