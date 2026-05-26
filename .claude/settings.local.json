@@ -259,7 +259,11 @@
       "Bash(apt-get install *)",
       "Bash(npx mmdc *)",
       "Bash(awk '/^```mermaid$/{f=1;next}/^```$/{if\\(f\\){f=0;exit}}f' /workspace/factorjepa/iter/iter17_ablations/plan1.md)",
-      "Bash(grep -n '^```' /workspace/factorjepa/iter/iter17_ablations/plan1.md)"
+      "Bash(grep -n '^```' /workspace/factorjepa/iter/iter17_ablations/plan1.md)",
+      "Bash(grep -niE \"CUDA_VISIBLE_DEVICES|for ENC|&$|wait|shard|--shard|parallel|xargs.*-P|nproc\" scripts/run_eval.sh)",
+      "Bash(grep -niE 'train_keys *=|all_keys *=|load_subset\\\\\\(args\\\\.subset|manifest\\\\.keys\\\\\\(\\\\\\)|not in val_set|not in test|val_set|test_set|test_split|test_keys' src/__TRACKED_VAR__.py)",
+      "Bash(grep -nA12 \"def load_subset\" src/utils/config.py)",
+      "Bash(awk '/torch.save\\\\\\(\\\\{/,/\\\\}, combined_ckpt\\\\\\)/' src/__TRACKED_VAR__.py)"
     ]
   }
 }

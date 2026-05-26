@@ -120,6 +120,9 @@ drift_control:
   enabled: false
   type: l2_uniform                 # mirrors surgery_base.yaml:208 (doc only)
   lambda_reg: 0.0                  # ignored when enabled=false; was 1.0 in v10
+  lambda_reg_sanity: 0.001         # m09a1 SANITY-only default when neither yaml nor --lambda-reg
+                                   #   sets λ (keeps drift branch alive in smoke). Was hardcoded
+                                   #   `= 0.001` in m09a1.merge_config_with_args (CLAUDE.md no-hardcode).
   # Below blocks are inert when type=l2_uniform (no FIM, no ablation sweep).
   # Kept null/false to avoid KeyError in any defensive .get() in older code.
   ablation_lambdas: []

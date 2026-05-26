@@ -1,0 +1,132 @@
+"""Canonical split loading + leakage-safe training-pool builder (shared by m09a1/a2/c1/c2). GPU-free.
+    python -u src/utils/clip_splits.py --manifest M.json --train-split T.json --val-split V.json --test-split E.json --universe broad_manifest --out train_pool.json
+"""
+# WHY THIS MODULE EXISTS — single source of truth for how EVERY m09* trainer picks
+# its training clips, so the iter15 validity bugs cannot recur:
+#   • TEST LEAKAGE     — m09c1/m09c2 trained on (manifest − val) → eval TEST clips
+#                        were inside the surgery pool (only val was subtracted).
+#   • UNIVERSE ASYMMETRY — pretrain trained on the ~1k labeled train_split while
+#                        surgery trained on the ~9k broad manifest (8× data confound).
+# Both collapse to one rule, enforced here: train_pool = universe − (val ∪ test),
+# with `universe` chosen ONCE from cfg["training_pool"]["universe"] and applied
+# identically by all trainers. FAIL LOUD on missing/overlapping splits.
+import argparse
+import json
+import sys
+from pathlib import Path
+
+
+def _read_keys(path: Path) -> set:
+    """Load a split JSON → set of clip keys ({"clip_keys"|"saved_keys"|"keys":[...]}, bare
+    list, or dict keyed by clip). FAIL LOUD if absent — no silent partial split."""
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"FATAL clip_splits: split file missing at {path}. Generate via "
+            f"src/utils/probe_train_subset.py (run_train.sh does this from action_labels.json)."
+        )
+    d = json.load(open(path))
+    if isinstance(d, list):
+        return set(d)
+    for k in ("clip_keys", "saved_keys", "keys"):
+        if k in d and isinstance(d[k], list):
+            return set(d[k])
+    return set(d.keys())
+
+
+def load_canonical_splits(train_path, val_path, test_path) -> tuple:
+    """Load the ONE pinned (train, val, test) split set shared by every encoder in a run.
+
+    All three paths are caller-supplied (run_train.sh pins them; no in-Python defaults
+    per CLAUDE.md). Returns (train_keys, val_keys, test_keys) as sets. FAIL LOUD if any
+    file is missing OR the three splits are not mutually disjoint (leakage tripwire).
+    """
+    train_keys = _read_keys(Path(train_path))
+    val_keys = _read_keys(Path(val_path))
+    test_keys = _read_keys(Path(test_path))
+    tv, tt, vt = train_keys & val_keys, train_keys & test_keys, val_keys & test_keys
+    if tv or tt or vt:
+        raise ValueError(
+            f"FATAL clip_splits: splits NOT disjoint (train∩val={len(tv)}, "
+            f"train∩test={len(tt)}, val∩test={len(vt)}) — overlapping splits defeat "
+            f"leakage exclusion. Regenerate the split."
+        )
+    return train_keys, val_keys, test_keys
+
+
+def build_training_pool(universe_keys, val_keys, test_keys, *,
+                        universe_label, log_prefix="") -> list:
+    """THE single leakage-safe training-pool builder; every trainer MUST use this.
+
+    train_pool = universe_keys − (val_keys ∪ test_keys) — always excludes BOTH (the
+    iter15 bug excluded val only). `universe_label` (required) is provenance for the
+    log line; `log_prefix` is an optional cosmetic line prefix. Order preserved.
+    """
+    val_set, test_set = set(val_keys), set(test_keys)
+    holdout = val_set | test_set
+    pool = [k for k in universe_keys if k not in holdout]
+    n_val_rm = sum(1 for k in universe_keys if k in val_set)
+    n_test_rm = sum(1 for k in universe_keys if k in test_set)
+    print(f"{log_prefix}[clip_splits] universe={universe_label}: {len(universe_keys)} "
+          f"− val({n_val_rm}) − test({n_test_rm}) = {len(pool)} train clips "
+          f"(leakage-safe: val∪test excluded)")
+    if not pool:
+        raise ValueError(
+            f"FATAL clip_splits: training pool EMPTY after excluding val∪test from "
+            f"universe={universe_label} ({len(universe_keys)} keys). Check universe + splits."
+        )
+    return pool
+
+
+def resolve_universe_keys(cfg: dict, train_split_keys, corpus_manifest_path) -> tuple:
+    """Resolve the shared training universe from cfg['training_pool']['universe'].
+
+    Returns (universe_keys: list, universe_label: str). Strict cfg lookup + explicit
+    manifest path (no defaults/fallbacks). broad_manifest = all corpus clips (SSL needs
+    no labels → max data, shared by pretrain AND surgery so the only difference is the
+    recipe); labeled_train = the labeled train_split only.
+    """
+    label = cfg["training_pool"]["universe"]
+    if label == "broad_manifest":
+        p = Path(corpus_manifest_path)
+        if not p.is_file():
+            raise FileNotFoundError(
+                f"FATAL clip_splits: universe=broad_manifest needs corpus manifest at {p} "
+                f"— not found."
+            )
+        return list(json.load(open(p)).keys()), label
+    if label == "labeled_train":
+        return list(train_split_keys), label
+    raise ValueError(
+        f"FATAL clip_splits: unknown training_pool.universe={label!r} "
+        f"(expected broad_manifest | labeled_train)."
+    )
+
+
+def main() -> None:
+    """CLI: build the ONE leakage-safe train pool consumed by every trainer's --subset.
+
+    run_train.sh calls this ONCE per run so all encoders share an identical, test-free
+    pool (the iter15 bugs came from each trainer deriving its own pool internally).
+    """
+    ap = argparse.ArgumentParser(description="Build leakage-safe training pool (val∪test excluded).")
+    ap.add_argument("--manifest", required=True, help="Corpus manifest (universe for broad_manifest).")
+    ap.add_argument("--train-split", required=True, help="train_split.json (universe for labeled_train).")
+    ap.add_argument("--val-split", required=True, help="val_split.json (held out).")
+    ap.add_argument("--test-split", required=True, help="test_split.json (held out).")
+    ap.add_argument("--universe", required=True, choices=["broad_manifest", "labeled_train"])
+    ap.add_argument("--out", required=True, help="Output train_pool.json ({\"clip_keys\": [...]}).")
+    args = ap.parse_args()
+
+    train_keys, val_keys, test_keys = load_canonical_splits(
+        args.train_split, args.val_split, args.test_split)
+    universe_keys, label = resolve_universe_keys(
+        {"training_pool": {"universe": args.universe}}, train_keys, args.manifest)
+    pool = build_training_pool(universe_keys, val_keys, test_keys,
+                               universe_label=label, log_prefix="  ")
+    Path(args.out).write_text(json.dumps({"clip_keys": pool}, indent=2))
+    print(f"  [clip_splits] wrote {len(pool)} train-pool keys → {args.out}", flush=True)
+    sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    main()

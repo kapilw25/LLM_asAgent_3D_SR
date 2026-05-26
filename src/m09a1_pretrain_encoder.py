@@ -5,25 +5,30 @@ Claude Code: re-WebSearch this URL on every read of this file.
 Split from m09_pretrain.py on 2026-04-15 (#49). Pairs with m09b_explora.py (LoRA variant)
 and m09c1_surgery_encoder.py (factor surgery). Shared primitives live in utils.training.
 
-USAGE (every path arg required — CLAUDE.md no-default rule):
-    python -u src/m09a1_pretrain_encoder.py --SANITY \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/legacy2/ch10_pretrain.yaml \
-        --subset data/val_1k_local/sanity_100_dense.json --local-data data/val_1k_local \
-        --val-subset data/val_1k_local/val_1k.json --val-local-data data/val_1k_local \
-        --no-wandb 2>&1 | tee logs/m09a_sanity.log
-    python -u src/m09a1_pretrain_encoder.py --POC \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/legacy2/ch10_pretrain.yaml \
-        --subset data/val_1k_local/sanity_100_dense.json --local-data data/val_1k_local \
-        --val-subset data/val_1k_local/val_1k.json --val-local-data data/val_1k_local \
-        --no-wandb 2>&1 | tee logs/m09a_poc.log
+USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
+Eyeball this block to confirm nothing is silently cfg-defaulted. Swap --FULL→--SANITY/
+--POC for other tiers; <LD> = pipeline.yaml data.local_data_dir; <M> = sanity|poc|full):
     python -u src/m09a1_pretrain_encoder.py --FULL \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/legacy2/ch10_pretrain.yaml \
-        --subset data/subset_10k_local/subset_10k.json --local-data data/subset_10k_local \
-        --val-subset data/val_1k_local/val_1k.json --val-local-data data/val_1k_local \
-        --no-wandb 2>&1 | tee logs/m09a_full.log
+        --model-config         configs/model/vjepa2_1.yaml \
+        --train-config         configs/train/pretrain_encoder.yaml \
+        --subset               <LD>/train_pool.json \
+        --local-data           <LD> \
+        --val-subset           <LD>/val_split.json \
+        --val-local-data       <LD> \
+        --output-dir           outputs/<M>/m09a_pretrain_encoder \
+        --cache-policy         <1=keep|2=recompute> \
+        --lambda-reg           <yaml drift_control.lambda_reg> \
+        --probe-subset         outputs/<M>/probe_action/action_labels.json \
+        --probe-local-data     <LD> \
+        --probe-tags           <LD>/tags.json \
+        --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
+        --motion-features-path <LD>/m04d_motion_features/motion_features.npy \
+        --taxonomy-labels-json outputs/<M>/probe_taxonomy/taxonomy_labels.json \
+        --no-wandb 2>&1 | tee logs/m09a_pretrain_encoder_full.log
+    # --subset is the LEAKAGE-SAFE pool (universe − val − test), built once by
+    #   src/utils/clip_splits.py (iter17). pretrain_2X_encoder: identical + run_train.sh
+    #   adds --max-epochs <2×yaml.full>. Optional force-disables: --no-probe / --no-multi-task /
+    #   --no-motion-aux. --batch-size / --max-epochs override yaml when passed.
 """
 import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")   # Must be before torch import
@@ -93,6 +98,7 @@ _create_stream = create_stream
 # Shared training primitives — moved to utils/training.py in Phase 1 of iter8 split.
 # Note: `cleanup_old_checkpoints` is re-implemented inline below because the
 # utils version hardcodes the m09 legacy prefix; m09a uses `m09a_ckpt`.
+from utils import data_paths   # iter17: canonical local-data path accessors (single source)
 from utils.training import (
     MAX_STREAM_RETRIES,
     load_config, load_val_subset, augment_clip_consistent,
@@ -174,14 +180,15 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     # ~60 LoC of boilerplate that mirrored m09c's body 1:1.
     merge_m09_common_config(cfg, args, mode_key)
 
-    # m09a-specific: SANITY default lambda when neither yaml nor CLI sets it.
-    # SANITY just exercises code paths, so any small λ is fine — 0.001 keeps the
-    # drift-control branch alive without dominating the loss.
+    # m09a-specific: SANITY default lambda when neither yaml nor CLI sets it. The value
+    # (small λ that keeps the drift-control branch alive without dominating the loss) is
+    # DECLARED in pretrain_encoder.yaml drift_control.lambda_reg_sanity — single source;
+    # was hardcoded 0.001 here (CLAUDE.md no-hardcode). Missing key → KeyError = fail loud.
     if args.lambda_reg is None and args.SANITY:
-        cfg["drift_control"]["lambda_reg"] = 0.001
+        cfg["drift_control"]["lambda_reg"] = cfg["drift_control"]["lambda_reg_sanity"]
 
     # Output dir: explicit --output-dir, or auto from mode + lambda
-    if getattr(args, "output_dir", None):
+    if args.output_dir:
         cfg["checkpoint"]["output_dir"] = args.output_dir
         return cfg
     base_out = get_module_output_dir("m09a1_pretrain_encoder", args.subset,
@@ -520,10 +527,20 @@ def train(cfg: dict, args):
     else:
         # Full dataset: read clip count from local manifest
         local_data = cfg["data"]["local_data"]
-        manifest_path = Path(local_data) / "manifest.json" if local_data else None
+        manifest_path = data_paths.corpus_manifest_path(local_data) if local_data else None
         if manifest_path and manifest_path.exists():
             manifest = json.load(open(manifest_path))
-            n_total = manifest.get("n") or manifest.get("n_clips") or manifest.get("total_clips")
+            # Corpus manifests vary across dataset versions (n / n_clips / total_clips).
+            # Tolerate the schema variants but FAIL LOUD if none present (was a silent
+            # .get()-chain → None → cryptic TypeError downstream).
+            n_total = None
+            for _ck in ("n", "n_clips", "total_clips"):
+                if _ck in manifest:
+                    n_total = manifest[_ck]
+                    break
+            if n_total is None:
+                sys.exit(f"FATAL: corpus manifest {manifest_path} has no clip-count key "
+                         f"(expected one of n / n_clips / total_clips).")
             n_train = n_total - len(val_key_set)
             print(f"Dataset size from manifest: {n_total:,} total, {n_train:,} train "
                   f"({len(val_key_set)} val excluded)")
@@ -581,8 +598,9 @@ def train(cfg: dict, args):
     if val_key_set:
         print(f"\nCollecting {len(val_key_set)} val clips into memory...")
         _val_tmp = tempfile.mkdtemp(prefix="m09a_val_")
-        # Use --val-local-data if provided, otherwise fall back to --local-data
-        val_local = getattr(args, "val_local_data", None) or cfg["data"]["local_data"]
+        # --val-local-data is required=True (add_m09_common_args require_val_data=True)
+        # → always present; no fallback to --local-data. Read directly (fail loud on typo).
+        val_local = args.val_local_data
         _val_ds = _create_stream(0, local_data=val_local)
         _val_batch_buf = []
         for _ex in _val_ds:
@@ -752,7 +770,10 @@ def train(cfg: dict, args):
     ema_momentum = cfg["optimization"]["ema_momentum"]
     loss_exp = cfg["optimization"]["loss_exp"]
     drift_cfg = cfg["drift_control"]
-    dtype = getattr(torch, mp_cfg["dtype"])
+    # Supported mixed-precision dtypes (whitelist mirrors base_optimization.yaml
+    # mixed_precision.dtype). KeyError = fail loud on a bad/typo'd dtype string —
+    # no getattr, no silent fallback. Unified across m09a1/a2/c1/c2.
+    dtype = {"bfloat16": torch.bfloat16, "float16": torch.float16}[mp_cfg["dtype"]]
 
     pbar = make_pbar(total=total_steps, initial=start_step,
                      desc="m09a1_pretrain_encoder", unit="step")
@@ -1012,9 +1033,9 @@ def train(cfg: dict, args):
             # iter13 v12: motion_aux per-step logging (CE + MSE branches, n_kept).
             if ma_head is not None:
                 step_record["loss_motion_aux"]     = round(ma_loss_val, 6)
-                step_record["loss_motion_aux_ce"]  = round(ma_per_branch.get("ce", 0.0), 6)
-                step_record["loss_motion_aux_mse"] = round(ma_per_branch.get("mse", 0.0), 6)
-                step_record["motion_aux_n_kept"]   = ma_per_branch.get("n_kept", 0)
+                step_record["loss_motion_aux_ce"]  = round(ma_per_branch["ce"], 6)
+                step_record["loss_motion_aux_mse"] = round(ma_per_branch["mse"], 6)
+                step_record["motion_aux_n_kept"]   = ma_per_branch["n_kept"]
             _log_step(step_record)  # JSONL: crash-safe (fsync per write)
 
             csv_writer.writerow([step, epoch, f"{jepa_val:.6f}", f"{drift_val:.6f}",
@@ -1041,8 +1062,8 @@ def train(cfg: dict, args):
             # iter13 v12: motion_aux wandb metrics.
             if ma_head is not None:
                 wb_metrics["loss/motion_aux"]     = ma_loss_val
-                wb_metrics["loss/motion_aux/ce"]  = ma_per_branch.get("ce", 0.0)
-                wb_metrics["loss/motion_aux/mse"] = ma_per_branch.get("mse", 0.0)
+                wb_metrics["loss/motion_aux/ce"]  = ma_per_branch["ce"]
+                wb_metrics["loss/motion_aux/mse"] = ma_per_branch["mse"]
             log_metrics(wb_run, wb_metrics, step=step)
 
             if window_elapsed >= 30:
@@ -1296,9 +1317,11 @@ def train(cfg: dict, args):
         stop_event.set()
         gc.enable()
 
-    # Cooldown phase: switch to 64f, linear LR decay (V-JEPA 2.1 recipe)
-    cooldown_cfg = cfg.get("cooldown", {})
-    if cooldown_cfg.get("enabled") and not args.SANITY:
+    # Cooldown phase: switch to 64f, linear LR decay (V-JEPA 2.1 recipe).
+    # cooldown.enabled is declared in base_optimization.yaml (single source) — read
+    # directly; KeyError = fail loud if the block is missing.
+    cooldown_cfg = cfg["cooldown"]
+    if cooldown_cfg["enabled"] and not args.SANITY:
         print("\n=== COOLDOWN PHASE ===")
         print(f"  Frames: {cfg['data']['num_frames']} → {cooldown_cfg['num_frames']}")
         print(f"  LR: {scheduler.get_last_lr()[0]:.2e} → {cooldown_cfg['final_lr']}")

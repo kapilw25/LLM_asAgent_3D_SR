@@ -45,6 +45,15 @@ data:
   master_manifest_name:  "eval_10k.json"           # iter15 / iter16 SANITY+POC master
   # master_manifest_name: "full_local.json"        # iter16 FULL (after M3 generates it)
 
+  # iter17 (2026-05-26): canonical m10/m11 OUTPUT subdir conventions — SINGLE SOURCE
+  # consumed by src/utils/data_paths.py + run_train.sh. Previously duplicated as
+  # hardcoded literals across m09a1/c1/c2 + run_train.sh (m09c1 read factor_manifest
+  # from --factor-dir, m09c2 reconstructed it from local_data + "m11_factor_datasets"
+  # → divergence risk, same class as the train-pool leakage). Now one place.
+  factor_subdir:         "m11_factor_datasets"     # m11_factor_datasets.py output dir
+  masks_subdir:          "m10_sam_segment"         # m10_sam_segment.py output dir (masks/ inside)
+  factor_manifest_name:  "factor_manifest.json"    # m11 manifest filename
+
   clips_per_shard: 1000       # m03/m00d: WebDataset shard size (≈1 GB each at 480p MP4 × 1000 clips)
   data_prep_workers: 10       # m00b: concurrent duration fetchers
   clip_duration_sec: 10       # m06: default clip length for ±30s exclusion

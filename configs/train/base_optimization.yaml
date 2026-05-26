@@ -275,6 +275,21 @@ optimization:
 replay:
   raw_pretrain_pct: 0.0           # 0.0 = off (legacy); 0.5 = recipe-v3
 
+# -- Training-clip universe (iter17 2026-05-26 — leakage + universe-asymmetry fix) --
+# SINGLE source of truth for how EVERY trainer (m09a1/a2/c1/c2) picks its training
+# clips, via src/utils/clip_splits.build_training_pool. Fixes the iter15 bugs where
+# (a) surgery trained on (manifest − val) → eval TEST clips leaked into the surgery
+# pool, and (b) pretrain used the ~1k labeled train_split while surgery used the ~9k
+# broad manifest (8× data-volume confound). Now ALL trainers compute
+#   train_pool = universe − (val ∪ test)
+# from the SAME universe → only the recipe differs, not the data.
+#   broad_manifest — all corpus clips (corpus manifest keys). SSL needs no labels →
+#                    use all available video. Pretrain AND surgery share this.
+#   labeled_train  — only the labeled train_split (smaller, label-matched).
+# Mode-invariant per POC↔FULL parity (only n_clips + n_epochs may differ).
+training_pool:
+  universe: broad_manifest        # iter17 user decision 2026-05-26 (broad SSL pool)
+
 # -- Cooldown phase (V-JEPA 2.1: switch to 64f + linear LR decay) --
 cooldown:
   enabled: true                   # Run cooldown after main training

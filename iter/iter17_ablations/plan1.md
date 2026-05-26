@@ -1,7 +1,9 @@
 # iter17 — World-model ablation plan (plan1)
 
-Date: 2026-05-23 · Author: continuation of iter15/iter16 work
-Status: DRAFT — awaiting user go before any code mod or training launch.
+Date: 2026-05-23 (scope changed 2026-05-24) · Author: continuation of iter15/iter16 work
+Status: DRAFT — **SCOPE = FULL 115k** (`data/full_local/`), reversed from POC-only
+on 2026-05-24 to get NON-OVERLAPPING 95% CIs (see § 0.5). FULL is NOT launch-ready
+(m10 SAM + m04d still in-prep; pipeline.yaml flip pending). Awaiting user go.
 
 ═══════════════════════════════════════════════════════════════════════════════
 § 0 · Why this plan exists (acknowledgement of my miss-call)
@@ -23,10 +25,52 @@ This iter17 plan corrects that and goes further — adding the realistic-scope
 HF candidates that ARE swap-compatible with our pipeline.
 
 ═══════════════════════════════════════════════════════════════════════════════
-§ 1 · iter15 v15a recipe — what we replicate per encoder (POC ONLY)
+§ 0.5 · ⚠️ SCOPE CHANGE 2026-05-24 — POC-only → FULL 115k (supersedes all "POC-only" text below)
 ═══════════════════════════════════════════════════════════════════════════════
 
-Scope: **POC only** on `data/eval_10k_local/`. No FULL (115K) run in iter17.
+WHY: at POC (10k corpus, test N≈218 labeled clips) the 95% bootstrap CIs for the
+probe-accuracy metrics OVERLAP — see
+  iter15.../v15a/poc/probe_plot/eval/probe_action_acc_compare.png
+  iter15.../v15a/poc/probe_plot/eval/probe_motion_cos_compare.png
+An overlapping-CI result is not publishable as "surgery > baseline". The fix is
+N, not the recipe: CI half-width ∝ 1/√N.
+
+```text
+┌──────────────────────────┬──────────────┬───────────────┬───────────────────────────────────┐
+│ Corpus                    │ Test clips    │ CI half-width │ Effect on overlapping metrics      │
+├──────────────────────────┼──────────────┼───────────────┼───────────────────────────────────┤
+│ POC eval_10k_local        │ ~218 labeled  │ baseline      │ taxon_top1 ±0.0516 → CIs OVERLAP  │
+│ FULL full_local (115,687) │ ~2.5k-17k     │ ~3-9× narrower│ ±0.0516 → ±0.006-0.015 → likely   │
+│                           │ labeled       │ (√N scaling)  │ SEPARATE                          │
+└──────────────────────────┴──────────────┴───────────────┴───────────────────────────────────┘
+```
+
+HONEST CAVEAT: FULL buys a STATISTICALLY DECISIVE verdict, not a guaranteed
+surgery-win. If the true effect is small (POC means already near-equal), tight
+FULL CIs will CONFIRM equality with high confidence — i.e. they can decisively
+REFUTE the headline, not just support it. That is the correct scientific risk to
+take (§ 6).
+
+FULL DATA-PREP PREREQUISITES (verified 2026-05-24 — NOT launch-ready yet):
+  • Corpus: ✅ 115,687 clips, all 116 tars + manifest on data/full_local/.
+  • m10 SAM segmentation: ⏳ STILL RUNNING (PID 2264355, ~56 GPU-hr in, 6 workers).
+  • m04d motion features: ⏳ INCOMPLETE (only .m04d_checkpoint.npz — no
+    motion_features.npy → probe labels cannot be generated yet).
+  • m11 factor datasets: partial, gated on m10 finishing.
+  • pipeline.yaml data.local_data_dir: still = data/eval_10k_local → M9 flip to
+    data/full_local (+ master_manifest_name) PENDING before any FULL run.
+GATE: no FULL training/eval launches until m10 + m04d complete AND the yaml flip
+lands. Until then, code-prep (M0a-M5, yaml authoring, SOTA trainers) proceeds on
+the 10k corpus as SANITY/dev — but the PAPER NUMBERS come from FULL.
+
+═══════════════════════════════════════════════════════════════════════════════
+§ 1 · iter15 v15a recipe — what we replicate per encoder (recipe is scale-agnostic)
+═══════════════════════════════════════════════════════════════════════════════
+
+Scope: **FULL 115k** on `data/full_local/` for paper numbers (§ 0.5). The iter15
+v15a recipe below is the per-encoder template — identical at POC and FULL per the
+POC↔FULL parity rule; only n_clips (10k→115k) and n_epochs differ. POC on
+`data/eval_10k_local/` remains the dev/SANITY tier.
 Verified from `iter15_poc_m09c1_3stage_DI_encoder_20260517_022905.log`:
   • eval_10k_train_split.json: 1,083 clips (split=train)
   • eval_10k_val_split.json:   218 clips (split=val)
@@ -244,17 +288,78 @@ CLAUDE.md TRUE-IMPOSSIBILITY carve-out).
 │     │   Output: iter17_ablation_summary.{png,pdf} with all 11+     │       │        │
 │     │   encoders side-by-side on action / taxonomy / motion / future│       │        │
 │     │   axes. ASCII summary table in high_level_outputs.md.        │       │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ Q5-Q9 ADDITIONS (2026-05-24) — see § 9 for the decisions                            │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M0a │ (Q6) torch.hub probe of ViT-L predictor depth (30 sec):       │ CPU   │ low    │
+│     │   python -c "import torch; m=torch.hub.load('facebookresearch │       │        │
+│     │   /jepa','vjepa2_1_vit_large_384'); print(m.predictor.depth)" │       │        │
+│     │   → record value in configs/model/vjepa2_1_vit_large.yaml     │       │        │
+│     │   model.pred_depth. BLOCKS M2b (ViT-L yaml authoring).        │       │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M7b │ (Q5) Image-encoder POOL SWEEP — mean+cls+max per backbone:    │ Pro   │ low    │
+│     │   3 image encs × 3 pools × 3 head positions = 27 head         │ 4000  │        │
+│     │   trainers + 3 frozen extractions (frozen has no pool — it    │       │        │
+│     │   feeds features, not a trained head). CLS pool FATALs if the │       │        │
+│     │   encoder ships no CLS token (see plan_code FL-8).            │       │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M7a │ (Q8) AMENDED: V-JEPA 2.0 SSv2-FT now FROZEN + head-only.      │ Pro   │ low    │
+│     │   +3 head yamls (pretrain_head + 2 surgery_head). Was FROZEN- │ 4000  │        │
+│     │   only; promoted for cross-table parity with image encoders.  │       │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M10 │ (Q7) SAFE trainer — NeurIPS 2024 slow+fast PET.               │ Pro   │ HIGH   │
+│     │   src/m09s_safe.py + 4 yamls (one per V-JEPA backbone).       │ 6000  │        │
+│     │   Built on m09c1 stage loop + m09c2 frozen backbone (Q10=     │       │        │
+│     │   Option A: session_i = surgery stage_i). § C.10 RESOLVED.    │       │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M11 │ (Q7) SEEKR trainer — EMNLP 2024 replay + selective KD.        │ Pro   │ HIGH   │
+│     │   src/m09s_seekr.py + 4 yamls. Same § C.10 prereq.            │ 6000  │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M12 │ (Q7) SSIAT trainer — CVPR 2024 shared adapter.                │ Pro   │ HIGH   │
+│     │   src/m09s_ssiat.py + 4 yamls. Same § C.10 prereq.            │ 6000  │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M13 │ (Q7) SAPT trainer — ACL 2024 input-cond PET routing.          │ Pro   │ HIGH   │
+│     │   src/m09s_sapt.py + 4 yamls. Same § C.10 prereq.             │ 6000  │        │
+├─────┼──────────────────────────────────────────────────────────────┼───────┼────────┤
+│ M14 │ (Q9) hf_outputs.py --subdir iter17_ablations pass-through.    │ CPU   │ low    │
 └─────┴──────────────────────────────────────────────────────────────┴───────┴────────┘
 ```
 
-Note: iter17 is **POC-only**. FULL (115K) is explicitly OUT OF SCOPE — the
-ablation question is "does V-JEPA 2.1's surgery-vs-frozen Δ replicate across
-V-JEPA 2.0 / I-JEPA / JEPA-WMS on the same 10K corpus", not "scale to 115K".
-A future iter can promote winners to FULL after iter17's paired-Δ is known.
+Note (REVISED 2026-05-24, supersedes prior POC-only note — see § 0.5): iter17
+paper numbers come from **FULL 115k** (`data/full_local/`), because POC CIs
+overlap and only N fixes that. The 10k corpus is the dev/SANITY tier where
+code-prep (M0a-M5, yaml authoring, SOTA trainers) is validated before each FULL
+launch. The ablation question is unchanged — "does the surgery-vs-frozen Δ hold
+across V-JEPA 2.0 / 2.1 size variants / I-JEPA / LeJEPA / SOTA" — but now it is
+answered at a scale where the CIs can SEPARATE. Per the POC↔FULL parity rule,
+every FULL run is a byte-identical scale-up of its POC counterpart (only n_clips
++ n_epochs differ).
 
 ═══════════════════════════════════════════════════════════════════════════════
 § 5 · Compute + storage budget (best-effort estimates from iter15 wallclocks)
 ═══════════════════════════════════════════════════════════════════════════════
+
+⚠️ POST-SCOPE-CHANGE (§ 0.5): the dollar/hour figures in THIS section are
+POC-scale (10k). FULL 115k is ~11.5× the train clips (80k vs ~7k) and ~78× the
+test clips (~17k vs 218). Per-encoder wallclocks scale accordingly:
+
+```text
+┌──────────────────────────────┬──────────────┬────────────────────────────────────────────┐
+│ Stage                         │ POC (10k)     │ FULL (115k) — from run_train.sh docstring  │
+├──────────────────────────────┼──────────────┼────────────────────────────────────────────┤
+│ pretrain_encoder (per enc)    │ ~1-2 min      │ ~3 GPU-h                                   │
+│ surgery_*_encoder (per enc)   │ ~2 min        │ ~6-8 GPU-h                                 │
+│ eval (per enc, all stages)    │ ~50 min       │ multi-hour (17k test feature-extract +     │
+│                               │               │ probe-train dominate)                      │
+└──────────────────────────────┴──────────────┴────────────────────────────────────────────┘
+```
+
+NET: the EFFECTIVE FULL budget is roughly ONE-to-TWO orders of magnitude above
+the ~$111-205 POC total below — the SOTA × 4-backbone matrix + image pool sweep
+at FULL is the dominant cost, and EVAL over 17k clips × ~23 encoders × 5 stages
+becomes the wall-time bottleneck (→ eval clip-sharding is now near-mandatory, see
+the multi-GPU table in the chat). A precise FULL budget needs a FULL-mode
+wallclock probe once m10/m04d finish; treat the numbers below as the POC tier.
 
 iter15 v15a POC wallclocks (from log timestamps):
   • m09a1 pretrain_encoder: 1:13 (2 epochs)
@@ -266,22 +371,44 @@ iter15 v15a POC wallclocks (from log timestamps):
   • m09c2 surgery_noDI_head: 0:25
   • post_poc_eval: ~6:00 (7 encoders × ~50 min each)
 
+⚠️ This table shows the POST-Q5-Q9 EFFECTIVE budget (updated 2026-05-24). The
+sub-block "BASE (pre-Q5-Q9)" is the original 7-candidate scope; the "Q5-Q9
+ADDITIONS" sub-block is the SOTA + pool-sweep + SSv2-FT-head expansion. The
+TOTAL row is the only number to plan against.
+
 ```text
-┌──────────────────────────────────┬─────────┬──────────┬───────────────────┐
-│ Scope (POST 2026-05-24 expansion) │ GPU-hr  │ Cost (Pro 6000 @$1.30/hr)│ Storage│
-├──────────────────────────────────┼─────────┼──────────┼───────────────────┤
-│ M6  V-JEPA 2.0 ViT-G full         │ ~8-10 hr│ ~$10-13  │ +60 GB ckpts     │
-│ M6a V-JEPA 2.1 ViT-L 300M full    │ ~3-5 hr │ ~$4-7    │ +30 GB ckpts     │
-│ M6b V-JEPA 2.1 ViT-g 1B full      │ ~6-8 hr │ ~$8-10   │ +50 GB ckpts     │
-│ M6c V-JEPA 2.0 SSv2-FT frozen     │ ~1 hr   │ ~$1-2    │ +8 GB ckpt       │
-│ M7  I-JEPA POC (both, frozen)     │ ~3-4 hr │ ~$4-5    │ +10 GB ckpts     │
-│ M7a LeJEPA-L frozen               │ ~1-2 hr │ ~$2-3    │ +3 GB ckpt       │
-│ M8  (JEPA-WMS dropped)            │ —       │ —        │ —                │
-│ M9  Aggregate plots               │ ~0 GPU  │ ~$0      │ +20 MB           │
-├──────────────────────────────────┼─────────┼──────────┼───────────────────┤
-│ iter17 POC TOTAL                  │ ~22-30 hr│ ~$29-40  │ ~160-180 GB total│
-└──────────────────────────────────┴─────────┴──────────┴───────────────────┘
+┌──────────────────────────────────┬──────────┬──────────────────────────┬───────────────────┐
+│ Scope                             │ GPU-hr   │ Cost (Pro 6000 @$1.30/hr)│ Storage           │
+├──────────────────────────────────┼──────────┼──────────────────────────┼───────────────────┤
+│ BASE (pre-Q5-Q9)                  │          │                          │                   │
+│ M6  V-JEPA 2.0 ViT-G full         │ ~8-10 hr │ ~$10-13                  │ +60 GB ckpts      │
+│ M6a V-JEPA 2.1 ViT-L 300M full    │ ~3-5 hr  │ ~$4-7                    │ +30 GB ckpts      │
+│ M6b V-JEPA 2.1 ViT-g 1B full      │ ~6-8 hr  │ ~$8-10                   │ +50 GB ckpts      │
+│ M6c V-JEPA 2.0 SSv2-FT frozen     │ ~1 hr    │ ~$1-2                    │ +8 GB ckpt        │
+│ M7  I-JEPA POC (both, frozen)     │ ~3-4 hr  │ ~$4-5                    │ +10 GB ckpts      │
+│ M7a LeJEPA-L frozen               │ ~1-2 hr  │ ~$2-3                    │ +3 GB ckpt        │
+│ M8  (JEPA-WMS dropped)            │ —        │ —                        │ —                 │
+│ M9  Aggregate plots               │ ~0 GPU   │ ~$0                      │ +20 MB            │
+│   BASE subtotal                   │ ~22-30 hr│ ~$29-40                  │ ~160-180 GB       │
+├──────────────────────────────────┼──────────┼──────────────────────────┼───────────────────┤
+│ Q5-Q9 ADDITIONS                   │          │                          │                   │
+│ M7a' SSv2-FT head-only (Q8, +3)   │ ~2 hr    │ ~$2                      │ +5 GB ckpts       │
+│ M7b  image-encoder pool sweep     │ ~3-5 hr  │ ~$2-3                    │ +5 GB (heads tiny)│
+│      (Q5, mean+cls+max × 3 enc)   │          │                          │                   │
+│ M10  SAFE  × 4 backbones (Q7)     │ ~8-12 hr │ ~$20-40                  │ +20 GB ckpts      │
+│ M11  SEEKR × 4 backbones (Q7)     │ ~8-12 hr │ ~$20-40                  │ +20 GB ckpts      │
+│ M12  SSIAT × 4 backbones (Q7)     │ ~6-10 hr │ ~$15-35                  │ +20 GB ckpts      │
+│ M13  SAPT  × 4 backbones (Q7)     │ ~8-12 hr │ ~$20-40                  │ +20 GB ckpts      │
+│   Q5-Q9 subtotal                  │ ~33-53 hr│ ~$79-160                 │ ~90 GB            │
+├──────────────────────────────────┼──────────┼──────────────────────────┼───────────────────┤
+│ iter17 EFFECTIVE TOTAL            │ ~55-83 hr│ ~$111-205                │ ~250-270 GB       │
+│ (GPU-hr; wall ~6-8 weeks dominated by SOTA trainer LoC, not GPU — see § 6 risk)            │
+└──────────────────────────────────┴──────────┴──────────────────────────┴───────────────────┘
 ```
+
+⚠️ STORAGE: the post-Q5-Q9 ~250-270 GB exceeds the ~75-85 GB free that Q4
+approved against. Re-confirm disk headroom (or GC) before M10 — Q4's "OK
+without cleanup" was decided against the BASE ~160-180 GB figure, not this.
 
 All training/eval uses `data/eval_10k_local/` (already on disk from iter15) —
 NO dependency on the currently-running Stage 3 m10 FULL run. iter17 POC can
@@ -306,14 +433,110 @@ ViT-G, V-JEPA 2.1 ViT-L, V-JEPA 2.1 ViT-g) run on Pro 6000 instance #2.
 │ predictor / wrong modality             │           │ shows incompat → drop from iter17.    │
 │ Disk pressure (75-85 GB additional)    │ low       │ Sequential M1 downloads + GC old      │
 │                                       │           │ /tmp/m09_e* dirs between runs.         │
-│ Surgery wins at POC (1083 clips) may   │ medium    │ Out of scope for iter17 — POC paired-Δ│
-│ not survive at FULL scale (115K)       │           │ is the deliverable. A separate later  │
-│                                       │           │ iter promotes winners to FULL.         │
+│ Surgery wins at POC (1083 clips) may   │ RESOLVED  │ NOW DIRECTLY TESTED — scope changed to│
+│ not survive at FULL scale (115K)       │ (§ 0.5)   │ FULL 115k (§ 0.5). No longer deferred.│
+│ FULL tight CIs may DECISIVELY REFUTE   │ HIGH      │ The real scientific risk of going FULL│
+│ the surgery-win if the true effect is  │ (§ 0.5)   │ : if POC means are near-equal, FULL    │
+│ small (CIs separate the WRONG way)     │           │ confirms equality with tight CIs →    │
+│                                       │           │ headline refuted. Accept it — a       │
+│                                       │           │ decisive null is still publishable;   │
+│                                       │           │ an overlapping-CI POC is not.         │
+│ FULL not launch-ready: m10 SAM still   │ HIGH      │ GATE (§ 0.5): no FULL run until m10 + │
+│ running + m04d motion_features missing │ (§ 0.5)   │ m04d complete AND pipeline.yaml flips │
+│ + pipeline.yaml still on eval_10k_local│           │ data.local_data_dir → data/full_local.│
+│                                       │           │ Monitor m10 PID 2264355 to completion.│
+│ FULL compute ~1-2 orders > POC budget  │ HIGH      │ § 5 numbers are POC-scale. Re-probe a │
+│ (§ 5 table is POC-scale)               │ (§ 0.5)   │ FULL wallclock once m10/m04d finish;   │
+│                                       │           │ eval clip-sharding now near-mandatory.│
 │ V-JEPA 2.0 frozen ALREADY exists as   │ low       │ Cross-check: was V-JEPA 2.0 frozen run│
 │ baseline (need to verify it's not in  │           │ in iter15 or any prior iter? grep      │
 │ iter15 result_outputs)                 │           │ result_outputs/ for "vjepa_2_0" before M2.│
+│ SOTA trainer LoC slips past deadline   │ HIGH↑     │ DOMINANT post-Q7 risk, ELEVATED by Q12│
+│ → 0/16 SOTA cells filled, hero table   │ (Q7/Q12)  │ (build all 4 in PARALLEL, not SAFE-   │
+│ ships with ??? where SOTA should be    │           │ first). ~2000-6000 LoC across M10-M13.│
+│                                       │           │ Q12 de-risk = SHARED infra: one       │
+│                                       │           │ tested base (peft_modules.py + m09c1- │
+│                                       │           │ clone) feeds all 4 → if the base is   │
+│                                       │           │ solid, the 4 diverge only in the PET/ │
+│                                       │           │ replay/routing head. Residual risk: a │
+│                                       │           │ base bug blocks ALL 4 at once. Hard   │
+│                                       │           │ gate: peft_modules.py + 1 trainer must│
+│                                       │           │ pass GATE-I before the other 3 land.  │
+│ SOTA methods are multi-SESSION but     │ RESOLVED  │ Q10=Option A (surgery stages=sessions)│
+│ iter17 is single-corpus → numbers      │ (Q10)     │ via § C.10. SOTA built on m09c1 stage │
+│ uninterpretable as continual-FT        │           │ loop. FL-10 (<2 sessions FATAL) is the│
+│ comparisons                           │           │ runtime guard. No longer open.        │
+│ Post-Q5-Q9 storage ~250-270 GB         │ RESOLVED  │ Q11 = provision more disk (not GC).   │
+│ exceeds Q4-approved ~160-180 GB        │ (Q11)     │ Attach storage BEFORE M1 (Q13 holds   │
+│                                       │           │ the 32 GB download until then).       │
 └──────────────────────────────────────┴───────────┴──────────────────────────────────────┘
 ```
+
+═══════════════════════════════════════════════════════════════════════════════
+§ 6b · Validity bugs found + RESOLVED in code (2026-05-26) — BLOCKERS for FULL
+═══════════════════════════════════════════════════════════════════════════════
+
+Discovered while auditing the iter15 v15a comparison: the surgery-vs-pretrain win
+was confounded by THREE data-handling bugs, all from the same root — each trainer
+re-derived its training pool internally instead of consuming one shared source.
+
+```text
+┌─────┬────────────────────────────────────────────┬──────────────────────────────────────────┐
+│ Bug │ What was wrong (iter15)                      │ Fix (2026-05-26, CPU-verified)            │
+├─────┼────────────────────────────────────────────┼──────────────────────────────────────────┤
+│ A   │ TEST LEAKAGE — m09c1 trained on manifest−val│ NEW src/utils/clip_splits.py:             │
+│     │ (only val excluded) → all eval-TEST clips    │ build_training_pool = universe−(val∪test).│
+│     │ were in surgery's SSL pool (9297−218=9079    │ run_train.sh builds ONE train_pool.json,  │
+│     │ proved test NOT excluded). m09c2 streamed    │ feeds it as --subset to all 4 trainers.   │
+│     │ the full factor manifest, also leaking.      │ m09c1 universe = subset∩factor_manifest;  │
+│     │                                              │ m09c2 streaming filtered to train pool.   │
+│ B   │ UNIVERSE ASYMMETRY (8×) — pretrain trained   │ base_optimization.yaml training_pool.     │
+│     │ on the ~1k labeled train_split; surgery on   │ universe=broad_manifest → BOTH pretrain   │
+│     │ the ~9k broad manifest → surgery's win partly│ and surgery train on corpus−val−test.     │
+│     │ a data-volume confound, not the mechanism.   │ Only the recipe differs now.              │
+│ C   │ SPLIT DRIFT — action_labels regenerated      │ run_train.sh generates splits + pool ONCE │
+│     │ between runs → pretrain (1096/220/220) and   │ per run; clip_splits asserts splits are   │
+│     │ surgery (1083/218/218) used DIFFERENT splits.│ mutually disjoint (FAIL LOUD).            │
+│ D   │ PATH DIVERGENCE — m09c1 read factor_manifest │ NEW src/utils/data_paths.py + pipeline.   │
+│     │ from --factor-dir; m09c2 from local_data+    │ yaml data.{factor_subdir,masks_subdir,    │
+│     │ "m11_factor_datasets". masks_dir + corpus    │ factor_manifest_name}. All modules + shell│
+│     │ manifest ("manifest.json" vs eval_10k.json)  │ derive paths from ONE source; m09c1 asserts│
+│     │ hardcoded divergently across modules.        │ --factor-dir == canonical.                │
+└─────┴────────────────────────────────────────────┴──────────────────────────────────────────┘
+```
+
+Systemic fix + new rule: `src/CLAUDE.md` → "SHARED DERIVATION VIA CLI — NO
+PER-MODULE RE-DERIVATION". Any data-selecting / cross-module-shared value is
+computed ONCE (shared util, invoked by the thin shell) and consumed as a CLI
+arg/artifact — never re-derived per module.
+
+```text
+┌──────────────────────────────────────────────┬──────────────────────────────────────────────┐
+│ Files changed (all CPU-verified: 3-check +     │ Status                                        │
+│ ruff F,E9 + CPU smoke/import)                  │                                               │
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ NEW src/utils/clip_splits.py (+ CLI main)      │ ✅ leakage-safe pool builder                  │
+│ NEW src/utils/data_paths.py                    │ ✅ canonical path accessors                   │
+│ configs/train/base_optimization.yaml           │ ✅ training_pool.universe: broad_manifest     │
+│ configs/pipeline.yaml                          │ ✅ data.{factor_subdir,masks_subdir,...}      │
+│ src/m09c1_surgery_encoder.py                   │ ✅ subset∩manifest + factor-dir assert + paths│
+│ src/m09c2_surgery_head.py                      │ ✅ streaming filtered to pool + paths         │
+│ src/m09a1_pretrain_encoder.py                  │ ✅ consumes pool --subset + corpus_manifest   │
+│ src/m09a2_pretrain_head.py                     │ ✅ consumes pool --subset (no code change)    │
+│ scripts/run_train.sh                           │ ✅ builds pool once → all --subset; FACTOR_DIR│
+│                                                │ from yaml                                     │
+│ src/CLAUDE.md                                  │ ✅ SHARED DERIVATION VIA CLI rule             │
+└──────────────────────────────────────────────┴──────────────────────────────────────────────┘
+```
+
+⚠️ GPU-SANITY GATE (deferred, NON-BLOCKING per user 2026-05-26): the m09c1/m09c2
+data-flow changes passed 3-check + CPU import-tests but have NOT run on GPU (m10
+owns the current GPU). Before any FULL run, on the NEW instance run smallest
+`--SANITY` of pretrain_encoder + surgery_3stage_DI_encoder + their _head variants
+and confirm: (1) train_pool.json built + non-empty, (2) m09c1 factor-dir assert
+passes, (3) m09c2 "[m09c2 leakage-guard] streaming universe restricted" log fires,
+(4) no test clip key appears in any trainer's pool. THESE BUGS INVALIDATE THE
+iter15 RESULT — the FULL run must use the fixed code, not the iter15 checkpoints.
 
 ═══════════════════════════════════════════════════════════════════════════════
 § 7 · Open verification — must run before M1 starts
@@ -387,6 +610,126 @@ that m10 FULL run. Hardware split:
       [✅] **OK to proceed without cleanup  (user-decided 2026-05-23)**
       [ ] First run a cleanup pass on outputs/poc/{m09a,m09c}_* from prior iters
 
+  Q5. Image-encoder temporal pooling — how to collapse (B, T, D) → (B, D)?
+      [ ] mean only (current plan1 lock)
+      [ ] cls only
+      [ ] max only
+      [✅] **sweep all 3 (mean + cls + max)  (user-decided 2026-05-24)**
+           Implication: encoder_loader.py exposes image_temporal_pool as a
+           REQUIRED cfg key; M7 fans out 3× per image encoder:
+             3 image encs × 3 pools = 9 frozen runs
+             3 head positions × 3 pools = 9 head runs each
+           Hero table § 12 grows a "pool" sub-column (or 3 separate columns).
+           Compute delta: +$2-3 GPU. Gives a defensible ablation row on pooling.
+
+  Q6. V-JEPA 2.1 ViT-L pred_depth — Meta's ViT-L typically uses pred_depth=12,
+      not ViT-G's 24. How to resolve before writing the yaml?
+      [✅] **Verify NOW via torch.hub probe  (user-decided 2026-05-24)**
+           Implication: add a 30-sec M0a verification step BEFORE M2b yaml lands.
+           One Python line: torch.hub.load('facebookresearch/jepa',
+             'vjepa2_1_vit_large_384').predictor.depth
+           Document the actual value in configs/model/vjepa2_1_vit_large.yaml
+           (instead of guessing 12 or 24). Eliminates M5 SANITY load_pct gate
+           tripping at <50% predictor-load.
+      [ ] Assume 12, fix at M5 SANITY
+      [ ] Assume 24 (same as ViT-G)
+
+  Q7. § 12 SOTA stretch (SAFE / SEEKR / SSIAT / SAPT × 4 V-JEPA backbones,
+      ~+$80-160 + 2-4 weeks) — defer to iter18 or include in iter17?
+      [✅] **INCLUDE in iter17  (user-decided 2026-05-24, against Plan rec)**
+           Implication: SCOPE BLOW-UP — adds 4 NEW trainers
+             (src/m09s_{safe,seekr,ssiat,sapt}.py),
+             16 NEW train yamls (4 methods × 4 V-JEPA backbones),
+             ~2000-6000 LoC of new trainer code, +$80-160 GPU.
+           M-section table grows: M10 (SAFE), M11 (SEEKR), M12 (SSIAT),
+             M13 (SAPT). Each gets its own SANITY gate + paired-Δ entry.
+           iter17 wall time stretches from ~2 weeks → ~6-8 weeks.
+           Rationale (user): iter17 win condition = full continual-FT
+             positioning, not just V-JEPA-family paired-Δ. Resubmit-grade
+             requires actually running SAFE/SEEKR/SSIAT/SAPT (not ??? rows).
+      [ ] DEFER to iter18
+
+  Q8. V-JEPA 2.0 SSv2-FT scope — plan1 § 11 locks FROZEN only. Add head-only
+      for cross-table symmetry?
+      [✅] **FROZEN + head-only (+3 cells)  (user-decided 2026-05-24)**
+           Implication: 3 NEW train yamls:
+             configs/train/pretrain_head_vjepa2_0_ssv2.yaml
+             configs/train/surgery_3stage_DI_head_vjepa2_0_ssv2.yaml
+             configs/train/surgery_2stage_noDI_head_vjepa2_0_ssv2.yaml
+           +3 registry rows in probe_encoders.yaml + pipeline.yaml.
+           Compute delta: +$2 GPU + 2 hr. Gives cross-table parity with image
+           encoders + V-JEPA family (every backbone covers 4 head positions).
+      [ ] FROZEN only (locked)
+
+  Q9. HF repo for iter17 ckpts — where do iter17 encoder/predictor/head .pt
+      files (for all 7 + SOTA backbones) live on HF Hub?
+      [✅] **Same as iter15 outputs repo, new subdir  (user-decided 2026-05-24)**
+           Implication: anonymousML123/factorjepa-outputs/iter17_ablations/
+           hf_outputs.py needs --subdir iter17_ablations pass-through; no other
+           code change. Single access-control surface as iter15.
+      [ ] New dedicated repo anonymousML123/factorjepa-iter17-ckpts
+      [ ] Same as iter15 PRETRAIN ckpt repo
+
+  Q10. SOTA session-mapping — SAFE/SEEKR/SSIAT/SAPT are multi-session; iter17 is
+       single-corpus. What is a "session"?
+       [✅] **Option A: surgery STAGES = sessions  (user-decided 2026-05-24)**
+            Resolved by a code check: user confirmed (vs the teams_work doc) that
+            the 4 methods are multi-session + backbone-frozen + PET-based → they
+            build on the SURGERY family (m09c1 stage loop + replay + m09c2 frozen
+            backbone), NOT m09a1/m09a2 pretrain. The only session axis that exists
+            in code is m09c1's 3 surgery stages → forces Option A.
+            Implication: SOTA trainers clone m09c1 + swap progressive-unfreeze for
+            PET anti-drift; session_i = surgery stage_i. See plan_code § C.8/§ C.10.
+       [ ] Option B: factor mixtures = sessions
+       [ ] Option C: held-out task split = sessions
+
+  Q11. Post-Q5-Q9 storage (~250-270 GB) exceeds Q4-approved (~160-180 GB). Resolve?
+       [✅] **Provision more disk  (user-decided 2026-05-24)**
+            Implication: add storage to the box(es) so all ckpts fit without
+            deleting prior-iter artifacts. Costs $ but zero risk to iter15/16
+            outputs. Supersedes the § 6 "GC first" mitigation.
+
+  Q12. SOTA build sequencing (M10-M13)?
+       [✅] **Build all 4 in parallel  (user-decided 2026-05-24)**
+            Implication: write m09s_{safe,seekr,ssiat,sapt}.py together, sharing
+            peft_modules.py + the m09c1-clone up front. De-risk is now the SHARED
+            infra (one tested base), NOT sequential landing. ⚠️ This RAISES the
+            deadline-slip risk vs the "land SAFE first" mitigation — see § 6.
+
+  Q13. M1 checkpoint download (~32 GB) — trigger now or hold?
+       [✅] **Hold until Q11 storage provisioned  (user-decided 2026-05-24)**
+            Implication: do NOT pull 32 GB until the extra disk is attached.
+            State-changing — awaits explicit user "go" regardless.
+
+═══════════════════════════════════════════════════════════════════════════════
+§ 9b · Post-Q5-Q9 net-impact summary (2026-05-24)
+═══════════════════════════════════════════════════════════════════════════════
+
+```text
+┌──────────────────────────────────┬───────────┬────────────┬──────────────────────────────────┐
+│ Bucket                            │ Pre-Q5-Q9 │ Post-Q5-Q9 │ Delta cause                       │
+├──────────────────────────────────┼───────────┼────────────┼──────────────────────────────────┤
+│ Model yamls                       │ 7         │ 7          │ unchanged                         │
+│ Train yamls (V-JEPA + image)      │ 27        │ 48         │ 18 video + (9→27 image pool sweep │
+│                                  │            │            │  per Q5) + 3 SSv2-FT head (Q8)    │
+│ Train yamls (SOTA)                │ 0         │ 16         │ +SAFE/SEEKR/SSIAT/SAPT × 4 (Q7)   │
+│ NEW src modules                   │ 1         │ 6          │ +4 SOTA trainers + peft_modules.py│
+│ PATCHES                           │ 4         │ 5          │ +hf_outputs.py --subdir (Q9)      │
+│ Registry rows                     │ 37        │ 83         │ +27 pool sweep + 3 SSv2 + 16 SOTA │
+│ Estimated GPU compute             │ ~$29-40   │ ~$111-205  │ +Q7 SOTA + Q5 pool sweep + Q8     │
+│ Estimated calendar time           │ ~2 weeks  │ ~6-8 weeks │ Q7 SOTA LoC dominates             │
+└──────────────────────────────────┴───────────┴────────────┴──────────────────────────────────┘
+```
+
+Image-yaml arithmetic (the one that bites): pool sweep SUPERSEDES the 9 P=mean
+image yamls — it does not add to them. Net image yamls = 3 backbones × 3 pools ×
+3 head positions = 27. Total non-SOTA train yamls = 18 video + 27 image + 3
+SSv2-FT head = 48. These counts match plan_code.md's § B.1 + bottom summary.
+
+§ 5 budget table (above) now shows the EFFECTIVE post-Q5-Q9 totals — it is the
+single source for "what will this cost". The Pre-Q5-Q9 sub-block inside § 5 is
+kept only for traceability.
+
 ═══════════════════════════════════════════════════════════════════════════════
 § 10 · Execution log
 ═══════════════════════════════════════════════════════════════════════════════
@@ -403,10 +746,35 @@ that m10 FULL run. Hardware split:
 │       │            │          │ V-JEPA 2.1 ViT-L + ViT-g + 2.0 SSv2-FT ADDED  │
 │       │            │          │ via torch.hub & facebook/* (user-decided       │
 │       │            │          │ 2026-05-24).                                   │
-│ M1    │ —          │ ready    │ Download list finalized (see § 11 below).      │
-│       │            │          │ Awaiting user "go" for state-changing download.│
+│ Q5-Q9 │ 2026-05-24 │ ✅ done  │ Pool sweep mean+cls+max; ViT-L pred_depth via │
+│       │            │          │ torch.hub probe; SOTA INCLUDED (M10-M13);     │
+│       │            │          │ SSv2-FT gets head-only +3 yamls; ckpts to     │
+│       │            │          │ iter15 outputs repo subdir. Scope: ~$111-205, │
+│       │            │          │ ~6-8 wk wall.                                  │
+│ M0a   │ —          │ pending  │ NEW (Q6): torch.hub probe of ViT-L predictor  │
+│       │            │          │ depth (30 sec, blocks M2b yaml authoring).    │
+│Q10-13 │ 2026-05-24 │ ✅ done  │ Q10=Option A (sessions=surgery stages; SOTA   │
+│       │            │          │ built on m09c1/m09c2, NOT m09a1 — code-       │
+│       │            │          │ verified); Q11=provision more disk; Q12=build │
+│       │            │          │ all 4 SOTA in parallel (slip risk ELEVATED);  │
+│       │            │          │ Q13=hold M1 download until disk provisioned.  │
+│ SCOPE │ 2026-05-24 │ ✅ done  │ REVERSED POC-only → FULL 115k (§ 0.5). Reason:│
+│ change│            │          │ POC CIs overlap; CI∝1/√N → FULL separates.   │
+│       │            │          │ 115,687 clips on disk. PREREQ (not ready):    │
+│       │            │          │ m10 SAM PID 2264355 still running + m04d      │
+│       │            │          │ motion_features.npy missing + yaml flip to    │
+│       │            │          │ full_local pending. GATE before any FULL run. │
+│ M1    │ —          │ HELD     │ Download list finalized (§ 11). HELD per Q13  │
+│       │            │          │ until Q11 disk is attached; then awaits user  │
+│       │            │          │ "go" for the ~32 GB state-changing pull.      │
 │ M2-M9 │ —          │ pending  │ Sequential per § 4 (M6 expanded into M6/M6a/  │
-│       │            │          │ M6b/M6c; M7 expanded into M7/M7a; M8 dropped).│
+│       │            │          │ M6b/M6c; M7 expanded into M7/M7a + 3-pool     │
+│       │            │          │ sweep per Q5; M7a SSv2-FT now FROZEN+head per │
+│       │            │          │ Q8; M8 dropped).                              │
+│ M10-13│ —          │ UNBLOCKED│ Q7 SOTA: SAFE/SEEKR/SSIAT/SAPT on m09c1/c2    │
+│       │            │ pending  │ base + peft_modules.py + 16 yamls. Q10 lock   │
+│       │            │          │ removed the session-axis blocker. GATE-I +    │
+│       │            │          │ FL-10 gate each. Build all 4 parallel (Q12).  │
 └───────┴────────────┴──────────┴──────────────────────────────────────────────┘
 ```
 
@@ -414,21 +782,35 @@ that m10 FULL run. Hardware split:
 § 11 · Final iter17 scope (locked 2026-05-24) — ready for M1 launch
 ═══════════════════════════════════════════════════════════════════════════════
 
+Header note: "locked 2026-05-24" refers to the BASE 7 candidates. The Q5-Q9
+additions (SSv2-FT head-only, image-encoder pool sweep, 4 SOTA methods) are
+appended below as candidates 8-11 + scope amendments to rows 4-7.
+
 ```text
-┌─────┬────────────────────────────────┬─────────────┬──────────────────────────┐
-│ #   │ Candidate                       │ Scope        │ Compute (POC)            │
-├─────┼────────────────────────────────┼─────────────┼──────────────────────────┤
-│ 1   │ V-JEPA 2.0 ViT-G/384 (HF mirror)│ FULL 8-enc  │ ~$10-13 · Pro 6000 #2    │
-│ 2   │ V-JEPA 2.1 ViT-L 300M           │ FULL 8-enc  │ ~$4-7  · Pro 6000 #2    │
-│ 3   │ V-JEPA 2.1 ViT-g 1B             │ FULL 8-enc  │ ~$8-10 · Pro 6000 #2    │
-│ 4   │ V-JEPA 2.0 ViT-G SSv2-FT        │ FROZEN only │ ~$1-2  · Pro 4000        │
-│ 5   │ I-JEPA ViT-H/14 IN-1k           │ FROZEN only │ ~$2    · Pro 4000        │
-│ 6   │ I-JEPA ViT-G/16 IN-22k          │ FROZEN only │ ~$2-3  · Pro 4000        │
-│ 7   │ LeJEPA-L ViT-H/14 IN-1k         │ FROZEN only │ ~$2-3  · Pro 4000        │
-├─────┼────────────────────────────────┼─────────────┼──────────────────────────┤
-│ TOT │ 7 candidates                    │ 3 FULL + 4   │ ~$29-40 · ~160-180 GB    │
-│     │                                 │ FROZEN       │                          │
-└─────┴────────────────────────────────┴─────────────┴──────────────────────────┘
+┌─────┬────────────────────────────────┬──────────────────┬──────────────────────────┐
+│ #   │ Candidate                       │ Scope             │ Compute (POC)            │
+├─────┼────────────────────────────────┼──────────────────┼──────────────────────────┤
+│ 1   │ V-JEPA 2.0 ViT-G/384 (HF mirror)│ FULL 8-enc       │ ~$10-13 · Pro 6000 #2    │
+│ 2   │ V-JEPA 2.1 ViT-L 300M           │ FULL 8-enc       │ ~$4-7  · Pro 6000 #2    │
+│ 3   │ V-JEPA 2.1 ViT-g 1B             │ FULL 8-enc       │ ~$8-10 · Pro 6000 #2    │
+│ 4   │ V-JEPA 2.0 ViT-G SSv2-FT        │ FROZEN + head    │ ~$3-4  · Pro 4000        │
+│     │   (Q8 amended: was FROZEN-only) │ (+3 head yamls)  │                          │
+│ 5   │ I-JEPA ViT-H/14 IN-1k           │ FROZEN + head    │ ~$3-4  · Pro 4000        │
+│     │   (Q5: × mean/cls/max pool)     │ × 3 pools        │                          │
+│ 6   │ I-JEPA ViT-G/16 IN-22k          │ FROZEN + head    │ ~$3-4  · Pro 4000        │
+│     │   (Q5: × mean/cls/max pool)     │ × 3 pools        │                          │
+│ 7   │ LeJEPA-L ViT-H/14 IN-1k         │ FROZEN + head    │ ~$3-4  · Pro 4000        │
+│     │   (Q5: × mean/cls/max pool)     │ × 3 pools        │                          │
+├─────┼────────────────────────────────┼──────────────────┼──────────────────────────┤
+│ 8   │ SAFE  (NeurIPS 2024)            │ × 4 V-JEPA bb    │ ~$20-40 · Pro 6000 #2    │
+│ 9   │ SEEKR (EMNLP   2024)            │ × 4 V-JEPA bb    │ ~$20-40 · Pro 6000 #2    │
+│ 10  │ SSIAT (CVPR    2024)            │ × 4 V-JEPA bb    │ ~$15-35 · Pro 6000 #2    │
+│ 11  │ SAPT  (ACL     2024)            │ × 4 V-JEPA bb    │ ~$20-40 · Pro 6000 #2    │
+│     │   (Q7: PREREQ § C.10 session-mapping in plan_code before any SOTA code)        │
+├─────┼────────────────────────────────┼──────────────────┼──────────────────────────┤
+│ TOT │ 11 candidates                   │ 3 FULL + 4 FRZ+  │ ~$111-205 · ~250-270 GB  │
+│     │                                 │ head + 4 SOTA    │ wall ~6-8 wk (SOTA LoC)  │
+└─────┴────────────────────────────────┴──────────────────┴──────────────────────────┘
 ```
 
 M1 download manifest (all destination paths via `checkpoints/iter17_ablations/`):
@@ -527,10 +909,13 @@ Note: Adapter / SSF / VPT / LoRA are NOT standalone rows — they're the PEFT
 parameterizations USED INSIDE SAFE / SSIAT / SAPT (tagged in each row's
 "(PET = ...)" annotation). Each SOTA method gets ONE row.
 
-Compute implication (not a budget update — flag for user):
+Compute implication (Q7 INCLUDE — now folded into § 5 EFFECTIVE TOTAL):
 - 4 new methods × 4 V-JEPA backbones = ~16 new training runs at POC scale
-- At ~$5-10 per run: estimated +$80-160 additional GPU on top of § 5 budget
-- Plus ~500-1500 LoC per method = ~2000-6000 LoC new trainer code (~2-4 weeks)
+- ~$79-160 GPU (M10-M13 in § 5) — already inside the ~$111-205 EFFECTIVE TOTAL
+- Plus ~500-1500 LoC per method = ~2000-6000 LoC new trainer code (~6-8 wks wall)
+- PREREQ before any SOTA run: § C.10 session-mapping (plan_code) — these are
+  multi-session methods; iter17 is single-corpus, so the session axis must be
+  defined or the cells are uninterpretable (see § 6 risk register).
 N/A row breakdown for image encoders: 
 - future_mse on all 8 positions (no predictor); 
 - motion_cos + taxon_top1 on 4 encoder-training positions
@@ -603,20 +988,24 @@ prior turn. The 3 below are the FactorJEPA-applicable actionable gaps; items
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ 🎯 FactorJEPA's 3 actionable gaps (to elevate paper score the same way):      │
+│ 🎯 FactorJEPA score-elevation gaps — status after Q5-Q9 (2026-05-24):         │
 │                                                                                │
 │   #3 ADD external capability eval — Kinetics-400 + SSv2 action recognition    │
-│      → tier-1 reviewers always ask "did you check it didn't hurt baseline    │
-│      capabilities?"  ~$5-10 + 3 days                                          │
+│      → STILL A GAP (not in iter17 scope). tier-1 reviewers ask "did it hurt  │
+│      baseline capabilities?"  ~$5-10 + 3 days. Candidate for iter18.          │
 │                                                                                │
-│   #4 ACTUALLY RUN SAFE/SEEKR/SSIAT/SAPT baselines (not just place ??? rows)   │
-│      → § 12 already has the cells; need to fill them  ~$80-160 + 2-4 wks     │
+│   #4 RUN SAFE/SEEKR/SSIAT/SAPT baselines                                       │
+│      → ✅ NOW IN SCOPE (Q7 INCLUDE). Lands via M10-M13 (§ 4) + § C.8/§ C.10  │
+│      in plan_code. Budget already folded into § 5 EFFECTIVE TOTAL. No longer  │
+│      a "gap" — it is committed iter17 work. PREREQ: § C.10 session-mapping.   │
 │                                                                                │
 │   #5 ADD multi-seed (≥3) runs for the headline-claim variants                 │
-│      → frozen + best surgery × 3 seeds × 4 backbones = 24 runs · ~$30 + 1 wk │
+│      → STILL A GAP (not in iter17 scope). frozen + best surgery × 3 seeds ×  │
+│      4 backbones = 24 runs · ~$30 + 1 wk. Candidate for iter18.               │
 │                                                                                │
-│ Items #1, #2 already in scope · items #6-#11 N/A (different modality/task) ·  │
-│ items #15, #17, #21, #22 are submission-time polish (free, do at end).        │
+│ Items #1, #2 already in scope · #4 promoted to in-scope (Q7) · #3, #5 deferred│
+│ to iter18 · items #6-#11 N/A (different modality/task) · items #15, #17, #21, │
+│ #22 are submission-time polish (free, do at end).                             │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 

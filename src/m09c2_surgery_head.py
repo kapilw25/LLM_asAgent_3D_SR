@@ -9,25 +9,31 @@ recipe-v3 mode_mixture. Single training stage (vs m09c1's 2-3 progressive unfree
 since the encoder is frozen always. Rule 32: zero cross-imports from m09a1/m09a2/m09c1;
 shared primitives via utils/training.py + utils/motion_aux_loss.py + utils/factor_streaming.py.
 
-USAGE (every path arg required — CLAUDE.md no-default rule):
-    python -u src/m09c2_surgery_head.py --SANITY \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/surgery_3stage_DI_head.yaml \
-        --subset data/val_1k_local/sanity_100_dense.json --local-data data/val_1k_local \
-        --val-subset data/val_1k_local/val_1k.json --val-local-data data/val_1k_local \
-        --no-wandb 2>&1 | tee logs/m09c2_3stage_DI_head_sanity_$(date +%Y%m%d_%H%M%S).log
-    python -u src/m09c2_surgery_head.py --POC \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/surgery_2stage_noDI_head.yaml \
-        --subset ${LOCAL_DATA}/train_split.json --local-data ${LOCAL_DATA} \
-        --val-subset ${LOCAL_DATA}/val_split.json --val-local-data ${LOCAL_DATA} \
-        --no-wandb 2>&1 | tee logs/m09c2_noDI_head_poc_$(date +%Y%m%d_%H%M%S).log
+USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
+Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml
+data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for other tiers):
     python -u src/m09c2_surgery_head.py --FULL \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/surgery_3stage_DI_head.yaml \
-        --subset ${LOCAL_DATA}/train_split.json --local-data ${LOCAL_DATA} \
-        --val-subset ${LOCAL_DATA}/val_split.json --val-local-data ${LOCAL_DATA} \
-        --no-wandb 2>&1 | tee logs/m09c2_3stage_DI_head_full_$(date +%Y%m%d_%H%M%S).log
+        --model-config         configs/model/vjepa2_1.yaml \
+        --train-config         configs/train/surgery_3stage_DI_head.yaml \
+        --subset               <LD>/train_pool.json \
+        --local-data           <LD> \
+        --val-subset           <LD>/val_split.json \
+        --val-local-data       <LD> \
+        --init-from-ckpt       <hf://owner/repo/file OR local .pt — run_train.sh $SURGERY_INIT> \
+        --probe-subset         outputs/<M>/probe_action/action_labels.json \
+        --probe-local-data     <LD> \
+        --probe-tags           <LD>/tags.json \
+        --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
+        --motion-features-path <LD>/m04d_motion_features/motion_features.npy \
+        --taxonomy-labels-json outputs/<M>/probe_taxonomy/taxonomy_labels.json \
+        --output-dir           outputs/<M>/m09c_surgery_3stage_DI_head \
+        --cache-policy         <1=keep|2=recompute> \
+        --no-wandb 2>&1 | tee logs/m09c2_surgery_3stage_DI_head_full.log
+    # HEAD-ONLY surgery: encoder+predictor FROZEN. --subset = leakage-safe pool
+    #   (clip_splits, iter17); _build_factor_loader restricts the streaming universe to it
+    #   (test excluded). factor_manifest + masks derived from --local-data via data_paths
+    #   (NOT a --factor-dir CLI arg today — promotion candidate for c1/c2 symmetry).
+    #   noDI variant: --train-config surgery_2stage_noDI_head.yaml.
 """
 import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -37,9 +43,7 @@ import argparse
 import csv
 import gc
 import json
-import shutil
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -67,12 +71,13 @@ from utils.m09_common import add_m09_common_args, merge_m09_common_config
 from utils.vjepa2_imports import (
     get_vit_by_arch, get_vit_predictor, get_vit_predictor_2_1,
 )
+from utils import data_paths   # iter17: canonical local-data path accessors (single source)
 from utils.training import (
     load_config,
     build_optimizer, build_scheduler,
     assert_encoder_frozen, set_trainable_prefix,
     export_student_for_eval,
-    augment_clip_consistent,
+    compute_val_motion_aux_loss,   # iter17 DRY: shared with m09a2 (was local _compute_…)
     StreamingFactorDataset, build_streaming_indices, _streaming_worker_init,
     # iter15 Phase 6 C1+C2 (2026-05-16): trio + head-drift wiring for head cells.
     build_probe_clips, run_trio_at_val, track_head_drift_at_val,
@@ -113,18 +118,18 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     # post-pretrain init (was previously Meta baseline → invalidated Δ5).
     cfg["init_from_ckpt"] = args.init_from_ckpt
 
-    # === Force head-only contract regardless of yaml/CLI ===
-    # iter15 Phase 5 V0 preflight fix (2026-05-14): surgery configs use per-stage
-    # `unfreeze_below` (via set_trainable_prefix in build_model), NOT the global
-    # `layer_freeze` switch — so we DON'T touch cfg["layer_freeze"] here (the
-    # key doesn't exist in surgery_base.yaml inheritance chain). Head-only
-    # encoder freeze is enforced at runtime in build_model() via:
+    # === Head-only contract: ENFORCED at runtime, DECLARED in yaml — not hardcoded here ===
+    # Head-only encoder freeze is enforced in build_model() via:
     #   1. set_trainable_prefix(student, 0)  → all blocks frozen
-    #   2. assert_encoder_frozen(student)    → fail-loud guard
-    # The per-stage validation below also requires stages[0].unfreeze_below=0.0.
-    cfg["drift_control"]["enabled"] = False
-    cfg["loss"]["weight_jepa"] = 0.0
-    cfg["loss"]["weight_motion_aux"] = 1.0
+    #   2. for p in (encoder + predictor): requires_grad = False
+    #   3. assert_encoder_frozen(student)    → fail-loud guard
+    # + train()'s "n_enc_pred_params == 0" optimizer guard (fail loud). The loss-weight /
+    # drift values (loss.weight_jepa=0.0, loss.weight_motion_aux=1.0, drift_control.enabled
+    # =false) are DECLARED in configs/train/surgery_*_head.yaml — the single source. We do
+    # NOT re-set or assert them against literals (CLAUDE.md: no hardcoded values, no
+    # fallback; an assert-vs-literal just relocates the hardcode). Nothing in m09c2 reads
+    # them, and a missing yaml key raises KeyError = fail loud. The per-stage validation
+    # below requires stages[0].unfreeze_below=0.0 (read from yaml, not forced).
 
     # === Force single head-only stage ===
     # The yaml SHOULD already declare exactly one stage with unfreeze_below=0.0
@@ -139,9 +144,20 @@ def merge_config_with_args(cfg: dict, args) -> dict:
               f"got {stages[0]['unfreeze_below']}.")
         sys.exit(1)
 
-    # === Force factor streaming on (raw replay mixture lives only in streaming path) ===
-    cfg["factor_streaming"]["enabled"] = True
+    # === Factor streaming: read mode-gated flag from yaml (mirror m09c1:225-231) ===
+    # Head-only surgery has ONLY a streaming data path (StreamingFactorDataset; no legacy
+    # FactorSampler). Streaming is therefore MANDATORY — surgery_*_head.yaml declares
+    # factor_streaming.{sanity,poc,full}=true (overriding surgery_base's sanity:false).
+    # We READ the flag (single source) instead of forcing it (CLAUDE.md no-hardcode), and
+    # FAIL LOUD if a yaml ever sets it false: m09c2 physically cannot honor that.
     fs_cfg = cfg["factor_streaming"]
+    fs_enabled = fs_cfg[mode_key]
+    if not fs_enabled:
+        print(f"FATAL [m09c2]: head-only surgery is streaming-ONLY; factor_streaming."
+              f"{mode_key}=false cannot be honored. Set it true in the head yaml "
+              f"(surgery_*_head.yaml declares factor_streaming.sanity=true).")
+        sys.exit(1)
+    cfg["factor_streaming"]["enabled"] = fs_enabled
     cfg["factor_streaming"]["num_workers"] = fs_cfg["num_workers"][mode_key]
 
     # === Output dir: explicit --output-dir, or auto from mode ===
@@ -151,9 +167,11 @@ def merge_config_with_args(cfg: dict, args) -> dict:
         base_out = get_module_output_dir(
             "m09c2_surgery_head", args.subset,
             sanity=args.SANITY, poc=args.POC)
-        # Append variant tag from yaml's adapted_encoder so 3stage_DI_head + noDI_head
-        # write to DIFFERENT subdirs (downstream eval scans by encoder name).
-        variant_tag = cfg["data"]["adapted_encoder"].replace("vjepa_2_1_surgical_", "")
+        # Append variant tag so 3stage_DI_head + noDI_head write to DIFFERENT subdirs
+        # (downstream eval scans by encoder name). variant_tag is DECLARED in the head
+        # yaml's data block (single source) — was a hardcoded .replace("vjepa_2_1_surgical_",
+        # "") string-strip (CLAUDE.md no-hardcode). Missing key → KeyError = fail loud.
+        variant_tag = cfg["data"]["variant_tag"]
         cfg["checkpoint"]["output_dir"] = str(base_out / variant_tag)
     return cfg
 
@@ -342,8 +360,10 @@ def _build_factor_loader(cfg: dict, train_keys: list, mode_mixture: dict,
     crop_size = cfg["model"]["crop_size"]
     batch_size = cfg["optimization"]["batch_size"]
     local_data = data_cfg["local_data"]
-    manifest_path = Path(local_data) / "m11_factor_datasets" / "factor_manifest.json"
-    masks_dir = Path(local_data) / "m10_sam_segment" / "masks"
+    # iter17 (2026-05-26): single-source via data_paths (was local_data + hardcoded
+    # subpaths → divergent from m09c1's --factor-dir; CLAUDE.md SHARED DERIVATION VIA CLI).
+    manifest_path = data_paths.factor_manifest_path(local_data)
+    masks_dir = data_paths.masks_dir(local_data)
     if not manifest_path.exists():
         print(f"FATAL: factor_manifest.json missing at {manifest_path}. "
               f"Run scripts/run_factor_prep.sh to generate.")
@@ -356,6 +376,22 @@ def _build_factor_loader(cfg: dict, train_keys: list, mode_mixture: dict,
         masks_dir=masks_dir,
         local_data=local_data,
     )
+    # iter17 (2026-05-26) — LEAKAGE FIX: restrict the streaming universe to train_keys
+    # (= the leakage-safe --subset pool = corpus manifest − val − test, built once by
+    # src/utils/clip_splits.py). m09c2 previously streamed the FULL factor manifest
+    # regardless of train_keys → eval TEST clips leaked into the head-surgery pool.
+    # Mirrors m09c1:676-677 (which already had this filter; m09c2 was missing it).
+    # See CLAUDE.md "SHARED DERIVATION VIA CLI".
+    _train_set = set(train_keys)
+    n_before = len(mp4_index)
+    mp4_index = {k: v for k, v in mp4_index.items() if k in _train_set}
+    mask_index = {k: v for k, v in mask_index.items() if k in _train_set}
+    print(f"  [m09c2 leakage-guard] streaming universe restricted to train pool: "
+          f"{n_before} → {len(mp4_index)} clips (val∪test excluded upstream)", flush=True)
+    if not mp4_index:
+        print("FATAL [m09c2]: streaming universe EMPTY after train-pool filter — "
+              "check --subset pool vs factor_manifest key overlap.", file=sys.stderr)
+        sys.exit(1)
     # Build factor_cfg by remapping yaml keys → stream_factor's expected names.
     # Mirrors m09c1:667-673 baseline. FAIL LOUD per CLAUDE.md: cfg["factor_datasets"]
     # crashes here if the yaml chain is broken (no .get() fallback to silent {}).
@@ -394,82 +430,6 @@ def _build_factor_loader(cfg: dict, train_keys: list, mode_mixture: dict,
         worker_init_fn=_streaming_worker_init if fs_cfg["num_workers"] > 0 else None,
     )
     return loader
-
-
-def _compute_val_motion_aux_loss(student, ma_head, ma_cfg, ma_lookup,
-                                  val_keys, val_local_data, cfg, device,
-                                  dtype) -> float:
-    """One-pass val motion_aux loss over val_keys (synchronous, raw clips).
-
-    Val intentionally uses RAW clips (not factor-aug) — the eval-time motion-class
-    taxonomy is defined on raw videos, so val loss should measure head accuracy on
-    raw clip features, not on artificially augmented factor tubes.
-
-    iter15 Phase 5 V2 fix (2026-05-15): mirrors m09a1:583-611 val pipeline —
-    decode_video_bytes(mp4, tmp_dir, key, num_frames) returns variable-shape;
-    augment_clip_consistent then resizes to fixed crop_size. _val_tmp dir is
-    scoped to one function call via try/finally cleanup.
-    """
-    from utils.video_io import create_stream, decode_video_bytes, get_clip_key
-    ma_head.eval()
-    student.eval()
-    total_loss = 0.0
-    total_n = 0
-    val_keys_set = set(val_keys)
-    ds = create_stream(local_data=val_local_data)
-    batch_clips, batch_keys = [], []
-    batch_size = cfg["optimization"]["batch_size"]
-    num_frames = cfg["data"]["num_frames"]
-    mp_cfg = cfg["mixed_precision"]
-    _val_tmp = tempfile.mkdtemp(prefix="m09c2_val_")
-    try:
-        for example in ds:
-            k = get_clip_key(example)
-            if k not in val_keys_set:
-                continue
-            mp4 = example.get("mp4", b"")
-            mp4_bytes = mp4["bytes"] if isinstance(mp4, dict) else mp4
-            if isinstance(mp4_bytes, str):
-                mp4_bytes = mp4_bytes.encode()
-            if not mp4_bytes or len(mp4_bytes) < 1000:
-                continue
-            clip = decode_video_bytes(mp4_bytes, _val_tmp, k, num_frames)
-            if clip is None:
-                continue
-            clip = augment_clip_consistent(clip, cfg["augmentation"],
-                                            cfg["data"]["crop_size"])
-            batch_clips.append(clip)
-            batch_keys.append(k)
-            if len(batch_clips) >= batch_size:
-                # (T, C, H, W) per clip → stack (B, T, C, H, W) → permute (B, C, T, H, W)
-                # matches utils/training.py:160 producer + m09a1:603/609 val pattern.
-                clips_tensor = torch.stack(batch_clips).permute(0, 2, 1, 3, 4).to(device)
-                with torch.no_grad():
-                    loss_val, _ = run_motion_aux_step(
-                        student, ma_head, ma_cfg, ma_lookup,
-                        clips_tensor, batch_keys, scaler=None,
-                        mp_cfg=mp_cfg, dtype=dtype, device=device,
-                    )
-                total_loss += float(loss_val) * len(batch_keys)
-                total_n += len(batch_keys)
-                batch_clips, batch_keys = [], []
-        if batch_clips:
-            clips_tensor = torch.stack(batch_clips).permute(0, 2, 1, 3, 4).to(device)
-            with torch.no_grad():
-                loss_val, _ = run_motion_aux_step(
-                    student, ma_head, ma_cfg, ma_lookup,
-                    clips_tensor, batch_keys, scaler=None,
-                    mp_cfg=mp_cfg, dtype=dtype, device=device,
-                )
-            total_loss += float(loss_val) * len(batch_keys)
-            total_n += len(batch_keys)
-    finally:
-        shutil.rmtree(_val_tmp, ignore_errors=True)
-    ma_head.train()
-    if total_n == 0:
-        print("FATAL: val cycle saw 0 clips — val_subset / val_local_data mismatch?")
-        sys.exit(1)
-    return total_loss / total_n
 
 
 def train(cfg: dict, args) -> None:
@@ -531,8 +491,9 @@ def train(cfg: dict, args) -> None:
     # iter15 Phase 6 C1+C2 (2026-05-16): snapshot motion_aux head init + build
     # probe_clips for in-training trio. Same wiring as m09a2 (mirrors m09c1
     # encoder-side flow). probe is universal-true post yaml-parity audit.
-    # variant_tag hoisted from build_model scope for in-training plot titles.
-    _variant_tag = cfg["data"]["adapted_encoder"].replace("vjepa_2_1_surgical_", "")
+    # variant_tag for in-training plot titles — DECLARED in head yaml data block
+    # (single source; was a hardcoded .replace string-strip). KeyError = fail loud.
+    _variant_tag = cfg["data"]["variant_tag"]
     head_init_params = {n: p.detach().cpu().clone() for n, p in ma_head.named_parameters()}
     head_drift_history = []
     probe_history = []
@@ -547,8 +508,9 @@ def train(cfg: dict, args) -> None:
     mask_generators = build_mask_generators(cfg)
     print(f"Mask generators: {len(mask_generators)} (for in-training trio future_l1)")
     probe_clips, probe_labels = None, None
-    _probe_block = cfg["probe"] if "probe" in cfg else None
-    if _probe_block is not None and _probe_block.get("enabled", False):
+    # probe block is declared in the yaml chain (single source) — read directly.
+    _probe_block = cfg["probe"]
+    if _probe_block["enabled"]:
         action_labels_path = (args.probe_action_labels or
                               str(Path(_probe_block["subset"]).parent / "action_labels.json"))
         if not Path(action_labels_path).exists():
@@ -595,7 +557,11 @@ def train(cfg: dict, args) -> None:
     scheduler = build_scheduler(optimizer, opt_cfg, total_steps)
 
     mp_cfg = cfg["mixed_precision"]
-    dtype = torch.bfloat16 if mp_cfg["dtype"] == "bfloat16" else torch.float16
+    # Supported mixed-precision dtypes (whitelist mirrors base_optimization.yaml
+    # mixed_precision.dtype). KeyError = fail loud on a bad/typo'd dtype string —
+    # was a ternary that SILENTLY defaulted to float16 on any non-bfloat16 value.
+    # Unified across m09a1/a2/c1/c2.
+    dtype = {"bfloat16": torch.bfloat16, "float16": torch.float16}[mp_cfg["dtype"]]
     # iter15 Phase 5 V2 fix (2026-05-15): GradScaler required for motion_aux
     # backward (motion_aux_loss.py:413). No-op for bfloat16 default but the
     # object must exist. Mirrors m09a1:560-561.
@@ -720,9 +686,10 @@ def train(cfg: dict, args) -> None:
                 # exactly at, end-of-epoch when there's a remainder).
                 if step > 0 and step % val_interval == 0:
                     mean_train = float(np.mean(epoch_train_losses)) if epoch_train_losses else float("nan")
-                    val_loss = _compute_val_motion_aux_loss(
+                    val_loss = compute_val_motion_aux_loss(
                         student, ma_head, ma_cfg, ma_lookup,
                         val_keys, args.val_local_data, cfg, device, dtype,
+                        tmp_prefix="m09c2_val_",
                     )
                     elapsed = time.time() - epoch_started
                     is_end_of_epoch = (step % steps_per_epoch == 0)

@@ -8,25 +8,27 @@ storage → ViT-G fits 24 GB RTX Pro 4000 at $0.20/hr. ONLY the ~432 K-param mot
 head trains (joint K-class CE + 23-D MSE on m04d optical-flow targets). Rule 32: zero
 cross-imports from m09a1; shared primitives via utils/training.py + utils/motion_aux_loss.py.
 
-USAGE (every path arg required — CLAUDE.md no-default rule):
-    python -u src/m09a2_pretrain_head.py --SANITY \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/pretrain_head.yaml \
-        --subset data/val_1k_local/sanity_100_dense.json --local-data data/val_1k_local \
-        --val-subset data/val_1k_local/val_1k.json --val-local-data data/val_1k_local \
-        --no-wandb 2>&1 | tee logs/m09a2_sanity_$(date +%Y%m%d_%H%M%S).log
-    python -u src/m09a2_pretrain_head.py --POC \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/pretrain_head.yaml \
-        --subset ${LOCAL_DATA}/train_split.json --local-data ${LOCAL_DATA} \
-        --val-subset ${LOCAL_DATA}/val_split.json --val-local-data ${LOCAL_DATA} \
-        --no-wandb 2>&1 | tee logs/m09a2_poc_$(date +%Y%m%d_%H%M%S).log
+USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
+Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml
+data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for other tiers):
     python -u src/m09a2_pretrain_head.py --FULL \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/pretrain_head.yaml \
-        --subset ${LOCAL_DATA}/train_split.json --local-data ${LOCAL_DATA} \
-        --val-subset ${LOCAL_DATA}/val_split.json --val-local-data ${LOCAL_DATA} \
-        --no-wandb 2>&1 | tee logs/m09a2_full_$(date +%Y%m%d_%H%M%S).log
+        --model-config         configs/model/vjepa2_1.yaml \
+        --train-config         configs/train/pretrain_head.yaml \
+        --subset               <LD>/train_pool.json \
+        --local-data           <LD> \
+        --val-subset           <LD>/val_split.json \
+        --val-local-data       <LD> \
+        --output-dir           outputs/<M>/m09a_pretrain_head \
+        --cache-policy         <1=keep|2=recompute> \
+        --probe-subset         outputs/<M>/probe_action/action_labels.json \
+        --probe-local-data     <LD> \
+        --probe-tags           <LD>/tags.json \
+        --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
+        --motion-features-path <LD>/m04d_motion_features/motion_features.npy \
+        --taxonomy-labels-json outputs/<M>/probe_taxonomy/taxonomy_labels.json \
+        --no-wandb 2>&1 | tee logs/m09a2_pretrain_head_full.log
+    # HEAD-ONLY: encoder+predictor FROZEN (no --lambda-reg/--init-from-ckpt). --subset is
+    #   the leakage-safe pool (clip_splits, iter17). Optional: --no-probe / --no-multi-task.
 """
 import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -37,9 +39,7 @@ import csv
 import gc
 import json
 import queue
-import shutil
 import sys
-import tempfile
 import threading
 import time
 from pathlib import Path
@@ -71,7 +71,7 @@ from utils.training import (
     load_config, producer_thread,
     build_optimizer, build_scheduler,
     assert_encoder_frozen, export_student_for_eval,
-    augment_clip_consistent,
+    compute_val_motion_aux_loss,   # iter17 DRY: shared with m09c2 (was local _compute_…)
     # iter15 Phase 6 C1+C2 (2026-05-16): trio + head-drift wiring for head cells.
     build_probe_clips, run_trio_at_val, track_head_drift_at_val,
     build_mask_generators,
@@ -105,12 +105,15 @@ def merge_config_with_args(cfg: dict, args) -> dict:
         mode_key = "full"
     merge_m09_common_config(cfg, args, mode_key)
 
-    # Force head-only contract regardless of what yaml/CLI tried to set.
-    cfg["layer_freeze"]["enabled"] = True
-    cfg["layer_freeze"]["freeze_below"] = 48
-    cfg["drift_control"]["enabled"] = False
-    cfg["loss"]["weight_jepa"] = 0.0
-    cfg["loss"]["weight_motion_aux"] = 1.0
+    # Head-only contract values (layer_freeze.freeze_below, drift_control.enabled,
+    # loss.weight_jepa=0.0, loss.weight_motion_aux=1.0) are DECLARED in
+    # configs/train/pretrain_head.yaml — the single source of truth. We do NOT re-set
+    # or assert them against literals here (CLAUDE.md: no hardcoded values, no fallback;
+    # an assert-vs-literal just relocates the hardcode). The contract is ENFORCED at
+    # runtime: build_model sets requires_grad=False on every encoder+predictor param +
+    # assert_encoder_frozen(), and train() FAILs LOUD if the optimizer sees any
+    # encoder/predictor trainable param (n_enc_pred_params > 0). Any consumer of a
+    # missing yaml key raises KeyError (fail loud) — no silent default.
 
     # Output dir: explicit --output-dir, or auto from mode (no lambda — drift off).
     if args.output_dir is not None:
@@ -250,84 +253,6 @@ def build_model(cfg: dict, device: torch.device) -> dict:
     }
 
 
-def _compute_val_motion_aux_loss(student, ma_head, ma_cfg, ma_lookup,
-                                  val_keys, val_local_data, cfg, device,
-                                  dtype) -> float:
-    """One-pass val motion_aux loss over val_keys. Returns mean loss (float).
-
-    iter15 Phase 5 V2 fix (2026-05-15): mirrors m09a1:583-611 val pipeline —
-    decode_video_bytes(mp4, tmp_dir, key, num_frames) returns variable-shape
-    tensor; augment_clip_consistent then standardizes to (T, C, crop_size,
-    crop_size) ImageNet-normalized so torch.stack() succeeds. _val_tmp dir is
-    scoped to this single function call via try/finally cleanup (no shared
-    long-lived tmpfs handle — avoids #80-class tmpfs degradation).
-    """
-    # Lazy import to avoid pulling video_io at module load on a CPU-only lint pass.
-    from utils.video_io import create_stream, decode_video_bytes, get_clip_key
-    ma_head.eval()
-    student.eval()
-    total_loss = 0.0
-    total_n = 0
-    val_keys_set = set(val_keys)
-    # Iterate ONE val batch at a time via the streaming reader. The producer thread is
-    # train-only; val is small enough to do synchronous reads here.
-    ds = create_stream(local_data=val_local_data)
-    batch_clips, batch_keys = [], []
-    batch_size = cfg["optimization"]["batch_size"]
-    num_frames = cfg["data"]["num_frames"]
-    mp_cfg = cfg["mixed_precision"]
-    _val_tmp = tempfile.mkdtemp(prefix="m09a2_val_")
-    try:
-        for example in ds:
-            k = get_clip_key(example)
-            if k not in val_keys_set:
-                continue
-            mp4 = example.get("mp4", b"")
-            mp4_bytes = mp4["bytes"] if isinstance(mp4, dict) else mp4
-            if isinstance(mp4_bytes, str):
-                mp4_bytes = mp4_bytes.encode()
-            if not mp4_bytes or len(mp4_bytes) < 1000:
-                continue
-            clip = decode_video_bytes(mp4_bytes, _val_tmp, k, num_frames)
-            if clip is None:
-                continue
-            clip = augment_clip_consistent(clip, cfg["augmentation"],
-                                            cfg["data"]["crop_size"])
-            batch_clips.append(clip)
-            batch_keys.append(k)
-            if len(batch_clips) >= batch_size:
-                # (T, C, H, W) per clip → stack (B, T, C, H, W) → permute (B, C, T, H, W)
-                # matches utils/training.py:160 producer + m09a1:603/609 val pattern.
-                clips_tensor = torch.stack(batch_clips).permute(0, 2, 1, 3, 4).to(device)
-                with torch.no_grad():
-                    loss_val, _ = run_motion_aux_step(
-                        student, ma_head, ma_cfg, ma_lookup,
-                        clips_tensor, batch_keys, scaler=None,
-                        mp_cfg=mp_cfg, dtype=dtype, device=device,
-                    )
-                total_loss += float(loss_val) * len(batch_keys)
-                total_n += len(batch_keys)
-                batch_clips, batch_keys = [], []
-        # Flush remainder
-        if batch_clips:
-            clips_tensor = torch.stack(batch_clips).permute(0, 2, 1, 3, 4).to(device)
-            with torch.no_grad():
-                loss_val, _ = run_motion_aux_step(
-                    student, ma_head, ma_cfg, ma_lookup,
-                    clips_tensor, batch_keys, scaler=None,
-                    mp_cfg=mp_cfg, dtype=dtype, device=device,
-                )
-            total_loss += float(loss_val) * len(batch_keys)
-            total_n += len(batch_keys)
-    finally:
-        shutil.rmtree(_val_tmp, ignore_errors=True)
-    ma_head.train()
-    if total_n == 0:
-        print("FATAL: val cycle saw 0 clips — val_subset / val_local_data mismatch?")
-        sys.exit(1)
-    return total_loss / total_n
-
-
 def train(cfg: dict, args) -> None:
     """Head-only training loop. Frozen encoder + predictor; only motion_aux head moves."""
     check_gpu()
@@ -400,8 +325,9 @@ def train(cfg: dict, args) -> None:
     mask_generators = build_mask_generators(cfg)
     print(f"Mask generators: {len(mask_generators)} (for in-training trio future_l1)")
     probe_clips, probe_labels = None, None
-    _probe_block = cfg["probe"] if "probe" in cfg else None
-    if _probe_block is not None and _probe_block.get("enabled", False):
+    # probe block is declared in the yaml chain (single source) — read directly.
+    _probe_block = cfg["probe"]
+    if _probe_block["enabled"]:
         action_labels_path = (args.probe_action_labels or
                               str(Path(_probe_block["subset"]).parent / "action_labels.json"))
         if not Path(action_labels_path).exists():
@@ -438,7 +364,11 @@ def train(cfg: dict, args) -> None:
 
     # === Mixed-precision + AdaptiveBatchSizer (OOM safety on 24 GB) ===
     mp_cfg = cfg["mixed_precision"]
-    dtype = torch.bfloat16 if mp_cfg["dtype"] == "bfloat16" else torch.float16
+    # Supported mixed-precision dtypes (whitelist mirrors base_optimization.yaml
+    # mixed_precision.dtype). KeyError = fail loud on a bad/typo'd dtype string —
+    # was a ternary that SILENTLY defaulted to float16 on any non-bfloat16 value.
+    # Unified across m09a1/a2/c1/c2.
+    dtype = {"bfloat16": torch.bfloat16, "float16": torch.float16}[mp_cfg["dtype"]]
     # iter15 Phase 5 V2 fix (2026-05-15): GradScaler is required for the
     # motion_aux backward in run_motion_aux_step (scaler.scale(loss).backward()
     # at motion_aux_loss.py:413 — unconditional once requires_grad=True).
@@ -577,9 +507,10 @@ def train(cfg: dict, args) -> None:
                 # (35, not divisible), it caused asymmetric over-firing.
                 if step > 0 and step % val_interval == 0:
                     mean_train = float(np.mean(epoch_train_losses)) if epoch_train_losses else float("nan")
-                    val_loss = _compute_val_motion_aux_loss(
+                    val_loss = compute_val_motion_aux_loss(
                         student, ma_head, ma_cfg, ma_lookup,
                         val_keys, args.val_local_data, cfg, device, dtype,
+                        tmp_prefix="m09a2_val_",
                     )
                     elapsed = time.time() - epoch_started
                     is_end_of_epoch = (step % steps_per_epoch == 0)

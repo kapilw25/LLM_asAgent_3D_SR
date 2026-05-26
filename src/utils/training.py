@@ -131,6 +131,87 @@ def augment_clip_consistent(video_tensor: torch.Tensor, cfg_aug: dict,
     return video  # (T, C, crop_size, crop_size), ImageNet-normalized
 
 
+def compute_val_motion_aux_loss(student, ma_head, ma_cfg, ma_lookup,
+                                val_keys, val_local_data, cfg, device, dtype,
+                                tmp_prefix: str) -> float:
+    """One-pass val motion_aux loss over val_keys (synchronous, RAW clips). Returns mean (float).
+
+    Shared by m09a2 (head-only pretrain) + m09c2 (head-only surgery) — both validate the
+    motion_aux head on RAW clip features (the eval-time motion-class taxonomy is defined on
+    raw videos, not factor-aug tubes). Extracted from the two byte-identical copies (iter17
+    DRY refactor, 2026-05-26). `tmp_prefix` is the only per-caller value (tmpdir naming for
+    debugging) — passed explicitly, no default.
+
+    decode_video_bytes returns variable-shape; augment_clip_consistent standardizes to
+    (T, C, crop_size, crop_size) ImageNet-normalized so torch.stack succeeds. _val_tmp is
+    scoped to this call via try/finally cleanup (no shared long-lived tmpfs handle).
+    """
+    # Lazy imports (mirror training.py's existing motion_aux_loss pattern) — avoids pulling
+    # video_io / motion_aux_loss at module load on a CPU-only lint pass + sidesteps cycles.
+    from utils.video_io import create_stream, decode_video_bytes, get_clip_key
+    from utils.motion_aux_loss import run_motion_aux_step
+    ma_head.eval()
+    student.eval()
+    total_loss = 0.0
+    total_n = 0
+    val_keys_set = set(val_keys)
+    # Iterate ONE val batch at a time via the streaming reader (val is small; synchronous).
+    ds = create_stream(local_data=val_local_data)
+    batch_clips, batch_keys = [], []
+    batch_size = cfg["optimization"]["batch_size"]
+    num_frames = cfg["data"]["num_frames"]
+    mp_cfg = cfg["mixed_precision"]
+    _val_tmp = tempfile.mkdtemp(prefix=tmp_prefix)
+    try:
+        for example in ds:
+            k = get_clip_key(example)
+            if k not in val_keys_set:
+                continue
+            mp4 = example.get("mp4", b"")
+            mp4_bytes = mp4["bytes"] if isinstance(mp4, dict) else mp4
+            if isinstance(mp4_bytes, str):
+                mp4_bytes = mp4_bytes.encode()
+            if not mp4_bytes or len(mp4_bytes) < 1000:
+                continue
+            clip = decode_video_bytes(mp4_bytes, _val_tmp, k, num_frames)
+            if clip is None:
+                continue
+            clip = augment_clip_consistent(clip, cfg["augmentation"],
+                                           cfg["data"]["crop_size"])
+            batch_clips.append(clip)
+            batch_keys.append(k)
+            if len(batch_clips) >= batch_size:
+                # (T, C, H, W) per clip → stack (B, T, C, H, W) → permute (B, C, T, H, W).
+                clips_tensor = torch.stack(batch_clips).permute(0, 2, 1, 3, 4).to(device)
+                with torch.no_grad():
+                    loss_val, _ = run_motion_aux_step(
+                        student, ma_head, ma_cfg, ma_lookup,
+                        clips_tensor, batch_keys, scaler=None,
+                        mp_cfg=mp_cfg, dtype=dtype, device=device,
+                    )
+                total_loss += float(loss_val) * len(batch_keys)
+                total_n += len(batch_keys)
+                batch_clips, batch_keys = [], []
+        # Flush remainder
+        if batch_clips:
+            clips_tensor = torch.stack(batch_clips).permute(0, 2, 1, 3, 4).to(device)
+            with torch.no_grad():
+                loss_val, _ = run_motion_aux_step(
+                    student, ma_head, ma_cfg, ma_lookup,
+                    clips_tensor, batch_keys, scaler=None,
+                    mp_cfg=mp_cfg, dtype=dtype, device=device,
+                )
+            total_loss += float(loss_val) * len(batch_keys)
+            total_n += len(batch_keys)
+    finally:
+        shutil.rmtree(_val_tmp, ignore_errors=True)
+    ma_head.train()
+    if total_n == 0:
+        print("FATAL: val cycle saw 0 clips — val_subset / val_local_data mismatch?")
+        sys.exit(1)
+    return total_loss / total_n
+
+
 def producer_thread(cfg: dict, q: queue.Queue, stop_event: threading.Event,
                     train_keys: set, processed_steps: int):
     """Stream WebDataset, decode videos, augment, enqueue batches (multi-epoch)."""

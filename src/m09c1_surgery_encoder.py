@@ -10,32 +10,44 @@ and m09b_explora.py (LoRA variant). Shared primitives live in utils.training.
 Pipeline: m10 (Grounded-SAM) → m11 (factor datasets) → m09c (surgery training).
 The paper novelty — factor-disentangled surgery on a frozen V-JEPA 2.1 encoder.
 
-USAGE (every path arg required — CLAUDE.md no-default rule; --probe-* fall back to yaml):
-    python -u src/m09c1_surgery_encoder.py --SANITY \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/legacy2/surgery_2stage_noDI_encoder.yaml \
-        --subset data/val_1k_local/sanity_100_dense.json --local-data data/val_1k_local \
-        --factor-dir outputs/sanity/m11_factor_datasets/ \
-        --probe-subset data/val_1k_local/val_1k.json --probe-local-data data/val_1k_local \
-        --probe-tags data/val_1k_local/tags.json \
-        --no-wandb 2>&1 | tee logs/m09c_sanity.log
-    python -u src/m09c1_surgery_encoder.py --POC \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/legacy2/surgery_2stage_noDI_encoder.yaml \
-        --subset data/val_1k_local/sanity_100_dense.json --local-data data/val_1k_local \
-        --factor-dir outputs/poc/m11_factor_datasets/ \
-        --no-wandb 2>&1 | tee logs/m09c_dense100.log
+USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
+Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml
+data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for other tiers):
     python -u src/m09c1_surgery_encoder.py --FULL \
-        --model-config configs/model/vjepa2_1.yaml \
-        --train-config configs/train/surgery_3stage_DI_encoder.yaml \
-        --subset data/ultra_hard_3066_train.json \
-        --local-data data/ultra_hard_3066_local \
-        --factor-dir outputs/full/m11_factor_datasets/ \
-        --probe-subset data/ultra_hard_3066_val.json \
-        --probe-local-data data/ultra_hard_3066_local \
-        --probe-tags data/ultra_hard_3066_local/tags.json \
-        --output-dir outputs/full/surgery_3stage_DI \
-        --no-wandb 2>&1 | tee logs/m09c_full.log
+        --model-config         configs/model/vjepa2_1.yaml \
+        --train-config         configs/train/surgery_3stage_DI_encoder.yaml \
+        --subset               <LD>/train_pool.json \
+        --local-data           <LD> \
+        --factor-dir           <LD>/m11_factor_datasets \
+        --init-from-ckpt       <hf://owner/repo/file OR local .pt — run_train.sh $SURGERY_INIT> \
+        --probe-subset         <LD>/val_split.json \
+        --probe-local-data     <LD> \
+        --probe-tags           <LD>/tags.json \
+        --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
+        --motion-features-path <LD>/m04d_motion_features/motion_features.npy \
+        --taxonomy-labels-json outputs/<M>/probe_taxonomy/taxonomy_labels.json \
+        --output-dir           outputs/<M>/m09c_surgery_3stage_DI_encoder \
+        --cache-policy         <1=keep|2=recompute> \
+        --teacher-mode         <surgery.teacher_mode> \
+        --lp-ft-stage0         <surgery.lp_ft_stage0.enabled → on|off> \
+        --warmup-mode          <surgery.warmup_mode> \
+        --subset-mode          recipe_v3 \
+        --saliency             <optimization.loss.saliency_weighting → on|off> \
+        --spd                  <optimization.spd.enabled → on|off> \
+        --replay               <replay.raw_pretrain_pct → on|off> \
+        --no-wandb 2>&1 | tee logs/m09c_surgery_3stage_DI_encoder_full.log
+    # ALL 7 recipe knobs are MANDATORY (required=True, iter17) — no silent yaml fallback inside
+    #   the trainer. run_train.sh resolves each from the train yaml (single source) with the
+    #   optional env-var override (run_recipe_v3_sweep.sh) winning, then ALWAYS passes the value
+    #   so the recipe is visible in the command + log. The <…> placeholders above name the exact
+    #   yaml key each value is read from — NO literal recipe value is baked into this docstring
+    #   (CLAUDE.md no-hardcode). Choices: --teacher-mode {EMA,FROZEN} --lp-ft-stage0 {on,off}
+    #   --warmup-mode {per_stage,single} --subset-mode {recipe_v3} (legacy retired 2026-05-26)
+    #   --saliency {off,on} --spd {off,on} --replay {off,on}. --subset = leakage-safe pool
+    #   (clip_splits) ∩ --factor-dir
+    #   manifest (test excluded); --factor-dir MUST equal canonical <LD>/m11_factor_datasets (FATAL
+    #   otherwise). --init-from-ckpt accepts hf:// OR local. noDI: --train-config surgery_2stage_noDI_encoder.yaml.
+    #   Genuinely optional: --factor-streaming/--no-factor-streaming (mutex flag pair).
 """
 import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")   # Must be before torch import
@@ -105,6 +117,7 @@ from utils.vjepa2_imports import (
 CHECKPOINT_PREFIX = "m09c_ckpt"
 
 # Shared training primitives — utils/training.py (Phase 1 of iter8 split).
+from utils import data_paths   # iter17: canonical local-data path accessors (single source)
 from utils.training import (
     load_config,
     build_mask_generators,
@@ -158,48 +171,36 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     # frozen V-JEPA URL = legacy iter13 behavior).
     cfg["init_from_ckpt"] = args.init_from_ckpt
 
-    # iter14 recipe-v2 (2026-05-09): CLI --teacher-mode overrides yaml surgery.teacher_mode.
-    # POC sweep cell selector: {EMA, FROZEN} × {LP-FT off, on}. None → keep yaml default.
-    if getattr(args, "teacher_mode", None) is not None:
-        cfg["surgery"]["teacher_mode"] = args.teacher_mode
-    # iter14 recipe-v2 (2026-05-09): CLI --lp-ft-stage0 overrides yaml surgery.lp_ft_stage0.enabled.
-    if getattr(args, "lp_ft_stage0", None) is not None:
-        cfg["surgery"]["lp_ft_stage0"]["enabled"] = (args.lp_ft_stage0 == "on")
+    # iter14 recipe-v2/v3: --teacher-mode / --lp-ft-stage0 + 5 drop-one ablation switches.
+    # iter17 (2026-05-26): all 7 recipe knobs are required=True (argparse) — they ALWAYS
+    # override yaml; there is no None-fallback. run_train.sh resolves each from the train
+    # yaml (single source) + optional env override, then always passes it. Read args.X
+    # directly — CLAUDE.md bans getattr(args,key,default): a typo'd attr name now
+    # AttributeErrors (fail loud) instead of silently returning None and propagating the
+    # wrong recipe into a multi-hour run.
+    cfg["surgery"]["teacher_mode"] = args.teacher_mode
+    cfg["surgery"]["lp_ft_stage0"]["enabled"] = (args.lp_ft_stage0 == "on")
 
-    # iter14 recipe-v3 (2026-05-09) — five additional ablation switches for the
-    # drop-one POC sweep (T7). Each respects None = "keep yaml value", so legacy
-    # callers without these flags get the yaml-level recipe-v3 defaults.
+    # iter14 recipe-v3 ablation switches: A4 warmup, A2 saliency, #4 spd, #5 replay.
+    # (#3 surgical-subset axis RETIRED 2026-05-26 — recipe_v3 4/8/8 won in iter14 over the
+    # legacy 12/24/24 arm; --subset-mode is recipe_v3-only now = the yaml-declared
+    # unfreeze_below, no in-code override. The hardcoded legacy 0.25/0.50/0.50 dict + the
+    # run_recipe_v3_sweep.sh R0/R4 legacy arms were removed/retired with it.)
 
-    # #3 surgical subset: legacy = 12/24/24 blocks (unfreeze_below 0.25/0.50/0.50);
-    # recipe_v3 = 4/8/8 (yaml-level default after T2). When --subset-mode=legacy,
-    # rewrite the per-stage unfreeze_below back to the iter10 v15c values.
-    if getattr(args, "subset_mode", None) == "legacy":
-        legacy_unfreeze = {
-            "stage1_layout": 0.25,
-            "stage2_agent": 0.50,
-            "stage3_interaction": 0.50,
-        }
-        for s in cfg["surgery"]["stages"]:
-            if s["name"] in legacy_unfreeze:
-                s["unfreeze_below"] = legacy_unfreeze[s["name"]]
-        print("  [recipe-v3 override] subset_mode=legacy → unfreeze_below restored "
-              "to 12/24/24 blocks (was 4/8/8 per yaml).")
+    # A4 single warmup: --warmup-mode={per_stage,single}.
+    cfg["surgery"]["warmup_mode"] = args.warmup_mode
 
-    # A4 single warmup: yaml default is "per_stage". --warmup-mode={per_stage,single}.
-    if getattr(args, "warmup_mode", None) is not None:
-        cfg["surgery"]["warmup_mode"] = args.warmup_mode
+    # A2 saliency-weighted JEPA loss: --saliency={off,on}.
+    cfg["optimization"]["loss"]["saliency_weighting"] = (args.saliency == "on")
 
-    # A2 saliency-weighted JEPA loss: yaml default false. --saliency={off,on}.
-    if getattr(args, "saliency", None) is not None:
-        cfg["optimization"]["loss"]["saliency_weighting"] = (args.saliency == "on")
+    # #4 SPD optimizer: --spd={off,on}.
+    cfg["optimization"]["spd"]["enabled"] = (args.spd == "on")
 
-    # #4 SPD optimizer: yaml default disabled. --spd={off,on}.
-    if getattr(args, "spd", None) is not None:
-        cfg["optimization"]["spd"]["enabled"] = (args.spd == "on")
-
-    # #5 CLEAR raw replay: yaml default 0.0. --replay={off,on} where on=0.5.
-    if getattr(args, "replay", None) is not None:
-        cfg["replay"]["raw_pretrain_pct"] = 0.5 if args.replay == "on" else 0.0
+    # #5 CLEAR raw replay: --replay={off,on}. When on, use the yaml's raw_pretrain_pct
+    # (surgery_base.yaml:312 = 0.5 — single source). When off, 0.0 disables replay
+    # (0.0 is the disabled-sentinel, not a tunable value).
+    if args.replay != "on":
+        cfg["replay"]["raw_pretrain_pct"] = 0.0
 
     # iter14 (2026-05-08): retired the legacy `data.train_val_split` + per-mode
     # `probe.use_permanent_val` resolution. m09c now mirrors m09a's gold-standard
@@ -213,7 +214,9 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     # See iter/iter9/plan_code_dev.md for architecture + parity verification.
     fs_cfg = cfg["factor_streaming"]
     fs_enabled = fs_cfg[mode_key]
-    fs_override = getattr(args, "factor_streaming_override", None)
+    # --factor-streaming/--no-factor-streaming is genuinely optional (dest=
+    # factor_streaming_override, default=None) → None means "no CLI override, use yaml gate".
+    fs_override = args.factor_streaming_override
     if fs_override is not None:
         fs_enabled = fs_override
     cfg["factor_streaming"]["enabled"] = fs_enabled
@@ -251,10 +254,10 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     # Without this, two standalone m09c runs with different variants silently
     # overwrite the same outputs/<mode>/m09c1_surgery_encoder/ dir → variant collision +
     # broken downstream eval.
-    if getattr(args, "output_dir", None):
+    if args.output_dir:
         cfg["checkpoint"]["output_dir"] = args.output_dir
         return cfg
-    train_cfg_path = getattr(args, "train_config", None) or getattr(args, "config", None)
+    train_cfg_path = args.train_config or args.config
     if train_cfg_path:
         stem = Path(train_cfg_path).stem  # e.g. "surgery_3stage_DI"
         # Match shell wrapper convention: 2stage_noDI yaml → noDI tag (the "2stage_"
@@ -544,7 +547,10 @@ def train(cfg: dict, args):
 
     mode_key = "sanity" if args.SANITY else ("poc" if args.POC else "full")
     mp_cfg = cfg["mixed_precision"]
-    dtype = getattr(torch, mp_cfg["dtype"])
+    # Supported mixed-precision dtypes (whitelist mirrors base_optimization.yaml
+    # mixed_precision.dtype). KeyError = fail loud on a bad/typo'd dtype string —
+    # no getattr, no silent fallback. Unified across m09a1/a2/c1/c2.
+    dtype = {"bfloat16": torch.bfloat16, "float16": torch.float16}[mp_cfg["dtype"]]
     scaler = torch.amp.GradScaler("cuda", enabled=(mp_cfg["dtype"] == "float16"))
     loss_exp = cfg["optimization"]["loss_exp"]
     ema_momentum = cfg["optimization"]["ema_momentum"]
@@ -590,7 +596,17 @@ def train(cfg: dict, args):
     if not factor_dir.exists():
         print(f"FATAL: factor_dir not found: {factor_dir}")
         sys.exit(1)
-    manifest_file = factor_dir / "factor_manifest.json"
+    # iter17 (2026-05-26): single-source the factor_manifest FILENAME via data_paths,
+    # and enforce that --factor-dir IS the canonical m11 dir derived from local_data.
+    # Kills the divergence where m09c1 honored --factor-dir while m09c2 reconstructed
+    # the path from local_data + "m11_factor_datasets" (CLAUDE.md SHARED DERIVATION VIA CLI).
+    _canonical_fd = data_paths.factor_dir(cfg["data"]["local_data"]).resolve()
+    if factor_dir.resolve() != _canonical_fd:
+        print(f"FATAL: --factor-dir {factor_dir.resolve()} != canonical {_canonical_fd} "
+              f"(data_paths.factor_dir from local_data). iter17 requires the canonical factor "
+              f"dir so m09c1 + m09c2 read the SAME factor_manifest. Pass the canonical dir.")
+        sys.exit(1)
+    manifest_file = data_paths.factor_manifest_in(factor_dir)
     if not manifest_file.exists():
         print(f"FATAL: factor_manifest.json not found in {factor_dir}")
         sys.exit(1)
@@ -618,13 +634,22 @@ def train(cfg: dict, args):
     val_path = cfg["probe"]["subset"]
     val_keys = json.load(open(val_path))["clip_keys"]
     val_set = set(val_keys)
-    all_keys = list(manifest.keys())
+    # iter17 (2026-05-26) — LEAKAGE + UNIVERSE-ASYMMETRY FIX: the training universe is
+    # the leakage-safe pool passed via --subset (run_train.sh builds it ONCE via
+    # src/utils/clip_splits.py = corpus manifest − val − test), NOT manifest.keys()
+    # (which only excluded val → eval TEST clips leaked into surgery's pool, and used
+    # the broad manifest while pretrain used the ~1k train_split = 8× confound). Intersect
+    # with this factor manifest, PRESERVING deterministic manifest order. See CLAUDE.md
+    # "SHARED DERIVATION VIA CLI". The val-set subtraction below is now a defensive no-op
+    # (the pool already excludes val∪test) but kept as a tripwire.
+    _pool_set = load_subset(args.subset)
+    all_keys = [k for k in manifest.keys() if k in _pool_set]
     n_overlap = sum(1 for k in all_keys if k in val_set)
     if n_overlap:
-        print(f"  Excluding {n_overlap} val clips from training manifest "
-              f"(mirrors m09a:472-477 leakage guard)")
+        print(f"  ⚠️ {n_overlap} val clips slipped into the --subset pool (expected 0 — "
+              f"clip_splits should have excluded them); subtracting defensively.")
     train_keys = [k for k in all_keys if k not in val_set]
-    split_source = f"EXTERNAL {val_path}"
+    split_source = "--subset pool ∩ factor_manifest (leakage-safe, test excluded upstream)"
 
     # iter14 (2026-05-08): POC mode pool capping happens UPSTREAM via the shell
     # generating data/eval_10k_local/eval_10k_poc.json (first N keys, N from
@@ -667,9 +692,9 @@ def train(cfg: dict, args):
         # Bug evidence: logs/iter15_poc_m09c1_3stage_DI_encoder_20260516_075807.log
         # L38 "0 clips ready (9297 mp4, 0 masks ...)" → StreamingFactorDataset
         # raised ValueError at training.py:1781 (D_L empty under L=1.0 mixture).
-        masks_dir = Path(cfg["data"]["local_data"]) / "m10_sam_segment" / "masks"
+        masks_dir = data_paths.masks_dir(cfg["data"]["local_data"])
         mp4_index, mask_index, streaming_manifest = build_streaming_indices(
-            manifest_path=factor_dir / "factor_manifest.json",
+            manifest_path=data_paths.factor_manifest_in(factor_dir),
             masks_dir=masks_dir,
             local_data=str(Path(cfg["data"]["local_data"])),
         )
@@ -1008,7 +1033,7 @@ def train(cfg: dict, args):
                     mask_generators, cfg, device,
                     mt_head=mt_head, mt_dims_spec=mt_dims_spec,
                     mt_labels_by_clip=mt_labels_by_clip, mt_cfg=mt_cfg,
-                    init_params=init_params, drift_cfg=cfg.get("drift_control"),
+                    init_params=init_params, drift_cfg=cfg["drift_control"],
                     ma_head=ma_head, ma_lookup=ma_lookup, ma_cfg=ma_cfg,
                 )
                 pr["val_jepa_loss"] = vl["jepa_loss"]
@@ -1493,9 +1518,9 @@ def train(cfg: dict, args):
                         d: round(v, 6) for d, v in mt_per_dim.items()}
                 if ma_head is not None:
                     step_record["loss_motion_aux"]     = round(ma_loss_val, 6)
-                    step_record["loss_motion_aux_ce"]  = round(ma_per_branch.get("ce", 0.0), 6)
-                    step_record["loss_motion_aux_mse"] = round(ma_per_branch.get("mse", 0.0), 6)
-                    step_record["motion_aux_n_kept"]   = ma_per_branch.get("n_kept", 0)
+                    step_record["loss_motion_aux_ce"]  = round(ma_per_branch["ce"], 6)
+                    step_record["loss_motion_aux_mse"] = round(ma_per_branch["mse"], 6)
+                    step_record["motion_aux_n_kept"]   = ma_per_branch["n_kept"]
                 _log_step(step_record)
                 csv_writer.writerow([global_step, stage_name, f"{jepa_val:.6f}",
                                      f"{masked_val:.6f}", f"{context_val:.6f}",
@@ -1519,8 +1544,8 @@ def train(cfg: dict, args):
                         wb_metrics[f"loss/multi_task/{d}"] = v
                 if ma_head is not None:
                     wb_metrics["loss/motion_aux"]     = ma_loss_val
-                    wb_metrics["loss/motion_aux/ce"]  = ma_per_branch.get("ce", 0.0)
-                    wb_metrics["loss/motion_aux/mse"] = ma_per_branch.get("mse", 0.0)
+                    wb_metrics["loss/motion_aux/ce"]  = ma_per_branch["ce"]
+                    wb_metrics["loss/motion_aux/mse"] = ma_per_branch["mse"]
                 log_metrics(wb_run, wb_metrics, step=global_step)
 
                 # tqdm postfix — windowed rolling mean (matches m09a:814-823 pattern).
@@ -1788,12 +1813,12 @@ def main():
     # iter14 recipe-v2 (2026-05-09): POC sweep axis #1. Overrides cfg["surgery"]["teacher_mode"]
     # from yaml. EMA = legacy deepcopy+EMA-update. FROZEN = SALT (Apple arXiv:2509.24317):
     # teacher = init from --init-from-ckpt, never updated. See plan_surgery_wins.md §0 row 1️⃣.
-    parser.add_argument("--teacher-mode", type=str, choices=["EMA", "FROZEN"], default=None,
+    parser.add_argument("--teacher-mode", type=str, choices=["EMA", "FROZEN"], required=True,
                         help="iter14 recipe-v2: override surgery.teacher_mode in yaml. "
                              "FROZEN = SALT (no EMA decay). Default None → use yaml value.")
     # iter14 recipe-v2 (2026-05-09): POC sweep axis #2. Overrides cfg["surgery"]["lp_ft_stage0"]["enabled"]
     # from yaml. LP-FT (Kumar ICLR'22): head-only warmup before backbone unfreeze. See plan_surgery_wins.md §0 row 2️⃣.
-    parser.add_argument("--lp-ft-stage0", type=str, choices=["on", "off"], default=None,
+    parser.add_argument("--lp-ft-stage0", type=str, choices=["on", "off"], required=True,
                         help="iter14 recipe-v2: override surgery.lp_ft_stage0.enabled in yaml. "
                              "'on' prepends a head-only warmup stage (encoder frozen, predictor + "
                              "motion_aux head only). Default None → use yaml value.")
@@ -1801,29 +1826,32 @@ def main():
     # Each respects None = "use yaml". The shell wrapper forwards these from
     # SUBSET_OVERRIDE / WARMUP_OVERRIDE / SALIENCY_OVERRIDE / SPD_OVERRIDE /
     # REPLAY_OVERRIDE env-vars, used by scripts/run_recipe_v3_sweep.sh.
-    parser.add_argument("--subset-mode", type=str, choices=["legacy", "recipe_v3"], default=None,
-                        help="iter14 recipe-v3 #3: override surgery.stages[*].unfreeze_below. "
-                             "legacy = 12/24/24 blocks (iter10 v15c). recipe_v3 = 4/8/8 (Lee ICLR'23 prescription). "
-                             "Default None → use yaml value (recipe_v3 after T2).")
-    parser.add_argument("--warmup-mode", type=str, choices=["per_stage", "single"], default=None,
+    parser.add_argument("--subset-mode", type=str, choices=["recipe_v3"], required=True,
+                        help="iter14 recipe-v3 #3: surgical subset = the yaml-declared "
+                             "surgery.stages[*].unfreeze_below (recipe_v3 = 4/8/8, Lee ICLR'23). "
+                             "The 'legacy' arm (12/24/24) was RETIRED 2026-05-26 — recipe_v3 won "
+                             "in iter14; recipe_v3 is now the only valid value (no in-code override).")
+    parser.add_argument("--warmup-mode", type=str, choices=["per_stage", "single"], required=True,
                         help="iter14 recipe-v3 A4: override surgery.warmup_mode. "
                              "per_stage = legacy (every stage repeats warmup, BUG at POC). "
                              "single = front-loaded warmup at stage 0; subsequent stages skip warmup. "
                              "Default None → use yaml value.")
-    parser.add_argument("--saliency", type=str, choices=["off", "on"], default=None,
+    parser.add_argument("--saliency", type=str, choices=["off", "on"], required=True,
                         help="iter14 recipe-v3 A2: override optimization.loss.saliency_weighting. "
                              "on = MGMAE-style per-token weighting by teacher-norm saliency. "
                              "Default None → use yaml value (off).")
-    parser.add_argument("--spd", type=str, choices=["off", "on"], default=None,
+    parser.add_argument("--spd", type=str, choices=["off", "on"], required=True,
                         help="iter14 recipe-v3 #4: override optimization.spd.enabled. "
                              "on = SPDAdamW (selective projection decay vs uniform L2 anchor). "
                              "Default None → use yaml value (off).")
-    parser.add_argument("--replay", type=str, choices=["off", "on"], default=None,
+    parser.add_argument("--replay", type=str, choices=["off", "on"], required=True,
                         help="iter14 recipe-v3 #5: override replay.raw_pretrain_pct. "
                              "on = 0.5 (50%% raw + 50%% factor batches, CLEAR Rolnick'18). "
                              "off = 0.0 (legacy factor-only). Default None → use yaml value.")
-    parser.add_argument("--factor-dir", type=str, default=None,
-                        help="Factor dataset dir from m11 (contains D_L/, D_A/, D_I/, factor_manifest.json)")
+    parser.add_argument("--factor-dir", type=str, required=True,
+                        help="REQUIRED (iter17): m11 factor dataset dir (contains D_L/, D_A/, D_I/, "
+                             "factor_manifest.json). MUST equal the canonical <local_data>/<data.factor_subdir> "
+                             "(data_paths) — m09c1 FATALs on mismatch. run_train.sh passes FACTOR_DIR_CANONICAL.")
     fs_group = parser.add_mutually_exclusive_group()
     fs_group.add_argument("--factor-streaming", dest="factor_streaming_override",
                           action="store_true", default=None,
@@ -1842,10 +1870,7 @@ def main():
         print("\nERROR: Specify --SANITY, --POC, or --FULL")
         sys.exit(1)
 
-    if not args.factor_dir:
-        print("FATAL: m09c1_surgery_encoder requires --factor-dir (path to m11 factor datasets)")
-        print("  Pipeline: m10 (Grounded-SAM) → m11 (factor datasets) → m09c (surgery)")
-        sys.exit(1)
+    # iter17: --factor-dir is argparse required=True (no post-check needed).
 
     ensure_local_data(args)
 
