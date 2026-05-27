@@ -12,3 +12,8 @@
 - First clean surgery-vs-pretrain numbers in (leakage-safe re-run).
 - Surgery wins temporal (future-L1); pretrain wins action top1.
 - Next: confirm on held-out test with CIs; add frozen.
+
+## Wed, May 27, 2026
+- Full-scale 116k-clip surgery data prepared: ~125 GPU-hr, ~$150.
+- Held-out test evaluation running; frozen baseline now included.
+- Next: read held-out motion-cos / future-L1 / top1 when done.
