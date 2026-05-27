@@ -143,7 +143,13 @@ def load_vjepa_2_1_frozen(ckpt_path: Path, num_frames: int):
     enc = ENCODERS["vjepa_2_1_frozen"]
     crop = enc["crop"]
     print(f"Loading V-JEPA 2.1 ViT-G ({enc['arch']}, crop={crop}, T={num_frames}) ...")
-    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    # iter17 (2026-05-27): mmap=True — memory-map the (up to 14 GB) ckpt instead of
+    # reading it all into anon CPU RAM. The eval feature-extraction producer is tiny
+    # (inline decode, 1 clip at a time), so the per-encoder ckpt LOAD is what drives
+    # host-RAM to the 92-93% cgroup ceiling; mmap-backed storages are reclaimable page
+    # cache, not anon → cuts the per-encoder spike with zero throughput cost (pages are
+    # read on-demand during load_state_dict). Zip-serialized ckpts (torch.save default).
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False, mmap=True)
     state_dict = resolve_encoder_state_dict(ckpt)
     state_dict = {k.replace("module.", "").replace("backbone.", ""): v for k, v in state_dict.items()}
 

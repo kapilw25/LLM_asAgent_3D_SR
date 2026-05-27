@@ -32,6 +32,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.checkpoint import save_json_checkpoint, load_json_checkpoint
+from utils.config import get_pipeline_config   # iter17: single-source the split-threshold defaults
 
 
 # ── Constants ────────────────────────────────────────────────────────
@@ -50,8 +51,13 @@ MOTION_DIRECTION_BINS: list = ["downward", "leftward", "rightward", "upward"]
 _DIRECTION_BIN_ORDER: list = ["rightward", "upward", "leftward", "downward"]   # argmax index → name
 
 MOTION_SEPARATOR: str = "__"
-MIN_CLIPS_PER_CLASS_DEFAULT: int = 34   # ≥34 → ≥5 per split at 70/15/15 (BCa CI floor)
-MIN_PER_SPLIT_DEFAULT: int = 5          # BCa CI floor per split
+# iter17 (2026-05-27): single-sourced from pipeline.yaml probe.* (was literal 34/5
+# duplicating the yaml values). Mode-keyed production values come from
+# probe_action_labels.{min_clips_per_class,min_per_split}.<mode> via the callers;
+# these mode-agnostic defaults back the CPU self-test (__main__) path.
+_PROBE_CFG = get_pipeline_config()["probe"]
+MIN_CLIPS_PER_CLASS_DEFAULT: int = _PROBE_CFG["min_clips_per_class"]   # ≥ this → ≥5/split @ 70/15/15
+MIN_PER_SPLIT_DEFAULT: int = _PROBE_CFG["min_per_split"]               # BCa CI floor per split
 
 
 # ── Public API ───────────────────────────────────────────────────────

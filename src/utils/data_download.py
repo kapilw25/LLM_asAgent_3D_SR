@@ -9,7 +9,6 @@ Usage:
     for clip_key, mp4_bytes in iter_clips_parallel(local_data, num_readers=8):
         ...
 """
-import io
 import json
 import queue
 import sys
@@ -45,9 +44,13 @@ def ensure_local_data(args) -> str:
         local_data = str(_derive_local_dir(args.subset))
         args.local_data = local_data
 
-    # For --FULL without --subset, use data/full_local
+    # For --FULL without --subset, use the ACTIVE corpus dir (single source:
+    # pipeline.yaml data.local_data_dir — flips eval_10k_local↔full_local). iter17
+    # (2026-05-27): was hardcoded "data/full_local", which on the eval_10k_local
+    # config silently pointed a --FULL/no-subset call at the WRONG corpus.
     if not local_data and not getattr(args, "subset", None):
-        local_data = "data/full_local"
+        from utils.config import get_pipeline_config
+        local_data = get_pipeline_config()["data"]["local_data_dir"]
         args.local_data = local_data
 
     # SANITY mode can stream (small clip count) — no download needed
@@ -64,8 +67,8 @@ def ensure_local_data(args) -> str:
     # Auto-download
     print(f"\n{'='*60}")
     print(f"  AUTO-DOWNLOAD: {local_data} not found")
-    print(f"  Downloading WebDataset shards from HuggingFace CDN...")
-    print(f"  This is a one-time operation (~50-60 min for 10K, ~60 min for 115K)")
+    print("  Downloading WebDataset shards from HuggingFace CDN...")
+    print("  This is a one-time operation (~50-60 min for 10K, ~60 min for 115K)")
     print(f"{'='*60}\n")
 
     # Build m00d args

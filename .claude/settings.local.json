@@ -265,7 +265,14 @@
       "Bash(grep -nA12 \"def load_subset\" src/utils/config.py)",
       "Bash(awk '/torch.save\\\\\\(\\\\{/,/\\\\}, combined_ckpt\\\\\\)/' src/__TRACKED_VAR__.py)",
       "Bash(grep -nE 'sanity_train_clips|sanity_val_clips|args\\\\.SANITY' src/__TRACKED_VAR__.py)",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Bash(grep -nA12 \"^probe_split:\" configs/pipeline.yaml)",
+      "Bash(echo \"  v15a training split: 1096/220/220 = $\\(python3 -c 'print\\(f\\\\\"{1096/1536:.0%}/{220/1536:.0%}/{220/1536:.0%}\\\\\"\\)'\\)\")",
+      "Bash(echo \"  v2   probe split:    6854/451/1825 = $\\(python3 -c 'print\\(f\\\\\"{6854/9130:.0%}/{451/9130:.0%}/{1825/9130:.0%}\\\\\"\\)'\\)\")",
+      "Bash(nvidia-smi --query-gpu=utilization.gpu,utilization.memory,memory.used,power.draw --format=csv,noheader)",
+      "Bash(grep -nE \"^DEFAULT_[A-Z_]+ *= *[0-9]|^[A-Z_]+ *= *[0-9]+ *\\(#|$\\)\" src/probe_future_mse.py src/probe_future_regress.py src/probe_motion_cos.py src/probe_action.py src/probe_taxonomy.py)",
+      "Bash(awk -F: '$1>=288 && $1<=300')",
+      "Bash(grep -oE '\\(python[0-9]* \\(-u \\)?|bash |\\\\$EX |scripts/lib/[a-z_]+\\\\.py \\)\\(src/[a-z0-9_]+\\\\.py|src/utils/[a-z0-9_]+\\\\.py|scripts/[a-z0-9_/]+\\\\.\\(py|sh\\)\\)' scripts/run_eval.sh)"
     ]
   }
 }

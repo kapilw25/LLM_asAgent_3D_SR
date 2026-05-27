@@ -1,77 +1,48 @@
-# iter15-v2 — Runbook: re-run the 8-encoder paired-Δ with the leakage/universe/path fixes
+# iter15-v2 — Runbook: 7-cell paired-Δ + eval (SANITY → POC)
 
-WHY v2: iter15 v15a was invalidated by (A) test-leakage, (B) 8× universe-asymmetry,
-(C) split-drift, (D) path-divergence. All fixed in code — `run_train.sh` now builds ONE
-leakage-safe `train_pool.json` (= corpus − val − test) via `src/utils/clip_splits.py` and
-feeds it as `--subset` to every trainer; paths come from `src/utils/data_paths.py`. The
-trainer commands are therefore ~identical to iter15; the fix is internal. Re-run on the NEW
-96 GB instance. iter15 checkpoints are INVALID — do not reuse them.
+Order: SANITY (validate code paths) → POC (paper-proxy numbers). Each block runs 7
+training cells then `run_eval`. Surgery cells init from the LOCAL per-mode
+`m09a_pretrain_encoder` ckpt (pipeline.yaml `surgery_init`), so `pretrain_encoder`
+MUST run first. `sleep 10` between cells lets the prior GPU process release VRAM/RAM.
 
-Run-mode order is mandatory: SANITY → POC → FULL. All three subsample the SAME corpus
-(`data/full_local`) via `pipeline.yaml clip_pool_ratio` (sanity 1% / poc 10% / full 100%).
-
-## 0 · Pre-flight: fixed code + corpus download
+## 1 · SANITY
 
 ```bash
-# fixed-code artifacts present
-ls src/utils/clip_splits.py src/utils/data_paths.py
-grep -q "^training_pool:" configs/train/base_optimization.yaml && echo "training_pool key ✓"
-grep -q "SHARED DERIVATION VIA CLI" src/CLAUDE.md && echo "rule ✓"
-
-# corpus download — eval_10k_local was migrated/emptied; re-pull it to re-run iter15's
-# EXACT experiment with the fixed code at the same scale. (corrected path: data/eval_10k_local,
-# not data/data/eval_10k_local). For the 115k paper tier, also: download-data data/full_local.
-python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 \
-  | tee logs/iter15_v2_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
-
-# single source → corpus dir (default eval_10k_local; flip to full_local for the 115k paper
-# tier: edit configs/pipeline.yaml data.local_data_dir + data.master_manifest_name)
-LD=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
-echo "LOCAL_DATA=$LD"
-
-# data prereqs present after download (probe labels + factor prep)
-ls "$LD/m04d_motion_features/motion_features.npy"          # m04d done (probe labels need it)
-test -f "$LD/m11_factor_datasets/factor_manifest.json" && echo "m11 factor manifest ✓"
+# ── 7 training + 1 eval (--SANITY) ──
+# ENCODER
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/sanity_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_2X_encoder       --SANITY 2>&1 | tee logs/sanity_a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/sanity_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/sanity_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+# HEAD
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/sanity_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/sanity_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/sanity_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+# eval / TEST of all
+CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter15_v2_sanity_eval_$(date +%Y%m%d_%H%M%S).log
 ```
 
-## 0.5 · GPU-SANITY checkpoint — validate the iter17 code changes BEFORE the full re-run
-
 ```bash
-# Gate (task #35): validate the 2026-05-26 edits (hardcoded-values→yaml single-source,
-# getattr/.get removal→dtype whitelist, --subset-mode legacy retired, refactor #29 shared
-# compute_val_motion_aux_loss) end-to-end on GPU. ~3–10 min each. Run BEFORE §1; if any FATAL,
-# fix before trusting §1-4 numbers. 6 subcmds cover all touched code: m09a1/a2/c1/c2 ×
-# (DI + noDI) yaml variants. CACHE_POLICY_ALL=2 is MANDATORY here — without it the .py
-# blocks on resolve_cache_policy_interactive's input() prompt (non-TTY → hang); 2=recompute
-# gives each SANITY cell a clean slate (SANITY is throwaway).
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/sanity_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log && \
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/sanity_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log && \
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/sanity_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log && \
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/sanity_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log && \
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/sanity_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log && \
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/sanity_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log
-
-# ── VALIDATION GATE (each grep confirms a specific change; last one MUST be empty) ──
-grep -E "recipe-v3 receipts" logs/sanity_c1*.log                    # m09c1 (DI+noDI): subset-mode recipe_v3, no legacy
-grep -E "leakage-guard.*train pool" logs/sanity_c2*.log             # m09c2: streaming + leakage filter (sanity=true)
-grep -E "variant_tag|3stage_DI_head|noDI_head" logs/sanity_c2*.log  # m09c2: data.variant_tag read (was .replace)
-grep -E "val_loss=" logs/sanity_a2*.log logs/sanity_c2*.log         # a2/c2: shared compute_val_motion_aux_loss ran ≥1 val
-grep -iE "FATAL|Traceback|KeyError|AttributeError|invalid choice" logs/sanity_*.log   # MUST be empty
-# NOTE: m09c2 SANITY uses StreamingFactorDataset (factor_streaming.sanity now config-true) —
-#   unchanged vs old force-True behavior; logs should match prior SANITY. Once green → run §1.
+# ── VERIFY (--SANITY) — all green before POC ──
+grep -iE "FATAL|Traceback|KeyError|AttributeError|invalid choice" logs/sanity_*.log logs/iter15_v2_sanity_eval_*.log   # MUST be EMPTY
+grep -hE "recipe-v3 receipts"            logs/sanity_c1*.log                       # surgery encoders: recipe_v3 (DI+noDI)
+grep -hE "leakage-guard.*train pool"     logs/sanity_c2*.log                       # surgery heads: streaming + leakage filter
+grep -hE "variant=(3stage_DI|noDI)_head" logs/sanity_c2*.log                       # head data.variant_tag read
+grep -hE "val_loss=|val_jepa="           logs/sanity_a2*.log logs/sanity_c2*.log   # >=1 val cycle ran (shared compute_val_motion_aux_loss)
 ```
 
-## 1 · Set the tier (run this block 3× — SANITY, then POC, then FULL)
+## 2 · POC
 
 ```bash
-MODE=--SANITY ; MD=sanity      # tier 1: validate fixed code paths
-# MODE=--POC  ; MD=poc         # tier 2: quick paired-Δ
-# MODE=--FULL ; MD=full        # tier 3: paper numbers (115k)
-```
-
-## 2 · 7-cell paired-Δ matrix (pretrain FIRST → provides SURGERY_INIT)
-
-```bash
+# ── 7 training + 1 eval (--POC) ──
+# ENCODER
 CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --POC 2>&1 | tee logs/poc_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log ; \
 sleep 10 ; \
 CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_2X_encoder       --POC 2>&1 | tee logs/poc_a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log ; \
@@ -80,111 +51,35 @@ CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --POC 2>&1 |
 sleep 10 ; \
 CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --POC 2>&1 | tee logs/poc_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log ; \
 sleep 10 ; \
+# HEAD
 CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --POC 2>&1 | tee logs/poc_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log ; \
 sleep 10 ; \
 CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --POC 2>&1 | tee logs/poc_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log ; \
 sleep 10 ; \
-CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --POC 2>&1 | tee logs/poc_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log
+CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --POC 2>&1 | tee logs/poc_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log ; \
+sleep 10 ; \
+# eval / TEST of all
+CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee logs/iter15_v2_poc_eval_$(date +%Y%m%d_%H%M%S).log
 ```
 
-
 ```bash
-# (1) pretrain encoder — provides the shared init for all 4 surgery cells
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_encoder $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log
-
-# (2) pretrain head (Δ6 pair with m09a1; both Meta init)
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_head $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log
-
-# (3) compute-matched control for Δ3 (Meta init, 2× epochs)
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_2X_encoder $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log
-
-# (4-7) surgery cells — all share ONE init from the POC/FULL pretrain ckpt (paired-Δ validity)
-SI=outputs/${MD}/m09a_pretrain_encoder/m09a_ckpt_best.pt
-SURGERY_INIT=$SI CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_encoder $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09c1_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log
-SURGERY_INIT=$SI CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_encoder $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09c1_noDI_encoder_$(date +%Y%m%d_%H%M%S).log
-SURGERY_INIT=$SI CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_head $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09c2_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log
-SURGERY_INIT=$SI CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_head $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_m09c2_noDI_head_$(date +%Y%m%d_%H%M%S).log
-```
-
-## 3 · LEAKAGE-FIX VERIFICATION GATE (the reason v2 exists — must pass before trusting numbers)
-
-```bash
+# ── VERIFY (--POC) — leakage-safe + paper Δ5 ──
 source venv_walkindia/bin/activate
 LD=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
-
-# (A) train_pool is leakage-free: ZERO test AND zero val clips in the training pool
-python -c "
-import json
-P=lambda f: set(json.load(open(f))['clip_keys'])
-pool=P('$LD/train_pool.json'); val=P('$LD/val_split.json'); test=P('$LD/test_split.json')
-assert not (pool & test), f'TEST LEAK: {len(pool&test)} test clips in pool'
-assert not (pool & val),  f'VAL LEAK:  {len(pool&val)} val clips in pool'
-print(f'OK leakage-free: pool={len(pool)} test_in_pool=0 val_in_pool=0')
-"
-
-# (B) m09c1 factor-dir assert passed + m09c2 streaming-universe restricted + clip_splits ran
-grep -hE "\[clip_splits\] universe=|leakage-guard.*restricted to train pool" logs/iter15_v2_${MD}_*.log
-
-# (C) ZERO FATAL across the matrix
-grep -c FATAL logs/iter15_v2_${MD}_*.log
-
-# (D) pretrain (m09a) and surgery (m09c) now train on the SAME pool size (universe-symmetry)
-grep -hE "Train clips:|train/val split:|universe=broad_manifest" logs/iter15_v2_${MD}_*.log
-```
-
-## 4 · Eval + Δ5 paper claim
-
-```bash
-CACHE_POLICY_ALL=1 ./scripts/run_eval.sh $MODE 2>&1 \
-  | tee logs/iter15_v2_${MD}_eval_$(date +%Y%m%d_%H%M%S).log
-
-# Δ5 = surgery_3stage_DI_encoder − surgery_3stage_DI_head (headline). Want non-overlapping CI.
-source venv_walkindia/bin/activate
-python -c "
-import json
-d = json.load(open('outputs/${MD}/probe_action/probe_paired_delta.json'))['iter14_paper_deltas']
-d5 = d.get('delta_5_surgical_vs_surgical_head')
-if not d5 or d5.get('skipped'):
-    print('Δ5 not available — cells incomplete')
-else:
-    print(f'Δ5 mean {d5[\"delta_mean\"]:+.4f}  95% CI [{d5[\"delta_ci_lo\"]:+.4f},{d5[\"delta_ci_hi\"]:+.4f}]  p={d5[\"p_value\"]:.4f}')
-    print(d5['interpretation'])
-"
-
-# training-side trajectory plots (12 PNGs)
-python -u src/probe_plot.py $MODE --training-side \
-  --training-root outputs/${MD} --output-dir outputs/${MD}/probe_plot --no-wandb 2>&1 \
-  | tee logs/iter15_v2_${MD}_probe_plot_$(date +%Y%m%d_%H%M%S).log
-```
-
-## 5 · Monitor / triage / cleanup
-
-```bash
-# live GPU + latest tqdm (2nd pane)
-watch -n 5 'nvidia-smi --query-gpu=utilization.gpu,memory.used,power.draw --format=csv; \
-  ls -t logs/iter15_v2_*.log 2>/dev/null | head -1 | xargs tail -1'
-
-# health sweep
-for log in logs/iter15_v2_*.log; do [ -f "$log" ] || continue; \
-  echo "$log: FATAL=$(grep -c FATAL "$log") OOM=$(grep -c 'IMMINENT\|OutOfMemoryError' "$log")"; done
-
-# common failures: OOM@BS1 → VRAM math · assert_encoder_frozen → freeze wiring ·
-#   factor_manifest.json missing → run scripts/run_factor_prep.sh first ·
-#   "--factor-dir != canonical" FATAL → pass the canonical m11 dir (yaml-derived) ·
-#   "streaming universe EMPTY after train-pool filter" → --subset pool vs factor_manifest mismatch
-
-# verify all 7 cells produced ckpts, then upload (POC/FULL only — SANITY is throw-away)
-find outputs/${MD}/m09a_pretrain_encoder outputs/${MD}/m09a_pretrain_head \
-     outputs/${MD}/m09c_surgery_3stage_DI_encoder outputs/${MD}/m09c_surgery_noDI_encoder \
-     outputs/${MD}/m09c_surgery_3stage_DI_head outputs/${MD}/m09c_surgery_noDI_head \
-     -name '*ckpt_best.pt' -o -name 'student_encoder.pt' | sort
-HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_outputs.py upload outputs/${MD} 2>&1 \
-  | tee logs/iter15_v2_${MD}_upload_$(date +%Y%m%d_%H%M%S).log
+# (a) zero errors across all 7 training + eval
+grep -iE "FATAL|Traceback|KeyError|AttributeError|invalid choice" logs/poc_*.log logs/iter15_v2_poc_eval_*.log   # MUST be EMPTY
+# (b) train pool leakage-free — zero val/test clips in the training pool (the reason v2 exists)
+python -c "import json; P=lambda f: set(json.load(open(f))['clip_keys']); pool=P('$LD/train_pool.json'); v=P('$LD/val_split.json'); t=P('$LD/test_split.json'); assert not(pool&v) and not(pool&t), 'LEAK'; print(f'leakage-free: pool={len(pool)} val_in_pool=0 test_in_pool=0')"
+# (c) universe-symmetry — pretrain (m09a) + surgery (m09c) train on the SAME pool size
+grep -hE "Train clips:|train/val split:|universe=broad_manifest" logs/poc_*.log
+# (d) all 7 cells produced their best ckpts
+ls outputs/poc/m09a_pretrain_encoder/m09a_ckpt_best.pt \
+   outputs/poc/m09a_pretrain_2X_encoder/m09a_ckpt_best.pt \
+   outputs/poc/m09a_pretrain_head/m09a_ckpt_best.pt \
+   outputs/poc/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt \
+   outputs/poc/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt \
+   outputs/poc/m09c_surgery_3stage_DI_head/m09c_ckpt_best.pt \
+   outputs/poc/m09c_surgery_noDI_head/m09c_ckpt_best.pt
+# (e) headline Δ5 = surgery_3stage_DI_encoder − surgery_3stage_DI_head (want non-overlapping CI)
+python -c "import json; d=json.load(open('outputs/poc/probe_action/probe_paired_delta.json'))['iter14_paper_deltas'].get('delta_5_surgical_vs_surgical_head'); print('Δ5 unavailable — cells incomplete') if not d or d.get('skipped') else print(f'Δ5 {d[\"delta_mean\"]:+.4f}  95% CI [{d[\"delta_ci_lo\"]:+.4f},{d[\"delta_ci_hi\"]:+.4f}]  p={d[\"p_value\"]:.4f}')"
 ```

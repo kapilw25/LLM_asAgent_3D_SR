@@ -156,14 +156,16 @@ if [ "$MODE" = "SANITY" ]; then
     # run_train.sh.
     DEFAULT_MIN_CLIPS_PER_CLASS=3
     DEFAULT_MIN_PER_SPLIT=1
-elif [ "$MODE" = "POC" ]; then
-    # iter14 (2026-05-08): POC ~500 clips ÷ 8 motion classes ≈ 60/class. Floor=10
-    # tolerates rare-class drops while keeping 6+ classes for probe statistics.
-    DEFAULT_MIN_CLIPS_PER_CLASS=10
-    DEFAULT_MIN_PER_SPLIT=2
 else
-    DEFAULT_MIN_CLIPS_PER_CLASS=34
-    DEFAULT_MIN_PER_SPLIT=5
+    # iter17 (2026-05-27): POC + FULL read the SAME thresholds as the training
+    # label bootstrap (pipeline.yaml probe_action_labels — single source). Was
+    # hardcoded 10/2 (POC) / 34/5 (FULL), which diverged from training's yaml
+    # 100/5 → eval rebuilt a 14-class label set vs the 11-class set the models
+    # were trained on (motion_aux head mismatch) AND crashed the video-disjoint
+    # split (val=5% needs ~5/0.05=100 clips/class). Single source = eval labels
+    # match training labels by construction.
+    DEFAULT_MIN_CLIPS_PER_CLASS=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_clips_per_class.${MODE,,}")
+    DEFAULT_MIN_PER_SPLIT=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_per_split.${MODE,,}")
 fi
 MIN_CLIPS_PER_CLASS="${MIN_CLIPS_PER_CLASS:-$DEFAULT_MIN_CLIPS_PER_CLASS}"
 MIN_PER_SPLIT="${MIN_PER_SPLIT:-$DEFAULT_MIN_PER_SPLIT}"
@@ -634,6 +636,26 @@ PER_ENC_ANY=0
 for s in 2 3 5 6 8; do should_skip "$s" || PER_ENC_ANY=1; done
 if [ "$PER_ENC_ANY" -eq 1 ]; then
     stamp "PER-ENCODER pipeline (Stages 2/3/5/6/8) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
+    # ── iter17: background aggregate-ETA heartbeat. Prints whole-pipeline progress
+    # (tqdm-style bar + hh:mm ETA across ALL encoders) into THIS eval log every
+    # ETA_HEARTBEAT_INTERVAL (default 120s), so no separate monitor script is needed —
+    # the bulk/ETA shows up inline when you tail the eval log. Scrapes the freshest
+    # eval log (= this run's outer-tee target). Self-terminates when run_eval exits
+    # (the parent PID disappears). Best-effort: the `if …; then :; fi` guards keep it
+    # alive (and set-e-safe) across transient parse failures on a partial log.
+    _ETA_PARENT=$$
+    _eta_heartbeat() {
+        if python -u tests/eval_live_eta.py --reset >/dev/null 2>&1; then :; fi
+        while kill -0 "$_ETA_PARENT" 2>/dev/null; do
+            sleep "${ETA_HEARTBEAT_INTERVAL:-120}"
+            local lg
+            if lg=$(ls -t logs/iter15_v2_*eval*.log 2>/dev/null | head -1) \
+                  && [ -n "$lg" ] && [ -n "$(find "$lg" -mmin -3 2>/dev/null)" ]; then
+                if python -u tests/eval_live_eta.py --log "$lg" 2>/dev/null; then :; fi
+            fi
+        done
+    }
+    _eta_heartbeat &
     for ENC in $ENCODERS; do
         echo ""
         echo "════════════════════════════════════════════════════════════════"

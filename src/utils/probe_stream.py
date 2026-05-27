@@ -81,8 +81,7 @@ def _stream_encoded_batches(args, model, encoder_kind: str, crop: int,
     from utils.config import get_pipeline_config
     pcfg = get_pipeline_config()
     if encoder_kind == "vjepa":
-        initial_bs = pcfg["gpu"].get("inference_vjepa_probe_initial_bs",
-                                     pcfg["gpu"]["inference_vjepa_initial_bs"])
+        initial_bs = pcfg["gpu"]["inference_vjepa_probe_initial_bs"]   # iter17: was .get-fallback (banned)
         max_bs = pcfg["gpu"]["inference_adapted_probe_bs"]
     else:
         initial_bs = pcfg["gpu"]["inference_dinov2_initial_bs"]

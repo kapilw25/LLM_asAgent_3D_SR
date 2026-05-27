@@ -89,13 +89,19 @@ PRED_DEPTH     = _MODEL_CFG["pred_depth"]               # was 24 literal
 PRED_NUM_HEADS = _MODEL_CFG["pred_num_heads"]           # was 12 literal
 NUM_MASK_TOKENS = _MODEL_CFG["num_mask_tokens"]         # was 2 literal
 
-# Default mask config — matches V-JEPA 2.1 small-block convention (8 × ~15% spatial).
-# Single mask spec (no large-block component) is sufficient for a forward-only
-# diagnostic; the large-block path is a training-time optimization not an objective.
-DEFAULT_SPATIAL_SCALE = (0.15, 0.15)
-DEFAULT_TEMPORAL_SCALE = (1.0, 1.0)
-DEFAULT_ASPECT_RATIO = (0.75, 1.5)
-DEFAULT_NUM_BLOCKS = 8
+# iter17 (2026-05-27): mask params single-sourced from the TRAINING mask config
+# (base_optimization.yaml mask[0], the small-block spec) — was a hardcoded copy of
+# (0.15,0.15)/(1.0,1.0)/(0.75,1.5)/8. The future-MSE eval mask MUST match the mask
+# the predictor was trained with; reading mask[0] makes them single-source so a
+# train-side mask change can't silently diverge from this eval. The forward-only
+# diagnostic uses mask[0] only (small blocks); mask[1] large blocks are a
+# training-time optimization, not an objective.
+from utils.config import load_train_config_with_extends as _load_train_cfg
+_MASK0 = _load_train_cfg("configs/train/base_optimization.yaml")["mask"][0]
+DEFAULT_SPATIAL_SCALE  = tuple(_MASK0["spatial_scale"])
+DEFAULT_TEMPORAL_SCALE = tuple(_MASK0["temporal_scale"])
+DEFAULT_ASPECT_RATIO   = tuple(_MASK0["aspect_ratio"])
+DEFAULT_NUM_BLOCKS     = _MASK0["num_blocks"]
 
 # Variants understood by --paired_per_variant. P1 ships frozen only; P2 adds the
 # m09a continual-pretrain output; P3 adds the m09c factor-surgery output. m09b
