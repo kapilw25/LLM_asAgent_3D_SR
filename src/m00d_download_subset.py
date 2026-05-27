@@ -38,6 +38,7 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import HF_DATASET_REPO, load_subset, add_subset_arg, PROJECT_ROOT
 from utils.config import get_sanity_clip_limit, get_pipeline_config
+from utils.data_paths import shards_dir
 from utils.wandb_utils import add_wandb_args, init_wandb, log_metrics, finish_wandb
 
 CLIPS_PER_SHARD = get_pipeline_config()["data"]["clips_per_shard"]
@@ -236,6 +237,12 @@ def download_subset(args):
     else:
         output_dir = PROJECT_ROOT / "data" / "full_local"
     output_dir.mkdir(parents=True, exist_ok=True)
+    # iter17 (2026-05-27): shards now live in <output_dir>/m00d_download_subset/
+    # (was the output_dir root) — single-sourced via data_paths.shards_dir, so the
+    # streaming readers (iter_clips_parallel / video_shard_glob) find them. manifest.json
+    # + tags.json stay at the corpus root (corpus-level, not shard-level artifacts).
+    shard_out = shards_dir(output_dir)
+    shard_out.mkdir(parents=True, exist_ok=True)
     manifest_path = output_dir / "manifest.json"
 
     mode_label = "FULL CORPUS" if full_mode else f"SUBSET ({len(subset_keys):,} keys)"
@@ -251,7 +258,7 @@ def download_subset(args):
     manifest = _load_manifest(manifest_path)
     # Verify claimed shards actually exist on disk (guards against stale manifest)
     claimed_shards = manifest.get("shards", [])
-    missing = [s for s in claimed_shards if not (output_dir / s).exists()]
+    missing = [s for s in claimed_shards if not (shard_out / s).exists()]
     if missing:
         print(f"  [resume] STALE MANIFEST: {len(missing)}/{len(claimed_shards)} TARs missing on disk. Resetting.")
         manifest = {}
@@ -356,7 +363,7 @@ def download_subset(args):
 
                     # Write output shard when buffer full
                     if len(shard_buffer) >= CLIPS_PER_SHARD:
-                        shard_path = _write_shard(output_dir, out_shard_idx, shard_buffer)
+                        shard_path = _write_shard(shard_out, out_shard_idx, shard_buffer)
                         shards_written.append(shard_path.name)
                         out_shard_idx += 1
                         shard_buffer = []
@@ -400,7 +407,7 @@ def download_subset(args):
 
     # Write final partial shard
     if shard_buffer:
-        shard_path = _write_shard(output_dir, out_shard_idx, shard_buffer)
+        shard_path = _write_shard(shard_out, out_shard_idx, shard_buffer)
         shards_written.append(shard_path.name)
         out_shard_idx += 1
 
@@ -436,8 +443,8 @@ def download_subset(args):
     print(f"  Workers: {DOWNLOAD_WORKERS}")
 
     # Disk usage
-    total_bytes = sum((output_dir / s).stat().st_size for s in shards_written
-                      if (output_dir / s).exists())
+    total_bytes = sum((shard_out / s).stat().st_size for s in shards_written
+                      if (shard_out / s).exists())
     print(f"  Disk: {total_bytes / 1e9:.2f} GB")
 
     # Clean up temp dir

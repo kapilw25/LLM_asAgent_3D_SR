@@ -14,9 +14,14 @@ USAGE:
     python -u src/utils/hf_outputs.py download outputs/full 2>&1 | tee logs/download_outputs_full_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
-    python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log    # ~15 min upload
-    python -u src/utils/hf_outputs.py download-data 2>&1 | tee logs/download_data_$(date +%Y%m%d_%H%M%S).log # ~3 min measured
-    python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/iter16_dl_full_local_resume3_$(date +%Y%m%d_%H%M%S).log # "only full_local" 
+    python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py download-data 2>&1 | tee logs/download_data_$(date +%Y%m%d_%H%M%S).log
+    
+    python -u src/utils/hf_outputs.py upload-data data/full_local 2>&1 | tee logs/upload_data_full_local_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py upload-data data/eval_10k_local 2>&1 | tee logs/upload_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
+    
+    python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/download_data_full_local_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
 
 
 
@@ -44,6 +49,7 @@ os.environ.setdefault("HF_HUB_DISABLE_XET", "1")          # Xet has a size-valid
 
 from huggingface_hub import HfApi, repo_exists, snapshot_download
 from utils.progress import make_pbar
+from utils.hf_upload_mode import resolve_upload_mode_interactive, delete_repo_folder_scoped
 
 # iter16 (2026-05-20): moved to configs/pipeline.yaml > hf_repos.outputs per
 # CLAUDE.md "No hardcoded values in Python". To fork for a new org, change yaml.
@@ -305,10 +311,18 @@ def upload_outputs(output_dir: str, subfolder: str = None):
 
     api = HfApi(token=token)
 
-    # Mirror: delete remote files not present locally before uploading.
-    # Without this, HF accumulates stale files (old checkpoints, renamed metrics,
-    # deleted plots). Download then pulls them all back → OOM (73GB incident).
-    _mirror_cleanup(api, output_path, subfolder)
+    # iter17 (2026-05-27): ask delete-then-reupload vs reuse (HF_UPLOAD_MODE env
+    # bypass for tmux). 'delete' = scoped wipe of the remote subfolder first (clean
+    # slate); 'reuse' = the existing mirror-cleanup (remove only stale remote files).
+    mode = resolve_upload_mode_interactive(
+        api, HF_OUTPUTS_REPO, "dataset", subfolder, f"outputs upload: {output_dir}")
+    if mode == "delete":
+        delete_repo_folder_scoped(api, HF_OUTPUTS_REPO, "dataset", subfolder)
+    else:
+        # Mirror: delete remote files not present locally before uploading.
+        # Without this, HF accumulates stale files (old checkpoints, renamed metrics,
+        # deleted plots). Download then pulls them all back → OOM (73GB incident).
+        _mirror_cleanup(api, output_path, subfolder)
 
     # List files that will be uploaded (preview list filtered by the same
     # skip patterns that upload_folder will apply — so "N files (X GB)" is accurate).
@@ -444,6 +458,7 @@ def _discover_data_uploads(data_root: Path) -> list:
     Rules:
       - every FILE  directly under data_root → upload as file (upload_file)
       - every SUBDIR        under data_root → upload as folder (upload_folder)
+      - EXCEPT a top-level dir named "legacy" → SKIPPED (retired artifacts)
 
     Returns: [(local_path: str, repo_path: str), ...].
     """
@@ -451,6 +466,14 @@ def _discover_data_uploads(data_root: Path) -> list:
         return []
     pairs: list = []
     for entry in sorted(data_root.iterdir()):
+        # iter17 (2026-05-27): never sync retired artifacts to HF. `legacy/` is
+        # the retire-don't-delete sink (CLAUDE.md "Retiring files: mv to sibling
+        # legacy/ subdir — never rm") — keeping those files LOCAL is the whole
+        # point; pushing them re-cruft the dataset (1.6 GB of worker-scratch
+        # overlay plots at data/full_local). Skip any top-level dir named "legacy".
+        if entry.is_dir() and entry.name == "legacy":
+            print(f"  SKIP (retired, not synced to HF): {entry}")
+            continue
         if entry.is_file() or entry.is_dir():
             pairs.append((str(entry), str(entry)))
     return pairs
@@ -493,9 +516,10 @@ def _pre_upload_pack_outputs(data_root: Path) -> None:
         ("m11_factor_datasets", "D_I", "D_I-{shard:05d}.tar"),
     ]
 
-    for d in sorted(data_root.iterdir()):
-        if not d.is_dir():
-            continue
+    def _pack_one_subset(d: Path) -> None:
+        """Pack the m10/m11 raw families inside ONE subset dir `d` — i.e. the
+        dir that DIRECTLY contains m10_sam_segment/ and m11_factor_datasets/.
+        No-op when a family has no raws; pack_dir_to_shards is idempotent."""
         for parent_name, raw_subdir, shard_pattern in pack_specs:
             raw_dir = d / parent_name / raw_subdir
             if not raw_dir.is_dir() or not any(raw_dir.iterdir()):
@@ -510,6 +534,21 @@ def _pre_upload_pack_outputs(data_root: Path) -> None:
                 keep_source=False,   # FIX-25: clean disk after pack
                 force=False,
             )
+
+    # data_root may be EITHER the top-level `data/` (subset dirs are children,
+    # m10/m11 are grandchildren) OR a single subset dir like data/full_local
+    # (m10/m11 are DIRECT children — the form the iter15_v2 runbook passes).
+    # Pack data_root itself AND each child so BOTH granularities work; a given
+    # raw dir lives at exactly one level, so there is no double-pack.
+    # iter17 FIX (2026-05-27): exact mirror of the _post_download_unpack_masks
+    # fix (line ~696). The prior child-only loop silently no-op'd when handed a
+    # subset dir directly → `upload-data data/full_local` left masks/ unpacked
+    # and upload_folder pushed 114,572 raw .npz individually, hitting HTTP 429 on
+    # POST .../objects/verify. See logs/upload_data_full_local_20260527_183618.log.
+    _pack_one_subset(data_root)
+    for d in sorted(data_root.iterdir()):
+        if d.is_dir():
+            _pack_one_subset(d)
 
 
 def upload_data(data_root: Path = None):
@@ -535,6 +574,14 @@ def upload_data(data_root: Path = None):
 
     _ensure_repo(token)
     api = HfApi(token=token)
+
+    # iter17 (2026-05-27): ask delete-then-reupload vs reuse BEFORE any (slow) pack.
+    # 'delete' scoped-wipes data_root's remote prefix (clean slate); 'reuse' uploads
+    # over the existing remote. HF_UPLOAD_MODE env bypass for non-interactive runs.
+    mode = resolve_upload_mode_interactive(
+        api, HF_OUTPUTS_REPO, "dataset", str(data_root), f"data upload: {data_root}")
+    if mode == "delete":
+        delete_repo_folder_scoped(api, HF_OUTPUTS_REPO, "dataset", str(data_root))
 
     # Pre-upload: TAR-shard m10 masks + m11 D_L/D_A/D_I raws across every
     # <subdir>/ under data_root (HF 10k-file repo cap). Dynamic discovery — no
@@ -583,20 +630,34 @@ def upload_data(data_root: Path = None):
                 # on every run_train.sh launch from eval_10k.json + motion_features
                 # (probe_train_subset.py + eval_subset.py). These ride free on the
                 # next instance via the bootstrap — no need to occupy HF storage.
+                # iter17 FIX (2026-05-27): every entry needs BOTH a top-level
+                # (`X/**`) AND a nested (`**/X/**`) form. `upload-data
+                # data/full_local` makes each subdir its OWN upload_folder root,
+                # so masks/ sits at depth-0 (needs `masks/**`); `upload-data`
+                # (data/) makes full_local/ the root, so masks/ sits at depth-1
+                # (needs `**/masks/**`). The prior single
+                # `**/m10_sam_segment/masks/**` form matched NEITHER depth
+                # (verified via huggingface_hub.filter_repo_objects — the leading
+                # `**/` requires a segment BEFORE the named dir, but the named dir
+                # IS the first relative segment) → the ignore list was dead and
+                # only the pack-empties-the-dir mechanism kept raws off HF.
+                # masks/D_L/D_A/D_I are packed+deleted above (belt-and-suspenders
+                # here); m10_overlay_verify/m11_per_clip_verify are NOT packed —
+                # these patterns are the ONLY thing keeping those regenerables out.
                 ignore_patterns=[
-                    "**/m10_sam_segment/masks/**",
-                    "**/m10_sam_segment/m10_overlay_verify/**",
-                    "**/m11_factor_datasets/D_L/**",
-                    "**/m11_factor_datasets/D_A/**",
-                    "**/m11_factor_datasets/D_I/**",
-                    "**/m11_factor_datasets/m11_per_clip_verify/**",
+                    "masks/**", "**/masks/**",
+                    "m10_overlay_verify/**", "**/m10_overlay_verify/**",
+                    "D_L/**", "**/D_L/**",
+                    "D_A/**", "**/D_A/**",
+                    "D_I/**", "**/D_I/**",
+                    "m11_per_clip_verify/**", "**/m11_per_clip_verify/**",
                     # iter16 M9 (2026-05-21): corpus-agnostic split filenames
                     # (no "eval_10k_" prefix — derived from probe Stage 1).
                     # eval_10k_poc.json + eval_10k_sanity.json retired to
                     # data/eval_10k_local/legacy/ in the same pass.
-                    "**/train_split.json",
-                    "**/val_split.json",
-                    "**/test_split.json",
+                    "train_split.json", "**/train_split.json",
+                    "val_split.json", "**/val_split.json",
+                    "test_split.json", "**/test_split.json",
                 ],
             )
         pbar.update(1)

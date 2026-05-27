@@ -885,7 +885,9 @@ def add_provenance(tags: dict, example: dict, model_id: str,
 def _create_stream(skip_count: int, local_data: str = None):
     """Create streaming dataset from HF or local WebDataset shards."""
     if local_data:
-        ds = load_dataset("webdataset", data_files=f"{local_data}/*.tar", split="train", streaming=True)
+        from utils.data_paths import video_shard_glob  # iter17: subdir-or-root subset-*.tar
+        ds = load_dataset("webdataset", data_files=video_shard_glob(local_data),
+                          split="train", streaming=True)
     else:
         ds = load_dataset(HF_DATASET_REPO, split="train", streaming=True)
     ds = ds.decode(False)

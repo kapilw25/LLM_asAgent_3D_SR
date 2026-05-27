@@ -46,6 +46,7 @@ _torch_mp.set_sharing_strategy("file_system")
 # matching m09_pretrain.py:53 pattern).
 from utils.config import get_pipeline_config
 from utils.data_download import iter_clips_parallel
+from utils.data_paths import find_video_shards
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup  # noqa: F401 (AdaptiveBatchSizer re-exported)
 from utils.video_io import get_clip_key, create_stream, decode_video_bytes
 from utils.vjepa2_imports import (
@@ -1786,10 +1787,11 @@ def build_streaming_indices(manifest_path: Path, masks_dir: Path, local_data: st
     factor_manifest = json.loads(Path(manifest_path).read_text())
     manifest_keys = set(factor_manifest.keys())
 
-    tar_files = sorted(Path(local_data).glob("*.tar"))
+    tar_files = find_video_shards(local_data)  # iter17: subdir-or-root subset-*.tar
     if not tar_files:
         raise FileNotFoundError(
-            f"build_streaming_indices: no *.tar files in {local_data}. "
+            f"build_streaming_indices: no subset-*.tar in {local_data} "
+            f"(checked m00d_download_subset/ + root). "
             f"Did you run ./git_pull.sh to fetch local_data?")
 
     mp4_index = {}

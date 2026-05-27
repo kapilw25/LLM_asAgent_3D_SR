@@ -17,6 +17,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from utils.data_paths import find_video_shards
+
 
 def _derive_local_dir(subset_path: str) -> Path:
     """Derive local data dir from subset filename: data/subset_10k.json → data/subset_10k_local/"""
@@ -192,7 +194,9 @@ def iter_clips_parallel(local_data: str, subset_keys: set = None,
             if item is None: break  # sentinel: all TARs exhausted
             clip_key, mp4_bytes = item
     """
-    tar_files = sorted(Path(local_data).glob("*.tar"))
+    # iter17 (2026-05-27): subset-*.tar now live in <local_data>/m00d_download_subset/
+    # (single-sourced via data_paths.find_video_shards, with root-layout fallback).
+    tar_files = find_video_shards(local_data)
     clip_q = queue.Queue(maxsize=max_queue)
     stop_event = threading.Event()
 

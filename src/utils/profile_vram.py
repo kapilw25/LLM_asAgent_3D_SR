@@ -641,7 +641,8 @@ def _load_real_video_batch(n_clips: int, local_data: str, config_path: str):
     processor = AutoVideoProcessor.from_pretrained(
         VJEPA_MODEL_ID, size={"height": crop_size, "width": crop_size})
 
-    tar_files = sorted(Path(local_data).glob("*.tar"))
+    from utils.data_paths import find_video_shards
+    tar_files = find_video_shards(local_data)  # iter17: subdir-or-root subset-*.tar
     clips = []
     tmp_dir = tempfile.mkdtemp(prefix="profile_")
 

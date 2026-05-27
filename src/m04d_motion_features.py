@@ -143,7 +143,8 @@ def _create_stream(skip_count: int = 0, local_data: str = None):
     """Create streaming dataset from HF or local WebDataset shards."""
     from datasets import load_dataset
     if local_data:
-        ds = load_dataset("webdataset", data_files=f"{local_data}/*.tar",
+        from utils.data_paths import video_shard_glob  # iter17: subdir-or-root subset-*.tar
+        ds = load_dataset("webdataset", data_files=video_shard_glob(local_data),
                           split="train", streaming=True)
     else:
         ds = load_dataset(HF_DATASET_REPO, split="train", streaming=True)

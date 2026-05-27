@@ -52,6 +52,7 @@ data:
   # → divergence risk, same class as the train-pool leakage). Now one place.
   factor_subdir:         "m11_factor_datasets"     # m11_factor_datasets.py output dir
   masks_subdir:          "m10_sam_segment"         # m10_sam_segment.py output dir (masks/ inside)
+  shard_subdir:          "m00d_download_subset"    # m00d_download_subset.py output dir (subset-*.tar inside)
   factor_manifest_name:  "factor_manifest.json"    # m11 manifest filename
 
   clips_per_shard: 1000       # m03/m00d: WebDataset shard size (≈1 GB each at 480p MP4 × 1000 clips)
