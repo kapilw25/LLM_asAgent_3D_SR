@@ -194,7 +194,8 @@ Arrow-of-Time   phase-2 enc    ↑    APPENDIX    ⏳ metrics§6
 Pace            phase-2 enc    ↑    APPENDIX    ⏳ metrics§6
 TCC             phase-2 enc    ↑    APPENDIX    ⏳ metrics§7
 ```
-↕ = order's sign is the signal. cross-arch predictor cols (vitg/2.0_vitg) need WS-B3 (predictor_eval arch-aware).
+↕ = order's sign is the signal. WS-B3 DONE (predictor_eval arch-aware): vitg/2.0_vitg now get ALL predictor
+cols — validated build+forward on all 3 (concat 6656/5632/1408; 2.1 deep-sup + 2.0 single-output).
 
 ═══════════════════════════════════════════════════════════════════════════════
 §H · Sequencing + cost
@@ -202,7 +203,8 @@ TCC             phase-2 enc    ↑    APPENDIX    ⏳ metrics§7
 
 ```text
 1. POC frozen-9 baseline eval (no train) → §G encoder rows                    runbook §1
-2. WS-B3: predictor_eval arch-aware (~60 LoC)                                 unblocks cross-arch predictor cols
+2. WS-B3: predictor_eval arch-aware  ✅ DONE (validated build+forward, 3 backbones)
 3. POC train+eval vjepa_2_1_vitg (scale) + vjepa_2_0_vitg (version)           runbook §2; pretrain_encoder first
+   → now gets ALL 10 metrics (predictor stages no longer skipped for vitg/2.0_vitg)
 4. Aggregate §G hero table + m13 plots across all backbones + 9 baselines
 ```

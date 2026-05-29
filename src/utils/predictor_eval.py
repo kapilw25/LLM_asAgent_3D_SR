@@ -36,7 +36,8 @@ from utils.frozen_features import (
 from utils.vjepa2_imports import (
     get_apply_masks,
     get_mask_generator,
-    get_vit_gigantic_xformers,
+    get_vit_by_arch,
+    get_vit_predictor,
     get_vit_predictor_2_1,
 )
 
@@ -44,14 +45,13 @@ from utils.vjepa2_imports import (
 _PCFG = get_pipeline_config()
 _MODEL_CFG = get_model_config(None)["model"]               # None → default vjepa2_1.yaml
 NUM_FRAMES_DEFAULT = _PCFG["probe"]["num_frames"]
+# Geometry constants are IDENTICAL across all predictor-capable backbones (vitG/vitg/2.0_vitg
+# = crop 384, patch 16, tubelet 2) → safe at module level. Per-model dims (arch/embed_dim/
+# pred_*/num_mask_tokens/n_output_distillation/predict_all) are read PER-CALL from model_cfg in
+# the loaders below (iter17 WS-B3 — these were ViT-G-hardcoded here, crashing non-G backbones).
 PATCH_SIZE = _MODEL_CFG["patch_size"]
 TUBELET_SIZE = _MODEL_CFG["tubelet_size"]
 CROP = _MODEL_CFG["crop_size"]
-PRED_EMBED_DIM = _MODEL_CFG["pred_embed_dim"]
-PRED_DEPTH = _MODEL_CFG["pred_depth"]
-PRED_NUM_HEADS = _MODEL_CFG["pred_num_heads"]
-NUM_MASK_TOKENS = _MODEL_CFG["num_mask_tokens"]
-ENCODER_EMBED_DIM = _MODEL_CFG["embed_dim"]                # 1664 (ViT-G last-layer)
 
 _MASK0 = load_train_config_with_extends("configs/train/base_optimization.yaml")["mask"][0]
 DEFAULT_SPATIAL_SCALE = tuple(_MASK0["spatial_scale"])
@@ -68,62 +68,76 @@ PT_SEED = _PT["seed"]                         # pt_maskratio + pt_order determin
 
 
 # ── Loaders (encoder hierarchical + predictor) ─────────────────────────
-def load_encoder_only(ckpt_path, num_frames):
-    """Load ONLY the V-JEPA 2.1 ViT-G hierarchical encoder (NO predictor build) from a .pt.
+def load_encoder_only(ckpt_path, num_frames, model_cfg=None):
+    """Load ONLY the V-JEPA encoder (NO predictor build) from a .pt; arch/dims from model_cfg.
 
-    Returns (encoder, ckpt, embed_dim_concat=6656). For encoder-temporal metrics (m12f) that
-    never use the predictor — iter16 §3.3 R2: skips the ~60M predictor construction + state
-    load that load_encoder_predictor does but m12f discards. `ckpt` is returned so callers that
-    DO need the predictor (load_encoder_predictor) reuse this single torch.load (no double read).
+    iter17 WS-B3: was ViT-G-hardcoded; now reads arch/crop/embed_dim/n_output_distillation from
+    get_model_config(model_cfg) (None → vjepa2_1.yaml ViT-G, back-compat). Returns
+    (encoder, ckpt, embed_dim_concat). 2.1 (n_distill>1) → deep-sup hierarchical concat =
+    embed_dim*n_distill; 2.0 (n_distill=1) → single-output encoder, concat = embed_dim. `ckpt` is
+    returned so load_encoder_predictor reuses this single torch.load. Used encoder-only by m12f.
     """
     from pathlib import Path
     ckpt_path = Path(ckpt_path)
     if not ckpt_path.exists():
         sys.exit(f"FATAL: ckpt not found: {ckpt_path}")
+    mc = get_model_config(model_cfg)["model"]
+    crop, n_distill = mc["crop_size"], mc["n_output_distillation"]
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False, mmap=True)
 
-    # --- encoder (hierarchical: returns 4-layer concat = 6656-dim) ---
     enc_sd = resolve_encoder_state_dict(ckpt)
     enc_sd = {k.replace("module.", "").replace("backbone.", ""): v for k, v in enc_sd.items()}
-    encoder = get_vit_gigantic_xformers()(
-        img_size=(CROP, CROP), patch_size=PATCH_SIZE, num_frames=num_frames,
-        tubelet_size=TUBELET_SIZE, use_sdpa=True, use_silu=False, wide_silu=True,
-        uniform_power=False, use_rope=True,
+    encoder = get_vit_by_arch(mc["arch"])(
+        img_size=(crop, crop), patch_size=mc["patch_size"], num_frames=num_frames,
+        tubelet_size=mc["tubelet_size"], use_sdpa=True, use_silu=False, wide_silu=True,
+        uniform_power=False, use_rope=mc["use_rope"],
     )
     msg = encoder.load_state_dict(enc_sd, strict=False)
     loaded = len(enc_sd) - len(msg.unexpected_keys)
     total = len(list(encoder.state_dict().keys()))
     if loaded < total * 0.9:
         sys.exit(f"FATAL: only {loaded}/{total} encoder params loaded — key mismatch")
-    encoder.return_hierarchical = True
+    if n_distill > 1:
+        # 2.1 deep supervision: encoder returns the hierarchical 4-layer concat.
+        encoder.return_hierarchical = True
+        embed_dim_concat = encoder.embed_dim * len(encoder.hierarchical_layers)
+        if embed_dim_concat != mc["embed_dim"] * n_distill:
+            sys.exit(f"FATAL: hierarchical concat {embed_dim_concat} != {mc['embed_dim']}*{n_distill}")
+    else:
+        # 2.0: no deep supervision → single-output encoder.
+        embed_dim_concat = mc["embed_dim"]
     encoder = encoder.to(device="cuda", dtype=torch.bfloat16).eval()
     torch.backends.cuda.sdp_kernel = contextlib.nullcontext
-    embed_dim_concat = encoder.embed_dim * len(encoder.hierarchical_layers)
-    if embed_dim_concat != ENCODER_EMBED_DIM * 4:
-        sys.exit(f"FATAL: hierarchical concat dim {embed_dim_concat} != {ENCODER_EMBED_DIM}*4")
     return encoder, ckpt, embed_dim_concat
 
 
-def load_encoder_predictor(ckpt_path, num_frames):
-    """Load V-JEPA 2.1 ViT-G hierarchical encoder + predictor from one .pt.
+def load_encoder_predictor(ckpt_path, num_frames, model_cfg=None):
+    """Load V-JEPA encoder + predictor from one .pt; arch/dims from model_cfg (iter17 WS-B3).
 
-    Returns (encoder, predictor, embed_dim_concat=6656). Mirrors
-    probe_future_mse._load_vjepa_2_1_encoder_hierarchical + _load_predictor_2_1.
-    iter16 §3.3: encoder half delegated to load_encoder_only (single source; one torch.load).
+    Returns (encoder, predictor, embed_dim_concat). Mirrors training.build_student_predictor:
+    pred ctor = get_vit_predictor_2_1() if predict_all (2.1 dense loss) else get_vit_predictor()
+    (2.0 base); the build kwargs are identical across versions, only the ctor + return_all_tokens
+    differ. None model_cfg → ViT-G (back-compat). Both predictor forwards accept the shared
+    masked_predict_l1 call signature (z, [m_enc], [m_pred], mask_index=0) — 2.1's `mod` defaults
+    to "video". iter16 §3.3: encoder half delegated to load_encoder_only (one torch.load).
     """
-    encoder, ckpt, embed_dim_concat = load_encoder_only(ckpt_path, num_frames)
+    encoder, ckpt, embed_dim_concat = load_encoder_only(ckpt_path, num_frames, model_cfg)
+    mc = get_model_config(model_cfg)["model"]
+    crop = mc["crop_size"]
 
     # --- predictor (same .pt) ---
     pred_sd = resolve_predictor_state_dict(ckpt)
     if pred_sd is None:
         sys.exit(f"FATAL: ckpt has no predictor key. top-level: {list(ckpt.keys())[:6]}")
-    predictor = get_vit_predictor_2_1()(
-        img_size=(CROP, CROP), patch_size=PATCH_SIZE, num_frames=num_frames,
-        tubelet_size=TUBELET_SIZE, embed_dim=ENCODER_EMBED_DIM,
-        predictor_embed_dim=PRED_EMBED_DIM, depth=PRED_DEPTH, num_heads=PRED_NUM_HEADS,
-        use_mask_tokens=True, num_mask_tokens=NUM_MASK_TOKENS, zero_init_mask_tokens=True,
-        use_rope=True, uniform_power=False, use_sdpa=True, use_silu=False, wide_silu=True,
-        use_activation_checkpointing=False, return_all_tokens=True,
+    pred_ctor = get_vit_predictor_2_1() if mc["predict_all"] else get_vit_predictor()
+    predictor = pred_ctor(
+        img_size=(crop, crop), patch_size=mc["patch_size"], num_frames=num_frames,
+        tubelet_size=mc["tubelet_size"], embed_dim=mc["embed_dim"],
+        predictor_embed_dim=mc["pred_embed_dim"], depth=mc["pred_depth"],
+        num_heads=mc["pred_num_heads"], use_mask_tokens=True,
+        num_mask_tokens=mc["num_mask_tokens"], zero_init_mask_tokens=True,
+        use_rope=mc["use_rope"], uniform_power=False, use_sdpa=True, use_silu=False,
+        wide_silu=True, use_activation_checkpointing=False, return_all_tokens=mc["predict_all"],
     )
     pred_sd = {k.replace("module.", "").replace("backbone.", ""): v for k, v in pred_sd.items()}
     pmsg = predictor.load_state_dict(pred_sd, strict=False)

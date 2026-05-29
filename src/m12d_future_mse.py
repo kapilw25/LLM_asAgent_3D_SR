@@ -242,17 +242,16 @@ def run_forward_stage(args, wb) -> None:
     # iter16 §3.2 DEDUP: one combined load (encoder hierarchical + predictor) from the
     # single source in utils.predictor_eval (shared with m12e) — was two separate calls.
     encoder, predictor, embed_dim_concat = load_encoder_predictor(
-        args.encoder_ckpt, args.num_frames)
-    # predictor_embed.0 is Linear(1664*n_distill -> 1664) = Linear(6656 -> 1664).
-    if embed_dim_concat != 1664 * 4:
-        sys.exit(f"FATAL: hierarchical concat dim {embed_dim_concat} != 6656; predictor expects 1664*4")
+        args.encoder_ckpt, args.num_frames, args.model_config)
+    # concat-dim validity (== embed_dim * n_output_distillation) is checked per-config inside
+    # load_encoder_only (WS-B3) — no ViT-G-hardcoded re-check here.
     mask_gen = build_mask_gen(args.num_frames)
     print(f"  predictor: {sum(p.numel() for p in predictor.parameters()) / 1e6:.1f}M params")
 
     # D2 (2026-05-16): optional motion_aux head augment → parallel per-clip L1
     # in (K+n_dims) space. None → original encoder+predictor JEPA-only path.
     ma_head = None
-    embed_dim = 1664   # V-JEPA 2.1 ViT-G last-layer dim (used to slice hierarchical concat)
+    embed_dim = _get_mcfg(args.model_config)["model"]["embed_dim"]   # last-layer dim (slice hierarchical concat)
     if args.motion_aux_head is not None:
         from utils.motion_aux_loss import load_motion_aux_head
         ma_head = load_motion_aux_head(args.motion_aux_head, device="cuda")
@@ -501,6 +500,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="V-JEPA variant whose ckpt is loaded for forward stage")
     p.add_argument("--encoder-ckpt", type=Path, default=None,
                    help="V-JEPA .pt holding encoder + predictor (target_encoder + predictor keys)")
+    p.add_argument("--model-config", type=str, default=None,
+                   help="configs/model/<backbone>.yaml — encoder+predictor arch/dims (WS-B3 arch-aware). "
+                        "Required for --stage forward; unused by --stage paired_per_variant (None → ViT-G).")
     # D2 fix (2026-05-16): wire motion_aux head for SYMMETRY with the rest of
     # the eval pipeline (probe_action / probe_motion_cos / probe_future_regress
     # all accept this flag). When provided, ADDS a parallel metric:

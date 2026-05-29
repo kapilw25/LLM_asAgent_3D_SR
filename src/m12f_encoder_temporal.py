@@ -313,7 +313,7 @@ def run_forward_stage(args, wb):
         train_keys = train_keys[:args.head_train_cap]
     print(f"  splits: train={len(train_keys)}  test={len(test_keys)}  metrics={todo}")
 
-    encoder, _ckpt, embed_concat = load_encoder_only(args.encoder_ckpt, args.num_frames)
+    encoder, _ckpt, embed_concat = load_encoder_only(args.encoder_ckpt, args.num_frames, args.model_config)
     del _ckpt  # encoder-temporal needs no predictor (iter16 §3.3 R2 — no predictor build)
     print(f"  encoder loaded (concat dim={embed_concat}; encoder-only — no predictor build)")
 
@@ -477,6 +477,9 @@ def build_parser():
     p.add_argument("--metric", required=True, choices=list(METRICS) + ["all"])
     p.add_argument("--variant", choices=list(KNOWN_VARIANTS), default=None)
     p.add_argument("--encoder-ckpt", type=Path, default=None)
+    p.add_argument("--model-config", type=str, default=None,
+                   help="configs/model/<backbone>.yaml — encoder arch/dims (WS-B3 arch-aware). "
+                        "Required for --stage forward; unused by --stage paired_per_variant (None → ViT-G).")
     add_local_data_arg(p)
     p.add_argument("--action-probe-root", type=Path, default=None,
                    help="probe_action output dir (action_labels.json train/test splits)")

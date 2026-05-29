@@ -210,6 +210,18 @@ _enc_kind() {                                   # encoder name → registry `kin
     [ -n "$k" ] || { echo "FATAL: encoder '$1' has empty 'kind' in $PROBE_REG"; exit 3; }
     echo "$k"
 }
+_model_cfg_for() {                              # encoder name → model config yaml (predictor stages 8/8b/8c; WS-B3)
+    # m12d/e/f build the encoder+predictor from this config (arch/embed_dim/pred_*/
+    # n_output_distillation/predict_all) so non-G backbones don't crash a ViT-G build.
+    # Backbone derived from the encoder name (mirror run_train.sh BACKBONE→MODEL_CFG case).
+    local bb arm; read -r bb arm <<<"$(_split_enc "$1")"
+    case "$bb" in
+        vjepa_2_1_vitG) echo "configs/model/vjepa2_1.yaml" ;;
+        vjepa_2_1_vitg) echo "configs/model/vjepa2_1_vitg.yaml" ;;
+        vjepa_2_0_vitg) echo "configs/model/vjepa2_0.yaml" ;;
+        *)              echo "configs/model/${bb}.yaml" ;;
+    esac
+}
 _arm_dir() {                                    # arm suffix → m09 output dir name
     case "$1" in
         pretrain_encoder)            echo m09a_pretrain_encoder ;;
@@ -691,6 +703,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         echo "ENCODER: $ENC  (Stages 2/3/5/6/8)"
         echo "════════════════════════════════════════════════════════════════"
         ENC_KIND="$(_enc_kind "$ENC")"   # gate ckpt/predictor stages on KIND (not name prefix) — hf_vjepa2/ijepa/dinov2 load from HF
+        ENC_MCFG="$(_model_cfg_for "$ENC")"   # WS-B3: backbone model config for predictor stages 8/8b/8c
         EXTRA_CKPT=""
         if [ "$ENC_KIND" = vjepa ]; then
             CKPT="$(encoder_ckpt_for "$ENC")"
@@ -897,6 +910,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                         --stage forward \
                         --variant "$ENC" \
                         --encoder-ckpt "$PCKPT" \
+                        --model-config "$ENC_MCFG" \
                         $MA_FLAG \
                         --action-probe-root "$OUTPUT_ACTION" \
                         --local-data "$LOCAL_DATA" \
@@ -922,6 +936,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                     python -u src/m12e_predictor_temporal.py "--$MODE" \
                         --stage forward --metric all \
                         --variant "$ENC" --encoder-ckpt "$PCKPT" \
+                        --model-config "$ENC_MCFG" \
                         $MA_FLAG \
                         --action-probe-root "$OUTPUT_ACTION" \
                         --local-data "$LOCAL_DATA" \
@@ -948,6 +963,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                     python -u src/m12f_encoder_temporal.py "--$MODE" \
                         --stage forward --metric all \
                         --variant "$ENC" --encoder-ckpt "$ECKPT" \
+                        --model-config "$ENC_MCFG" \
                         --action-probe-root "$OUTPUT_ACTION" \
                         --local-data "$LOCAL_DATA" \
                         --output-root "$OUTPUT_ENCTEMP" \

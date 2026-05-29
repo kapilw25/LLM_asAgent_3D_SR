@@ -125,7 +125,7 @@ def run_forward_stage(args, wb) -> None:
         sys.exit("FATAL: 0 test clips in action_labels.json — re-run the labels stage")
     print(f"Forward {todo} on {len(test_keys)} test clips, variant={args.variant}")
 
-    encoder, predictor, embed_concat = load_encoder_predictor(args.encoder_ckpt, args.num_frames)
+    encoder, predictor, embed_concat = load_encoder_predictor(args.encoder_ckpt, args.num_frames, args.model_config)
     print(f"  encoder+predictor loaded (concat dim={embed_concat})")
 
     # Resume: one ckpt holds the shared keys + each metric's per-clip accumulator in lockstep.
@@ -275,6 +275,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--metric", required=True, choices=list(METRICS) + ["all"])
     p.add_argument("--variant", choices=list(KNOWN_VARIANTS), default=None)
     p.add_argument("--encoder-ckpt", type=Path, default=None)
+    p.add_argument("--model-config", type=str, default=None,
+                   help="configs/model/<backbone>.yaml — encoder+predictor arch/dims (WS-B3 arch-aware). "
+                        "Required for --stage forward; unused by --stage paired_per_variant (None → ViT-G).")
     p.add_argument("--motion-aux-head", type=Path, default=None,
                    help="head-cell symmetry (reserved; not yet consumed by these metrics)")
     add_local_data_arg(p)

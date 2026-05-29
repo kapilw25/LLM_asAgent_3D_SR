@@ -26,40 +26,39 @@ VRAM. Stage map: 1=labels 2=feat 3=action-probe 4=action-Δ 5/6=motion_cos 7=mot
 # 9 frozen baselines (native .pt verified present; ijepa/dinov2/ssv2 pull from HF; lejepa = local timm load).
 FROZEN="dinov2 ijepa_vitH14 ijepa_vitG16 vjepa_2_0_vitg_ssv2 vjepa_1_vitL_frozen vjepa_1_vitH_frozen vjepa_2_vitL_256_frozen vjepa_2_1_vitL_frozen lejepa_vitL_frozen"
 # run 1/2/3/5/6/11 = action + motion_cos + taxonomy. SKIP: paired-Δ (no arm pairs here),
-# predictor 8/8b/8c+9 (ViT-G-only loader → would crash on non-G), plots 10/13 (build combined §G later).
+# predictor 8/8b/8c+9 (frozen baselines have no usable predictor → N/A), plots 10/13 (build combined §G later).
 SKIP_FROZEN="4,7,8,8b,8c,9,9b,9c,10,12,13"
 ```
 
 ```bash
-# ── 1a · SANITY (combined smoke — proves the 8-in-one-command path, ~10 min, tiny data) ──
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_frozen8_$(date +%Y%m%d_%H%M%S).log
+# ── 1a · SANITY (combined smoke — proves the 9-in-one-command path, ~10 min, tiny data) ──
+ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_frozen9_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
 # ── 1b · POC (real 10k §G numbers) ──
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen8_$(date +%Y%m%d_%H%M%S).log
+ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen9_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
 # ── 1c · OVERNIGHT (sleepy): SANITY then POC, `;` not `&&` so POC runs even if SANITY hiccups ──
 FROZEN="dinov2 ijepa_vitH14 ijepa_vitG16 vjepa_2_0_vitg_ssv2 vjepa_1_vitL_frozen vjepa_1_vitH_frozen vjepa_2_vitL_256_frozen vjepa_2_1_vitL_frozen lejepa_vitL_frozen" ; SKIP_FROZEN="4,7,8,8b,8c,9,9b,9c,10,12,13" ; \
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_frozen8_$(date +%Y%m%d_%H%M%S).log ; \
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen8_$(date +%Y%m%d_%H%M%S).log
+ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_frozen9_$(date +%Y%m%d_%H%M%S).log ; \
+ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen9_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
 # ── VERIFY (frozen) ──
-grep -iE "FATAL|Traceback|KeyError|invalid choice" logs/iter17_*frozen8*.log   # MUST be EMPTY
+grep -iE "FATAL|Traceback|KeyError|invalid choice" logs/iter17_*frozen9*.log   # MUST be EMPTY
 ls outputs/poc/probe_action/{dinov2,ijepa_vitH14,ijepa_vitG16,vjepa_2_0_vitg_ssv2,vjepa_1_vitL_frozen,vjepa_1_vitH_frozen,vjepa_2_vitL_256_frozen,vjepa_2_1_vitL_frozen,lejepa_vitL_frozen}/probe.pt  # 9 action probes
-grep -hE "Test top-1 acc|score_mean=" logs/iter17_poc_frozen8_*.log   # per-encoder action top1 + motion_cos
+grep -hE "Test top-1 acc|score_mean=" logs/iter17_poc_frozen9_*.log   # per-encoder action top1 + motion_cos
 ```
 
 ## 2 · Trainable cross-arch — vjepa_2_1_vitg + vjepa_2_0_vitg (train + eval)
 
 ```bash
-# PREREQ for predictor §G columns (future_mse/rollout/teacher_free): predictor_eval.py is ViT-G-ONLY
-# (WS-B3 ~60 LoC: thread --model-config through predictor_eval + m12d/e/f). NOT done. Until then EVAL
-# skips predictor stages (8/8b/8c/9*); encoder metrics (action/motion_cos/taxonomy) work now.
+# WS-B3 DONE: predictor_eval is arch-aware (run_eval passes --model-config per backbone) → vitg/2.0_vitg
+# get ALL 10 metrics; predictor stages (8/8b/8c/9*) are NO LONGER skipped (validated build+forward).
 # Surgery inits from THIS backbone's m09a_pretrain_encoder ckpt (pipeline.yaml surgery_init,
 # namespaced outputs/<mode>/<BACKBONE>/) → pretrain_encoder MUST run first.
 BACKBONE=vjepa_2_1_vitg          # ← switch to vjepa_2_0_vitg for the version axis (same commands)
@@ -83,7 +82,7 @@ BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encode
 BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
 BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
 BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-ENCODERS="$ARMS_EVAL" SKIP_STAGES="8,8b,8c,9,9b,9c" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log
+ENCODERS="$ARMS_EVAL" SKIP_STAGES="" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
@@ -96,7 +95,7 @@ BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encode
 BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
 BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
 BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-ENCODERS="$ARMS_EVAL" SKIP_STAGES="8,8b,8c,9,9b,9c" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log
+ENCODERS="$ARMS_EVAL" SKIP_STAGES="" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log
 # version axis: re-run 2c with BACKBONE=vjepa_2_0_vitg and ARMS_EVAL prefixed vjepa_2_0_vitg_*
 ```
 
