@@ -3,6 +3,12 @@
 # AUDIENCE has knowledge about ONLY plots from @iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/poc/probe_plot/eval/
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
+
+## Thurs, May 28, 2026
+- All six temporal-prediction metrics now in; surgery beats pretrain on four (motion, future-frame, causal, mask-robustness).
+- Pretrain leads only weak action-classification; four metrics tie — surgery is the clear overall winner.
+- Next: adding older V-JEPA and image baselines (DINOv2, iJEPA) as frozen references.
+
 ## Wed, May 27, 2026
 - Full-scale 116k-clip surgery data prepared: ~125 GPU-hr, ~$150.
 - Fixed test-clip leakage + 8x larger eval (n=1825); CIs tightened ~2.8x, conclusions held.

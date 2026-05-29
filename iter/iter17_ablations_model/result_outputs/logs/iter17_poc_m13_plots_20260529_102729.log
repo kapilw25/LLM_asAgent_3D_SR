@@ -1,0 +1,27 @@
+  [m13_eval_plot] wiping eval/ — 27 stale file(s)
+m13_eval_plot:   0%|          | 0/15 [00:00<?, ?panel/s]  Saved: outputs/poc/probe_plot/eval/head/probe_action_acc_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/head/probe_motion_cos_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/head/m13_taxonomy_f1_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/head/probe_future_mse_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/predictor/m13_rollout_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/predictor/m13_causal_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/predictor/m13_tdist_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/predictor/m13_teacher_free_compare.png + .pdf
+  Saved: outputs/poc/probe_plot/eval/predictor/m13_maskratio_compare.png + .pdf
+  [skip] order: signed (no better/worse direction) — diagnostic only, kept in CSV not plotted
+  [skip] aot: source JSON absent
+  [skip] tov: source JSON absent
+  [skip] pace: source JSON absent
+  [skip] tcc_tau: source JSON absent
+  [skip] tcc_cycle: source JSON absent
+m13_eval_plot: 100%|██████████| 15/15 [00:04<00:00,  3.58panel/s]m13_eval_plot: 100%|██████████| 15/15 [00:04<00:00,  3.58panel/s]
+  9/15 bar panels written (9 plotted): ['action_top1', 'causal', 'future_mse', 'maskratio', 'motion_cos', 'rollout', 'taxonomy_f1', 'tdist', 'teacher_free']  ·  signed (CSV-only, not plotted): ['order']
+  Saved: outputs/poc/probe_plot/eval/m13_hero_table.png + .pdf
+  [hero-table] m13_hero_table.{png,pdf,csv} — 9 metric rows drawn (+signed 'order' in CSV only) × 18 cols (transposed) · WINNER col = single best per metric
+  Saved: outputs/poc/probe_plot/eval/m13_hero_surgery_vs_frozen.png + .pdf
+  [hero-heatmap] m13_hero_surgery_vs_frozen.{png,pdf} — 16 × 9 (Δ+CI, bold black)
+  Saved: outputs/poc/probe_plot/eval/m13_scoreboard_surgery_vs_pretrain.png + .pdf
+  [scoreboard] m13_scoreboard_surgery_vs_pretrain — surgery 4 pretrain 1 tie 4
+  Saved: outputs/poc/probe_plot/eval/m13_grouped_winner_surgery_vs_pretrain.png + .pdf
+  [grouped] m13_grouped_winner_surgery_vs_pretrain — surgery 4 pretrain 1 tie 4
+  Plots written to: outputs/poc/probe_plot/eval

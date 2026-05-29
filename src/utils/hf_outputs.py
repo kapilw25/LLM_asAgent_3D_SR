@@ -4,12 +4,10 @@ Repo: anonymousML123/factorjepa-outputs (public, gated, auto-created on first up
 
 USAGE:
     # FULL/POC/SANITY usage: from outputs/
-    python -u src/utils/hf_outputs.py upload outputs 2>&1 | tee logs/hf_upload_outputs_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py upload outputs 2>&1 | tee logs/upload_outputs_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download outputs 2>&1 | tee logs/hf_download_outputs_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from outputs/full/ ONLY
-    python -u src/utils/hf_outputs.py upload outputs/full 2>&1 | tee logs/hf_upload_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py upload outputs/full  2>&1 | tee logs/upload_outputs_full_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py upload outputs/poc  2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download outputs/full 2>&1 | tee logs/download_outputs_full_$(date +%Y%m%d_%H%M%S).log
 
@@ -18,16 +16,19 @@ USAGE:
     python -u src/utils/hf_outputs.py download-data 2>&1 | tee logs/download_data_$(date +%Y%m%d_%H%M%S).log
     
     python -u src/utils/hf_outputs.py upload-data data/full_local 2>&1 | tee logs/upload_data_full_local_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py upload-data data/eval_10k_local 2>&1 | tee logs/upload_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
-    
-    python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/download_data_full_local_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
+    
+    # from @checkpoints/
+    python -u src/utils/hf_outputs.py upload-data checkpoints 2>&1 | tee logs/upload_checkpoints_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py download-data checkpoints 2>&1 | tee logs/download_checkpoints_$(date +%Y%m%d_%H%M%S).log
+    
 
 
 
 """
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -56,7 +57,15 @@ from utils.hf_upload_mode import resolve_upload_mode_interactive, delete_repo_fo
 from utils.config import get_pipeline_config as _get_pcfg
 HF_OUTPUTS_REPO = _get_pcfg()["hf_repos"]["outputs"]   # was "anonymousML123/factorjepa-outputs" literal
 
-_UPLOAD_EXTENSIONS = {"*.npy", "*.npz", "*.json", "*.csv", "*.png", "*.pdf", "*.tex", "*.pt"}
+# Upload policy (single source for preview + mirror-cleanup + upload_folder):
+# the LIGHT science (json/csv/png/pdf/tex) + ONLY the trained `student_encoder.pt`.
+# Heavy + regeneratable/duplicate artifacts are DROPPED — *.npy / *.npz (probe
+# features, re-extractable at eval) and every OTHER *.pt (m09*_ckpt_best.pt =
+# full resume-state that duplicates the encoder; probe*.pt heads = re-trainable in
+# minutes). At vitG this cut outputs/ from ~248 GB → ~tens of GB. NOTE: the glob is
+# `*student_encoder.pt` (not the bare filename) so it matches at ANY depth in BOTH
+# pathlib.rglob (_list_local_files) AND huggingface_hub fnmatch (allow_patterns).
+_UPLOAD_EXTENSIONS = {"*.json", "*.csv", "*.png", "*.pdf", "*.tex", "*student_encoder.pt"}
 
 # Large regeneratable m11 subdirs — mirror .gitignore lines 80-84. These are
 # deliberately EXCLUDED from HF upload because they are cheap to re-compute
@@ -113,6 +122,82 @@ def _fmt_size(nbytes: int) -> str:
     if nbytes >= 1e3:
         return f"{nbytes / 1e3:.0f} KB"
     return f"{nbytes} B"
+
+
+def _host_tx_bytes() -> int:
+    """Cumulative host network TX bytes (Linux /proc) — a movement proxy for the
+    upload, since on a transfer box the dominant outbound traffic IS the upload."""
+    try:
+        total = 0
+        with open("/proc/self/net/dev") as fh:
+            for line in fh.readlines()[2:]:          # skip 2 header rows
+                parts = line.split()
+                if len(parts) >= 10:
+                    total += int(parts[9])           # column 9 = tx bytes
+        return total
+    except Exception:
+        return 0
+
+
+def _self_read_bytes() -> int:
+    """Cumulative bytes THIS process read from block devices (Linux /proc/self/io).
+    Climbs during LFS sha256 HASHING of large files (a pure disk-read phase) even
+    while network TX is flat — this is what lets the heartbeat tell 'hashing
+    (working)' apart from a genuine stall. (Fully page-cached reads don't hit the
+    block device so won't increment, but multi-GB .pt files spill cache → they do.)"""
+    try:
+        with open("/proc/self/io") as fh:
+            for line in fh:
+                if line.startswith("read_bytes:"):
+                    return int(line.split()[1])
+        return 0
+    except Exception:
+        return 0
+
+
+class _UploadHeartbeat:
+    """Pulse elapsed + phase every `interval`s while a SILENT huggingface_hub
+    upload_folder() runs. It emits no per-file output in a piped/non-TTY context
+    (`2>&1 | tee`) → a multi-GB .pt upload looks 'stuck' for 10-20 min across TWO
+    phases: (1) LFS HASHING (disk-read-bound, network TX flat) then (2) SENDING
+    (network-bound). The heartbeat reports BOTH disk-read and TX rates + infers
+    the phase, so neither phase looks frozen. Daemon thread; stops on context exit.
+    TX is host-namespace level (movement proxy); read is this-process-exact."""
+
+    def __init__(self, label: str, interval: float = 30.0):
+        self.label, self.interval = label, interval
+        self._stop = threading.Event()
+        self._t = None
+
+    def __enter__(self):
+        self._t0 = self._t_last = time.time()
+        self._tx0 = self._tx_last = _host_tx_bytes()
+        self._rd0 = self._rd_last = _self_read_bytes()
+        self._t = threading.Thread(target=self._run, daemon=True)
+        self._t.start()
+        return self
+
+    def _run(self):
+        while not self._stop.wait(self.interval):
+            now = time.time()
+            tx, rd = _host_tx_bytes(), _self_read_bytes()
+            dt = max(now - self._t_last, 1e-9)
+            tx_rate = (tx - self._tx_last) / dt
+            rd_rate = (rd - self._rd_last) / dt
+            phase = ("SENDING" if tx_rate > 1e6 and tx_rate >= rd_rate
+                     else "HASHING" if rd_rate > 1e6
+                     else "waiting")           # neither moving → HF commit/verify or net stall
+            print(f"  [{self.label}] {phase} · {now - self._t0:.0f}s elapsed · "
+                  f"read +{_fmt_size(int(rd_rate))}/s · sent +{_fmt_size(int(tx_rate))}/s · "
+                  f"tot {_fmt_size(rd - self._rd0)} read / {_fmt_size(tx - self._tx0)} sent",
+                  flush=True)
+            self._tx_last, self._rd_last, self._t_last = tx, rd, now
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        if self._t:
+            self._t.join(timeout=2)
+        return False
 
 
 def _list_local_files(output_path: Path, extensions: set,
@@ -330,6 +415,8 @@ def upload_outputs(output_dir: str, subfolder: str = None):
                                     skip_patterns=_UPLOAD_SKIP_PATTERNS)
     total_bytes = sum(f.stat().st_size for f in local_files)
     print(f"Uploading {output_dir} → {HF_OUTPUTS_REPO}/{subfolder}/")
+    print("  Policy: light science (json/csv/png/pdf/tex) + student_encoder.pt only — "
+          "DROPPING *.npy / *.npz / non-encoder *.pt (regeneratable/duplicate heavies)")
     print(f"  Skipping {len(_UPLOAD_SKIP_PATTERNS)} large regeneratable dirs "
           f"(see _UPLOAD_SKIP_PATTERNS in hf_outputs.py): "
           f"{', '.join(p.strip('/').split('/')[-2] for p in _UPLOAD_SKIP_PATTERNS)}")
@@ -340,15 +427,19 @@ def upload_outputs(output_dir: str, subfolder: str = None):
 
     t0 = time.time()
 
-    api.upload_folder(
-        folder_path=str(output_path),
-        repo_id=HF_OUTPUTS_REPO,
-        repo_type="dataset",
-        path_in_repo=subfolder,
-        allow_patterns=list(_UPLOAD_EXTENSIONS),
-        ignore_patterns=(["tmp_*"] + _stale_checkpoint_ignores(output_path)
-                         + _UPLOAD_SKIP_PATTERNS),
-    )
+    # upload_folder is SILENT in a piped context (no per-file output) → the
+    # heartbeat thread pulses elapsed + throughput every 30s so the multi-GB
+    # .pt phase doesn't look stuck. Keeps upload_folder's dedup/batching/mirror.
+    with _UploadHeartbeat(f"upload {subfolder}"):
+        api.upload_folder(
+            folder_path=str(output_path),
+            repo_id=HF_OUTPUTS_REPO,
+            repo_type="dataset",
+            path_in_repo=subfolder,
+            allow_patterns=list(_UPLOAD_EXTENSIONS),
+            ignore_patterns=(["tmp_*"] + _stale_checkpoint_ignores(output_path)
+                             + _UPLOAD_SKIP_PATTERNS),
+        )
 
     elapsed = time.time() - t0
     print(f"Upload complete: {elapsed:.0f}s → https://huggingface.co/datasets/{HF_OUTPUTS_REPO}")

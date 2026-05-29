@@ -111,24 +111,41 @@ python -c "import json; d=json.load(open('outputs/poc/probe_action/probe_paired_
 ## 3 · §G aggregate — combined verdict plots across ALL encoders (run LAST)
 
 ```bash
-# run_eval STAGE 10 auto-plots per-eval, but §1 frozen SKIPs 10/13 → build the COMBINED §G plot
-# ONCE, after §1+§2 finish. m13 re-reads the SHARED probe roots (they accumulate EVERY encoder
-# across all eval runs) → one hero_table / hero_heatmap / scoreboard / grouped spanning frozen + all arms.
+# STEP 1 (MUST run FIRST) — rebuild the by_encoder AGGREGATES over ALL encoders. m13 reads the
+# paired-Δ JSONs (probe_paired_delta / probe_motion_cos_paired / per_dim_acc), and the paired_delta
+# stage is the ONLY place by_encoder is built — but §1 frozen SKIPs stages 4/7/12, so the 9 frozen
+# baselines never landed there → they'd be INVISIBLE in §G. These 3 CPU aggregators auto-discover
+# every encoder subdir present (arms + 9 baselines) and rebuild by_encoder from the on-disk
+# per-encoder test_metrics.json — no GPU, no feature recompute, ~15 min total.
+source venv_walkindia/bin/activate ; export PYTHONPATH=src ; \
+python -u src/m12a_action_top1.py --POC --stage paired_delta --output-root outputs/poc/probe_action     --cache-policy 1 --no-wandb ; \
+python -u src/m12b_motion_cos.py  --POC --stage paired_delta --output-root outputs/poc/probe_motion_cos --cache-policy 1 --no-wandb ; \
+python -u src/m12c_taxonomy_f1.py --POC --stage paired_delta --features-root outputs/poc/probe_action --output-root outputs/poc/probe_taxonomy --cache-policy 1 --no-wandb
+```
+
+```bash
+# STEP 2 — build the COMBINED §G plots. m13 re-reads the SHARED probe roots (now carrying EVERY
+# encoder) → one hero_table / hero_heatmap / scoreboard / grouped spanning frozen + baselines + arms.
 # Verdict is single-sourced via _family_verdict (champion duel): scoreboard == grouped tally always.
+# Frozen reference auto-derives to the arms' same-backbone frozen (vjepa_2_1_frozen), NOT the
+# alphabetically-first 'frozen' baseline. Baselines carry head metrics only (predictor cols N/A).
 source venv_walkindia/bin/activate ; export PYTHONPATH=src ; \
 python -u src/m13_eval_plot.py --POC \
-  --action-probe-root       outputs/poc/probe_action \
-  --motion-cos-root         outputs/poc/probe_motion_cos \
-  --future-mse-root         outputs/poc/probe_future_mse \
-  --taxonomy-root           outputs/poc/probe_taxonomy \
-  --predictor-temporal-root outputs/poc/predictor_temporal \
-  --encoder-temporal-root   outputs/poc/encoder_temporal \
-  --output-dir              outputs/poc/probe_plot \
-  --no-wandb 2>&1 | tee logs/iter17_poc_m13_plots_$(date +%Y%m%d_%H%M%S).log
+--action-probe-root       outputs/poc/probe_action \
+--motion-cos-root         outputs/poc/probe_motion_cos \
+--future-mse-root         outputs/poc/probe_future_mse \
+--taxonomy-root           outputs/poc/probe_taxonomy \
+--predictor-temporal-root outputs/poc/predictor_temporal \
+--encoder-temporal-root   outputs/poc/encoder_temporal \
+--output-dir              outputs/poc/probe_plot \
+--no-wandb 2>&1 | tee logs/iter17_poc_m13_plots_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
 # ── VERIFY (plots) ──
+# STEP 1 landed: by_encoder must cover the baselines (frozen-9 → 17 with the iter16 arms), not just 8
+python -c "import json; print('action by_encoder:', len(json.load(open('outputs/poc/probe_action/probe_paired_delta.json'))['by_encoder']))"   # expect 17 (8 arms + 9 baselines)
+grep -E "\[hero-table\]|\[hero-heatmap\]" logs/iter17_poc_m13_plots_*.log   # cols/rows must reflect ALL encoders (e.g. 18 cols, 16 rows)
 grep -iE "FATAL|Traceback" logs/iter17_poc_m13_plots_*.log                 # MUST be EMPTY (absent temporal "[skip]" lines are EXPECTED, not errors)
 grep -E "\[scoreboard\]|\[grouped\]" logs/iter17_poc_m13_plots_*.log       # champion-duel tally — scoreboard & grouped MUST agree: surgery N · pretrain N · tie N
 ls outputs/poc/probe_plot/eval/{m13_hero_table,m13_hero_surgery_vs_frozen,m13_scoreboard_surgery_vs_pretrain,m13_grouped_winner_surgery_vs_pretrain}.{png,pdf}

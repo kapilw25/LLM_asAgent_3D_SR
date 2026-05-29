@@ -1,0 +1,14 @@
+{
+  "encoder": "lejepa_vitL_frozen",
+  "n_test": 1825,
+  "pos_mean": 0.774046,
+  "neg_mean": 0.759694,
+  "score_mean": 0.014352,
+  "score_ci": {
+    "mean": 0.014352,
+    "ci_lo": 0.012824,
+    "ci_hi": 0.015837,
+    "ci_half": 0.001507
+  },
+  "elapsed_sec": 0.02
+}
