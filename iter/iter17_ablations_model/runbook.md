@@ -43,7 +43,6 @@ ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_e
 ```bash
 # ── 1c · OVERNIGHT (sleepy): SANITY then POC, `;` not `&&` so POC runs even if SANITY hiccups ──
 FROZEN="dinov2 ijepa_vitH14 ijepa_vitG16 vjepa_2_0_vitg_ssv2 vjepa_1_vitL_frozen vjepa_1_vitH_frozen vjepa_2_vitL_256_frozen vjepa_2_1_vitL_frozen lejepa_vitL_frozen" ; SKIP_FROZEN="4,7,8,8b,8c,9,9b,9c,10,12,13" ; \
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_frozen9_$(date +%Y%m%d_%H%M%S).log ; \
 ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen9_$(date +%Y%m%d_%H%M%S).log
 ```
 

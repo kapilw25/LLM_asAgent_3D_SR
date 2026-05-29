@@ -24,6 +24,7 @@ import os
 import queue
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -60,6 +61,11 @@ TUBELET_SIZE  = _MODEL_CFG["tubelet_size"]          # was 2 literal
 # "No `.get(key, default)` on YAML — use cfg[key] so missing keys crash".
 # probe_features_checkpoint_every is REQUIRED in pipeline.yaml (line 62).
 CHECKPOINT_EVERY = _PCFG["streaming"]["probe_features_checkpoint_every"]
+# iter17 T1 (2026-05-29): parallel decode-worker count for the eval feature-extraction
+# consumer. Was serial main-thread decode → GPU starved to ~0% util (decode-bound). Reuses
+# the m05/embedding decode knob; same per-clip PyAV linspace decode (bit-identical frames),
+# only parallelized — mirrors training.py's DECODE_WORKERS pool.
+DECODE_WORKERS_EMBED = _PCFG["streaming"]["decode_workers_embed"]
 
 # ImageNet normalization — both V-JEPA 2.1 + DINOv2 expect this.
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
@@ -507,20 +513,61 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
     clip_q, tar_stop, _reader = iter_clips_parallel(
         local_data=args.local_data, subset_keys=target, processed_keys=processed)
 
+    # iter17 T1 (2026-05-29): PARALLEL decode pool. The TAR readers above only prefetch mp4
+    # BYTES; previously the MAIN thread decoded one clip at a time (serial) → GPU starved to
+    # ~0% util (spiky), eval decode-bound. Now DECODE_WORKERS_EMBED threads pull bytes →
+    # decode_to_tensor (per-clip tmp file → thread-safe) → decoded_q; the main thread only
+    # batches → GPU. Bit-identical frames (same PyAV linspace decode), just parallelized.
+    # set_num_threads(1) avoids ATen oversubscription across the N workers' resize_and_normalize
+    # (CLAUDE.md threading rule). Clips arrive out-of-order but every feature is tagged with its
+    # clip_key (keys_acc), so downstream (keyed by clip_key) is order-independent.
+    torch.set_num_threads(1)
+    decoded_q: "queue.Queue" = queue.Queue(maxsize=max(64, DECODE_WORKERS_EMBED * 4))
+    decode_stop = threading.Event()
+
+    def _decode_worker():
+        while not decode_stop.is_set():
+            try:
+                item = clip_q.get(timeout=300)
+            except queue.Empty:
+                break
+            if item is None:
+                clip_q.put(None)            # re-broadcast sentinel to sibling workers
+                break
+            ck, mp4_bytes = item
+            try:
+                dt = decode_to_tensor(mp4_bytes, tmp_dir, ck, args.num_frames, crop)
+            except Exception as e:          # per-clip FAIL-SOFT (matches serial path's None-skip)
+                print(f"  SKIP (decode error {ck}): {e}")
+                dt = None
+            decoded_q.put((ck, dt))
+
+    decode_workers = [threading.Thread(target=_decode_worker, daemon=True)
+                      for _ in range(DECODE_WORKERS_EMBED)]
+    for w in decode_workers:
+        w.start()
+
+    def _decode_joiner():                   # signal end-of-stream once all decoders drain
+        for w in decode_workers:
+            w.join()
+        decoded_q.put(None)
+    threading.Thread(target=_decode_joiner, daemon=True).start()
+    print(f"  decode pool: {DECODE_WORKERS_EMBED} workers (T1 parallel decode), "
+          f"decoded_q maxsize={decoded_q.maxsize}")
+
     pending_tensors, pending_keys = [], []
     n_since_ckpt = 0
     t0 = time.time()
     try:
         while True:
             try:
-                item = clip_q.get(timeout=300)
+                item = decoded_q.get(timeout=300)
             except queue.Empty:
-                print("  WARN: clip queue timeout (5 min) — flushing pending and exiting loop")
+                print("  WARN: decoded queue timeout (5 min) — flushing pending and exiting loop")
                 break
             if item is None:
                 break
-            clip_key, mp4_bytes = item
-            t = decode_to_tensor(mp4_bytes, tmp_dir, clip_key, args.num_frames, crop)
+            clip_key, t = item
             if t is None:
                 print(f"  SKIP (decode fail): {clip_key}")
                 continue
@@ -542,6 +589,7 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
                          sizer, feats_acc, keys_acc, pbar,
                          pool_tokens=pool_tokens)
     finally:
+        decode_stop.set()
         tar_stop.set()
         pbar.close()
 
