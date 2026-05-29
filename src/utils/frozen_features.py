@@ -213,6 +213,9 @@ def load_encoder_by_kind(encoder_name: str, ckpt_path, num_frames: int):
     if kind == "hf_vjepa2":
         from utils.hf_vjepa2_features import load_hf_vjepa2_frozen   # lazy: avoids circular import
         return load_hf_vjepa2_frozen(encoder_name)
+    if kind == "lejepa":
+        from utils.lejepa_features import load_lejepa_frozen   # lazy: avoids circular import
+        return load_lejepa_frozen(encoder_name)
     if kind == "dinov2":
         model, _proc, crop, embed_dim = load_dinov2_frozen()
         return model, crop, embed_dim
@@ -367,6 +370,9 @@ def _flush_batch(pending_tensors, pending_keys, model, encoder_kind, num_frames,
             elif encoder_kind == "hf_vjepa2":
                 from utils.hf_vjepa2_features import forward_hf_vjepa2   # lazy
                 feats = forward_hf_vjepa2(model, sub, num_frames)
+            elif encoder_kind == "lejepa":
+                from utils.lejepa_features import forward_lejepa   # lazy
+                feats = forward_lejepa(model, sub, num_frames)
             else:
                 feats = forward_dinov2(model, sub, num_frames)
         except torch.cuda.OutOfMemoryError:

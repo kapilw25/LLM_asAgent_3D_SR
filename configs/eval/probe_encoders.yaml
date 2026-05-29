@@ -104,6 +104,17 @@ encoders:
     crop: 224
     embed_dim: 1408
 
+  # iter17 LeJEPA-L (Balestriero & LeCun, arXiv 2511.08544) — image JEPA, DINOv3-style ViT-L.
+  # RAW state_dict (no HF card) → kind=lejepa (src/utils/lejepa_features.py): timm
+  # vit_large_patch16_dinov3_qkvb + timm.models.eva.checkpoint_filter_fn (0 miss/0 unexpected, strict).
+  # ckpt: third-party HF datasets gajeshladharai/artifacts/core-jepa/lejepa-l.pt (1.24GB; 1024-d/24-blk/patch16).
+  lejepa_vitL_frozen:
+    kind: lejepa
+    arch: vit_large_patch16_dinov3_qkvb
+    crop: 224
+    embed_dim: 1024
+    ckpt: checkpoints/lejepa_l.pt
+
   # iter17 frozen V-JEPA-2.0 family (kind=vjepa native; ckpt resolved by run_eval frozen_ckpt_for).
   # vitg dims verified from the downloaded ckpt: 40 blocks, 1408-dim, target_encoder key.
   vjepa_2_0_vitg_frozen:
@@ -153,3 +164,25 @@ encoders:
     arch: vit_large
     crop: 256
     embed_dim: 1024
+
+  # ── iter17 TRAINABLE cross-arch arms (eval rows) — V-JEPA 2.1 ViT-g + 2.0 ViT-g, 7 trained arms each.
+  # arch/crop/embed_dim INHERITED from each backbone's *_frozen sibling above (encoder-only output: the
+  # 2.1 deep-sup hierarchical concat is NOT used at frozen-eval → base embed_dim 1408, vit_giant_xformers).
+  # Per-arm student_encoder.pt is resolved by run_eval.sh encoder_ckpt_for → outputs/<mode>/<bb>/<m09 arm dir>/.
+  # NB: PREDICTOR stages (8/8b/8c) on these are ViT-G-ONLY until predictor_eval is arch-aware (WS-B3) → skip them.
+  # vjepa_2_1_vitg (1B, scale axis) — VERIFY 1408/40: https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
+  vjepa_2_1_vitg_pretrain_encoder:           {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_pretrain_2X_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_pretrain_head:              {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_3stage_DI_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_noDI_encoder:      {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_3stage_DI_head:    {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_noDI_head:         {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # vjepa_2_0_vitg (1B, version axis) — same dims (2.0 g): https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
+  vjepa_2_0_vitg_pretrain_encoder:           {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_pretrain_2X_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_pretrain_head:              {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_3stage_DI_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_noDI_encoder:      {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_3stage_DI_head:    {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_noDI_head:         {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}

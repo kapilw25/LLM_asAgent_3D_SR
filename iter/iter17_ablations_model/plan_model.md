@@ -36,18 +36,21 @@ CORRECTION: 2.1 ViT-g AND ViT-L checkpoints DO exist (vjepa2_1_vitg_384.pt /
 │ dinov2               │ ✅        │ ✅           │ N/A non-JEPA                           │
 │ vjepa_2_0_vitg_ssv2  │ ✅        │ ✅ (20,16,   │ N/A frozen-only (hf_vjepa2 fwd GPU-val │
 │                      │           │    1408)     │    ✓; predictor N/A — skip_predictor) │
-│ lejepa_vitH14        │ ⛔        │ ⛔           │ ⛔ raw artifact → custom loader        │
+│ lejepa_vitL          │ ✅        │ ✅ (20,16,   │ N/A frozen-only (image JEPA; timm      │
+│                      │           │    1024)     │    DINOv3-L + eva filter, 0miss/0unex) │
 │ mc_jepa / d_jepa     │ ⛔        │ ⛔           │ ⛔ weights gated/unreleased            │
 └──────────────────────┴───────────┴──────────────┴──────────────────────────────────────┘
 ```
 ✅=done · ⏳=running/next · N/A=arch can't (frozen-only) · ⛔=blocked (new loader / trainer / gated).
-Net: ALL 11 weight-available models PASS frozen inference (incl. ssv2 via kind=hf_vjepa2, GPU-val).
-Sanity-TRAIN ✅ for 2.1 (vitG + vitg, deep-sup) AND 2.0_vitg — both scale + version axes train
-end-to-end (m09a deep-sup gated on n_output_distillation>1; 2.1 regression PASS = gates safe).
-ssv2 DONE: hf_vjepa2 forward built + run_eval gates kind-based (not name-prefix) so the vjepa_*-named
-HF model skips the native-ckpt/predictor path. Remaining blocked tail (each = a CODE change, not a
-run): (1) lejepa — raw-artifact custom loader. (2) mc/d-jepa — weights gated. FROZEN 2.0_vitg works, so
-the 2.0 baseline is covered for eval; only 2.0 *continual-pretrain/surgery* needs the trainer fix.
+Net: ALL 12 weight-available models PASS frozen inference (incl. ssv2 via kind=hf_vjepa2 + lejepa
+via kind=lejepa, both GPU-val). Sanity-TRAIN ✅ for 2.1 (vitG + vitg, deep-sup) AND 2.0_vitg — both
+scale + version axes train end-to-end (m09a deep-sup gated on n_output_distillation>1; 2.1 regression
+PASS = gates safe). ssv2 + lejepa DONE: kind=hf_vjepa2 / kind=lejepa loaders built; run_eval gates
+kind-based (not name-prefix) so vjepa_*-named HF models skip the native-ckpt/predictor path; lejepa
+loads the raw DINOv3-style ViT-L via timm vit_large_patch16_dinov3_qkvb + eva.checkpoint_filter_fn
+(0 missing / 0 unexpected). Remaining blocked tail (CODE/weights, not a run): mc/d-jepa — weights
+gated/unreleased. FROZEN 2.0_vitg works, so the 2.0 baseline is covered for eval; only 2.0
+*continual-pretrain/surgery* needs the trainer fix.
 
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -70,7 +73,7 @@ ONE canonical name per model, used identically in every table below.
 │ vjepa_2_vitL_256         │ V-JEPA 2 ViT-L (fpc64-256)   │ vit_large (HF)   │ 24  │1024 │ 256 │frozen │ version/res axis (2.0)│
 │ ijepa_vitH14             │ I-JEPA ViT-H/14 IN-1k        │ vit_huge (image) │ 32  │1280 │ 224 │frozen │ image baseline        │
 │ ijepa_vitG16             │ I-JEPA ViT-G/16 IN-22k       │ vit_giant (image)│ —   │1408 │ 224 │frozen │ image baseline        │
-│ lejepa_vitH14            │ LeJEPA-L ViT-H/14            │ vit_huge (image) │ 32  │1280 │ 224 │frozen │ image baseline        │
+│ lejepa_vitL              │ LeJEPA-L ViT-L/16 (DINOv3)   │ vit_large (timm) │ 24  │1024 │ 224 │frozen │ image baseline        │
 │ mc_jepa          🟡gated │ MC-JEPA motion+content       │ ViT (vid/img)    │ —   │ —   │ —   │frozen │ ★ motion contrast     │
 │ d_jepa           🟡gated │ D-JEPA denoising (image)     │ ViT (image)      │ —   │ —   │ —   │frozen │ image-gen baseline    │
 │ dinov2 (non-JEPA)        │ DINOv2 ViT-g + registers     │ HF AutoModel     │ 40  │1536 │ 224 │frozen │ non-JEPA contrast     │
@@ -80,7 +83,8 @@ train? : ✅ = full 5-arm train+eval · frozen = eval-only · 🟡 = weights GAT
 ckpt sources: vjepa_2_1_* = checkpoints/vjepa2_1_vit{G,g,L}_384.pt (or torch.hub vjepa2_1_vit_*);
 vjepa_2_0_* = facebook/vjepa2-vitg-fpc64-384(-ssv2); vjepa_1_* = facebookresearch/jepa (VideoMix2M);
 vjepa_2_vitL_256 = HF facebook/vjepa2-vitl-fpc64-256(-fpc16-256-ssv2); ijepa_* = facebook/ijepa_*;
-lejepa_vitH14 = HF asset lejepa-l.pt; mc_jepa = arXiv 2307.12698 (weights pending); dinov2 =
+lejepa_vitL = timm vit_large_patch16_dinov3_qkvb + eva.checkpoint_filter_fn, ckpt gajeshladharai/artifacts
+core-jepa/lejepa-l.pt (1.24GB raw DINOv3-style state_dict); mc_jepa = arXiv 2307.12698 (weights pending); dinov2 =
 facebook/dinov2-with-registers-giant.
 SKIP (not a per-clip video/image encoder): VL-JEPA (text query), A-JEPA (audio),
 Point-JEPA/3D-JEPA, Graph-JEPA, T-JEPA/TS-JEPA, Brain-JEPA/ECG-JEPA/S-JEPA, Stem-JEPA (music).
@@ -108,7 +112,7 @@ output; image JEPAs have neither.
 │ vjepa_2_vitL_256     │ ✅     │ ❌ HF-only  │ ❌        │ ❌           │ ❌         │
 │ ijepa_vitH14         │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
 │ ijepa_vitG16         │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
-│ lejepa_vitH14        │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
+│ lejepa_vitL          │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
 │ mc_jepa      🟡gated │ ✅*    │ ❌          │ ❌        │ ❌           │ ❌         │
 │ d_jepa       🟡gated │ ✅*    │ ❌          │ ❌        │ ❌           │ ❌         │
 │ dinov2 (non-JEPA)    │ ✅     │ ❌          │ ❌        │ ❌           │ ❌         │
@@ -182,7 +186,7 @@ Scaling to ALL trainable variants: wrap D2/D3 in
 (backbone × arm) and run_eval enumerates every (backbone × arm) encoder — the per-variant work
 collapses to D1 (one yaml) + D4 (registry rows). Surgery freeze auto-scales (§E). Frozen-only models
 (vjepa_2_0_vitg_ssv2, vjepa_1_vitL, vjepa_1_vitH, vjepa_2_vitL_256, ijepa_vitH14, ijepa_vitG16,
-lejepa_vitH14, dinov2) skip D1/D2/D5 — registry + ckpt-resolver rows only.
+lejepa_vitL, dinov2) skip D1/D2/D5 — registry + ckpt-resolver rows only.
 
 ═══════════════════════════════════════════════════════════════════════════════
 §E · Surgery freeze is ALREADY depth-agnostic — NO per-backbone edit
@@ -249,7 +253,7 @@ vjepa_1_vitH                      │   ·     │     ·      │    N/A     �
 vjepa_2_vitL_256                  │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  v2/res axis
 ijepa_vitH14                      │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
 ijepa_vitG16                      │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
-lejepa_vitH14                     │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
+lejepa_vitL                       │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
 mc_jepa            🟡gated        │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  ★ motion contrast
 d_jepa             🟡gated        │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image-gen baseline
 dinov2 (non-JEPA)                 │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  non-JEPA contrast
