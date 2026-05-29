@@ -421,13 +421,21 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
     for k in metric_keys:
         present = [valmat[(e, k)] for e in ordered if valmat[(e, k)] is not None]
         colstat[k] = (min(present), max(present)) if present else (0.0, 0.0)
+    # WINNER = canonical surgery-vs-pretrain CHAMPION DUEL (same _family_verdict the heatmap WINNER
+    # row / scoreboard / grouped use) — NOT a raw best-encoder argmax (which never ties and could
+    # even crown the frozen baseline). Decisive metric → the winning arm; dead-heat (|Δ|<ε) → tie
+    # (no winner, no blue box). Keeps all four §G views telling ONE story.
+    _surg = [e for e in ordered if _arm_family(e) == "surgery"]
+    _pre = [e for e in ordered if _arm_family(e) == "pretrain"]
+    _per = _family_verdict(metrics, encoders, frozen)[3]
     winner = {}
     for key, _f, _o, direction, _y, _c, _l in scorable:
-        cand = [(e, valmat[(e, key)]) for e in ordered if valmat[(e, key)] is not None]
-        if not cand:
-            continue
-        best = (max if direction == "higher" else min)(cand, key=lambda t: t[1])[0]
-        winner[key] = best
+        v = _per.get(key)
+        if v == "surgery":
+            winner[key] = _family_champion(metrics, key, frozen, _surg)
+        elif v == "pretrain":
+            winner[key] = _family_champion(metrics, key, frozen, _pre)
+        # v == "tie" (or absent) → no winner entry → WINNER col shows "tie", no blue box
 
     def _cell_colour(val, key, direction):
         if val is None:
@@ -462,7 +470,8 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
             ccols.append(_cell_colour(val, key, direction))
             if winner.get(key) == e:
                 wins_ci.append(ci)
-        win_cell = _wrap_name(winner[key]) if key in winner else "—"
+        win_cell = (_wrap_name(winner[key]) if winner.get(key)
+                    else ("tie" if direction in ("higher", "lower") else "—"))  # dead-heat duel → tie
         csv_rows.append([key] + cells + [win_cell])                # CSV keeps ALL metrics incl signed 'order'
         if direction not in ("higher", "lower"):
             continue                                               # signed (order): diagnostic-only → CSV, not drawn
@@ -487,8 +496,8 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
         cell.set_linewidth(3.0)
     ax.set_title("HERO scorecard (vertical) — value ± BCa 95% CI · colour = per-metric min-max "
                  "(green = best) · * = Δ-vs-frozen CI excludes 0\n"
-                 f"{len(scorable)} metrics × {len(ordered)} encoders · bold + BLUE BOX cell + WINNER col = "
-                 f"single best per metric · {boot_str}",
+                 f"{len(scorable)} metrics × {len(ordered)} encoders · WINNER col + BLUE BOX = "
+                 f"surgery-vs-pretrain champion duel (tie if within ε) · {boot_str}",
                  fontsize=10, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_hero_table"))
@@ -496,7 +505,7 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
     with open(str(output_dir / "m13_hero_table.csv"), "w", newline="") as f:
         csv.writer(f).writerows(csv_rows)
     print(f"  [hero-table] m13_hero_table.{{png,pdf,csv}} — {len(scorable)} metric rows drawn "
-          f"(+signed 'order' in CSV only) × {len(col_labels)} cols (transposed) · WINNER col = single best per metric")
+          f"(+signed 'order' in CSV only) × {len(col_labels)} cols (transposed) · WINNER col = champion duel (ties shown)")
 
 
 def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Path):
@@ -537,13 +546,20 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     ax.set_xticklabels([f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat], rotation=45, ha="right", fontsize=9)
     ax.set_yticks(list(range(len(contenders))) + [len(contenders)])
     ax.set_yticklabels([_display_label(e) for e in contenders] + ["WINNER"], fontsize=10)
-    # Plain BLACK BOLD numbers (no halo): Δ on top, CI below. The per-metric WINNER cell (best
-    # sign-corrected Δ in its column) is SPOTLIGHTED — thick blue outline + enlarged Δ font (CI
-    # font unchanged) — so it's findable at a glance in the grid.
-    col_winner = {}                                     # j (metric col) -> i (contender) with the best Δ
-    for (i, j), (sc, *_r) in cells.items():
-        if j not in col_winner or sc > cells[(col_winner[j], j)][0]:
-            col_winner[j] = i
+    # Plain BLACK BOLD numbers (no halo): Δ on top, CI below. SPOTLIGHT (thick blue outline +
+    # enlarged Δ font) = the champion-duel WINNING ARM per metric — SAME _family_verdict as the
+    # WINNER row / hero table / scoreboard, NOT raw best-Δ. Tie metric → no box (no single winner).
+    _surg = [e for e in contenders if _arm_family(e) == "surgery"]
+    _pre = [e for e in contenders if _arm_family(e) == "pretrain"]
+    _per = _family_verdict(metrics, encoders, frozen)[3]
+    _row = {e: i for i, e in enumerate(contenders)}
+    col_winner = {}                                     # j (metric col) -> i (winning-arm row); decisive only
+    for j, (key, *_r) in enumerate(cat):
+        v = _per.get(key)
+        champ = (_family_champion(metrics, key, frozen, _surg) if v == "surgery"
+                 else _family_champion(metrics, key, frozen, _pre) if v == "pretrain" else None)
+        if champ in _row:
+            col_winner[j] = _row[champ]
     for (i, j), (sc, clo, chi, _sig) in cells.items():
         win = col_winner.get(j) == i
         ax.text(j, i - 0.26, _fmt_compact(sc), ha="center", va="center",
@@ -557,7 +573,7 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     # plot's [S/P/=] band. One extra row BELOW the contenders; signed metrics (order) aren't a
     # win/loss → neutral "·". Verdict single-sourced via _family_verdict (same tally as scoreboard).
     ny = len(contenders)
-    _verdict_per = _family_verdict(metrics, encoders, frozen)[3]
+    _verdict_per = _per                                 # reuse (computed above for the spotlight)
     _VC = {"surgery": ((0.17, 0.63, 0.17, 0.6), "S"), "pretrain": ((0.84, 0.15, 0.16, 0.6), "P"),
            "tie": ((0.6, 0.6, 0.6, 0.35), "=")}
     for j, c in enumerate(cat):
@@ -570,7 +586,8 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     ax.axhline(ny - 0.5, color="black", lw=1.5)         # separator above the WINNER row
     ax.set_title(f"HERO — Δ vs {_display_label(frozen)}  ·  per cell: Δ (top) and 95% BCa CI (bottom), "
                  "sign-corrected so + = better\ncolour: red = worst, green = best (per-metric min-max) · "
-                 "column badge ↑/↓ = better-direction · BLUE BOX + big Δ = single best arm per metric",
+                 "column badge ↑/↓ = better-direction · BLUE BOX + big Δ = champion-duel winning arm "
+                 "(none on ties — matches WINNER row)",
                  fontsize=11, fontweight="bold")
     fig.colorbar(im, ax=ax, shrink=0.7, label="red = worst   →   green = best (per-metric normalized Δ)")
     fig.tight_layout()
