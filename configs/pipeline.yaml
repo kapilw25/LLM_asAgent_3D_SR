@@ -88,10 +88,11 @@ streaming:
   prefetch_queue_train: 4     # m09: training producer queue depth. iter17 (2026-05-26): 8→4 —
                               # m09a1 pegged the 170GB cgroup at SANITY; each slot ≈2.3GB batch, so
                               # 4 = ~9GB vs 8 = ~18GB. Zero throughput cost (1.84B steps 30-500s ≫ decode).
-  decode_workers_embed: 16    # m05/m05b/m05c + iter17 T1 eval decode pool (frozen_features). 8→16
-                              # (2026-05-29): at 8 the eval was still ~40% GPU / decode-bound (~12.5 clip/s);
-                              # 64-core box + the embed queue holds single decoded clips (~2GB total at 16,
-                              # RAM-light vs train's 2.3GB batch-slots that OOM'd at 16) → safe to double.
+  decode_workers_embed: 8     # m05/m05b/m05c + iter17 T1 eval decode pool (frozen_features). 8 is the
+                              # ceiling: T1 (serial→8 workers) gave ~3.3× (3.87→12.9 clip/s); a 8→16 trial
+                              # (2026-05-29) measured 12.94 vs 12.76 clip/s = 0.99× (NO gain) — after T1 the
+                              # bottleneck is the serial main-thread consumer (stack→cuda→forward→pool), not
+                              # decode, so more decoders don't help. Reverted 16→8 (16 = wasted CPU/RAM).
   # m04d host-RAM scaling guide. CPU count is rarely the bottleneck (need ≥nproc/2);
   # the cgroup memory cap is. Anchor on cgroup memory.limit_in_bytes (NOT `free -h`
   # — cgroup cap can be far smaller than physical RAM in containers):
