@@ -8,6 +8,10 @@
 #
 # Download command (run on GPU instance):
 #   wget https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt -P checkpoints/
+# ── VERIFY DIMS (eyeball) ──────────────────────────────────────────────────────────────
+#  encoder ctor (def vit_gigantic_xformers): https://github.com/facebookresearch/vjepa2/blob/main/src/models/vision_transformer.py
+#    → embed_dim=1664 · depth=48 · num_heads=26 · mlp_ratio 64/13=4.92
+#  model table (params/res/filenames): https://github.com/facebookresearch/vjepa2#models
 
 model:
   version: "2.1"

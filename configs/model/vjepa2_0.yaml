@@ -5,8 +5,13 @@
 # Kept here only for: (a) backward compat with existing 2.0 embeddings, (b) ablation comparison.
 #
 # Source: https://arxiv.org/abs/2506.09985
-# Checkpoint: https://dl.fbaipublicfiles.com/vjepa2/vitg-384.pt
+# Checkpoint: https://dl.fbaipublicfiles.com/vjepa2/vitg-384.pt   (downloaded → vjepa2_0_vitg_384.pt)
 # HF model:   facebook/vjepa2-vitg-fpc64-384
+# ── VERIFY DIMS (eyeball) ──────────────────────────────────────────────────────────────
+#  encoder: HF config.json https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
+#           → hidden_size=1408(embed_dim) · num_hidden_layers=40(depth) · num_attention_heads=22 · mlp_ratio 48/11=4.36
+#  native ViT ctor (def vit_giant_xformers): https://github.com/facebookresearch/vjepa2/blob/main/src/models/vision_transformer.py
+#  model table (params/res/filenames): https://github.com/facebookresearch/vjepa2#models
 
 model:
   version: "2.0"
@@ -41,6 +46,6 @@ model:
   # Checkpoint loading
   hf_model_id: facebook/vjepa2-vitg-fpc64-384
   checkpoint_url: https://dl.fbaipublicfiles.com/vjepa2/vitg-384.pt
-  checkpoint_path: checkpoints/vjepa2_vitg384.pt
+  checkpoint_path: checkpoints/vjepa2_0_vitg_384.pt
   min_student_load_pct: 90
   min_predictor_load_pct: 50

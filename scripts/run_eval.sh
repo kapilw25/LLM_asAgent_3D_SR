@@ -5,19 +5,19 @@
 #
 # Pipeline (priority 1 — frozen V-JEPA vs frozen DINOv2 on Indian action probe
 # applied to data/eval_10k_local):
-#   STAGE 1   probe_action.py    --stage labels        (CPU, ~1 min)
-#   STAGE 2   probe_action.py    --stage features      (GPU × 2 encoders, ~1 h)
-#   STAGE 3   probe_action.py    --stage train         (GPU × 2 encoders, ~30 min)
-#   STAGE 11  probe_taxonomy.py  --stage train         (GPU × 16 dims × N enc, ~30 min) [iter13]
-#   STAGE 4   probe_action.py    --stage paired_delta  (CPU, ~5 min)  ← P1 GATE
-#   STAGE 12  probe_taxonomy.py  --stage paired_delta  (CPU, ~5 min, BCa across 16 dims) [iter13]
-#   STAGE 13  probe_taxonomy.py  --stage plot          (CPU, ~5s) [iter13]
-#   STAGE 5   probe_motion_cos.py  --stage features      (CPU mean-pool × 2 enc)
-#   STAGE 6   probe_motion_cos.py  --stage cosine        (CPU × 2 enc)
-#   STAGE 7   probe_motion_cos.py  --stage paired_delta  (CPU)
-#   STAGE 8   probe_future_mse.py  --stage forward       (GPU, V-JEPA only, ~30 min)
-#   STAGE 9   probe_future_mse.py  --stage paired_per_variant   (CPU)
-#   STAGE 10  probe_plot.py                                  (CPU, ~5s — plots)
+#   STAGE 1   m04e_action_labels.py (labels)           (CPU, ~1 min — ANNOTATION band)
+#   STAGE 2   m12a_action_top1.py --stage features     (GPU × 2 encoders, ~1 h)
+#   STAGE 3   m12a_action_top1.py --stage train        (GPU × 2 encoders, ~30 min)
+#   STAGE 11  m12c_taxonomy_f1.py --stage train        (GPU × 16 dims × N enc, ~30 min) [iter13]
+#   STAGE 4   m12a_action.py     --stage paired_delta  (CPU, ~5 min)  ← P1 GATE
+#   STAGE 12  m12c_taxonomy_f1.py --stage paired_delta (CPU, ~5 min, BCa across 16 dims) [iter13]
+#   STAGE 13  m12c_taxonomy_f1.py --stage plot         (CPU, ~5s) [iter13]
+#   STAGE 5   m12b_motion_cos.py  --stage features      (CPU mean-pool × 2 enc)
+#   STAGE 6   m12b_motion_cos.py  --stage cosine        (CPU × 2 enc)
+#   STAGE 7   m12b_motion_cos.py  --stage paired_delta  (CPU)
+#   STAGE 8   m12d_future_mse.py  --stage forward       (GPU, V-JEPA only, ~30 min)
+#   STAGE 9   m12d_future_mse.py  --stage paired_per_variant   (CPU)
+#   STAGE 10  m13_eval_plot.py                                  (CPU, ~5s — plots)
 #
 # iter13 (2026-05-05): stages 11/12/13 added so the 16-dim taxonomy gets a
 # proper paper-final eval pass (was previously train-time-only as multi-task aux).
@@ -131,6 +131,21 @@ ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
 OUTPUT_ACTION="${OUTPUT_ACTION:-${DEFAULT_OUTPUT_PREFIX}/probe_action}"
 OUTPUT_COS="${OUTPUT_COS:-${DEFAULT_OUTPUT_PREFIX}/probe_motion_cos}"
 OUTPUT_MSE="${OUTPUT_MSE:-${DEFAULT_OUTPUT_PREFIX}/probe_future_mse}"
+# iter16 §3.3: temporal-metric suites (m12e predictor 6 + m12f encoder 4) — Stages 8b/8c/9b/9c.
+OUTPUT_PREDTEMP="${OUTPUT_PREDTEMP:-${DEFAULT_OUTPUT_PREFIX}/predictor_temporal}"
+OUTPUT_ENCTEMP="${OUTPUT_ENCTEMP:-${DEFAULT_OUTPUT_PREFIX}/encoder_temporal}"
+PT_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.predictor_temporal.batch_size)"
+ET_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.batch_size)"
+ET_TUBELET="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.tubelet_size)"
+ET_TOV_NPERM="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.tov_n_permutations)"
+ET_PACE_STRIDES="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.pace_strides)"
+ET_PACE_SRCFRAMES="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.pace_source_frames)"
+ET_TCC_TEMP="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.tcc_temperature)"
+ET_HEAD_LR="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_lr)"
+ET_HEAD_EPOCHS="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_epochs)"
+ET_HEAD_WD="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_weight_decay)"
+ET_HEAD_BS="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_batch_size)"
+ET_HEAD_TRAIN_CAP="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_train_cap)"
 OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${DEFAULT_OUTPUT_PREFIX}/probe_taxonomy}"
 OUTPUT_PLOTS="${OUTPUT_PLOTS:-${DEFAULT_OUTPUT_PREFIX}/probe_plot}"
 TAG_TAXONOMY="${TAG_TAXONOMY:-configs/tag_taxonomy.json}"
@@ -179,55 +194,65 @@ MIN_PER_SPLIT="${MIN_PER_SPLIT:-$DEFAULT_MIN_PER_SPLIT}"
 # — to test whether D_I helps; each writes its own dir.
 # iter13 v13 T2-rename (2026-05-07): probe_pretrain → m09a_pretrain_encoder,
 # probe_surgery_* → m09c_surgery_* (matches source-module naming + run_train.sh).
-encoder_ckpt_for() {                                            # encoder-only — Stages 2/3
+# iter17: encoder name = "<backbone>_<arm>". Parse once + map arm→on-disk m09 dir, so
+# adding a backbone is config+registry only (no per-variant case growth). The legacy 8
+# vitG encoders are renamed vjepa_2_1_vitG_<arm> (see ENCODERS default). frozen arm →
+# external ckpt (frozen_ckpt_for); "" for HF-loaded kinds (ijepa/dinov2/2.0-HF).
+_arm_dir() {                                    # arm suffix → m09 output dir name
     case "$1" in
-        vjepa_2_1_frozen)                          echo "$ENCODER_CKPT" ;;
-        vjepa_2_1_pretrain_encoder)                        echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_encoder/student_encoder.pt" ;;
-        vjepa_2_1_pretrain_2X_encoder)                     echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_2X_encoder/student_encoder.pt" ;;     # iter14 arm C
-        vjepa_2_1_surgical_3stage_DI_encoder)              echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_encoder/student_encoder.pt" ;;
-        vjepa_2_1_surgical_noDI_encoder)                   echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_encoder/student_encoder.pt" ;;
-        # iter15 Phase 4 (2026-05-14): head-only variants — encoder is bit-identical
-        # to Meta init (proven via assert_encoder_frozen in build_model); the only
-        # thing that differs across variants is the motion_aux head. student_encoder.pt
-        # is a COPY of Meta init for all 3 head variants.
-        vjepa_2_1_pretrain_head)                   echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_head/student_encoder.pt" ;;
-        vjepa_2_1_surgical_3stage_DI_head)         echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_head/student_encoder.pt" ;;
-        vjepa_2_1_surgical_noDI_head)              echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_head/student_encoder.pt" ;;
+        pretrain_encoder)            echo m09a_pretrain_encoder ;;
+        pretrain_2X_encoder)         echo m09a_pretrain_2X_encoder ;;
+        pretrain_head)               echo m09a_pretrain_head ;;
+        surgical_3stage_DI_encoder)  echo m09c_surgery_3stage_DI_encoder ;;
+        surgical_noDI_encoder)       echo m09c_surgery_noDI_encoder ;;
+        surgical_3stage_DI_head)     echo m09c_surgery_3stage_DI_head ;;
+        surgical_noDI_head)          echo m09c_surgery_noDI_head ;;
         *) echo "" ;;
     esac
 }
-# iter15 Phase 6 audit (2026-05-16): motion_aux head resolver. Wires the
-# trained head into probe_action / probe_motion_cos / probe_future_regress so
-# head-vs-encoder paired-Δ (Δ5/Δ6/Δ7) has signal. Frozen baseline gets ""
-# → MA_FLAG empty → encoder-only path (iter14 reproducibility preserved).
-# See iter/iter15_trainHead_freezeEncoder/planCODE_head_eval.md Step 6.
+_split_enc() {                                  # "<bb>_<arm>" → echoes "BACKBONE ARM" (longest arm match)
+    local n="$1" arm bb
+    for arm in pretrain_2X_encoder surgical_3stage_DI_encoder surgical_noDI_encoder \
+               surgical_3stage_DI_head surgical_noDI_head pretrain_encoder pretrain_head frozen; do
+        if [[ "$n" == *"_$arm" ]]; then
+            bb="${n%_$arm}"
+            [ "$bb" = vjepa_2_1 ] && bb=vjepa_2_1_vitG   # legacy vitG names (vjepa_2_1_<arm>) → uniform dir
+            echo "$bb $arm"; return
+        fi
+    done
+    echo "$n "
+}
+frozen_ckpt_for() {                             # external frozen ckpt; "" → HF model_id (registry)
+    case "$1" in
+        vjepa_2_1_vitG)       echo "$ENCODER_CKPT" ;;                        # checkpoints/vjepa2_1_vitG_384.pt
+        vjepa_2_1_vitg)       echo "checkpoints/vjepa2_1_vitg_384.pt" ;;     # 2.1 ViT-g 1B (fbai vjepa2_1_vitg_384.pt)
+        vjepa_2_1_vitL)       echo "checkpoints/vjepa2_1_vitl_dist_vitG_384.pt" ;;  # 2.1 ViT-L distilled-from-G
+        vjepa_2_0_vitg)       echo "checkpoints/vjepa2_0_vitg_384.pt" ;;     # fbai vitg-384.pt (verified 40blk/1408)
+        vjepa_2_vitL_256)     echo "checkpoints/vjepa2_0_vitl_256.pt" ;;     # fbai vitl.pt (2.0 ViT-L 256)
+        vjepa_1_vitL)         echo "checkpoints/vjepa1_vitL_16.pt" ;;
+        vjepa_1_vitH)         echo "checkpoints/vjepa1_vitH_16.pt" ;;
+        *) echo "" ;;          # vjepa_2_vitL_256 / ijepa_* / lejepa_* / dinov2 → HF model_id in registry
+    esac
+}
+encoder_ckpt_for() {                            # encoder-only — Stages 2/3
+    local bb arm; read -r bb arm <<<"$(_split_enc "$1")"
+    { [ "$arm" = frozen ] || [ -z "$arm" ]; } && { frozen_ckpt_for "$bb"; return; }   # frozen / bare HF name
+    echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/$(_arm_dir "$arm")/student_encoder.pt"
+}
+# motion_aux head resolver (head-vs-encoder paired-Δ). Frozen / bare HF → "" → encoder-only path.
 motion_aux_head_for() {
-    case "$1" in
-        vjepa_2_1_frozen)                          echo "" ;;
-        vjepa_2_1_pretrain_encoder)                echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_encoder/motion_aux_head.pt" ;;
-        vjepa_2_1_pretrain_2X_encoder)             echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_2X_encoder/motion_aux_head.pt" ;;
-        vjepa_2_1_surgical_3stage_DI_encoder)      echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt" ;;
-        vjepa_2_1_surgical_noDI_encoder)           echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_encoder/motion_aux_head.pt" ;;
-        vjepa_2_1_pretrain_head)                   echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_head/motion_aux_head.pt" ;;
-        vjepa_2_1_surgical_3stage_DI_head)         echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_head/motion_aux_head.pt" ;;
-        vjepa_2_1_surgical_noDI_head)              echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_head/motion_aux_head.pt" ;;
-        *) echo "" ;;
-    esac
+    local bb arm; read -r bb arm <<<"$(_split_enc "$1")"
+    { [ "$arm" = frozen ] || [ -z "$arm" ]; } && { echo ""; return; }
+    echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/$(_arm_dir "$arm")/motion_aux_head.pt"
 }
-encoder_predictor_ckpt_for() {                                  # encoder+predictor — Stage 8 future_mse
-    case "$1" in
-        vjepa_2_1_frozen)                          echo "$ENCODER_CKPT" ;;
-        vjepa_2_1_pretrain_encoder)                        echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_encoder/m09a_ckpt_best.pt" ;;
-        vjepa_2_1_pretrain_2X_encoder)                     echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_2X_encoder/m09a_ckpt_best.pt" ;;       # iter14 arm C
-        vjepa_2_1_surgical_3stage_DI_encoder)              echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt" ;;
-        vjepa_2_1_surgical_noDI_encoder)                   echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt" ;;
-        # iter15 Phase 4: head-only variants. Their ckpts include motion_aux_head_state_dict
-        # alongside encoder+predictor. probe_future_mse (Meta predictor) is moot here —
-        # Stage 9b probe_future_regress trains a separate regressor head per variant.
-        vjepa_2_1_pretrain_head)                   echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_head/m09a_ckpt_best.pt" ;;
-        vjepa_2_1_surgical_3stage_DI_head)         echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_head/m09c_ckpt_best.pt" ;;
-        vjepa_2_1_surgical_noDI_head)              echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_head/m09c_ckpt_best.pt" ;;
-        *) echo "" ;;
+encoder_predictor_ckpt_for() {                  # encoder+predictor — Stage 8 future_mse
+    local bb arm d; read -r bb arm <<<"$(_split_enc "$1")"
+    { [ "$arm" = frozen ] || [ -z "$arm" ]; } && { frozen_ckpt_for "$bb"; return; }
+    d="$(_arm_dir "$arm")"
+    case "$d" in
+        m09a_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09a_ckpt_best.pt" ;;
+        m09c_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09c_ckpt_best.pt" ;;
+        *)      echo "" ;;
     esac
 }
 
@@ -351,37 +376,26 @@ echo "P2/P3 trainer-output pre-flight"
 echo "──────────────────────────────────────────────"
 NEW_ENCODERS=""
 for ENC in $ENCODERS; do
-    case "$ENC" in
-        # iter15 Phase 7 (2026-05-17): head variants added so a missing
-        # student_encoder.pt (e.g. swept by an accidental find -size +50M -delete)
-        # drops the variant cleanly here instead of FATAL'ing inside the per-
-        # encoder loop at L616. Head variants ship student_encoder.pt as a COPY
-        # of Meta init (assert_encoder_frozen guarantees bit-identity), so the
-        # file's presence still gates "is this variant trainable artifact set
-        # complete on disk?".
-        vjepa_2_1_pretrain_encoder|vjepa_2_1_pretrain_2X_encoder|vjepa_2_1_surgical_3stage_DI_encoder|vjepa_2_1_surgical_noDI_encoder|vjepa_2_1_pretrain_head|vjepa_2_1_surgical_3stage_DI_head|vjepa_2_1_surgical_noDI_head)
+    # iter17: parser-based. frozen/HF baselines (arm=frozen or bare HF name like dinov2/
+    # ijepa_*) have NO trainer output → always pass. Trainable arms → require their
+    # student_encoder.pt on disk (drop cleanly if a producer hasn't run for this backbone).
+    read -r _bb _arm <<<"$(_split_enc "$ENC")"
+    case "$_arm" in
+        frozen|"")
+            echo "  ✓ $ENC: external/HF frozen (no trainer needed)"
+            ;;
+        pretrain_encoder|pretrain_2X_encoder|surgical_3stage_DI_encoder|surgical_noDI_encoder|pretrain_head|surgical_3stage_DI_head|surgical_noDI_head)
             CKPT="$(encoder_ckpt_for "$ENC")"
             if [ ! -e "$CKPT" ]; then
                 echo "  ⚠️  $ENC: $CKPT not found — train via:"
-                case "$ENC" in
-                    vjepa_2_1_pretrain_encoder)            echo "       ./scripts/run_train.sh pretrain_encoder            --$MODE" ;;
-                    vjepa_2_1_pretrain_2X_encoder)         echo "       ./scripts/run_train.sh pretrain_2X_encoder         --$MODE" ;;
-                    vjepa_2_1_surgical_3stage_DI_encoder)  echo "       ./scripts/run_train.sh surgery_3stage_DI_encoder   --$MODE" ;;
-                    vjepa_2_1_surgical_noDI_encoder)       echo "       ./scripts/run_train.sh surgery_noDI_encoder        --$MODE" ;;
-                    vjepa_2_1_pretrain_head)               echo "       ./scripts/run_train.sh pretrain_head                --$MODE" ;;
-                    vjepa_2_1_surgical_3stage_DI_head)     echo "       ./scripts/run_train.sh surgery_3stage_DI_head      --$MODE" ;;
-                    vjepa_2_1_surgical_noDI_head)          echo "       ./scripts/run_train.sh surgery_noDI_head           --$MODE" ;;
-                esac
+                echo "       BACKBONE=$_bb ./scripts/run_train.sh ${_arm/surgical_/surgery_} --$MODE"
                 echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
                 continue
             fi
             echo "  ✓ $ENC: $CKPT"
             ;;
-        vjepa_2_1_frozen)
-            echo "  ✓ $ENC: external Meta ckpt (no trainer needed)"
-            ;;
         *)
-            echo "  ⚠️  $ENC: unrecognized variant — dropping (add to encoder_ckpt_for resolver if intentional)"
+            echo "  ⚠️  $ENC: unrecognized arm '$_arm' — dropping (check encoder name / registry)"
             continue
             ;;
     esac
@@ -396,7 +410,7 @@ echo "  → final ENCODERS: $ENCODERS"
 
 # ── Pre-flight: Stage 8 needs predictor-bearing ckpt (NOT just encoder) ─
 # Stages 2-7 use student_encoder.pt (encoder only); Stage 8 future_mse calls
-# probe_future_mse._load_predictor_2_1 which requires the "predictor" key —
+# m12d_future_mse → predictor_eval.load_encoder_predictor which requires the "predictor" key —
 # present only in m09{a,c}_ckpt_best.pt (save_training_checkpoint full=True).
 # m09a's _best.pt was historically saved with full=False, so vjepa_2_1_pretrain_encoder
 # may have student_encoder.pt but NOT m09a_ckpt_best.pt → Stage 8 in-loop
@@ -514,12 +528,14 @@ if [ "${EVAL_KEEP_LATEST:-0}" != "1" ]; then
     echo "Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)"
     echo "──────────────────────────────────────────────"
     pretrain_cleanup_get_latest() {
-        # Map encoder → its m09{a,c}_ckpt_latest.pt path (or empty if external).
-        case "$1" in
-            vjepa_2_1_pretrain_encoder)            echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_encoder/m09a_ckpt_latest.pt" ;;
-            vjepa_2_1_pretrain_2X_encoder)       echo "${DEFAULT_OUTPUT_PREFIX}/m09a_pretrain_2X_encoder/m09a_ckpt_latest.pt" ;;     # iter14 arm C
-            vjepa_2_1_surgical_3stage_DI_encoder)  echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_3stage_DI_encoder/m09c_ckpt_latest.pt" ;;
-            vjepa_2_1_surgical_noDI_encoder)       echo "${DEFAULT_OUTPUT_PREFIX}/m09c_surgery_noDI_encoder/m09c_ckpt_latest.pt" ;;
+        # iter17: parser-based (per-backbone dir). Map encoder → its m09{a,c}_ckpt_latest.pt
+        # (empty for frozen/head — only the trainable encoder arms write _latest.pt anchors).
+        local bb arm d; read -r bb arm <<<"$(_split_enc "$1")"; d="$(_arm_dir "$arm")"
+        case "$d" in
+            m09a_pretrain_encoder|m09a_pretrain_2X_encoder)
+                echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09a_ckpt_latest.pt" ;;
+            m09c_surgery_3stage_DI_encoder|m09c_surgery_noDI_encoder)
+                echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09c_ckpt_latest.pt" ;;
             *) echo "" ;;
         esac
     }
@@ -574,8 +590,7 @@ if ! should_skip 1; then
     # iter13 v12 (2026-05-05): probe_action labels derive MOTION-flow classes
     # from m04d's motion_features.npy (16 classes of magnitude×direction).
     # --tags-json is NOT passed any more — action labels no longer use VLM tags.
-    python -u src/probe_action.py "--$MODE" \
-        --stage labels \
+    python -u src/m04e_action_labels.py "--$MODE" \
         --eval-subset "$EVAL_SUBSET" \
         --motion-features "$MOTION_FEATURES" \
         --min-clips-per-class "$MIN_CLIPS_PER_CLASS" \
@@ -583,17 +598,16 @@ if ! should_skip 1; then
         --output-root "$OUTPUT_ACTION" \
         --cache-policy "$P_ACTION" \
         --no-wandb \
-        2>&1 | tee logs/probe_action_labels.log
+        2>&1 | tee logs/m04e_action_labels.log
     if [ -f "$TAG_TAXONOMY" ]; then
-        python -u src/probe_taxonomy.py "--$MODE" \
-            --stage labels \
+        python -u src/m04f_taxonomy_labels.py "--$MODE" \
             --eval-subset "$EVAL_SUBSET" \
             --tags-json "$TAGS_JSON" \
             --tag-taxonomy "$TAG_TAXONOMY" \
             --output-root "$OUTPUT_TAXONOMY" \
             --cache-policy "$P_ACTION" \
             --no-wandb \
-            2>&1 | tee logs/probe_taxonomy_labels.log
+            2>&1 | tee logs/m04f_taxonomy_labels.log
     else
         echo "  WARN: $TAG_TAXONOMY missing — skipping probe_taxonomy labels."
         echo "    multi_task_probe in m09a/m09c will auto-disable for this run."
@@ -633,9 +647,12 @@ fi
 n_lrs=$(echo "$LR_SWEEP" | wc -w)
 
 PER_ENC_ANY=0
-for s in 2 3 5 6 8; do should_skip "$s" || PER_ENC_ANY=1; done
+# iter16 §3.3: list ALL per-encoder stages so the loop isn't skipped when only a
+# subset is requested. Was "2 3 5 6 8" — omitted 11 (taxonomy) AND the new 8b/8c
+# (predictor/encoder temporal), so e.g. SKIP_STAGES=2,3,5,6,8 wrongly skipped them.
+for s in 2 3 11 5 6 8 8b 8c; do should_skip "$s" || PER_ENC_ANY=1; done
 if [ "$PER_ENC_ANY" -eq 1 ]; then
-    stamp "PER-ENCODER pipeline (Stages 2/3/5/6/8) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
+    stamp "PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
     # ── iter17: background aggregate-ETA heartbeat. Prints whole-pipeline progress
     # (tqdm-style bar + hh:mm ETA across ALL encoders) into THIS eval log every
     # ETA_HEARTBEAT_INTERVAL (default 120s), so no separate monitor script is needed —
@@ -679,7 +696,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         # ─── Stage 2: features for this encoder ──────────────────────────
         if ! should_skip 2; then
             stamp "  STAGE 2 · features for $ENC (splits=${FEATURES_SPLITS}, dtype=fp16)"
-            python -u src/probe_action.py "--$MODE" \
+            python -u src/m12a_action_top1.py "--$MODE" \
                 --stage features \
                 --encoder "$ENC" \
                 $EXTRA_CKPT $MA_FLAG \
@@ -722,7 +739,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 # .probe_features_{train,val}_ckpt.npz so Stage 3.5 (probe_taxonomy)
                 # can reuse them — saves ~7 min × N encoders of redundant re-extract.
                 # Cleanup is invoked explicitly via `--stage cleanup_lazy` after Stage 3.5.
-                python -u src/probe_action.py "--$MODE" \
+                python -u src/m12a_action_top1.py "--$MODE" \
                     --stage train \
                     --encoder "$ENC" \
                     $EXTRA_CKPT $MA_FLAG \
@@ -744,7 +761,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             if [ "$n_lrs" -gt 1 ]; then
                 # iter15 D8 (2026-05-16): same --keep-lazy-cache contract — defer
                 # cleanup so Stage 3.5 reuses the resume ckpt.
-                python -u src/probe_action.py "--$MODE" \
+                python -u src/m12a_action_top1.py "--$MODE" \
                     --stage select_best_lr \
                     --encoder "$ENC" \
                     --output-root "$OUTPUT_ACTION" \
@@ -773,11 +790,10 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             # is passed (D1 fix in src/probe_taxonomy.py). Without this flag the
             # taxonomy probe would crash with the same LN[1664] vs input[*,1700]
             # mismatch on the test split. Mirrors Stage 3 threading above.
-            python -u src/probe_taxonomy.py "--$MODE" \
+            python -u src/m12c_taxonomy_f1.py "--$MODE" \
                 --stage train \
                 --encoder "$ENC" \
                 $EXTRA_CKPT $MA_FLAG \
-                --eval-subset "$EVAL_SUBSET" \
                 --local-data "$LOCAL_DATA" \
                 --num-frames "$NUM_FRAMES" \
                 --features-root "$OUTPUT_ACTION" \
@@ -798,7 +814,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         # transient .probe_features_{train,val}_ckpt.npz at FULL scale.
         # Idempotent — no-op when files absent (e.g., Stage 3 also skipped).
         # CLAUDE.md: "All destructive deletes live in .py" — shell never rm's.
-        python -u src/probe_action.py "--$MODE" \
+        python -u src/m12a_action_top1.py "--$MODE" \
             --stage cleanup_lazy \
             --encoder "$ENC" \
             --output-root "$OUTPUT_ACTION" \
@@ -817,7 +833,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             # (--share-features, default) inherits augmentation from probe_action's
             # features_test.npy automatically. Flag is forwarded for Path B
             # (--no-share-features) parity + future-proofing.
-            python -u src/probe_motion_cos.py "--$MODE" \
+            python -u src/m12b_motion_cos.py "--$MODE" \
                 --stage features \
                 --encoder "$ENC" \
                 $MA_FLAG \
@@ -837,7 +853,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         # the post-Stage-8 cleanup below — irrelevant to Stage 6.)
         if ! should_skip 6; then
             stamp "  STAGE 6 · motion_cos cosine for $ENC"
-            python -u src/probe_motion_cos.py "--$MODE" \
+            python -u src/m12b_motion_cos.py "--$MODE" \
                 --stage cosine \
                 --encoder "$ENC" \
                 --action-probe-root "$OUTPUT_ACTION" \
@@ -858,13 +874,13 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 PCKPT="$(encoder_predictor_ckpt_for "$ENC")"
                 if [ -e "$PCKPT" ]; then
                     stamp "  STAGE 8 · future_mse forward for $ENC"
-                    # iter15 D7 fix (2026-05-16): pass $MA_FLAG so probe_future_mse
+                    # iter15 D7 fix (2026-05-16): pass $MA_FLAG so m12d_future_mse
                     # emits the parallel per_clip_motion_aux_l1.npy + aggregate_
-                    # motion_aux_l1.json (D2 wiring in src/probe_future_mse.py). The
+                    # motion_aux_l1.json (D2 wiring in src/m12d_future_mse.py). The
                     # original JEPA per_clip_mse.npy is still emitted in parallel —
                     # this is an ADDITIONAL 4th paired-Δ axis for the paper claim,
                     # not a replacement.
-                    python -u src/probe_future_mse.py "--$MODE" \
+                    python -u src/m12d_future_mse.py "--$MODE" \
                         --stage forward \
                         --variant "$ENC" \
                         --encoder-ckpt "$PCKPT" \
@@ -881,6 +897,67 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 fi
             else
                 echo "  Stage 8 SKIP $ENC (not in STAGE8_ENCODERS preflight set)"
+            fi
+        fi
+
+        # ── STAGE 8b — predictor_temporal (m12e, 6 metrics) ── (iter16 §3.3, default-on)
+        if ! should_skip 8b && [[ "$ENC" == vjepa* ]]; then
+            if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
+                PCKPT="$(encoder_predictor_ckpt_for "$ENC")"
+                if [ -e "$PCKPT" ]; then
+                    stamp "  STAGE 8b · predictor_temporal (6 metrics) for $ENC"
+                    python -u src/m12e_predictor_temporal.py "--$MODE" \
+                        --stage forward --metric all \
+                        --variant "$ENC" --encoder-ckpt "$PCKPT" \
+                        $MA_FLAG \
+                        --action-probe-root "$OUTPUT_ACTION" \
+                        --local-data "$LOCAL_DATA" \
+                        --output-root "$OUTPUT_PREDTEMP" \
+                        --num-frames "$NUM_FRAMES" \
+                        --batch-size "$PT_BATCH" \
+                        --cache-policy "$P_MSE" \
+                        --no-wandb \
+                        2>&1 | tee "logs/m12e_predictor_temporal_forward_${ENC}.log"
+                else
+                    echo "  ⚠️  Stage 8b SKIP $ENC: predictor-bearing ckpt missing ($PCKPT)"
+                fi
+            else
+                echo "  Stage 8b SKIP $ENC (not in STAGE8_ENCODERS preflight set)"
+            fi
+        fi
+
+        # ── STAGE 8c — encoder_temporal (m12f, 4 metrics: aot/tov/pace/tcc) ── (iter16 §6/§3.3)
+        if ! should_skip 8c && [[ "$ENC" == vjepa* ]]; then
+            if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
+                ECKPT="$(encoder_ckpt_for "$ENC")"   # encoder-only (lighter; m12f needs no predictor — §3.3 R2)
+                if [ -e "$ECKPT" ]; then
+                    stamp "  STAGE 8c · encoder_temporal (4 metrics) for $ENC"
+                    python -u src/m12f_encoder_temporal.py "--$MODE" \
+                        --stage forward --metric all \
+                        --variant "$ENC" --encoder-ckpt "$ECKPT" \
+                        --action-probe-root "$OUTPUT_ACTION" \
+                        --local-data "$LOCAL_DATA" \
+                        --output-root "$OUTPUT_ENCTEMP" \
+                        --num-frames "$NUM_FRAMES" \
+                        --tubelet-size "$ET_TUBELET" \
+                        --batch-size "$ET_BATCH" \
+                        --tov-n-permutations "$ET_TOV_NPERM" \
+                        --pace-strides "$ET_PACE_STRIDES" \
+                        --pace-source-frames "$ET_PACE_SRCFRAMES" \
+                        --tcc-temperature "$ET_TCC_TEMP" \
+                        --head-lr "$ET_HEAD_LR" \
+                        --head-epochs "$ET_HEAD_EPOCHS" \
+                        --head-weight-decay "$ET_HEAD_WD" \
+                        --head-batch-size "$ET_HEAD_BS" \
+                        --head-train-cap "$ET_HEAD_TRAIN_CAP" \
+                        --cache-policy "$P_MSE" \
+                        --no-wandb \
+                        2>&1 | tee "logs/m12f_encoder_temporal_forward_${ENC}.log"
+                else
+                    echo "  ⚠️  Stage 8c SKIP $ENC: encoder ckpt missing ($ECKPT)"
+                fi
+            else
+                echo "  Stage 8c SKIP $ENC (not in STAGE8_ENCODERS preflight set)"
             fi
         fi
 
@@ -925,7 +1002,7 @@ fi
 # canonical path. All encoders' Stage 3 outputs were written above.
 if ! should_skip 4; then
     stamp "STAGE 4 · action_probe paired_delta (🔥 P1 GATE — CPU, ~5 min, BCa 10K)"
-    python -u src/probe_action.py "--$MODE" \
+    python -u src/m12a_action_top1.py "--$MODE" \
         --stage paired_delta \
         --output-root "$OUTPUT_ACTION" \
         --cache-policy "$P_ACTION" \
@@ -940,7 +1017,7 @@ fi
 # SKIP_STAGES=12.
 if ! should_skip 12 && [ -f "$TAG_TAXONOMY" ]; then
     stamp "STAGE 12 · probe_taxonomy paired_delta (CPU, 16 dims × encoders, BCa 10K each)"
-    python -u src/probe_taxonomy.py "--$MODE" \
+    python -u src/m12c_taxonomy_f1.py "--$MODE" \
         --stage paired_delta \
         --features-root "$OUTPUT_ACTION" \
         --output-root "$OUTPUT_TAXONOMY" \
@@ -952,7 +1029,7 @@ fi
 # ── STAGE 13 — plot (probe_taxonomy per-dim metric across encoders) ───
 if ! should_skip 13 && [ -f "$TAG_TAXONOMY" ]; then
     stamp "STAGE 13 · probe_taxonomy plot (CPU, ~5s)"
-    python -u src/probe_taxonomy.py "--$MODE" \
+    python -u src/m12c_taxonomy_f1.py "--$MODE" \
         --stage plot \
         --features-root "$OUTPUT_ACTION" \
         --output-root "$OUTPUT_TAXONOMY" \
@@ -964,7 +1041,7 @@ fi
 # ── STAGE 7 — paired Δ (motion_cos) ────────────────────────────────────
 if ! should_skip 7; then
     stamp "STAGE 7 · motion_cos paired_delta (CPU)"
-    python -u src/probe_motion_cos.py "--$MODE" \
+    python -u src/m12b_motion_cos.py "--$MODE" \
         --stage paired_delta \
         --output-root "$OUTPUT_COS" \
         --cache-policy "$P_COS" \
@@ -974,14 +1051,14 @@ fi
 
 # ── STAGE 8 (forward) is run inside the per-encoder loop above ─────────
 # (see "PER-ENCODER SEQUENTIAL PIPELINE" block). Kept here as a marker for
-# anyone grepping for the stage; the actual `python probe_future_mse --stage
+# anyone grepping for the stage; the actual `python m12d_future_mse --stage
 # forward` invocation lives in the per-encoder loop so its V-JEPA forward
 # pass runs while features_test.npy for that encoder is still small/freed.
 
 # ── STAGE 9 — paired Δ (future_mse, per-variant) ───────────────────────
 if ! should_skip 9; then
     stamp "STAGE 9 · future_mse paired_per_variant (CPU)"
-    python -u src/probe_future_mse.py "--$MODE" \
+    python -u src/m12d_future_mse.py "--$MODE" \
         --stage paired_per_variant \
         --output-root "$OUTPUT_MSE" \
         --cache-policy "$P_MSE" \
@@ -989,18 +1066,44 @@ if ! should_skip 9; then
         2>&1 | tee logs/probe_future_mse_paired.log
 fi
 
+# ── STAGE 9b — predictor_temporal paired (m12e, 6 metrics) ── (iter16 §3.3)
+if ! should_skip 9b; then
+    stamp "STAGE 9b · predictor_temporal paired_per_variant (CPU)"
+    python -u src/m12e_predictor_temporal.py "--$MODE" \
+        --stage paired_per_variant --metric all \
+        --output-root "$OUTPUT_PREDTEMP" \
+        --cache-policy "$P_MSE" \
+        --no-wandb \
+        2>&1 | tee logs/m12e_predictor_temporal_paired.log
+fi
+
+# ── STAGE 9c — encoder_temporal paired (m12f, 4 metrics) ── (iter16 §6/§3.3)
+if ! should_skip 9c; then
+    stamp "STAGE 9c · encoder_temporal paired_per_variant (CPU)"
+    python -u src/m12f_encoder_temporal.py "--$MODE" \
+        --stage paired_per_variant --metric all \
+        --output-root "$OUTPUT_ENCTEMP" \
+        --tubelet-size "$ET_TUBELET" \
+        --cache-policy "$P_MSE" \
+        --no-wandb \
+        2>&1 | tee logs/m12f_encoder_temporal_paired.log
+fi
+
 # ── STAGE 10 — plots (m08d, CPU, always-recompute) ─────────────────────
 # Pure visualization — no cache_policy. Wipes its own output_dir on entry
 # (single-owner, m08b-style). Reads JSONs + train_log.jsonl from prior stages.
 if ! should_skip 10; then
-    stamp "STAGE 10 · m08d plot probe (CPU, ~5s)"
-    python -u src/probe_plot.py "--$MODE" \
+    stamp "STAGE 10 · m13 eval plot — 14 bars + HERO (CPU, ~5s)"
+    python -u src/m13_eval_plot.py "--$MODE" \
         --action-probe-root "$OUTPUT_ACTION" \
         --motion-cos-root   "$OUTPUT_COS" \
         --future-mse-root   "$OUTPUT_MSE" \
+        --taxonomy-root     "$OUTPUT_TAXONOMY" \
+        --predictor-temporal-root "$OUTPUT_PREDTEMP" \
+        --encoder-temporal-root   "$OUTPUT_ENCTEMP" \
         --output-dir        "$OUTPUT_PLOTS" \
         --no-wandb \
-        2>&1 | tee logs/probe_plot.log
+        2>&1 | tee logs/m13_eval_plot.log
 fi
 
 # ── Final summary ──────────────────────────────────────────────────────

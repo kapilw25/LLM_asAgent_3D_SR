@@ -292,7 +292,8 @@ def compute_metric_trio(
             # 4a. Unmasked forward — used both for pooling AND L1 target.
             #     With return_hierarchical=True, returns (B, N, 4*embed_dim).
             try:
-                h_full = student(batch_tensors, training=True)
+                # iter17: training=True (hierarchical deep-sup) only for 2.1; 2.0 ViT.forward lacks it
+                h_full = student(batch_tensors, **({"training": True} if cfg["model"]["n_output_distillation"] > 1 else {}))
             except torch.cuda.OutOfMemoryError:
                 cuda_cleanup()
                 sizer.on_oom()
@@ -333,7 +334,7 @@ def compute_metric_trio(
 
             # Context forward (with mask) — separate from h_concat which is unmasked.
             try:
-                z_ctx = student(batch_tensors, masks=[m_enc], training=True)
+                z_ctx = student(batch_tensors, masks=[m_enc], **({"training": True} if cfg["model"]["n_output_distillation"] > 1 else {}))
             except torch.cuda.OutOfMemoryError:
                 cuda_cleanup()
                 sizer.on_oom()
@@ -346,7 +347,7 @@ def compute_metric_trio(
             # Reuse h_concat as L1 target → predictor predicts target tokens
             # at the m_pred positions.
             h_target = apply_masks(h_concat, [m_pred])
-            out = predictor(z_concat, [m_enc], [m_pred], mod="video", mask_index=0)
+            out = predictor(z_concat, [m_enc], [m_pred], **({"mod": "video", "mask_index": 0} if cfg["model"]["n_output_distillation"] > 1 else {}))
             if isinstance(out, tuple) and len(out) == 2:
                 out = out[0]   # (z_pred, z_context) → keep z_pred only
             if out.shape != h_target.shape:

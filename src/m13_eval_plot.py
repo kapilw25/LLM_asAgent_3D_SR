@@ -1,0 +1,685 @@
+"""m13 — N-encoder visualization for the FULL probe eval suite (VISUALIZATION band, LAST).
+Renamed from probe_plot.py (was m08d) — strict pipeline direction: visualization is the LAST band.
+
+CPU-only. Pure-visualization — ALWAYS recomputes; no cache_policy.
+
+iter16 §3.2/§3.3/§7 (2026-05-28): ALL LINE PLOTS REMOVED (§3.3a). Emits ONLY bar-with-CI panels
+for ALL 14 metrics (§3.3c) + (pending) the HERO (table-with-CI + plot-with-CI). Every number
+carries its BCa 95% CI. The 14 metrics (plan §7.1):
+  HEAD (4): action_top1 · motion_cos · taxonomy_f1 · future_mse
+  PRED (6): rollout · causal · tdist · teacher_free · maskratio · order        (m12e)
+  ENC  (4): aot · tov · pace · tcc(τ)   [+ tcc_cycle appendix]                 (m12f)
+
+Reads (auto-discovers encoders from each JSON; graceful — absent source → that metric skipped):
+  <action-probe-root>/probe_paired_delta.json          {by_encoder}            → action_top1
+  <motion-cos-root>/probe_motion_cos_paired.json        {by_encoder}            → motion_cos
+  <future-mse-root>/probe_future_mse_per_variant.json   {by_variant}            → future_mse
+  <taxonomy-root>/per_dim_acc.json                      {dims[*].by_encoder}    → taxonomy_f1
+  <predictor-temporal-root>/predictor_temporal_per_variant.json {metrics}       → 6 PRED metrics
+  <encoder-temporal-root>/encoder_temporal_per_variant.json     {metrics}       → 4 ENC metrics
+
+Writes (under <output-dir>/eval/{head,predictor,encoder}/):
+  one bar-with-CI panel per available metric (legacy names kept for the 3 v15a headline panels:
+  probe_action_acc_compare / probe_motion_cos_compare / probe_future_mse_compare; the rest m13_*).
+  (§3.3c-hero will add m13_hero_table + m13_hero_surgery_vs_frozen.)
+
+USAGE:
+  python -u src/m13_eval_plot.py --SANITY \\
+    --action-probe-root outputs/sanity/probe_action \\
+    --motion-cos-root   outputs/sanity/probe_motion_cos \\
+    --future-mse-root   outputs/sanity/probe_future_mse \\
+    --taxonomy-root     outputs/sanity/probe_taxonomy \\
+    --predictor-temporal-root outputs/sanity/predictor_temporal \\
+    --encoder-temporal-root   outputs/sanity/encoder_temporal \\
+    --output-dir        outputs/sanity/probe_plot \\
+    2>&1 | tee logs/m13_eval_plot_sanity.log
+"""
+import argparse
+import json
+import shutil
+import sys
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
+from utils.progress import make_pbar
+from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+from utils.bootstrap import N_BOOTSTRAP
+
+
+# ── Display helpers (no hardcoded encoder list — derived per-call) ───
+
+def _display_label(enc: str) -> str:
+    """Human-readable encoder name for plot legends. Falls back to enc verbatim."""
+    return {
+        "vjepa_2_1_frozen":                       "V-JEPA 2.1 frozen",
+        "dinov2":                                 "DINOv2 frozen",
+        "vjepa_2_1_pretrain_encoder":             "pretrain encoder",
+        "vjepa_2_1_pretrain_2X_encoder":          "pretrain_2X encoder",
+        "vjepa_2_1_surgical_3stage_DI_encoder":   "surgery 3stage_DI encoder",
+        "vjepa_2_1_surgical_noDI_encoder":        "surgery noDI encoder",
+        "vjepa_2_1_pretrain_head":                "pretrain head",
+        "vjepa_2_1_surgical_3stage_DI_head":      "surgery 3stage_DI head",
+        "vjepa_2_1_surgical_noDI_head":           "surgery noDI head",
+    }.get(enc, enc.replace("_", " "))
+
+
+_FALLBACK_COLOR_CYCLE = ("blue", "green", "orange", "purple", "red", "cyan", "gold")
+
+
+def _color_for(enc: str, idx: int) -> str:
+    """Pick a color for an encoder bar (canonical map first, else deterministic rotation)."""
+    if enc in ENCODER_COLORS:
+        return ENCODER_COLORS[enc]
+    if enc.startswith("vjepa"):
+        return ENCODER_COLORS["vjepa"]
+    fallback_key = _FALLBACK_COLOR_CYCLE[idx % len(_FALLBACK_COLOR_CYCLE)]
+    return COLORS.get(fallback_key, COLORS["gray"])
+
+
+# ── Loaders ──────────────────────────────────────────────────────────
+
+def _load_json(path: Path, stage_hint: str) -> dict:
+    """REQUIRED JSON — FAIL LOUD if missing (CLAUDE.md: no silent defaults)."""
+    if not path.exists():
+        sys.exit(f"FATAL: {path} not found — run {stage_hint} first")
+    return json.loads(path.read_text())
+
+
+def _opt_json(path: Path):
+    """OPTIONAL JSON — returns None (graceful) if absent. For the newer temporal/taxonomy
+    sources that a SKIP_STAGES run may not have produced; m13 degrades to fewer metrics."""
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+# ── Bar-with-CI primitive (N-bar generic) ───────────────────────────
+
+def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
+                 ylabel: str, title: str, na_set: set = None, direction: str = ""):
+    """Render N bars with 95% CI error caps + value labels. `direction`: higher/lower → badge;
+    "" → none. `na_set` = encoders with no measurement → hatched 'N/A'."""
+    na_set = na_set or set()
+    x = np.arange(len(encoders))
+    colors = [_color_for(e, i) for i, e in enumerate(encoders)]
+    plot_vals = [0.0 if e in na_set else v for e, v in zip(encoders, vals)]
+    plot_errs = [0.0 if e in na_set else er for e, er in zip(encoders, errs)]
+    bars = ax.bar(x, plot_vals, 0.6, color=colors, alpha=0.85,
+                  yerr=plot_errs, capsize=4, error_kw={"lw": 1.2, "ecolor": "#222"})
+    for i, e in enumerate(encoders):
+        if e in na_set:
+            bars[i].set_hatch("//")
+            bars[i].set_alpha(0.25)
+    real_v = np.array([v for e, v in zip(encoders, plot_vals) if e not in na_set])
+    real_e = np.array([er for e, er in zip(encoders, plot_errs) if e not in na_set])
+    if real_v.size:
+        real_e_safe = np.nan_to_num(real_e, nan=0.0)
+        lo = float((real_v - real_e_safe).min())
+        hi = float((real_v + real_e_safe).max())
+        span = hi - lo
+        pad = max(0.15 * span, 0.02 * abs(hi)) if span > 0 else (abs(hi) * 0.1 or 1.0)
+        ax.set_ylim(lo - pad, hi + pad)
+    else:
+        pad = 0.05
+    y_lo, y_hi = ax.get_ylim()
+    for xi, e, v, er in zip(x, encoders, plot_vals, plot_errs):
+        if e in na_set:
+            ax.text(xi, y_lo + (y_hi - y_lo) * 0.5, "N/A", ha="center", va="center",
+                    fontsize=12, color="#555", fontweight="bold")
+        else:
+            er_safe = 0.0 if (isinstance(er, float) and np.isnan(er)) else er
+            ax.text(xi, v + er_safe + (y_hi - y_lo) * 0.01, f"{v:.3f}",
+                    ha="center", va="bottom", fontsize=9, color="#222")
+    ax.set_xticks(x)
+    ax.set_xticklabels([_display_label(e) for e in encoders], fontsize=9, rotation=25, ha="right")
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    if direction == "higher":
+        ax.text(0.02, 0.97, "↑ higher = better", transform=ax.transAxes, fontsize=10,
+                fontweight="bold", color="#2E7D32", va="top", ha="left",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#E8F5E9",
+                          edgecolor="#2E7D32", linewidth=1.0, alpha=0.85))
+    elif direction == "lower":
+        ax.text(0.02, 0.97, "↓ lower = better", transform=ax.transAxes, fontsize=10,
+                fontweight="bold", color="#E65100", va="top", ha="left",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#FFF3E0",
+                          edgecolor="#E65100", linewidth=1.0, alpha=0.85))
+
+
+def _sort_by_metric(encoders: list, vals: list, errs: list, na_set: set, direction: str):
+    """Sort (encoder, val, err) by val; N/A always tail. direction 'desc' (higher=better) /
+    'asc' (lower=better). NaN treated as N/A."""
+    triples = list(zip(encoders, vals, errs))
+    real = [(e, v, er) for e, v, er in triples
+            if e not in na_set and not (isinstance(v, float) and np.isnan(v))]
+    na = [(e, v, er) for e, v, er in triples
+          if e in na_set or (isinstance(v, float) and np.isnan(v))]
+    real.sort(key=lambda t: t[1], reverse=(direction == "desc"))
+    out = real + na
+    return [t[0] for t in out], [t[1] for t in out], [t[2] for t in out]
+
+
+def _emit_bar(out_path: Path, sorted_enc, sorted_vals, sorted_errs, na_set,
+              ylabel, title, badge, caption, layman, n_enc, boot_str):
+    """One bar-with-CI figure (png+pdf). Module-level (was a closure) so the 14-metric loop
+    and the legacy 3 headline panels share one code path.
+
+    iter16 fix: the caption lives in FIGURE coords at the bottom (not ax.text at a large
+    negative axes-fraction, which fed back into tight_layout and collapsed the axes into a
+    thin strip). Fixed margins via subplots_adjust give a TALL plot area (~1.5:1), matching
+    the iter15 reference. Caption now carries a plain-language `Layman:` example."""
+    fig, ax = plt.subplots(figsize=(max(8.5, 0.95 * n_enc + 3.0), 9.5))
+    _bar_with_ci(ax, sorted_enc, sorted_vals, sorted_errs,
+                 ylabel=ylabel, title=title, na_set=na_set, direction=badge)
+    cap = (f"{caption}\nLayman: e.g. {layman}\n"
+           f"TEST split · whiskers = BCa 95 % CI from {boot_str}.")
+    fig.text(0.5, 0.03, cap, ha="center", va="bottom", fontsize=10, color="#000",
+             linespacing=1.6,
+             bbox=dict(boxstyle="round,pad=0.5", facecolor="#FAFAFA", edgecolor="#888", linewidth=0.8))
+    fig.suptitle(f"{title} · {n_enc} encoders · 95 % BCa CI", fontsize=14, fontweight="bold", y=0.985)
+    # Fixed margins: TALL axes (top-bottom = 0.59 of a 9.5in fig ≈ 5.6in) + room for rotated
+    # xticklabels (bottom 0.33) and the caption box (figure y≈0.03).
+    fig.subplots_adjust(left=0.11, right=0.96, top=0.92, bottom=0.33)
+    save_fig(fig, str(out_path))
+
+
+# ── §3.3c: 14-metric catalog + unified loader + per-metric bars (plan §7) ──
+# (key, family, out_name, direction, ylabel, caption, layman). direction: higher|lower|signed.
+# `layman` = one-line plain-language example shown in every panel's caption box (iter16 fix).
+# Legacy names kept for the 3 v15a headline panels; the rest take m13_ names. Mirrors §7.1.
+_CATALOG = [
+    ("action_top1",  "HEAD", "probe_action_acc_compare", "higher", "Top-1 accuracy (%)",
+     "AttentiveClassifier → K-class motion-flow accuracy (magnitude × direction).",
+     "from the clip's features alone, can a simple classifier tell 'fast leftward motion' from 'slow upward motion'?"),
+    ("motion_cos",   "HEAD", "probe_motion_cos_compare", "higher", "Intra − Inter cosine",
+     "Same-class minus different-class cosine separation (>0 ⇒ motion-semantic clustering).",
+     "do two clips of the SAME motion sit closer in feature space than two clips of DIFFERENT motions?"),
+    ("taxonomy_f1",  "HEAD", "m13_taxonomy_f1_compare",  "higher", "Taxonomy mean (top1+F1)",
+     "Mean over 15 VLM-tag dims of per-dim top-1 (single) / sample-F1 (multi).",
+     "can a linear read-off name scene attributes — crowd density, lighting, camera motion — from the features?"),
+    ("future_mse",   "HEAD", "probe_future_mse_compare", "lower",  "Future L1",
+     "V-JEPA predictor L1 on masked next-frame tokens (the JEPA objective; V-JEPA-only).",
+     "given the first frames, how well does the model's predictor guess the next frame's content?"),
+    ("rollout",      "PRED", "m13_rollout_compare",      "lower",  "Free-run drift slope",
+     "Iterated multi-step rollout L1 slope — lower = stabler free-running dynamics.",
+     "if the model predicts step-by-step into the future, how fast does its error snowball?"),
+    ("causal",       "PRED", "m13_causal_compare",       "lower",  "Causal future-block L1",
+     "Predict future temporal half from past half — lower = better causal prediction.",
+     "shown only the first half of a clip, how well does it predict the second half?"),
+    ("tdist",        "PRED", "m13_tdist_compare",        "lower",  "L1-vs-Δt slope",
+     "Single-shot L1 vs target offset Δt — lower = slower decay with temporal distance.",
+     "does prediction stay accurate as you ask it to look further ahead in time?"),
+    ("teacher_free", "PRED", "m13_teacher_free_compare", "lower",  "Free − teacher gap",
+     "Free-running minus teacher-forced L1 — lower = less exposure bias.",
+     "how much worse is the model when it must rely on its OWN predictions vs being fed the truth each step?"),
+    ("maskratio",    "PRED", "m13_maskratio_compare",    "lower",  "L1-vs-maskratio slope",
+     "L1 vs mask-ratio sweep — lower = graceful degradation under heavier masking.",
+     "how gracefully does prediction degrade as more of the video is hidden?"),
+    ("order",        "PRED", "m13_order_compare",        "signed", "Shuffled − ordered ΔL1",
+     "Shuffled-context minus ordered-context L1 — sign = predictor's reliance on frame order.",
+     "does scrambling the frame order hurt the model — i.e. does it actually use time?"),
+    ("aot",          "ENC",  "m13_aot_compare",          "higher", "Arrow-of-Time acc",
+     "Forward-vs-reversed binary head accuracy — higher = encoder preserves time's arrow.",
+     "can the model tell a video played forwards from the same video played backwards?"),
+    ("tov",          "ENC",  "m13_tov_compare",          "higher", "TOV / VCOP top-1",
+     "N-way frame-permutation classification top-1 — higher = retains temporal order.",
+     "can it put a handful of shuffled frames back into the right order?"),
+    ("pace",         "ENC",  "m13_pace_compare",         "higher", "Pace top-1",
+     "Playback-rate (1×/2×/4×) classification top-1 — higher = temporal-scale sensitive.",
+     "can it tell normal-speed video from 2× / 4× fast-forwarded video?"),
+    ("tcc_tau",      "ENC",  "m13_tcc_tau_compare",      "higher", "TCC Kendall's τ",
+     "Per-frame soft-NN alignment Kendall's τ across same-action pairs (training-free).",
+     "do matching moments in two clips of the same action line up in feature space?"),
+    ("tcc_cycle",    "ENC",  "m13_tcc_cycle_compare",    "lower",  "TCC cycle-back error",
+     "TCC A→B→A cycle-back frame-index error (appendix companion to τ) — lower = better.",
+     "follow a frame to its match in clip B and back — how far from where it started does it land?"),
+]
+_FAMILY_DIR = {"HEAD": "head", "PRED": "predictor", "ENC": "encoder"}
+_DIR_TAG = {"higher": "↑ better", "lower": "↓ better", "signed": "± signed"}   # column direction badge
+
+
+def _short_label(enc: str) -> str:
+    """Compact encoder tag for the hero WINNER row (cells are narrow)."""
+    return {
+        "vjepa_2_1_frozen": "frozen", "dinov2": "dinov2",
+        "vjepa_2_1_pretrain_encoder": "pre-enc", "vjepa_2_1_pretrain_2X_encoder": "pre-2X",
+        "vjepa_2_1_pretrain_head": "pre-hd",
+        "vjepa_2_1_surgical_3stage_DI_encoder": "s3DI-enc", "vjepa_2_1_surgical_noDI_encoder": "sNoDI-enc",
+        "vjepa_2_1_surgical_3stage_DI_head": "s3DI-hd", "vjepa_2_1_surgical_noDI_head": "sNoDI-hd",
+    }.get(enc, enc.replace("vjepa_2_1_", "")[:10])
+
+
+def _fmt_compact(x: float) -> str:
+    """Sign-prefixed compact number for tight heatmap cells."""
+    if x == 0:
+        return "0"
+    ax = abs(x)
+    if ax >= 100:
+        return f"{x:+.0f}"
+    if ax >= 1:
+        return f"{x:+.2f}"
+    if ax >= 0.01:
+        return f"{x:+.3f}"
+    return f"{x:+.4f}"
+
+
+def _taxonomy_f1_by_encoder(taxonomy_json: dict, encoders: list) -> dict:
+    """taxonomy_f1 per encoder = mean over the 15 dims of per-dim test_mean; ci = mean of the
+    per-dim ci_half (a conservative aggregate of the per-dim BCa half-widths)."""
+    dims = taxonomy_json.get("dims", {})
+    out = {}
+    for v in encoders:
+        vals, cis = [], []
+        for spec in dims.values():
+            be = spec.get("by_encoder", {}).get(v)
+            if be is not None:
+                vals.append(be["test_mean"])
+                cis.append(be["test_ci"]["ci_half"])
+        if vals:
+            # nan-filter the per-dim CI halves (a degenerate per-dim BCa → nan; don't poison the
+            # aggregate — tiny SANITY splits trip this, real POC/FULL won't).
+            clean = [c for c in cis if not (isinstance(c, float) and np.isnan(c))]
+            out[v] = (float(np.mean(vals)), float(np.mean(clean)) if clean else 0.0)
+    return out
+
+
+_DM = ("delta_mean", "delta_ci_lo", "delta_ci_hi")   # motion/future/pred/enc/tcc pairwise schema
+
+
+def _norm_deltas(pairwise: dict, fields: tuple) -> dict:
+    """Normalize a pairwise_deltas block → {pair_key: (delta, lo, hi)} using this schema's
+    (delta, lo, hi) field names. pair_key is the JSON's '{a}_minus_{b}' (= a − b)."""
+    fd, fl, fh = fields
+    return {k: (v[fd], v[fl], v[fh]) for k, v in pairwise.items()}
+
+
+def _agg_taxonomy_deltas(taxonomy_json: dict) -> dict:
+    """taxonomy aggregate Δ per pair = mean over the 15 dims of per-dim (delta, ci_lo, ci_hi)."""
+    acc = {}
+    for spec in taxonomy_json.get("dims", {}).values():
+        for pk, v in spec.get("pairwise_deltas", {}).items():
+            acc.setdefault(pk, []).append((v["delta"], v["ci_lo"], v["ci_hi"]))
+    return {pk: tuple(float(np.mean(col)) for col in zip(*rows)) for pk, rows in acc.items()}
+
+
+def _load_all_metrics(srcs: dict, encoders: list) -> dict:
+    """Return {metric_key: {"by_encoder": {enc: (val, ci_half)}, "na": set, "deltas": {pair_key:
+    (Δ, lo, hi)}}} for every catalog metric whose source JSON is present (graceful: absent → omitted).
+    `deltas` (the paired Δ across variants) feeds the hero's Δ-vs-frozen + CI-exclusion ★."""
+    out = {}
+
+    def _pack(by_enc, deltas):
+        return {"by_encoder": by_enc, "na": {e for e in encoders if e not in by_enc}, "deltas": deltas}
+
+    if srcs.get("action"):
+        be = srcs["action"].get("by_encoder", {})
+        out["action_top1"] = _pack(
+            {v: (be[v]["acc_pct"], be[v]["top1_ci"]["ci_half"] * 100.0) for v in be},
+            _norm_deltas(srcs["action"].get("pairwise_deltas", {}), ("delta_pp", "ci_lo_pp", "ci_hi_pp")))
+    if srcs.get("motion"):
+        be = srcs["motion"].get("by_encoder", {})
+        out["motion_cos"] = _pack(
+            {v: (be[v]["score_mean"], be[v]["score_ci"]["ci_half"]) for v in be},
+            _norm_deltas(srcs["motion"].get("pairwise_deltas", {}), _DM))
+    if srcs.get("future"):
+        bv = srcs["future"].get("by_variant", {})
+        real = {v: e for v, e in bv.items() if isinstance(e, dict)}
+        out["future_mse"] = _pack(
+            {v: (real[v]["mse_mean"], real[v]["mse_ci"]["ci_half"]) for v in real},
+            _norm_deltas(srcs["future"].get("pairwise_deltas", {}), _DM))
+    if srcs.get("taxonomy"):
+        out["taxonomy_f1"] = _pack(_taxonomy_f1_by_encoder(srcs["taxonomy"], encoders),
+                                   _agg_taxonomy_deltas(srcs["taxonomy"]))
+    if srcs.get("pred"):
+        m = srcs["pred"].get("metrics", {})
+        for key in ("rollout", "causal", "tdist", "teacher_free", "maskratio", "order"):
+            blk = m.get(key, {})
+            bv = blk.get("by_variant", {})
+            if bv:
+                out[key] = _pack({v: (bv[v]["mean"], bv[v]["ci"]["ci_half"]) for v in bv},
+                                 _norm_deltas(blk.get("pairwise_deltas", {}), _DM))
+    if srcs.get("enc"):
+        m = srcs["enc"].get("metrics", {})
+        for key in ("aot", "tov", "pace"):
+            blk = m.get(key, {})
+            bv = blk.get("by_variant", {})
+            if bv:
+                out[key] = _pack({v: (bv[v]["mean"], bv[v]["ci"]["ci_half"]) for v in bv},
+                                 _norm_deltas(blk.get("pairwise_deltas", {}), _DM))
+        tcc = m.get("tcc", {})
+        tcc_bv = tcc.get("by_variant", {})
+        if tcc_bv:
+            tpd = tcc.get("pairwise_deltas", {})
+            out["tcc_tau"] = _pack(
+                {v: (tcc_bv[v]["kendalls_tau"]["mean"], tcc_bv[v]["kendalls_tau"]["ci"]["ci_half"]) for v in tcc_bv},
+                _norm_deltas(tpd.get("kendalls_tau", {}), _DM))
+            out["tcc_cycle"] = _pack(
+                {v: (tcc_bv[v]["cycle_back"]["mean"], tcc_bv[v]["cycle_back"]["ci"]["ci_half"]) for v in tcc_bv},
+                _norm_deltas(tpd.get("cycle_back", {}), _DM))
+    return out
+
+
+# ── §3.3c HERO (B1 table-with-CI + B2 Δ-vs-frozen heatmap) — plan §7.3 ──
+
+def _delta_v_vs_frozen(deltas: dict, v: str, frozen: str):
+    """Δ(v − frozen), (lo, hi) from a normalized deltas dict keyed '{a}_minus_{b}' (=a−b).
+    Orients + sign-flips (and swaps CI bounds) when stored as frozen−v. None if absent."""
+    kvf, kfv = f"{v}_minus_{frozen}", f"{frozen}_minus_{v}"
+    if kvf in deltas:
+        d, lo, hi = deltas[kvf]
+        return d, lo, hi
+    if kfv in deltas:
+        d, lo, hi = deltas[kfv]
+        return -d, -hi, -lo          # v−f = −(f−v); CI [lo,hi] → [−hi,−lo]
+    return None
+
+
+def _ci_excludes_zero(lo: float, hi: float) -> bool:
+    return lo > 0 or hi < 0
+
+
+def _is_good_win(delta: float, lo: float, hi: float, direction: str) -> bool:
+    """Significant win vs frozen in the GOOD direction. higher→lo>0 ; lower→hi<0 ; signed→never."""
+    if direction == "higher":
+        return lo > 0
+    if direction == "lower":
+        return hi < 0
+    return False
+
+
+def _hero_catalog(metrics: dict):
+    """The 14 hero metrics present (tcc_cycle is the appendix companion — excluded from the grid)."""
+    return [c for c in _CATALOG if c[0] in metrics and c[0] != "tcc_cycle"]
+
+
+def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path, boot_str: str):
+    """B1: value±CI scorecard PNG + CSV, rendered as a COLORED heatmap-table.
+    rows = encoders (frozen pinned top) + a WINNER row ; cols = hero metrics + WINS.
+      • cell colour  = per-column min-max normalized, direction-aware (green=best in that metric);
+                       'order' (signed) + N/A → neutral.
+      • '*'          = Δ-vs-frozen 95% BCa CI excludes 0 (significance vs baseline).
+      • winner       = single best encoder per scorable metric (argmax/argmin); its cell is BOLD,
+                       named in the WINNER row.
+      • WINS         = #metrics this encoder is THE winner, of n_scorable → the column PARTITIONS
+                       the metrics (Σ over all rows = n_scorable; iter16 fix — was an overlapping
+                       'beats-frozen' count that summed to >1)."""
+    cat = _hero_catalog(metrics)
+    if not cat:
+        print("  [hero-table] no metrics present — skip")
+        return
+    scorable = [c for c in cat if c[3] in ("higher", "lower")]
+    n_scorable = len(scorable)
+    ordered = [frozen] + [e for e in encoders if e != frozen]
+    metric_keys = [c[0] for c in cat]
+    cmap = plt.get_cmap("RdYlGn")
+
+    # raw point values for colouring + winner determination
+    valmat = {(e, k): (metrics[k]["by_encoder"].get(e, (None, None))[0]) for e in ordered for k in metric_keys}
+    colstat = {}                                   # key -> (vmin, vmax) over present encoders
+    for k in metric_keys:
+        present = [valmat[(e, k)] for e in ordered if valmat[(e, k)] is not None]
+        colstat[k] = (min(present), max(present)) if present else (0.0, 0.0)
+    winner, wins = {}, {e: 0 for e in ordered}
+    for key, _f, _o, direction, _y, _c, _l in scorable:
+        cand = [(e, valmat[(e, key)]) for e in ordered if valmat[(e, key)] is not None]
+        if not cand:
+            continue
+        best = (max if direction == "higher" else min)(cand, key=lambda t: t[1])[0]
+        winner[key] = best
+        wins[best] += 1
+
+    def _cell_colour(val, key, direction):
+        if val is None:
+            return (0.90, 0.90, 0.90, 1.0)                       # N/A grey
+        if direction not in ("higher", "lower"):
+            return (1.0, 1.0, 1.0, 1.0)                          # signed → neutral
+        vmin, vmax = colstat[key]
+        t = 0.5 if vmax == vmin else (val - vmin) / (vmax - vmin)
+        if direction == "lower":
+            t = 1.0 - t                                          # low value = good = green
+        r, g, b, _ = cmap(t)
+        return (r, g, b, 0.55)                                   # alpha keeps black text legible
+
+    text_rows, colour_rows, winner_coords, csv_rows = [], [], [], [["encoder"] + metric_keys + ["WINS"]]
+    for ri, e in enumerate(ordered):
+        cells, ccols = [], []
+        for ci, (key, _f, _o, direction, _y, _c, _l) in enumerate(cat):
+            be = metrics[key]["by_encoder"].get(e)
+            if be is None:
+                cells.append("N/A"); ccols.append(_cell_colour(None, key, direction)); continue
+            val, ciw = be
+            star = ""
+            if e != frozen:
+                dvf = _delta_v_vs_frozen(metrics[key]["deltas"], e, frozen)
+                if dvf and _ci_excludes_zero(dvf[1], dvf[2]):
+                    star = "*"
+            cells.append(f"{val:.3f}±{ciw:.3f}{star}")
+            ccols.append(_cell_colour(val, key, direction))
+            if winner.get(key) == e:
+                winner_coords.append((ri, ci))
+        wmin, wmax = min(wins.values()), max(wins.values())
+        wt = 0.5 if wmax == wmin else (wins[e] - wmin) / (wmax - wmin)
+        cells.append(f"{wins[e]}/{n_scorable}")
+        ccols.append(tuple(cmap(wt)[:3]) + (0.55,))
+        text_rows.append(cells); colour_rows.append(ccols)
+        csv_rows.append([_display_label(e)] + cells)
+    # WINNER row
+    win_cells = [(_short_label(winner[k]) if k in winner else "—") for k in metric_keys]
+    win_cells.append(f"Σ {sum(wins.values())}/{n_scorable}")
+    text_rows.append(win_cells)
+    colour_rows.append([(1.0, 0.96, 0.78, 1.0)] * len(win_cells))
+    csv_rows.append(["WINNER"] + win_cells)
+
+    row_labels = [_display_label(e) for e in ordered] + ["WINNER / metric"]
+    col_labels = [f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat] + ["WINS\n↑ better"]
+    fig, ax = plt.subplots(figsize=(3.0 + 1.5 * len(col_labels), 1.8 + 0.62 * len(row_labels)))
+    ax.axis("off")
+    tbl = ax.table(cellText=text_rows, cellColours=colour_rows,
+                   rowLabels=row_labels, colLabels=col_labels, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(7)
+    tbl.scale(1.0, 1.6)
+    for (ri, ci) in winner_coords:                              # bold the winning cells (+1 for header row)
+        tbl[(ri + 1, ci)].set_text_props(fontweight="bold")
+    ax.set_title("HERO scorecard — value ± BCa 95% CI · cell colour = per-metric min-max "
+                 "(green = best), * = Δ-vs-frozen CI excludes 0\n"
+                 f"{len(ordered)} encoders × {len(cat)} metrics · bold + WINNER row = single best "
+                 f"per metric · WINS partitions the {n_scorable} scorable metrics (Σ = {sum(wins.values())}) · {boot_str}",
+                 fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    save_fig(fig, str(output_dir / "m13_hero_table"))
+    import csv
+    with open(str(output_dir / "m13_hero_table.csv"), "w", newline="") as f:
+        csv.writer(f).writerows(csv_rows)
+    print(f"  [hero-table] m13_hero_table.{{png,pdf,csv}} — {len(ordered)}+winner rows × "
+          f"{len(col_labels)} cols · WINS Σ={sum(wins.values())}/{n_scorable}")
+
+
+def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Path):
+    """B2: direction-normalized Δ-vs-frozen heatmap WITH numbers. rows=contenders, cols=hero
+    metrics. Colour = sign-corrected Δ (positive=better; lower-better metrics negated),
+    per-column normalized to [-1,1] for cross-metric comparability (RdYlGn). Each cell now
+    PRINTS the sign-corrected Δ and its 95% BCa CI [lo, hi] in the metric's native units
+    (iter16 fix — was colour-only); BOLD when the CI excludes 0 (significant vs frozen)."""
+    cat = _hero_catalog(metrics)
+    contenders = [e for e in encoders if e != frozen]
+    if not cat or not contenders:
+        print("  [hero-heatmap] need a frozen baseline + ≥1 contender + metrics — skip")
+        return
+    raw = np.full((len(contenders), len(cat)), np.nan)
+    cells = {}                                          # (i,j) -> (sc, clo, chi, sig)
+    for i, e in enumerate(contenders):
+        for j, (key, _fam, _on, direction, _yl, _cap, _lay) in enumerate(cat):
+            dvf = _delta_v_vs_frozen(metrics[key]["deltas"], e, frozen)
+            if dvf is None:
+                continue
+            d, lo, hi = dvf
+            sc, clo, chi = (d, lo, hi) if direction != "lower" else (-d, -hi, -lo)  # +=better, bounds too
+            raw[i, j] = sc
+            cells[(i, j)] = (sc, clo, chi, _ci_excludes_zero(lo, hi))
+    norm = np.full_like(raw, np.nan)
+    for j in range(raw.shape[1]):
+        col = raw[:, j]
+        fin = col[np.isfinite(col)]
+        amax = float(np.abs(fin).max()) if fin.size else 0.0
+        norm[:, j] = col / amax if amax > 0 else col * 0.0
+    fig, ax = plt.subplots(figsize=(3.0 + 1.75 * len(cat), 2.6 + 1.2 * len(contenders)))
+    # alpha=0.6 → pastel RdYlGn (matches the hero TABLE); keeps red→green meaning while staying
+    # light enough for plain BLACK BOLD numbers — no halo/outline needed (iter16 fix).
+    im = ax.imshow(np.ma.masked_invalid(norm), cmap="RdYlGn", vmin=-1, vmax=1, aspect="auto", alpha=0.6)
+    ax.grid(False)                                      # iter16 fix: kill the distracting white gridlines
+    ax.tick_params(length=0)
+    ax.set_xticks(range(len(cat)))
+    ax.set_xticklabels([f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat], rotation=45, ha="right", fontsize=9)
+    ax.set_yticks(range(len(contenders)))
+    ax.set_yticklabels([_display_label(e) for e in contenders], fontsize=10)
+    # Plain BLACK BOLD numbers (no halo): Δ on top, CI below.
+    for (i, j), (sc, clo, chi, _sig) in cells.items():
+        ax.text(j, i - 0.17, _fmt_compact(sc), ha="center", va="center",
+                fontsize=13, fontweight="bold", color="black")
+        ax.text(j, i + 0.24, f"[{_fmt_compact(clo)}, {_fmt_compact(chi)}]", ha="center", va="center",
+                fontsize=8.5, fontweight="bold", color="black")
+    ax.set_title(f"HERO — Δ vs {_display_label(frozen)}  ·  per cell: Δ (top) and 95% BCa CI (bottom), "
+                 "sign-corrected so + = better\ncolour: red = worst, green = best (per-metric min-max) · "
+                 "column badge ↑/↓ = better-direction",
+                 fontsize=11, fontweight="bold")
+    fig.colorbar(im, ax=ax, shrink=0.7, label="red = worst   →   green = best (per-metric normalized Δ)")
+    fig.tight_layout()
+    save_fig(fig, str(output_dir / "m13_hero_surgery_vs_frozen"))
+    print(f"  [hero-heatmap] m13_hero_surgery_vs_frozen.{{png,pdf}} — {len(contenders)} × {len(cat)} (Δ+CI, bold black)")
+
+
+def plot_all_metric_bars(metrics: dict, output_dir: Path, boot_str: str) -> int:
+    """One bar-with-CI panel per available catalog metric → <output_dir>/{head,predictor,encoder}/.
+    Returns the number of panels written."""
+    n = 0
+    for key, family, out_name, direction, ylabel, caption, layman in _CATALOG:
+        md = metrics.get(key)
+        if md is None:
+            print(f"  [skip] {key}: source JSON absent")
+            continue
+        be, na = md["by_encoder"], md["na"]
+        encoders = sorted(set(be) | na)
+        if not encoders:
+            print(f"  [skip] {key}: no encoders")
+            continue
+        vals = [be.get(e, (0.0, 0.0))[0] for e in encoders]
+        errs = [be.get(e, (0.0, 0.0))[1] for e in encoders]
+        sort_dir = "asc" if direction == "lower" else "desc"
+        s_enc, s_vals, s_errs = _sort_by_metric(encoders, vals, errs, na, direction=sort_dir)
+        order_word = "↑ lowest" if direction == "lower" else "↓ highest"
+        badge = "" if direction == "signed" else direction
+        sub = output_dir / _FAMILY_DIR[family]
+        sub.mkdir(parents=True, exist_ok=True)
+        _emit_bar(sub / out_name, s_enc, s_vals, s_errs, na, ylabel,
+                  f"{key} — sorted {order_word} first", badge, caption, layman,
+                  len(encoders), boot_str)
+        n += 1
+    return n
+
+
+# ── CLI ──────────────────────────────────────────────────────────────
+
+def main():
+    p = argparse.ArgumentParser(
+        description="m13 — 14-metric bar-with-CI viz for the probe eval suite (hero: §3.3c).")
+    p.add_argument("--SANITY", action="store_true")
+    p.add_argument("--POC",    action="store_true")
+    p.add_argument("--FULL",   action="store_true")
+    p.add_argument("--action-probe-root", type=Path, default=None)
+    p.add_argument("--motion-cos-root",   type=Path, default=None)
+    p.add_argument("--future-mse-root",   type=Path, default=None)
+    p.add_argument("--taxonomy-root",     type=Path, default=None,
+                   help="m12c probe_taxonomy output dir (per_dim_acc.json) — OPTIONAL (graceful).")
+    p.add_argument("--predictor-temporal-root", type=Path, default=None,
+                   help="m12e output dir (predictor_temporal_per_variant.json) — OPTIONAL.")
+    p.add_argument("--encoder-temporal-root",   type=Path, default=None,
+                   help="m12f output dir (encoder_temporal_per_variant.json) — OPTIONAL.")
+    p.add_argument("--output-dir",        type=Path, required=True)
+    add_wandb_args(p)
+    args = p.parse_args()
+    if not (args.SANITY or args.POC or args.FULL):
+        sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
+    mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
+
+    sub_dir = args.output_dir / "eval"
+    if sub_dir.exists():
+        nfile = sum(1 for _ in sub_dir.rglob("*") if _.is_file())
+        print(f"  [m13_eval_plot] wiping eval/ — {nfile} stale file(s)")
+        shutil.rmtree(sub_dir)
+    sub_dir.mkdir(parents=True, exist_ok=True)
+    args.output_dir = sub_dir
+
+    # The 3 legacy headline roots are REQUIRED (FAIL LOUD); temporal/taxonomy are graceful.
+    missing = [name for name, val in [
+        ("--action-probe-root", args.action_probe_root),
+        ("--motion-cos-root",   args.motion_cos_root),
+        ("--future-mse-root",   args.future_mse_root),
+    ] if val is None]
+    if missing:
+        sys.exit(f"ERROR: m13 requires: {', '.join(missing)}")
+
+    boot_str = f"{N_BOOTSTRAP // 1000} K bootstrap" if N_BOOTSTRAP >= 1000 else f"{N_BOOTSTRAP} bootstrap"
+
+    wb = init_wandb("m13_eval_plot", mode, config=vars(args), enabled=not args.no_wandb)
+    try:
+        init_style()
+        srcs = {
+            "action":   _load_json(args.action_probe_root / "probe_paired_delta.json", "Stage 4"),
+            "motion":   _load_json(args.motion_cos_root / "probe_motion_cos_paired.json", "Stage 7"),
+            "future":   _load_json(args.future_mse_root / "probe_future_mse_per_variant.json", "Stage 9"),
+            "taxonomy": _opt_json(args.taxonomy_root / "per_dim_acc.json") if args.taxonomy_root else None,
+            "pred":     _opt_json(args.predictor_temporal_root / "predictor_temporal_per_variant.json")
+                        if args.predictor_temporal_root else None,
+            "enc":      _opt_json(args.encoder_temporal_root / "encoder_temporal_per_variant.json")
+                        if args.encoder_temporal_root else None,
+        }
+        # Encoder union across all present sources (no hardcoded list).
+        encoders = sorted(
+            set(srcs["action"].get("by_encoder", {}))
+            | set(srcs["motion"].get("by_encoder", {}))
+            | {v for v, e in srcs["future"].get("by_variant", {}).items() if isinstance(e, dict)}
+        )
+        if not encoders:
+            sys.exit("FATAL: no encoders found in the action/motion/future JSONs")
+
+        metrics = _load_all_metrics(srcs, encoders)
+        pbar = make_pbar(total=len(_CATALOG), desc="m13_eval_plot", unit="panel")
+        n_panels = plot_all_metric_bars(metrics, args.output_dir, boot_str)
+        pbar.update(len(_CATALOG))
+        pbar.close()
+        present = sorted(metrics.keys())
+        print(f"  {n_panels}/{len(_CATALOG)} bar panels written ({len(present)} metrics present): {present}")
+
+        # ── HERO (B1 table-with-CI + B2 Δ-vs-frozen heatmap) — plan §7.3 ──
+        # baseline = runtime-discovered 'frozen' encoder (no hardcoded name); needs ≥1 contender.
+        frozen = next((e for e in encoders if "frozen" in e), None)
+        if frozen and len(encoders) >= 2:
+            plot_hero_table(metrics, encoders, frozen, args.output_dir, boot_str)
+            plot_hero_heatmap(metrics, encoders, frozen, args.output_dir)
+        else:
+            print(f"  [hero] skipped — needs a 'frozen' baseline + ≥2 encoders (got {encoders})")
+
+        # wandb metric upload — generic prefix + encoder name (NO hardcoded keys).
+        wb_metrics = {"n_encoders": len(encoders), "n_metric_panels": n_panels}
+        for mkey, md in metrics.items():
+            for e, (val, _ci) in md["by_encoder"].items():
+                wb_metrics[f"{mkey}__{e}"] = float(val)
+        log_metrics(wb, wb_metrics)
+        print(f"  Plots written to: {args.output_dir}")
+    finally:
+        finish_wandb(wb)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException:
+        import traceback
+        print(f"\n❌ FATAL: {Path(__file__).name} crashed — see traceback below", file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(1)

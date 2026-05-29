@@ -1,0 +1,29 @@
+{
+  "encoder": "vjepa_2_1_pretrain_2X_encoder",
+  "n_classes": 11,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__upward",
+    "slow__downward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 1825,
+  "top1_acc": 0.5315068493150685,
+  "top1_ci": {
+    "mean": 0.531507,
+    "ci_lo": 0.508493,
+    "ci_hi": 0.553973,
+    "ci_half": 0.02274
+  },
+  "best_val_acc": 0.5742793791574279,
+  "probe_lr": 0.0005,
+  "warmup_pct": 0.0,
+  "epochs": 20
+}

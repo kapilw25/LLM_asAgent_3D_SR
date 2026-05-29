@@ -127,6 +127,20 @@ def get_vit_giant_xformers():
     return sys.modules["src.models.vision_transformer"].vit_giant_xformers
 
 
+def get_vit_large():
+    """ViT-L (300M, embed_dim=1024, depth=24). Base module — FROZEN baselines only
+    (V-JEPA 1 ViT-L, V-JEPA 2.0/2 ViT-L). iter17: cross-arch frozen eval (§B1)."""
+    _ensure_loaded_base()
+    return sys.modules["src.models.vision_transformer"].vit_large
+
+
+def get_vit_huge():
+    """ViT-H (embed_dim=1280, depth=32). Base module — FROZEN baselines only
+    (V-JEPA 1 ViT-H). iter17: cross-arch frozen eval (§B1)."""
+    _ensure_loaded_base()
+    return sys.modules["src.models.vision_transformer"].vit_huge
+
+
 # ── V-JEPA 2.1 (with deep supervision + dense loss) ─────────────────
 
 def get_vit_gigantic_xformers():
@@ -135,6 +149,14 @@ def get_vit_gigantic_xformers():
     """
     _ensure_loaded_2_1()
     return sys.modules["app.vjepa_2_1.models.vision_transformer"].vit_gigantic_xformers
+
+
+def get_vit_giant_xformers_2_1():
+    """V-JEPA 2.1 ViT-g (1B, embed_dim=1408, depth=40, 22 heads) WITH deep supervision
+    (2.1 app module — norms_block/hierarchical). iter17: cross-arch 2.1 TRAINING (the base-module
+    vit_giant_xformers drops the deep-sup norms; frozen eval tolerates it, training needs them)."""
+    _ensure_loaded_2_1()
+    return sys.modules["app.vjepa_2_1.models.vision_transformer"].vit_giant_xformers
 
 
 def get_vit_predictor_2_1():
@@ -148,6 +170,9 @@ def get_vit_by_arch(arch: str):
     dispatch = {
         "vit_giant_xformers": get_vit_giant_xformers,
         "vit_gigantic_xformers": get_vit_gigantic_xformers,
+        "vit_large": get_vit_large,     # iter17: frozen V-JEPA 1 ViT-L / 2.0 / 2 ViT-L
+        "vit_huge": get_vit_huge,       # iter17: frozen V-JEPA 1 ViT-H
+        "vit_giant_xformers_2_1": get_vit_giant_xformers_2_1,  # iter17: 2.1 ViT-g deep-sup (TRAIN)
     }
     if arch not in dispatch:
         print(f"FATAL: Unknown arch '{arch}'. Supported: {list(dispatch.keys())}")

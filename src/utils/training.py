@@ -734,7 +734,8 @@ def _train_step_grad_accum(student, teacher, predictor, batch_clips,
                     # return_hierarchical=True (vit:335 has `if training or
                     # self.return_hierarchical:`), but aligns intent with the
                     # official train script.
-                    h = teacher(bc, training=True)
+                    # iter17: training=True (hierarchical deep-sup) only for 2.1; 2.0 ViT.forward lacks it
+                    h = teacher(bc, **({"training": True} if n_levels > 1 else {}))
                     if h.size(-1) == n_levels * embed_dim:
                         chunks = [F.layer_norm(h[:, :, lvl * embed_dim:(lvl + 1) * embed_dim],
                                                (embed_dim,))
@@ -744,8 +745,9 @@ def _train_step_grad_accum(student, teacher, predictor, batch_clips,
                         h = F.layer_norm(h, (h.size(-1),))
                 pf, pc = [], []
                 for k, (me, mp) in enumerate(zip(m_enc_list, m_pred_list)):
-                    z = student(bc, masks=[me], training=True)
-                    out = predictor(z, [me], [mp], mod="video", mask_index=k)
+                    z = student(bc, masks=[me], **({"training": True} if n_levels > 1 else {}))
+                    # iter17: mod=/mask_index= are 2.1-predictor kwargs; 2.0 base predictor lacks them
+                    out = predictor(z, [me], [mp], **({"mod": "video", "mask_index": k} if n_levels > 1 else {}))
                     if isinstance(out, tuple) and len(out) == 2:
                         pf.append(out[0]); pc.append(out[1])
                     else:
@@ -1087,7 +1089,8 @@ def run_validation(student, teacher, predictor, mask_generators,
                 # iter13 Fix #3: pass training=True / mod="video" to match Meta's
                 # reference call style (deps/vjepa2/app/vjepa_2_1/train.py:593+618).
                 # Semantically equivalent to return_hierarchical=True attribute path.
-                h = teacher(batch_clips, training=True)
+                # iter17: deep-sup training= only for 2.1; 2.0 ViT.forward lacks the kwarg
+                h = teacher(batch_clips, **({"training": True} if n_levels_val > 1 else {}))
                 if h.size(-1) == n_levels_val * embed_dim_val:
                     chunks = []
                     for lvl in range(n_levels_val):
@@ -1102,8 +1105,8 @@ def run_validation(student, teacher, predictor, mask_generators,
                 pred_features = []
                 pred_context_val = []
                 for i, (m_enc, m_pred) in enumerate(zip(all_masks_enc, all_masks_pred)):
-                    z = student(batch_clips, masks=[m_enc], training=True)
-                    outputs = predictor(z, [m_enc], [m_pred], mod="video", mask_index=i)
+                    z = student(batch_clips, masks=[m_enc], **({"training": True} if n_levels_val > 1 else {}))
+                    outputs = predictor(z, [m_enc], [m_pred], **({"mod": "video", "mask_index": i} if n_levels_val > 1 else {}))
                     if isinstance(outputs, tuple) and len(outputs) == 2:
                         pred_features.append(outputs[0])
                         pred_context_val.append(outputs[1])
@@ -2536,7 +2539,7 @@ def run_probe_val_loss(student, teacher, predictor, probe_clips: list,
                     pf, pc = [], []
                     for k, (me, mp) in enumerate(zip(all_menc, all_mpred)):
                         z = student(batch, masks=[me])
-                        out = predictor(z, [me], [mp], mask_index=k)
+                        out = predictor(z, [me], [mp], **({"mask_index": k} if n_levels > 1 else {}))
                         if isinstance(out, tuple) and len(out) == 2:
                             pf.append(out[0]); pc.append(out[1])
                         else:

@@ -486,6 +486,24 @@ probe:
     lr:                1.0e-3        # was REGRESSOR_LR
     wd:                0.05          # was REGRESSOR_WD
     mlp_hidden:        4096          # was REGRESSOR_MLP_HIDDEN
+  predictor_temporal:                # m12e_predictor_temporal.py (Stages 8b/9b) — iter16 §3.3/§3.4
+    batch_size:        4             # EMPIRICAL: BS 4→32 gave ~0× (2.9→3.28 s/clip, 12% SLOWER) — m12e is compute-bound at 98% util (per-clip sequential predictor rollout), NOT batch-starved; low VRAM was a red herring. Reverted to 4. m12e _safe_metric OOM-backoff.
+    deltas:            [1, 2, 4, 8]  # §3.4: was pt_tdist._DELTAS — Δt target-offset sweep (frames)
+    mask_ratios:       [0.3, 0.5, 0.7, 0.9]  # §3.4: was pt_maskratio._RATIOS — masked-token fraction
+    seed:              0             # §3.4: was pt_maskratio._SEED / pt_order._SEED (det. partition)
+  encoder_temporal:                  # m12f_encoder_temporal.py (Stages 8c/9c) — iter16 §6/§3.3/§opt
+    batch_size:        32            # §opt 4→32: fills idle VRAM; m12f cleanly sys.exits on OOM (SANITY-smoked)
+    tubelet_size:      2             # V-JEPA 2.1 ViT-G tubelet (matches configs/model/vjepa2_1.yaml)
+    tov_n_permutations: 4            # TOV/VCOP: identity + 3 frame-shuffles
+    pace_strides:      "1,2,4"       # Pace playback rates (sorted, distinct)
+    pace_source_frames: 64           # oversample decode = num_frames(16) × max(strides)(4)
+    tcc_temperature:   0.1           # TCC soft-NN temperature (Dwibedi eq.1)
+    head_lr:           1.0e-3        # tiny linear head (aot/tov/pace)
+    head_epochs:       20
+    head_weight_decay: 1.0e-4
+    head_batch_size:   64
+    head_train_cap:    2000          # §opt: cap head-fit TRAIN clips (linear head on D=6656 saturates
+                                     # ~1.5-2k); TEST split + BCa CI UNTOUCHED. 6844→2000 ≈ 3.4× less train I/O.
 
 # -- Bootstrap 95% CI (utils/bootstrap.py) --
 bootstrap:

@@ -134,15 +134,18 @@ def resolve_predictor_state_dict(ckpt: dict) -> dict:
     return None
 
 
-def load_vjepa_2_1_frozen(ckpt_path: Path, num_frames: int):
-    """V-JEPA 2.1 ViT-G frozen. Mirrors m05_vjepa_embed.py:629-670.
-    Returns (model, crop=384, embed_dim=1664).
-    """
+def load_vjepa_frozen(ckpt_path: Path, num_frames: int, encoder_name: str):
+    """Load ANY native V-JEPA frozen encoder by registry name (arch/crop/embed_dim from
+    ENCODERS[encoder_name]). iter17 §B2: generalized from the ViT-G-hardcoded loader so
+    cross-arch frozen baselines (2.0 g/L, v1 L/H, 2 vitL_256) build the right ViT.
+    Returns (model, crop, embed_dim).
+    VERIFY-FIRST: the xformers ctor kwargs below (use_silu/wide_silu/use_rope) are the
+    2.0/2.1 family signature; V-JEPA-1 vit_large/vit_huge may need different kwargs."""
     if not ckpt_path.exists():
         sys.exit(f"FATAL: encoder ckpt not found: {ckpt_path}")
-    enc = ENCODERS["vjepa_2_1_frozen"]
+    enc = ENCODERS[encoder_name]
     crop = enc["crop"]
-    print(f"Loading V-JEPA 2.1 ViT-G ({enc['arch']}, crop={crop}, T={num_frames}) ...")
+    print(f"Loading V-JEPA frozen {encoder_name} ({enc['arch']}, crop={crop}, T={num_frames}) ...")
     # iter17 (2026-05-27): mmap=True — memory-map the (up to 14 GB) ckpt instead of
     # reading it all into anon CPU RAM. The eval feature-extraction producer is tiny
     # (inline decode, 1 clip at a time), so the per-encoder ckpt LOAD is what drives
@@ -172,6 +175,12 @@ def load_vjepa_2_1_frozen(ckpt_path: Path, num_frames: int):
     return model, crop, enc["embed_dim"]
 
 
+def load_vjepa_2_1_frozen(ckpt_path: Path, num_frames: int):
+    """Back-compat alias (iter17 §B2) → the ViT-G frozen registry row. Callers that know the
+    encoder name should use load_vjepa_frozen(ckpt, nf, name) so cross-arch backbones load right."""
+    return load_vjepa_frozen(ckpt_path, num_frames, "vjepa_2_1_frozen")
+
+
 def load_dinov2_frozen():
     """DINOv2 ViT-G/14 with registers, fp16, FA2. Mirrors m05b_baselines.py:368-388.
     Returns (model, processor, crop=224, embed_dim=1536).
@@ -185,6 +194,29 @@ def load_dinov2_frozen():
         device_map="cuda", attn_implementation="flash_attention_2",
     ).eval()
     return model, processor, enc["crop"], enc["embed_dim"]
+
+
+def load_encoder_by_kind(encoder_name: str, ckpt_path, num_frames: int):
+    """iter17 §B2/C2: single dispatch — load ANY registry encoder by its `kind`.
+    Returns (model, crop, embed_dim). kind=vjepa needs a local --encoder-ckpt; ijepa/dinov2
+    load from the registry HF model_id (ckpt_path ignored). Replaces the per-module
+    if/elif vjepa/dinov2 blocks in m12a/m12b/m12c so a new kind is wired in ONE place."""
+    kind = ENCODERS[encoder_name]["kind"]
+    if kind == "vjepa":
+        if ckpt_path is None:
+            sys.exit(f"FATAL: {encoder_name} (kind=vjepa) requires --encoder-ckpt")
+        return load_vjepa_frozen(ckpt_path, num_frames, encoder_name)
+    if kind == "ijepa":
+        from utils.ijepa_features import load_ijepa_frozen   # lazy: avoids circular import
+        model, _proc, crop, embed_dim = load_ijepa_frozen(encoder_name)
+        return model, crop, embed_dim
+    if kind == "hf_vjepa2":
+        from utils.hf_vjepa2_features import load_hf_vjepa2_frozen   # lazy: avoids circular import
+        return load_hf_vjepa2_frozen(encoder_name)
+    if kind == "dinov2":
+        model, _proc, crop, embed_dim = load_dinov2_frozen()
+        return model, crop, embed_dim
+    sys.exit(f"FATAL: unknown encoder kind '{kind}' for {encoder_name}")
 
 
 # ── Frame preprocessing ───────────────────────────────────────────────
@@ -329,6 +361,12 @@ def _flush_batch(pending_tensors, pending_keys, model, encoder_kind, num_frames,
         try:
             if encoder_kind == "vjepa":
                 feats = forward_vjepa(model, sub)
+            elif encoder_kind == "ijepa":
+                from utils.ijepa_features import forward_ijepa   # lazy: avoids ijepa↔frozen circular import
+                feats = forward_ijepa(model, sub, num_frames)
+            elif encoder_kind == "hf_vjepa2":
+                from utils.hf_vjepa2_features import forward_hf_vjepa2   # lazy
+                feats = forward_hf_vjepa2(model, sub, num_frames)
             else:
                 feats = forward_dinov2(model, sub, num_frames)
         except torch.cuda.OutOfMemoryError:
@@ -438,7 +476,7 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
     # m05 inference profile at 64-frame; here we use 16-frame so headroom is
     # even larger). AdaptiveBatchSizer ramps from initial → max based on actual
     # VRAM utilisation. DINOv2 (300M params) tolerates BS=96.
-    if encoder_kind == "vjepa":
+    if encoder_kind in ("vjepa", "hf_vjepa2"):   # iter17: hf_vjepa2 is a heavy video ViT-g → vjepa BS envelope
         # iter13: probe-specific initial BS — required in pipeline.yaml > gpu.
         # iter16 (2026-05-20): replaced `.get(key, fallback)` form per CLAUDE.md
         # "No .get(key, default) on YAML — use cfg[key] so missing keys crash".
@@ -604,7 +642,7 @@ def apply_motion_aux_head_to_features(features, motion_aux_head, batch_size: int
 
 __all__ = [
     "ENCODERS",
-    "load_vjepa_2_1_frozen", "load_dinov2_frozen",
+    "load_vjepa_frozen", "load_vjepa_2_1_frozen", "load_dinov2_frozen", "load_encoder_by_kind",
     "decode_to_tensor", "resize_and_normalize",
     "forward_vjepa", "forward_dinov2",
     "extract_features_for_keys",

@@ -95,7 +95,7 @@ FACTOR_DIR_CANONICAL="${LOCAL_DATA}/${FACTOR_SUBDIR}"
 # CLI surface (subprocess to probe_action.py + eval_subset.py) for parity.
 ACTION_LABELS="outputs/${mode_dir}/probe_action/action_labels.json"
 if [ ! -f "$ACTION_LABELS" ]; then
-    echo "  [run_probe_train] $ACTION_LABELS missing — auto-bootstrapping via probe_action.py --stage labels (CPU, ~1 min)"
+    echo "  [run_probe_train] $ACTION_LABELS missing — auto-bootstrapping via m04e_action_labels.py (CPU, ~1 min)"
     MOTION_FEATURES_BOOTSTRAP="${LOCAL_DATA}/m04d_motion_features/motion_features.npy"
     if [ ! -f "$MOTION_FEATURES_BOOTSTRAP" ]; then
         echo "❌ FATAL: $MOTION_FEATURES_BOOTSTRAP not found — run m04d_motion_features.py first" >&2
@@ -119,8 +119,7 @@ if [ ! -f "$ACTION_LABELS" ]; then
         MIN_CLIPS_BOOTSTRAP=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_clips_per_class.${mode_dir}")
         MIN_SPLIT_BOOTSTRAP=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_per_split.${mode_dir}")
     fi
-    python -u src/probe_action.py "${MODE_FLAG}" \
-        --stage labels \
+    python -u src/m04e_action_labels.py "${MODE_FLAG}" \
         --eval-subset "$EVAL_SUBSET_BOOTSTRAP" \
         --motion-features "$MOTION_FEATURES_BOOTSTRAP" \
         --min-clips-per-class "$MIN_CLIPS_BOOTSTRAP" \
@@ -128,7 +127,7 @@ if [ ! -f "$ACTION_LABELS" ]; then
         --output-root "outputs/${mode_dir}/probe_action" \
         --cache-policy "${CACHE_POLICY_ALL:-1}" \
         --no-wandb \
-        2>&1 | tee "logs/probe_action_labels_${mode_dir}.log"
+        2>&1 | tee "logs/m04e_action_labels_${mode_dir}.log"
 fi
 
 # ── Pre-flight: bitsandbytes for SANITY 8-bit optim path ────────────────
@@ -182,7 +181,19 @@ python -u src/utils/clip_splits.py \
     --universe "$UNIVERSE" --pool-ratio "$POOL_RATIO" --seed "$POOL_SEED" --out "$TRAIN_POOL"
 
 # (LOCAL_DATA defined earlier via M9 yaml_extract — no re-declaration needed)
-MODEL_CFG="configs/model/vjepa2_1.yaml"
+# iter17: backbone selector. ViT-G keeps its canonical config (also the
+# get_model_config(None) default); other backbones use configs/model/<backbone>.yaml.
+# Per-backbone output namespace below: outputs/<mode>/<backbone>/<arm>/.
+BACKBONE="${BACKBONE:-vjepa_2_1_vitG}"
+case "$BACKBONE" in
+    vjepa_2_1_vitG) _MCFG="configs/model/vjepa2_1.yaml" ;;       # 2B ViT-G (canonical)
+    vjepa_2_1_vitg) _MCFG="configs/model/vjepa2_1_vitg.yaml" ;;  # 1B ViT-g scale axis
+    vjepa_2_1_vitL) _MCFG="configs/model/vjepa2_1_vitL.yaml" ;;  # 300M ViT-L scale axis
+    vjepa_2_0_vitg) _MCFG="configs/model/vjepa2_0.yaml" ;;       # 2.0 ViT-g version axis
+    *)              _MCFG="configs/model/${BACKBONE}.yaml" ;;
+esac
+MODEL_CFG="${MODEL_CFG:-$_MCFG}"
+[ -f "$MODEL_CFG" ] || { echo "FATAL: model config $MODEL_CFG missing for BACKBONE=$BACKBONE"; exit 3; }
 P_M09="${CACHE_POLICY_ALL:-1}"
 
 # iter17 (2026-05-26): surgery init source — LOCAL per-mode m09a pretrain_encoder
@@ -205,7 +216,7 @@ P_M09="${CACHE_POLICY_ALL:-1}"
 #     bash scripts/run_train.sh surgery_3stage_DI_encoder --POC
 PRETRAIN_NS=$(scripts/lib/yaml_extract.py configs/pipeline.yaml surgery_init.pretrain_namespace)
 PRETRAIN_CKPT=$(scripts/lib/yaml_extract.py configs/pipeline.yaml surgery_init.ckpt_filename)
-SURGERY_INIT="${SURGERY_INIT:-outputs/${mode_dir}/${PRETRAIN_NS}/${PRETRAIN_CKPT}}"
+SURGERY_INIT="${SURGERY_INIT:-outputs/${mode_dir}/${BACKBONE}/${PRETRAIN_NS}/${PRETRAIN_CKPT}}"
 
 # ── Multi-task probe-loss labels (iter13) ────────────────────────────────
 # When base_optimization.yaml `multi_task_probe.enabled` is true for this
@@ -226,16 +237,15 @@ TAGS_JSON_TX="${LOCAL_DATA}/tags.json"
 TAXONOMY_ARGS=()
 if [ ! -f "$TAXONOMY_LABELS" ]; then
     if [ -f "$TAG_TAXONOMY" ] && [ -f "$EVAL_SUBSET_TX" ] && [ -f "$TAGS_JSON_TX" ]; then
-        echo "  [multi-task] $TAXONOMY_LABELS missing — auto-generating via probe_taxonomy --stage labels"
-        python -u src/probe_taxonomy.py "${MODE_FLAG}" \
-            --stage labels \
+        echo "  [multi-task] $TAXONOMY_LABELS missing — auto-generating via m04f_taxonomy_labels.py"
+        python -u src/m04f_taxonomy_labels.py "${MODE_FLAG}" \
             --eval-subset "$EVAL_SUBSET_TX" \
             --tags-json "$TAGS_JSON_TX" \
             --tag-taxonomy "$TAG_TAXONOMY" \
             --output-root "outputs/${mode_dir}/probe_taxonomy" \
             --cache-policy "$P_M09" \
             --no-wandb \
-            2>&1 | tee "logs/probe_taxonomy_labels_${mode_dir}.log"
+            2>&1 | tee "logs/m04f_taxonomy_labels_${mode_dir}.log"
     else
         echo "  [multi-task] cannot auto-generate $TAXONOMY_LABELS — sources missing:"
         [ -f "$TAG_TAXONOMY" ]   || echo "      ✗ $TAG_TAXONOMY"
@@ -265,7 +275,7 @@ case "$SUBCMD" in
         # 4/10). SANITY left at single-epoch since it's a code-path validator.
         TRAIN_CFG="configs/train/pretrain_encoder.yaml"
         if [ "$SUBCMD" = "pretrain_2X_encoder" ]; then
-            OUT_DIR="outputs/${mode_dir}/m09a_pretrain_2X_encoder"
+            OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_2X_encoder"
             EPOCHS_OVERRIDE_FLAG=""
             if [ "$MODE" = "POC" ] || [ "$MODE" = "FULL" ]; then
                 _BASE_EP=$(scripts/lib/yaml_extract.py "$TRAIN_CFG" "optimization.max_epochs.${mode_dir}")
@@ -273,7 +283,7 @@ case "$SUBCMD" in
             fi
         else
             # iter17: single source with surgery read-path (pipeline.yaml surgery_init.pretrain_namespace)
-            OUT_DIR="outputs/${mode_dir}/${PRETRAIN_NS}"
+            OUT_DIR="outputs/${mode_dir}/${BACKBONE}/${PRETRAIN_NS}"
             EPOCHS_OVERRIDE_FLAG=""
         fi
         # Read lambda_reg from YAML so it stays the single source of truth.
@@ -325,7 +335,7 @@ case "$SUBCMD" in
         esac
         # iter13 v12+ (2026-05-06): renamed probe_surgery_* → m09c_surgery_* to
         # match m09c1_surgery_encoder.py module name. Mirror in run_eval.sh.
-        OUT_DIR="outputs/${mode_dir}/m09c_surgery_${VARIANT_TAG}"
+        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09c_surgery_${VARIANT_TAG}"
         # iter13 v12+ Task 3 (2026-05-06): m11 outputs co-located with input
         # under <--local-data>/m11_factor_datasets/. m11 derives this default
         # itself; this consumer just mirrors the same convention.
@@ -400,7 +410,7 @@ case "$SUBCMD" in
     pretrain_head)
         # iter15 Phase 4 (2026-05-14): head-only m09a2. Frozen encoder + frozen
         # predictor; only the ~432K motion_aux head trains. 24 GB sufficient.
-        OUT_DIR="outputs/${mode_dir}/m09a_pretrain_head"
+        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_head"
         TRAIN_CFG="configs/train/pretrain_head.yaml"
         echo "═══ $(date '+%H:%M:%S') · m09a2 HEAD-ONLY continual SSL (${MODE}) ═══"
         echo "  config:    $TRAIN_CFG"
@@ -440,7 +450,7 @@ case "$SUBCMD" in
                 VARIANT_TAG="noDI_head"
                 ;;
         esac
-        OUT_DIR="outputs/${mode_dir}/m09c_surgery_${VARIANT_TAG}"
+        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09c_surgery_${VARIANT_TAG}"
         FACTOR_DIR="$FACTOR_DIR_CANONICAL"   # iter17: yaml-derived (data.factor_subdir), single source
         VAL_TAGS="${LOCAL_DATA}/tags.json"
         if [ ! -d "$FACTOR_DIR" ]; then

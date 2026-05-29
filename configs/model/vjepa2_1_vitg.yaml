@@ -1,0 +1,48 @@
+# V-JEPA 2.1 ViT-g (1B, 1408-dim) — SCALE-AXIS ablation backbone (½ of ViT-G)
+#
+# Clone of vjepa2_1.yaml (ViT-G) with ViT-g encoder dims. iter17: all dims VERIFIED by
+# inspecting checkpoints/vjepa2_1_vitg_384.pt (target_encoder + predictor state_dicts).
+# 2.1 is native-only (NO HF transformers card), so verify against the native sources:
+# ── VERIFY DIMS (eyeball) ──────────────────────────────────────────────────────────────
+#  encoder ctor (embed_dim/depth/heads/mlp_ratio hardcoded in def vit_giant_xformers):
+#    https://github.com/facebookresearch/vjepa2/blob/main/src/models/vision_transformer.py
+#    → embed_dim=1408 · depth=40 · num_heads=22 · mlp_ratio 48/11=4.36 (fc1=6144)
+#  predictor (depth 24, hierarchical-concat 5632=1408*4): re-inspect the ckpt 'predictor' dict.
+#  checkpoint (filename): https://github.com/facebookresearch/vjepa2#models  (vjepa2_1_vitg_384.pt)
+
+model:
+  version: "2.1"
+  arch: vit_giant_xformers_2_1   # iter17 VERIFIED: 2.1 app-module giant WITH deep supervision
+                                 # (norms_block); frozen-eval registry uses base vit_giant_xformers
+  embed_dim: 1408                # VERIFIED from ckpt target_encoder
+  depth: 40                      # VERIFIED
+  num_heads: 22                  # VERIFIED (1408/64)
+  mlp_ratio: 4.36                # VERIFIED: fc1=6144=1408*48/11
+
+  # Predictor — VERIFIED from ckpt (depth 24; hierarchical-concat 5632=1408*4 input)
+  pred_depth: 24
+  pred_embed_dim: 384
+  pred_num_heads: 12
+  num_mask_tokens: 2
+  zero_init_mask_tokens: true
+
+  # Deep supervision — depth=40 → layers [9, 19, 29, 39] (depth/4-spaced), derived in code.
+  n_output_distillation: 4
+
+  use_rope: true
+  use_activation_checkpointing: true
+
+  loss_exp: 1.0
+  predict_all: true
+  weight_distance_loss: true
+
+  crop_size: 384
+  patch_size: 16
+  tubelet_size: 2
+
+  # Checkpoint — VERIFY URL (V-JEPA 2.1 ViT-g 384). torch.hub alt: vjepa2_1_vit_giant_384.
+  hf_model_id: null
+  checkpoint_url: https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitg_384.pt   # VERIFY
+  checkpoint_path: checkpoints/vjepa2_1_vitg_384.pt
+  min_student_load_pct: 90
+  min_predictor_load_pct: 50

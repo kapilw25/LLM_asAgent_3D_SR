@@ -10,8 +10,17 @@
 #
 # Adding a new V-JEPA variant: copy the vjepa_2_1_frozen entry, rename the key,
 # point the orchestrator's encoder→ckpt resolver (run_eval.sh) at the new .pt.
-# No new loader function needed — load_vjepa_2_1_frozen handles all V-JEPA ckpts
+# No new loader function needed — load_vjepa_frozen handles all V-JEPA ckpts
 # via target_encoder → encoder → raw key fallback.
+#
+# ── VERIFY embed_dim (eyeball) — sources per kind ──────────────────────────────────────
+#  kind=dinov2 : https://huggingface.co/facebook/dinov2-with-registers-giant/blob/main/config.json (hidden_size=1536)
+#  kind=ijepa  : https://huggingface.co/facebook/ijepa_vith14_1k/blob/main/config.json (1280) ·
+#                https://huggingface.co/facebook/ijepa_vitg16_22k/blob/main/config.json (1408)
+#  kind=vjepa 2.0 : https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json (1408) ·
+#                   https://huggingface.co/facebook/vjepa2-vitl-fpc64-256/blob/main/config.json (1024)
+#  kind=vjepa native ctor (embed_dim/depth/heads): https://github.com/facebookresearch/vjepa2/blob/main/src/models/vision_transformer.py
+#  V-JEPA 1 (vitl16/vith16) config table: https://github.com/facebookresearch/jepa#pretrained-models
 
 encoders:
   vjepa_2_1_frozen:
@@ -80,3 +89,67 @@ encoders:
     model_id: facebook/dinov2-with-registers-giant
     crop: 224
     embed_dim: 1536
+
+  # iter17 frozen image-JEPA baselines (kind=ijepa → src/utils/ijepa_features.py, HF AutoModel).
+  # Per-frame image encode + pool (no video predictor → predictor metrics N/A).
+  ijepa_vitH14:
+    kind: ijepa
+    model_id: facebook/ijepa_vith14_1k
+    crop: 224
+    embed_dim: 1280
+
+  ijepa_vitG16:
+    kind: ijepa
+    model_id: facebook/ijepa_vitg16_22k
+    crop: 224
+    embed_dim: 1408
+
+  # iter17 frozen V-JEPA-2.0 family (kind=vjepa native; ckpt resolved by run_eval frozen_ckpt_for).
+  # vitg dims verified from the downloaded ckpt: 40 blocks, 1408-dim, target_encoder key.
+  vjepa_2_0_vitg_frozen:
+    kind: vjepa
+    arch: vit_giant_xformers
+    crop: 384
+    embed_dim: 1408
+
+  # iter17 supervised-action baseline — SSv2-FT encoder, HF-transformers-only (no native .pt) →
+  # kind=hf_vjepa2 (src/utils/hf_vjepa2_features.py, VJEPA2Model.skip_predictor). Frozen-eval only.
+  vjepa_2_0_vitg_ssv2:
+    kind: hf_vjepa2
+    model_id: facebook/vjepa2-vitg-fpc64-384-ssv2
+    crop: 384
+    embed_dim: 1408
+
+  # iter17 frozen V-JEPA-1 (2024) baselines — base-module archs, crop 224, native .pth.tar.
+  # VERIFY-FIRST: v1 may use different ctor kwargs (no RoPE?) / state_dict keys vs 2.x.
+  vjepa_1_vitL_frozen:
+    kind: vjepa
+    arch: vit_large
+    crop: 224
+    embed_dim: 1024
+
+  vjepa_1_vitH_frozen:
+    kind: vjepa
+    arch: vit_huge
+    crop: 224
+    embed_dim: 1280
+
+  # iter17 scale axis (2.1 g/L EXIST — fbai vjepa2_1_vit{g,l_dist_vitG}_384.pt) + 2.0 ViT-L 256.
+  # dims VERIFY-on-load (load% gates); 2.1 deep-supervision norms may show as benign unexpected keys.
+  vjepa_2_1_vitg_frozen:
+    kind: vjepa
+    arch: vit_giant_xformers
+    crop: 384
+    embed_dim: 1408
+
+  vjepa_2_1_vitL_frozen:
+    kind: vjepa
+    arch: vit_large
+    crop: 384
+    embed_dim: 1024
+
+  vjepa_2_vitL_256_frozen:
+    kind: vjepa
+    arch: vit_large
+    crop: 256
+    embed_dim: 1024
