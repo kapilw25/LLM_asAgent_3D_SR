@@ -284,23 +284,43 @@ else:
     print("vjepa2 RoPE dtype patch applied (#44)")
 PYEOF
 
-    # Download V-JEPA 2.1 ViT-G (2B) checkpoint (~28 GB)
-    VJEPA_CKPT="checkpoints/vjepa2_1_vitG_384.pt"
-    if [ ! -f "$VJEPA_CKPT" ]; then
-        echo ""
-        echo "Downloading V-JEPA 2.1 ViT-G checkpoint (~28 GB)..."
-        mkdir -p checkpoints
-        command -v aria2c &> /dev/null || apt-get install -y -qq aria2 > /dev/null 2>&1
-        if command -v aria2c &> /dev/null; then
-            aria2c -x 16 -s 16 -d checkpoints -o vjepa2_1_vitG_384.pt \
-                https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt
-        else
-            wget -q --show-progress https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt -P checkpoints/
+    # Download ALL model checkpoints (~91 GB total) for the iter17 model-axis ablation
+    # (scale: 2.1 G/g/L · version: 2.0 g/L, v1 L/H · image baseline: lejepa). Each
+    # (local filename | source URL) pair was verified 2026-05-29: HTTP 200 AND remote
+    # Content-Length == on-disk bytes. The 2.0 / v1 / lejepa assets download under a
+    # DIFFERENT upstream name → aria2 `-o` renames to our canonical checkpoints/ name
+    # (the name run_eval.sh frozen_ckpt_for + configs/eval/probe_encoders.yaml expect).
+    # lejepa_l.pt is a THIRD-PARTY HF dataset mirror (no official release); the rest are
+    # Meta fbaipublicfiles. Idempotent: skips a file only when fully downloaded (no
+    # leftover .aria2 control sidecar); aria2 `-c` resumes partials.
+    mkdir -p checkpoints
+    command -v aria2c &> /dev/null || apt-get install -y -qq aria2 > /dev/null 2>&1
+    CKPTS=(
+        "vjepa2_1_vitG_384.pt|https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt"
+        "vjepa2_1_vitg_384.pt|https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitg_384.pt"
+        "vjepa2_1_vitl_dist_vitG_384.pt|https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitl_dist_vitG_384.pt"
+        "vjepa2_0_vitg_384.pt|https://dl.fbaipublicfiles.com/vjepa2/vitg-384.pt"
+        "vjepa2_0_vitl_256.pt|https://dl.fbaipublicfiles.com/vjepa2/vitl.pt"
+        "vjepa1_vitL_16.pt|https://dl.fbaipublicfiles.com/jepa/vitl16/vitl16.pth.tar"
+        "vjepa1_vitH_16.pt|https://dl.fbaipublicfiles.com/jepa/vith16/vith16.pth.tar"
+        "lejepa_l.pt|https://huggingface.co/datasets/gajeshladharai/artifacts/resolve/main/core-jepa/lejepa-l.pt"
+    )
+    echo ""
+    echo "Downloading model checkpoints (~91 GB total) → checkpoints/ ..."
+    for entry in "${CKPTS[@]}"; do
+        fname="${entry%%|*}"; url="${entry#*|}"
+        if [ -f "checkpoints/$fname" ] && [ ! -f "checkpoints/$fname.aria2" ]; then
+            echo "  ✓ present: $fname"
+            continue
         fi
-        echo "Checkpoint saved: $VJEPA_CKPT"
-    else
-        echo "V-JEPA 2.1 checkpoint already present: $VJEPA_CKPT"
-    fi
+        echo "  Downloading $fname ..."
+        if command -v aria2c &> /dev/null; then
+            aria2c -c -x 16 -s 16 --auto-file-renaming=false -d checkpoints -o "$fname" "$url"
+        else
+            wget -c -q --show-progress -O "checkpoints/$fname" "$url"
+        fi
+    done
+    echo "Checkpoints ready: $(ls checkpoints/*.pt 2>/dev/null | wc -l)/${#CKPTS[@]} in checkpoints/"
 
     # Download prebuilt wheels if --from-wheels
     if [ "$FROM_WHEELS" = true ]; then

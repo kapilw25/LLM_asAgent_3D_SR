@@ -1,23 +1,12 @@
-# iter16 ablations — JEPA-variant (model) ablation · INTEGRATION CODE PLAN + HERO TABLE
+# iter17 ablations — JEPA-variant (model) ablation · roster + integration + HERO TABLE
 
-> What this file answers: **which JEPA world-models we ablate, and exactly how each is wired
-> into `scripts/run_train.sh` (train + val) and `scripts/run_eval.sh` (test/eval) + the m09
-> trainers + the eval registry.** FT *techniques* (SAFE/SEEKR/SSIAT/SAPT) → `plan_FTtechniues.md`.
-> Temporal metrics → `plan_metrics_temporal.md`. Broader code/exec ops → `plan_code.md`
-> (+ retired `legacy/plan_model_FTtechniues.md`).
-
-Status: DRAFT · scope = FULL 115k for paper numbers, 10k for dev/SANITY (see §0.5 in legacy doc).
-Grounded in a 2026-05-28 re-read of run_train.sh / run_eval.sh / m09a1/a2/c1/c2 / probe_encoders.yaml.
+> WHAT/HOW JEPA world-models are wired into run_train.sh / run_eval.sh / m09 trainers / eval
+> registry. FT techniques → legacy/plan_model_FTtechniues.md · temporal metrics → plan_metrics_temporal.md
+> · detailed code diffs → legacy/plan_model_CODE.md (infra BUILT, git e8535c7). Scope: FULL 115k paper / 10k dev.
 
 ═══════════════════════════════════════════════════════════════════════════════
 §0 · iter17 EXECUTION STATUS (updated 2026-05-29)
 ═══════════════════════════════════════════════════════════════════════════════
-INFRA ✅ : WS-A per-backbone namespace (run_train BACKBONE selector + run_eval name→(bb,arm)
-  parser; vitG outputs migrated → outputs/<mode>/vjepa_2_1_vitG/) · WS-B cross-arch seams
-  (get_vit_by_arch +vit_large/+vit_huge/+vit_giant_xformers_2_1 ; frozen_features.load_vjepa_frozen
-  by-name + load_encoder_by_kind single dispatch + ijepa branch ; m12a/b/c rewired). 3-check green.
-CORRECTION: 2.1 ViT-g AND ViT-L checkpoints DO exist (vjepa2_1_vitg_384.pt /
-  vjepa2_1_vitl_dist_vitG_384.pt) — the scale axis is alive (earlier "ViT-G only" was wrong).
 
 ```text
 ┌──────────────────────┬───────────┬──────────────┬──────────────────────────────────────┐
@@ -41,23 +30,13 @@ CORRECTION: 2.1 ViT-g AND ViT-L checkpoints DO exist (vjepa2_1_vitg_384.pt /
 │ mc_jepa / d_jepa     │ ⛔        │ ⛔           │ ⛔ weights gated/unreleased            │
 └──────────────────────┴───────────┴──────────────┴──────────────────────────────────────┘
 ```
-✅=done · ⏳=running/next · N/A=arch can't (frozen-only) · ⛔=blocked (new loader / trainer / gated).
-Net: ALL 12 weight-available models PASS frozen inference (incl. ssv2 via kind=hf_vjepa2 + lejepa
-via kind=lejepa, both GPU-val). Sanity-TRAIN ✅ for 2.1 (vitG + vitg, deep-sup) AND 2.0_vitg — both
-scale + version axes train end-to-end (m09a deep-sup gated on n_output_distillation>1; 2.1 regression
-PASS = gates safe). ssv2 + lejepa DONE: kind=hf_vjepa2 / kind=lejepa loaders built; run_eval gates
-kind-based (not name-prefix) so vjepa_*-named HF models skip the native-ckpt/predictor path; lejepa
-loads the raw DINOv3-style ViT-L via timm vit_large_patch16_dinov3_qkvb + eva.checkpoint_filter_fn
-(0 missing / 0 unexpected). Remaining blocked tail (CODE/weights, not a run): mc/d-jepa — weights
-gated/unreleased. FROZEN 2.0_vitg works, so the 2.0 baseline is covered for eval; only 2.0
-*continual-pretrain/surgery* needs the trainer fix.
-
+✅=done · N/A=arch can't (frozen-only) · ⛔=blocked. 12 weight-available models PASS frozen; trainable
+= vitG/vitg (2.1) + 2.0_vitg. Skipped (modality/no weights): V-JEPA 2-AC (encoder=2.0_vitg + robot-action
+head), WavJEPA (audio), VL-JEPA (no public weights), mc/d-jepa (gated).
 
 ═══════════════════════════════════════════════════════════════════════════════
 §A · The JEPA-variant roster (the "models" axis)
 ═══════════════════════════════════════════════════════════════════════════════
-
-ONE canonical name per model, used identically in every table below.
 
 ```text
 ┌──────────────────────────┬───────────────────────────────┬──────────────────┬─────┬─────┬─────┬───────┬───────────────────────┐
@@ -65,7 +44,7 @@ ONE canonical name per model, used identically in every table below.
 ├──────────────────────────┼───────────────────────────────┼──────────────────┼─────┼─────┼─────┼───────┼───────────────────────┤
 │ vjepa_2_1_vitG (PRIMARY) │ V-JEPA 2.1 ViT-G/2B           │ vit_gigantic_xf  │ 48  │1664 │ 384 │ ✅    │ primary full pipeline │
 │ vjepa_2_1_vitg           │ V-JEPA 2.1 ViT-g/1B           │ vit_giant_xf     │ 40  │1408 │ 384 │ ✅    │ scale axis (½ of G)   │
-│ vjepa_2_1_vitL           │ V-JEPA 2.1 ViT-L/300M        │ vit_large_xf     │ 24  │1024 │ 384 │ ✅    │ scale axis (small)    │
+│ vjepa_2_1_vitL           │ V-JEPA 2.1 ViT-L/300M        │ vit_large_xf     │ 24  │1024 │ 384 │frozen │ scale axis (frozen)   │
 │ vjepa_2_0_vitg           │ V-JEPA 2.0 ViT-g/1B          │ vit_giant_xf     │ 40  │1408 │ 384 │ ✅    │ version axis (2.0)    │
 │ vjepa_2_0_vitg_ssv2      │ V-JEPA 2.0 ViT-g SSv2-FT     │ vit_giant_xf     │ 40  │1408 │ 384 │frozen │ supervised action bl. │
 │ vjepa_1_vitL             │ V-JEPA 1 ViT-L/16 (2024)     │ vit_large (1.x)  │ 24  │1024 │ 224 │frozen │ version axis (v1)     │
@@ -74,29 +53,16 @@ ONE canonical name per model, used identically in every table below.
 │ ijepa_vitH14             │ I-JEPA ViT-H/14 IN-1k        │ vit_huge (image) │ 32  │1280 │ 224 │frozen │ image baseline        │
 │ ijepa_vitG16             │ I-JEPA ViT-G/16 IN-22k       │ vit_giant (image)│ —   │1408 │ 224 │frozen │ image baseline        │
 │ lejepa_vitL              │ LeJEPA-L ViT-L/16 (DINOv3)   │ vit_large (timm) │ 24  │1024 │ 224 │frozen │ image baseline        │
-│ mc_jepa          🟡gated │ MC-JEPA motion+content       │ ViT (vid/img)    │ —   │ —   │ —   │frozen │ ★ motion contrast     │
-│ d_jepa           🟡gated │ D-JEPA denoising (image)     │ ViT (image)      │ —   │ —   │ —   │frozen │ image-gen baseline    │
 │ dinov2 (non-JEPA)        │ DINOv2 ViT-g + registers     │ HF AutoModel     │ 40  │1536 │ 224 │frozen │ non-JEPA contrast     │
 └──────────────────────────┴───────────────────────────────┴──────────────────┴─────┴─────┴─────┴───────┴───────────────────────┘
 ```
-train? : ✅ = full 5-arm train+eval · frozen = eval-only · 🟡 = weights GATED (add iff released).
-ckpt sources: vjepa_2_1_* = checkpoints/vjepa2_1_vit{G,g,L}_384.pt (or torch.hub vjepa2_1_vit_*);
-vjepa_2_0_* = facebook/vjepa2-vitg-fpc64-384(-ssv2); vjepa_1_* = facebookresearch/jepa (VideoMix2M);
-vjepa_2_vitL_256 = HF facebook/vjepa2-vitl-fpc64-256(-fpc16-256-ssv2); ijepa_* = facebook/ijepa_*;
-lejepa_vitL = timm vit_large_patch16_dinov3_qkvb + eva.checkpoint_filter_fn, ckpt gajeshladharai/artifacts
-core-jepa/lejepa-l.pt (1.24GB raw DINOv3-style state_dict); mc_jepa = arXiv 2307.12698 (weights pending); dinov2 =
-facebook/dinov2-with-registers-giant.
-SKIP (not a per-clip video/image encoder): VL-JEPA (text query), A-JEPA (audio),
-Point-JEPA/3D-JEPA, Graph-JEPA, T-JEPA/TS-JEPA, Brain-JEPA/ECG-JEPA/S-JEPA, Stem-JEPA (music).
-Dropped post-M0: jepa-wms, LeWorldModel, H-JEPA (robotics/wrong-modality, no usable video weights).
+ckpt sources: native .pt in checkpoints/ (vjepa_2_1_*, vjepa_2_0_*, vjepa_1_*, lejepa_l.pt) · HF model_id
+in $HF_HOME (ijepa_*, dinov2, *_ssv2). SKIP (wrong modality / no weights): VL-JEPA, WavJEPA/A-JEPA, V-JEPA 2-AC
+(jepa-wms robotics), Point/3D/Graph/T/Brain/Stem-JEPA, mc_jepa & d_jepa (gated arXiv 2307.12698).
 
 ═══════════════════════════════════════════════════════════════════════════════
 §B · Per-variant FT-arm support (what each architecture can run)
 ═══════════════════════════════════════════════════════════════════════════════
-
-The 5 FT arms = {frozen, pretrain_encoder, pretrain_head, surgery_encoder, surgery_head}.
-Surgery/pretrain need a VIDEO JEPA with a predictor + the hierarchical (n_output_distillation=4)
-output; image JEPAs have neither.
 
 ```text
 ┌──────────────────────┬────────┬─────────────┬───────────┬──────────────┬────────────┐
@@ -104,8 +70,8 @@ output; image JEPAs have neither.
 ├──────────────────────┼────────┼─────────────┼───────────┼──────────────┼────────────┤
 │ vjepa_2_1_vitG       │ ✅     │ ✅          │ ✅        │ ✅ (48-blk)  │ ✅         │
 │ vjepa_2_1_vitg       │ ✅     │ ✅          │ ✅        │ ✅ (40-blk)  │ ✅         │
-│ vjepa_2_1_vitL       │ ✅     │ ✅          │ ✅        │ ✅ (24-blk)  │ ✅         │
 │ vjepa_2_0_vitg       │ ✅     │ ✅          │ ✅        │ ✅ (40-blk)  │ ✅         │
+│ vjepa_2_1_vitL       │ ✅     │ ❌ distill  │ ❌        │ ❌           │ ❌         │
 │ vjepa_2_0_vitg_ssv2  │ ✅     │ ❌ (FT ckpt)│ ❌        │ ❌           │ ❌         │
 │ vjepa_1_vitL         │ ✅     │ ❌ 1.x arch │ ❌        │ ❌ 1.x arch  │ ❌         │
 │ vjepa_1_vitH         │ ✅     │ ❌ 1.x arch │ ❌        │ ❌ 1.x arch  │ ❌         │
@@ -113,18 +79,14 @@ output; image JEPAs have neither.
 │ ijepa_vitH14         │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
 │ ijepa_vitG16         │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
 │ lejepa_vitL          │ ✅     │ ❌ no pred  │ ❌ no m_aux│ ❌ arch      │ ❌         │
-│ mc_jepa      🟡gated │ ✅*    │ ❌          │ ❌        │ ❌           │ ❌         │
-│ d_jepa       🟡gated │ ✅*    │ ❌          │ ❌        │ ❌           │ ❌         │
 │ dinov2 (non-JEPA)    │ ✅     │ ❌          │ ❌        │ ❌           │ ❌         │
 └──────────────────────┴────────┴─────────────┴───────────┴──────────────┴────────────┘
 ```
-* = frozen support gated on weights surfacing (mc_jepa / d_jepa).
-Frozen-only models → eval Stages 2/3/3.5/5/6 (+ m12 action/motion_cos/taxonomy) but SKIP Stage 8
-future_mse + the new m12e predictor-temporal suite (no trained predictor — CLAUDE.md
-TRUE-IMPOSSIBILITY carve-out). Surgery layer_freeze indices are depth-specific (§E).
+Frozen-only → eval Stages 2/3/3.5/5/6 (action/motion_cos/taxonomy); SKIP Stage 8 future_mse + m12e
+predictor-temporal (no trained predictor). Surgery freeze auto-scales by depth (§E).
 
 ═══════════════════════════════════════════════════════════════════════════════
-§C · Integration architecture — the FOUR code seams (traced 2026-05-28)
+§C · Integration architecture — the FOUR code seams (BUILT, git e8535c7)
 ═══════════════════════════════════════════════════════════════════════════════
 
 ```text
@@ -132,72 +94,35 @@ seam 1  configs/model/<variant>.yaml         backbone spec: arch / embed_dim / d
         (clone vjepa2_0.yaml)                pred_* / crop / patch / tubelet / checkpoint_url /
                                              n_output_distillation / predict_all. CONSUMED by
                                              m09 build_student_predictor(model_cfg, data_cfg).
-seam 2  scripts/run_train.sh                 L185 MODEL_CFG="configs/model/vjepa2_1.yaml" is
-        (TRAIN — parameterize backbone)      HARDCODED → make it ${MODEL_CFG:-...} + a per-
-                                             backbone output namespace so each variant trains
-                                             into its own outputs/<mode>/<variant>/<arm>/ dir.
-                                             Technique recipe stays in --train-config (unchanged).
-seam 3  scripts/run_eval.sh                  (a) ENCODERS list (L137) ; (b) encoder_ckpt_for()
-        (EVAL — register + resolve ckpt)     case (L182, →student_encoder.pt) ; (c) encoder_
-                                             predictor_ckpt_for() case (L217, →*_ckpt_best.pt,
-                                             Stage 8) ; (d) the FROZEN special-case (external .pt).
+seam 2  scripts/run_train.sh                 BACKBONE selector (L187) → MODEL_CFG + per-backbone
+        (TRAIN — parameterize backbone)      output ns outputs/<mode>/<variant>/<arm>/.
+seam 3  scripts/run_eval.sh                  name→(backbone,arm) parser → encoder_ckpt_for /
+        (EVAL — register + resolve ckpt)     encoder_predictor_ckpt_for / frozen_ckpt_for ;
+                                             stage gates keyed on registry kind (not name prefix).
 seam 4  configs/eval/probe_encoders.yaml     registry row per variant: kind / arch / crop /
-        + src/utils/frozen_features.py       embed_dim. kind=vjepa already handles ALL V-JEPA
-                                             ckpts (target_encoder→encoder→raw fallback) — NO new
-                                             loader for V-JEPA variants. embed_dim propagates to
-                                             the probe head dim automatically (probe_action
-                                             _make_probe(d_in=embed_dim)). kind=ijepa = NEW (§F).
+        + src/utils/frozen_features.py       embed_dim (+ ckpt for kind=lejepa). load_encoder_by_kind
+                                             dispatches vjepa / ijepa / dinov2 / hf_vjepa2 / lejepa.
 ```
 
-KEY WIN: because the m09 trainers load arch from `model_cfg["arch"]` via `get_vit_by_arch` and
-probe heads size off the registry `embed_dim`, adding a V-JEPA variant is **config + shell-resolver
-only — zero new Python** (surgery freeze auto-scales by depth §E; the one new file is the
-image-JEPA loader §F).
-
 ═══════════════════════════════════════════════════════════════════════════════
-§D · DETAILED CODE PLAN — adding one V-JEPA variant end-to-end (vitL worked example)
+§D · Adding one variant end-to-end (worked example)
 ═══════════════════════════════════════════════════════════════════════════════
 
 ```text
-D1  configs/model/vjepa2_1_vitL.yaml   (NEW — clone vjepa2_1.yaml, change:)
-      arch: vit_large_xformers   embed_dim: 1024   depth: 24   num_heads: 16
-      pred_embed_dim/-depth/-num_heads per V-JEPA-2.1-L predictor   crop_size: 384
-      checkpoint_url/path: vjepa2_1 vit_large_384 hub weights   n_output_distillation: 4
-D2  scripts/run_train.sh                (parameterize the backbone, ~6 lines)
-      L185: MODEL_CFG="${MODEL_CFG:-configs/model/vjepa2_1.yaml}"
-      derive a BACKBONE tag from MODEL_CFG basename → output ns:
-        outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_encoder/...  (keep arms under the backbone)
-      surgery init (SURGERY_INIT) already derives from PRETRAIN_NS → make PRETRAIN_NS backbone-aware.
-D3  scripts/run_eval.sh                 (register + resolve, ~8 lines)
-      ENCODERS += vjepa_2_1_vitL_{frozen,pretrain_encoder,...,surgical_*}   (or a BACKBONES loop)
-      encoder_ckpt_for():           new cases → outputs/${PFX}/${BACKBONE}/<arm>/student_encoder.pt
-      encoder_predictor_ckpt_for(): new cases → .../<arm>/m09{a,c}_ckpt_best.pt
-      frozen case for the backbone → its downloaded .pt
-D4  configs/eval/probe_encoders.yaml    (NEW rows — one per variant×arm that gets evaluated)
-      vjepa_2_1_vitL_frozen: {kind: vjepa, arch: vit_large_xformers, crop: 384, embed_dim: 1024}
-      ...(pretrain/surgery arms = same arch/dim, different ckpt resolved in run_eval)
-D5  surgery freeze: NONE — already depth-agnostic via int(depth*unfreeze_below) (§E)
-D6  SANITY smoke per new backbone       run_train --SANITY (1 arm) + run_eval --sanity ENCODERS=<one>
-      → confirms ckpt loads at the new arch/dim, probe head sizes to embed_dim, no shape crash.
+D1  configs/model/<bb>.yaml      arch / embed_dim / depth / num_heads / pred_* / crop / n_output_distillation
+D2  scripts/run_train.sh         BACKBONE=<bb> → MODEL_CFG + outputs/<mode>/<bb>/<arm>/ (already parameterized)
+D3  scripts/run_eval.sh          encoder name "<bb>_<arm>" auto-resolves via the parser (no per-variant case)
+D4  configs/eval/probe_encoders  one row per <bb>_<arm>: {kind, arch, crop, embed_dim}
+D5  surgery freeze               NONE — depth-agnostic int(depth*unfreeze_below) (§E)
+D6  SANITY smoke                 run_train --SANITY (1 arm) + run_eval --SANITY ENCODERS=<one>
 ```
 
-Scaling to ALL trainable variants: wrap D2/D3 in
-`BACKBONES="vjepa_2_1_vitG vjepa_2_1_vitg vjepa_2_1_vitL vjepa_2_0_vitg"` so run_train trains every
-(backbone × arm) and run_eval enumerates every (backbone × arm) encoder — the per-variant work
-collapses to D1 (one yaml) + D4 (registry rows). Surgery freeze auto-scales (§E). Frozen-only models
-(vjepa_2_0_vitg_ssv2, vjepa_1_vitL, vjepa_1_vitH, vjepa_2_vitL_256, ijepa_vitH14, ijepa_vitG16,
-lejepa_vitL, dinov2) skip D1/D2/D5 — registry + ckpt-resolver rows only.
-
 ═══════════════════════════════════════════════════════════════════════════════
-§E · Surgery freeze is ALREADY depth-agnostic — NO per-backbone edit
+§E · Surgery freeze is depth-agnostic — NO per-backbone edit
 ═══════════════════════════════════════════════════════════════════════════════
 
-CORRECTION (2026-05-28): an earlier draft of this section was WRONG. The surgery configs do NOT
-hardcode 48-block indices. Each `configs/train/surgery_*.yaml` declares freeze as a DEPTH
-FRACTION via `surgery.stages[*].unfreeze_below` (recipe-v3 = 0.083, 0.167 ≈ 4/8 of 48), and
-`src/m09c1_surgery_encoder.py:1150` applies it as `n_trainable = int(depth * unfreeze_below)`,
-where `depth` is the LOADED model's block count. So surgery auto-scales to ANY backbone with
-ZERO recipe edit:
+`m09c1_surgery_encoder.py:1150` applies `n_trainable = int(depth * unfreeze_below)` (fractions in
+configs/train/surgery_*.yaml). Auto-scales to any backbone:
 
 ```text
 model            depth  unfreeze_below=0.083 →  =0.167 →   (n_trainable = int(depth * frac))
@@ -205,33 +130,24 @@ vjepa_2_1_vitG   48     3–4                     8           recipe-v3 baseline
 vjepa_2_1_vitg   40     3                       6           auto
 vjepa_2_1_vitL   24     1–2                      4          auto
 ```
-The ONLY per-backbone check: confirm `depth` is read from the loaded model (it is). NO new code.
-(A draft `src/utils/surgery_freeze.py` was created then DELETED — redundant with m09c1:1150, and
-its `(2/3,1/3)` was the retired legacy 12/24 reading, not recipe-v3. Per "hardcoded values live in
-configs/ only", the fractions belong in the surgery yaml — where they already are.)
 
 ═══════════════════════════════════════════════════════════════════════════════
-§F · Image-JEPA adapter (I-JEPA / LeJEPA) — frozen-only, NEW loader
+§F · Image-JEPA / DINOv3 adapters — frozen-only loaders
 ═══════════════════════════════════════════════════════════════════════════════
 
 ```text
-F1  configs/eval/probe_encoders.yaml   ijepa_vitH14_frozen: {kind: ijepa, arch: vit_huge,
-                                       model_id: facebook/ijepa_vith14_1k, crop: 224, embed_dim: 1280}
-F2  src/utils/frozen_features.py       NEW load_ijepa_frozen() + forward_ijepa(): encode each of
-                                       the T frames as an IMAGE → (T, N_patch, D) → mean-pool over
-                                       frames+patches → (D,). Mirrors forward_dinov2's per-frame path.
-F3  dispatch                           probe_action/_motion_cos/_taxonomy `kind` dispatch already
-                                       branches vjepa/dinov2 → add `ijepa`. Stage 8 + m12e: GUARD
-                                       `if kind != "ijepa"` (no predictor → skip, log the N/A).
+kind=ijepa   src/utils/ijepa_features.py     HF AutoModel (facebook/ijepa_*), per-frame image encode
+kind=dinov2  frozen_features.load_dinov2      HF AutoModel (dinov2-with-registers-giant)
+kind=lejepa  src/utils/lejepa_features.py     timm vit_large_patch16_dinov3_qkvb + eva.checkpoint_filter_fn
+                                              on raw checkpoints/lejepa_l.pt (0 miss/0 unexpected)
+all          forward → (B, T*n_tokens, D) → _pool_tokens; SKIP Stage 8/8b/8c (no predictor)
 ```
-LeJEPA loads the same way (ViT-H/14 image encoder), just a different checkpoint asset.
 
 ═══════════════════════════════════════════════════════════════════════════════
 §G · 🦸 HERO TABLE — JEPA-variant × FT-arm × metric (cells to fill at FULL)
 ═══════════════════════════════════════════════════════════════════════════════
 
-Each cell = mean ± 95% BCa CI on FULL test split. ↑=higher-better, ↓=lower-better.
-Headline claim lives in the bold cells: surgery_enc vs pretrain_enc per backbone, per metric.
+Each cell = mean ± 95% BCa CI on test split. ↑=higher-better ↓=lower-better. Headline = surgery_enc vs pretrain_enc.
 
 ```text
 model · arm                       │ action↑ │ motion_cos↑│ future_mse↓│ rollout↓ │ teacher_free↓│ taxon↑
@@ -244,9 +160,9 @@ vjepa_2_1_vitG · surgery_encoder ★│   ·     │     ·      │   **·**  
 vjepa_2_1_vitG · surgery_head     │   ·     │     ·      │     ·      │    ·     │      ·       │   ·
 ──────────────────────────────────┼─────────┼────────────┼────────────┼──────────┼──────────────┼───────
 vjepa_2_1_vitg · ×5 arms          │   ·     │     ·      │     ·      │    ·     │      ·       │   ·  scale axis
-vjepa_2_1_vitL · ×5 arms          │   ·     │     ·      │     ·      │    ·     │      ·       │   ·  scale axis
 vjepa_2_0_vitg · ×5 arms          │   ·     │     ·      │     ·      │    ·     │      ·       │   ·  version axis
-──── FROZEN-only (frozen arm only) ┼─────────┼────────────┼────────────┼──────────┼──────────────┼───────
+─── FROZEN-only (frozen arm only) ┼─────────┼────────────┼────────────┼──────────┼──────────────┼───────
+vjepa_2_1_vitL                    │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  scale axis (frozen)
 vjepa_2_0_vitg_ssv2               │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  supervised action bl.
 vjepa_1_vitL                      │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  v1 version axis
 vjepa_1_vitH                      │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  v1 version axis
@@ -254,53 +170,39 @@ vjepa_2_vitL_256                  │   ·     │     ·      │    N/A     �
 ijepa_vitH14                      │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
 ijepa_vitG16                      │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
 lejepa_vitL                       │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image baseline
-mc_jepa            🟡gated        │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  ★ motion contrast
-d_jepa             🟡gated        │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  image-gen baseline
 dinov2 (non-JEPA)                 │   ·     │     ·      │    N/A     │   N/A    │     N/A      │   ·  non-JEPA contrast
 ```
-N/A on frozen rows = future_mse/rollout/teacher_free need a trained predictor (none here).
-Reads the table answers: (1) surgery>pretrain ACROSS backbones (vjepa_2_1_vitG/vitg/vitL) →
-generality; (2) does the surgery edge GROW or SHRINK with scale (vitL→vitg→vitG) → scaling law;
-(3) hold across VERSION (vjepa_2_0_vitg / vjepa_1_* / vjepa_2_vitL_256 vs vjepa_2_1_*); (4) how
-the frozen SSv2 / I-JEPA / LeJEPA / DINOv2 baselines bound it.
+N/A on frozen rows = future_mse/rollout/teacher_free need a trained predictor. Reads: (1) surgery>pretrain
+across backbones (vitG/vitg); (2) edge grows/shrinks with scale (vitg→vitG); (3) holds across version
+(2.0_vitg / v1 / 2_vitL_256 vs 2.1); (4) frozen SSv2 / I-JEPA / LeJEPA / DINOv2 bound it.
 
-**§G.2 · Full metric catalog — HERO (6) vs APPENDIX (8).** The hero stays the 6 headline columns
-above; the remaining metrics go in a SAME-SHAPE appendix grid (models × metric), NOT the hero
-(14 metrics × 14 models = unreadable). Same eval harness fills both.
 ```text
-metric          module        dir  tier        surgery-win prob     status
-action top1     m12  (probe)   ↑    HERO        pretrain ≳ surgery   ✅ live
-motion_cos      m12b           ↑    HERO        ≈ (trained > frozen) ✅ live
-taxonomy        m12c           ↑    HERO        capability check     ✅ live
-future_mse      m12d           ↓    HERO        surgery wins ★       ✅ live
-rollout         m12e #1        ↓    HERO ★      HIGHEST (predictor)  ✅ built · GPU-val pending
-teacher_free    m12e #4        ↓    HERO ★      HIGHEST (predictor)  ✅ built · GPU-val pending
-causal          m12e #2        ↓    APPENDIX    high (predictor)     ✅ built · GPU-val pending
-tdist           m12e #3        ↓    APPENDIX    med  (predictor)     ✅ built · GPU-val pending
-maskratio       m12e #5        ↓    APPENDIX    med  (predictor)     ✅ built · GPU-val pending
-order           m12e #6        ↕    APPENDIX    med  (predictor)     ✅ built · GPU-val pending
-TOV / VCOP      phase-2 enc    ↑    APPENDIX    lower (encoder)      ⏳ metrics§6 (Task #6)
-Arrow-of-Time   phase-2 enc    ↑    APPENDIX    lower (encoder)      ⏳ metrics§6 (Task #6)
-Pace            phase-2 enc    ↑    APPENDIX    lower (encoder)      ⏳ metrics§6 (Task #6)
-TCC             phase-2 enc    ↑    APPENDIX    lower (no-train)     ⏳ metrics§6 (Task #7)
+§G.2 metric catalog — HERO (6) vs APPENDIX (8)
+metric          module        dir  tier        status
+action top1     m12  (probe)   ↑    HERO        ✅ live
+motion_cos      m12b           ↑    HERO        ✅ live
+taxonomy        m12c           ↑    HERO        ✅ live
+future_mse      m12d           ↓    HERO        ✅ live
+rollout         m12e #1        ↓    HERO ★      ✅ built · GPU-val pending
+teacher_free    m12e #4        ↓    HERO ★      ✅ built · GPU-val pending
+causal          m12e #2        ↓    APPENDIX    ✅ built · GPU-val pending
+tdist           m12e #3        ↓    APPENDIX    ✅ built · GPU-val pending
+maskratio       m12e #5        ↓    APPENDIX    ✅ built · GPU-val pending
+order           m12e #6        ↕    APPENDIX    ✅ built · GPU-val pending
+TOV / VCOP      phase-2 enc    ↑    APPENDIX    ⏳ metrics§6
+Arrow-of-Time   phase-2 enc    ↑    APPENDIX    ⏳ metrics§6
+Pace            phase-2 enc    ↑    APPENDIX    ⏳ metrics§6
+TCC             phase-2 enc    ↑    APPENDIX    ⏳ metrics§7
 ```
-↕ = order's sign is the signal (reliance on temporal order), not strictly better/worse.
-PROMOTION RULE: if an APPENDIX predictor metric shows a CI-separated surgery>pretrain that
-future_mse/rollout do NOT, promote it into the hero. Encoder metrics stay appendix (lower prob,
-phase-2) unless one surprises. Frozen models get only the encoder-feature metrics (action/
-motion_cos/taxon/TOV/AoT/Pace/TCC) — all predictor columns are N/A.
+↕ = order's sign is the signal. cross-arch predictor cols (vitg/2.0_vitg) need WS-B3 (predictor_eval arch-aware).
 
 ═══════════════════════════════════════════════════════════════════════════════
 §H · Sequencing + cost
 ═══════════════════════════════════════════════════════════════════════════════
 
 ```text
-• POC/dev (10k): add vitL first (cheapest, 6.7× smaller) → validate the BACKBONES loop end-to-end
-  before paying FULL. vitL full 5-arm train ≈ ¼ of vitG.
-• Frozen-only variants (ssv2, ijepa, lejepa, dinov2) are eval-only → no training cost, just
-  registry + (ijepa) the §F loader.
-• Per-variant marginal work after the loop lands: 1 model-config + registry rows (surgery
-  freeze auto-scales — §E).
-• GATE: same as the rest of iter16 — no run_train.sh / run_eval.sh edits while the current eval
-  runs (live-script). This plan is authored now; edits land in the post-eval pass.
+1. POC frozen-9 baseline eval (no train) → §G encoder rows                    runbook §1
+2. WS-B3: predictor_eval arch-aware (~60 LoC)                                 unblocks cross-arch predictor cols
+3. POC train+eval vjepa_2_1_vitg (scale) + vjepa_2_0_vitg (version)           runbook §2; pretrain_encoder first
+4. Aggregate §G hero table + m13 plots across all backbones + 9 baselines
 ```
