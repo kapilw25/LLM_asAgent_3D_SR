@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_encoder",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.059261,
+  "std": 0.011131,
+  "ci": {
+    "mean": 0.059261,
+    "ci_lo": 0.05875,
+    "ci_hi": 0.059764,
+    "ci_half": 0.000507
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt"
+}

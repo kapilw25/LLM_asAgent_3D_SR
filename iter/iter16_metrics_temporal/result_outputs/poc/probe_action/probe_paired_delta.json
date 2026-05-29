@@ -1,0 +1,439 @@
+{
+  "metric": "top1_accuracy",
+  "by_encoder": {
+    "vjepa_2_1_frozen": {
+      "acc_pct": 44.3836,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.443836,
+        "ci_lo": 0.42137,
+        "ci_hi": 0.466849,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_pretrain_2X_encoder": {
+      "acc_pct": 53.1507,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.531507,
+        "ci_lo": 0.508493,
+        "ci_hi": 0.553973,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_pretrain_encoder": {
+      "acc_pct": 51.6712,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.516712,
+        "ci_lo": 0.493699,
+        "ci_hi": 0.539178,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_pretrain_head": {
+      "acc_pct": 42.8493,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.428493,
+        "ci_lo": 0.405899,
+        "ci_hi": 0.451507,
+        "ci_half": 0.022804
+      }
+    },
+    "vjepa_2_1_surgical_3stage_DI_encoder": {
+      "acc_pct": 50.3014,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.503014,
+        "ci_lo": 0.480548,
+        "ci_hi": 0.526027,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_surgical_3stage_DI_head": {
+      "acc_pct": 51.2329,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.512329,
+        "ci_lo": 0.489315,
+        "ci_hi": 0.535342,
+        "ci_half": 0.023014
+      }
+    },
+    "vjepa_2_1_surgical_noDI_encoder": {
+      "acc_pct": 51.7808,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.517808,
+        "ci_lo": 0.494795,
+        "ci_hi": 0.540274,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_surgical_noDI_head": {
+      "acc_pct": 51.726,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.51726,
+        "ci_lo": 0.494247,
+        "ci_hi": 0.540274,
+        "ci_half": 0.023014
+      }
+    }
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_2X_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -8.7671,
+      "ci_lo_pp": -11.0137,
+      "ci_hi_pp": -6.4658,
+      "ci_half_pp": 2.274,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_pretrain_2X_encoder > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_pretrain_2X_encoder"
+    },
+    "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -7.2877,
+      "ci_lo_pp": -9.4795,
+      "ci_hi_pp": -4.9863,
+      "ci_half_pp": 2.2466,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_pretrain_encoder > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_pretrain_encoder"
+    },
+    "vjepa_2_1_frozen_minus_vjepa_2_1_pretrain_head": {
+      "n_shared": 1825,
+      "delta_pp": 1.5342,
+      "ci_lo_pp": -0.4932,
+      "ci_hi_pp": 3.6522,
+      "ci_half_pp": 2.0727,
+      "p_value": 0.155,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_pretrain_head > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_pretrain_head"
+    },
+    "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -5.9178,
+      "ci_lo_pp": -8.2192,
+      "ci_hi_pp": -3.6164,
+      "ci_half_pp": 2.3014,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_surgical_3stage_DI_encoder > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_pp": -6.8493,
+      "ci_lo_pp": -9.1507,
+      "ci_hi_pp": -4.5479,
+      "ci_half_pp": 2.3014,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_surgical_3stage_DI_head > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_surgical_3stage_DI_head"
+    },
+    "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -7.3973,
+      "ci_lo_pp": -9.6438,
+      "ci_hi_pp": -4.9315,
+      "ci_half_pp": 2.3562,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_surgical_noDI_encoder > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_surgical_noDI_encoder"
+    },
+    "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": -7.3425,
+      "ci_lo_pp": -9.6438,
+      "ci_hi_pp": -4.9863,
+      "ci_half_pp": 2.3288,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_frozen - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_frozen more accurate than vjepa_2_1_surgical_noDI_head"
+    },
+    "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.4795,
+      "ci_lo_pp": -0.274,
+      "ci_hi_pp": 3.2877,
+      "ci_half_pp": 1.7808,
+      "p_value": 0.1066,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_2X_encoder - vjepa_2_1_pretrain_encoder > 0 means vjepa_2_1_pretrain_2X_encoder more accurate than vjepa_2_1_pretrain_encoder"
+    },
+    "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_pretrain_head": {
+      "n_shared": 1825,
+      "delta_pp": 10.3014,
+      "ci_lo_pp": 7.8904,
+      "ci_hi_pp": 12.6387,
+      "ci_half_pp": 2.3742,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_pretrain_2X_encoder - vjepa_2_1_pretrain_head > 0 means vjepa_2_1_pretrain_2X_encoder more accurate than vjepa_2_1_pretrain_head"
+    },
+    "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.8493,
+      "ci_lo_pp": 1.0959,
+      "ci_hi_pp": 4.6027,
+      "ci_half_pp": 1.7534,
+      "p_value": 0.002,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_pretrain_2X_encoder - vjepa_2_1_surgical_3stage_DI_encoder > 0 means vjepa_2_1_pretrain_2X_encoder more accurate than vjepa_2_1_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_pp": 1.9178,
+      "ci_lo_pp": 0.2192,
+      "ci_hi_pp": 3.726,
+      "ci_half_pp": 1.7534,
+      "p_value": 0.031,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_pretrain_2X_encoder - vjepa_2_1_surgical_3stage_DI_head > 0 means vjepa_2_1_pretrain_2X_encoder more accurate than vjepa_2_1_surgical_3stage_DI_head"
+    },
+    "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.3699,
+      "ci_lo_pp": -0.3288,
+      "ci_hi_pp": 3.1233,
+      "ci_half_pp": 1.726,
+      "p_value": 0.1338,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_2X_encoder - vjepa_2_1_surgical_noDI_encoder > 0 means vjepa_2_1_pretrain_2X_encoder more accurate than vjepa_2_1_surgical_noDI_encoder"
+    },
+    "vjepa_2_1_pretrain_2X_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": 1.4247,
+      "ci_lo_pp": -0.3288,
+      "ci_hi_pp": 3.1233,
+      "ci_half_pp": 1.726,
+      "p_value": 0.109,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_2X_encoder - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_pretrain_2X_encoder more accurate than vjepa_2_1_surgical_noDI_head"
+    },
+    "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_pretrain_head": {
+      "n_shared": 1825,
+      "delta_pp": 8.8219,
+      "ci_lo_pp": 6.5753,
+      "ci_hi_pp": 11.0685,
+      "ci_half_pp": 2.2466,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_pretrain_encoder - vjepa_2_1_pretrain_head > 0 means vjepa_2_1_pretrain_encoder more accurate than vjepa_2_1_pretrain_head"
+    },
+    "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.3699,
+      "ci_lo_pp": -0.0548,
+      "ci_hi_pp": 2.7945,
+      "ci_half_pp": 1.4247,
+      "p_value": 0.0702,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_encoder - vjepa_2_1_surgical_3stage_DI_encoder > 0 means vjepa_2_1_pretrain_encoder more accurate than vjepa_2_1_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_pp": 0.4384,
+      "ci_lo_pp": -1.2055,
+      "ci_hi_pp": 2.0822,
+      "ci_half_pp": 1.6438,
+      "p_value": 0.6342,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_encoder - vjepa_2_1_surgical_3stage_DI_head > 0 means vjepa_2_1_pretrain_encoder more accurate than vjepa_2_1_surgical_3stage_DI_head"
+    },
+    "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.1096,
+      "ci_lo_pp": -1.6986,
+      "ci_hi_pp": 1.5342,
+      "ci_half_pp": 1.6164,
+      "p_value": 0.904,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_encoder - vjepa_2_1_surgical_noDI_encoder > 0 means vjepa_2_1_pretrain_encoder more accurate than vjepa_2_1_surgical_noDI_encoder"
+    },
+    "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": -0.0548,
+      "ci_lo_pp": -1.8082,
+      "ci_hi_pp": 1.6438,
+      "ci_half_pp": 1.726,
+      "p_value": 0.987,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_encoder - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_pretrain_encoder more accurate than vjepa_2_1_surgical_noDI_head"
+    },
+    "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -7.4521,
+      "ci_lo_pp": -9.7534,
+      "ci_hi_pp": -5.0959,
+      "ci_half_pp": 2.3288,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_head - vjepa_2_1_surgical_3stage_DI_encoder > 0 means vjepa_2_1_pretrain_head more accurate than vjepa_2_1_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_pp": -8.3836,
+      "ci_lo_pp": -10.7397,
+      "ci_hi_pp": -5.9726,
+      "ci_half_pp": 2.3836,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_head - vjepa_2_1_surgical_3stage_DI_head > 0 means vjepa_2_1_pretrain_head more accurate than vjepa_2_1_surgical_3stage_DI_head"
+    },
+    "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -8.9315,
+      "ci_lo_pp": -11.3425,
+      "ci_hi_pp": -6.5205,
+      "ci_half_pp": 2.411,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_head - vjepa_2_1_surgical_noDI_encoder > 0 means vjepa_2_1_pretrain_head more accurate than vjepa_2_1_surgical_noDI_encoder"
+    },
+    "vjepa_2_1_pretrain_head_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": -8.8767,
+      "ci_lo_pp": -11.2329,
+      "ci_hi_pp": -6.4658,
+      "ci_half_pp": 2.3836,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_pretrain_head - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_pretrain_head more accurate than vjepa_2_1_surgical_noDI_head"
+    },
+    "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_pp": -0.9315,
+      "ci_lo_pp": -2.5753,
+      "ci_hi_pp": 0.7671,
+      "ci_half_pp": 1.6712,
+      "p_value": 0.2852,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_surgical_3stage_DI_encoder - vjepa_2_1_surgical_3stage_DI_head > 0 means vjepa_2_1_surgical_3stage_DI_encoder more accurate than vjepa_2_1_surgical_3stage_DI_head"
+    },
+    "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.4795,
+      "ci_lo_pp": -3.1233,
+      "ci_hi_pp": 0.1644,
+      "ci_half_pp": 1.6438,
+      "p_value": 0.0846,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_surgical_3stage_DI_encoder - vjepa_2_1_surgical_noDI_encoder > 0 means vjepa_2_1_surgical_3stage_DI_encoder more accurate than vjepa_2_1_surgical_noDI_encoder"
+    },
+    "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": -1.4247,
+      "ci_lo_pp": -3.1233,
+      "ci_hi_pp": 0.1644,
+      "ci_half_pp": 1.6438,
+      "p_value": 0.0944,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_surgical_3stage_DI_encoder - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_surgical_3stage_DI_encoder more accurate than vjepa_2_1_surgical_noDI_head"
+    },
+    "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.5479,
+      "ci_lo_pp": -2.137,
+      "ci_hi_pp": 1.1507,
+      "ci_half_pp": 1.6438,
+      "p_value": 0.524,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_surgical_3stage_DI_head - vjepa_2_1_surgical_noDI_encoder > 0 means vjepa_2_1_surgical_3stage_DI_head more accurate than vjepa_2_1_surgical_noDI_encoder"
+    },
+    "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": -0.4932,
+      "ci_lo_pp": -2.0274,
+      "ci_hi_pp": 1.0411,
+      "ci_half_pp": 1.5342,
+      "p_value": 0.5536,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_surgical_3stage_DI_head - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_surgical_3stage_DI_head more accurate than vjepa_2_1_surgical_noDI_head"
+    },
+    "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": 0.0548,
+      "ci_lo_pp": -1.589,
+      "ci_hi_pp": 1.6438,
+      "ci_half_pp": 1.6164,
+      "p_value": 0.9534,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_surgical_noDI_encoder - vjepa_2_1_surgical_noDI_head > 0 means vjepa_2_1_surgical_noDI_encoder more accurate than vjepa_2_1_surgical_noDI_head"
+    }
+  },
+  "iter14_paper_deltas": {
+    "delta_1_pretrain_vs_frozen": {
+      "n_shared": 1825,
+      "delta_pp": 7.2877,
+      "ci_lo_pp": 4.9863,
+      "ci_hi_pp": 9.4795,
+      "ci_half_pp": 2.2466,
+      "p_value": 0.0,
+      "pass": true,
+      "interpretation": "\u03941: pretrain > frozen (continual SSL beats frozen baseline)"
+    },
+    "delta_2_surgical_vs_pretrain": {
+      "n_shared": 1825,
+      "delta_pp": -1.3699,
+      "ci_lo_pp": -2.7945,
+      "ci_hi_pp": 0.0548,
+      "ci_half_pp": 1.4247,
+      "p_value": 0.0702,
+      "pass": false,
+      "interpretation": "\u03942: surgery > pretrain (factor patching adds value)"
+    },
+    "delta_3_surgical_vs_pretrain_2X": {
+      "n_shared": 1825,
+      "delta_pp": -2.8493,
+      "ci_lo_pp": -4.6027,
+      "ci_hi_pp": -1.0959,
+      "ci_half_pp": 1.7534,
+      "p_value": 0.002,
+      "pass": false,
+      "interpretation": "\u03943: surgery > pretrain_2X (CAUSAL \u2014 gain is factor patching, not extra steps)"
+    },
+    "delta_4_pretrain_vs_pretrain_head": {
+      "n_shared": 1825,
+      "delta_pp": 8.8219,
+      "ci_lo_pp": 6.5753,
+      "ci_hi_pp": 11.0685,
+      "ci_half_pp": 2.2466,
+      "p_value": 0.0,
+      "pass": true,
+      "interpretation": "\u03944: pretrain > pretrain_head (does encoder-update add value beyond a trained head?)"
+    },
+    "delta_5_surgical_vs_surgical_head": {
+      "n_shared": 1825,
+      "delta_pp": -0.9315,
+      "ci_lo_pp": -2.5753,
+      "ci_hi_pp": 0.7671,
+      "ci_half_pp": 1.6712,
+      "p_value": 0.2852,
+      "pass": false,
+      "interpretation": "\u03945: surgery > surgery_head (KEY iter15 paper claim \u2014 if |\u03945|<0.01, head-only WINS)"
+    },
+    "delta_6_surgical_head_vs_pretrain_head": {
+      "n_shared": 1825,
+      "delta_pp": 8.3836,
+      "ci_lo_pp": 5.9726,
+      "ci_hi_pp": 10.7397,
+      "ci_half_pp": 2.3836,
+      "p_value": 0.0,
+      "pass": true,
+      "interpretation": "\u03946: surgery_head > pretrain_head (factor data helps even when encoder is frozen)"
+    },
+    "delta_7_DI_head_vs_noDI_head": {
+      "n_shared": 1825,
+      "delta_pp": -0.4932,
+      "ci_lo_pp": -2.0274,
+      "ci_hi_pp": 1.0411,
+      "ci_half_pp": 1.5342,
+      "p_value": 0.5536,
+      "pass": false,
+      "interpretation": "\u03947: 3stage_DI_head > noDI_head (D_I tubes carry signal beyond D_L+D_A)"
+    }
+  }
+}

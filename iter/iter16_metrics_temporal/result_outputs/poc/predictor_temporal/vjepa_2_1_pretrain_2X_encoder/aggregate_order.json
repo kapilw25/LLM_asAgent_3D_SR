@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_pretrain_2X_encoder",
+  "metric": "order",
+  "n_test": 1825,
+  "mean": 0.021285,
+  "std": 0.029034,
+  "ci": {
+    "mean": 0.021285,
+    "ci_lo": 0.019946,
+    "ci_hi": 0.022591,
+    "ci_half": 0.001322
+  },
+  "lower_is_better": null,
+  "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/m09a_pretrain_2X_encoder/m09a_ckpt_best.pt"
+}

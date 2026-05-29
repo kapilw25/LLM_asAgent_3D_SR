@@ -198,6 +198,18 @@ MIN_PER_SPLIT="${MIN_PER_SPLIT:-$DEFAULT_MIN_PER_SPLIT}"
 # adding a backbone is config+registry only (no per-variant case growth). The legacy 8
 # vitG encoders are renamed vjepa_2_1_vitG_<arm> (see ENCODERS default). frozen arm →
 # external ckpt (frozen_ckpt_for); "" for HF-loaded kinds (ijepa/dinov2/2.0-HF).
+PROBE_REG="configs/eval/probe_encoders.yaml"    # encoder registry (kind/arch/crop/embed_dim) — SSOT, also read by m12a
+_enc_kind() {                                   # encoder name → registry `kind` (vjepa|hf_vjepa2|ijepa|dinov2).
+    # iter17 ssv2 fix: gate ckpt/predictor stages on KIND, not the `vjepa*` name prefix.
+    # hf_vjepa2 (e.g. vjepa_2_0_vitg_ssv2) is NAMED vjepa_* but loads from the HF model_id
+    # (no local ckpt) and exposes encoder-only (skip_predictor) → must NOT take the
+    # native-ckpt / native-predictor path. yaml_extract FATALs (exit 4) on an unregistered
+    # encoder → set -e aborts loud (every ENCODERS name is a registry row, same as m12a).
+    local k
+    k="$("$EX" "$PROBE_REG" "encoders.$1.kind")"
+    [ -n "$k" ] || { echo "FATAL: encoder '$1' has empty 'kind' in $PROBE_REG"; exit 3; }
+    echo "$k"
+}
 _arm_dir() {                                    # arm suffix → m09 output dir name
     case "$1" in
         pretrain_encoder)            echo m09a_pretrain_encoder ;;
@@ -423,7 +435,7 @@ echo "Stage 8 predictor-ckpt pre-flight"
 echo "──────────────────────────────────────────────"
 STAGE8_NEW=""
 for ENC in $ENCODERS; do
-    [[ "$ENC" == vjepa* ]] || continue                         # DINOv2 has no predictor — skip
+    [ "$(_enc_kind "$ENC")" = vjepa ] || continue              # non-vjepa kinds (dinov2/ijepa/hf_vjepa2) have no native predictor — skip
     PCKPT="$(encoder_predictor_ckpt_for "$ENC")"
     if [ -e "$PCKPT" ]; then
         echo "  ✓ $ENC: $PCKPT"
@@ -678,8 +690,9 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         echo "════════════════════════════════════════════════════════════════"
         echo "ENCODER: $ENC  (Stages 2/3/5/6/8)"
         echo "════════════════════════════════════════════════════════════════"
+        ENC_KIND="$(_enc_kind "$ENC")"   # gate ckpt/predictor stages on KIND (not name prefix) — hf_vjepa2/ijepa/dinov2 load from HF
         EXTRA_CKPT=""
-        if [[ "$ENC" == vjepa* ]]; then
+        if [ "$ENC_KIND" = vjepa ]; then
             CKPT="$(encoder_ckpt_for "$ENC")"
             [ -e "$CKPT" ] || { echo "FATAL: encoder ckpt missing for $ENC: $CKPT"; exit 3; }
             EXTRA_CKPT="--encoder-ckpt $CKPT"
@@ -869,7 +882,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         # Stage 8 preflight (line ~298). Defense-in-depth: re-check inside the
         # loop and SKIP+continue (NOT FATAL) so SKIP_STAGES bypassing the
         # preflight can't crash the rest of the per-encoder pipeline.
-        if ! should_skip 8 && [[ "$ENC" == vjepa* ]]; then
+        if ! should_skip 8 && [ "$ENC_KIND" = vjepa ]; then
             if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
                 PCKPT="$(encoder_predictor_ckpt_for "$ENC")"
                 if [ -e "$PCKPT" ]; then
@@ -901,7 +914,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         fi
 
         # ── STAGE 8b — predictor_temporal (m12e, 6 metrics) ── (iter16 §3.3, default-on)
-        if ! should_skip 8b && [[ "$ENC" == vjepa* ]]; then
+        if ! should_skip 8b && [ "$ENC_KIND" = vjepa ]; then
             if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
                 PCKPT="$(encoder_predictor_ckpt_for "$ENC")"
                 if [ -e "$PCKPT" ]; then
@@ -927,7 +940,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
         fi
 
         # ── STAGE 8c — encoder_temporal (m12f, 4 metrics: aot/tov/pace/tcc) ── (iter16 §6/§3.3)
-        if ! should_skip 8c && [[ "$ENC" == vjepa* ]]; then
+        if ! should_skip 8c && [ "$ENC_KIND" = vjepa ]; then
             if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
                 ECKPT="$(encoder_ckpt_for "$ENC")"   # encoder-only (lighter; m12f needs no predictor — §3.3 R2)
                 if [ -e "$ECKPT" ]; then

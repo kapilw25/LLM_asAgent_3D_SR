@@ -26,25 +26,27 @@ CORRECTION: 2.1 ViT-g AND ViT-L checkpoints DO exist (vjepa2_1_vitg_384.pt /
 │ vjepa_2_1_vitG       │ ✅        │ ✅ (iter16)  │ ✅ pretrain_encoder (namespace valid.) │
 │ vjepa_2_1_vitg       │ ✅        │ ✅ 482/484   │ ✅ deep-sup train (vit_giant_xf_2_1)   │
 │ vjepa_2_1_vitL       │ ✅        │ ✅ 290/292   │ N/A — distilled→frozen-only (no pred)  │
-│ vjepa_2_0_vitg       │ ✅        │ ✅           │ ⛔ m09a teacher(…,training=True) is 2.1-│
-│                      │           │              │    only; 2.0 base ViT.forward lacks it  │
+│ vjepa_2_0_vitg       │ ✅        │ ✅           │ ✅ sanity-train (deep-sup gated off;   │
+│                      │           │              │    2.1 regress PASS — gates safe)      │
 │ vjepa_2_vitL_256     │ ✅        │ ✅ 292/292   │ N/A frozen-only                        │
 │ vjepa_1_vitL         │ ✅        │ ✅ 292/292   │ N/A 1.x, no predictor                  │
 │ vjepa_1_vitH         │ ✅        │ ✅           │ N/A 1.x, no predictor                  │
 │ ijepa_vitH14         │ ✅        │ ✅           │ N/A image-JEPA                         │
 │ ijepa_vitG16         │ ✅        │ ✅           │ N/A image-JEPA                         │
 │ dinov2               │ ✅        │ ✅           │ N/A non-JEPA                           │
-│ vjepa_2_0_vitg_ssv2  │ ⛔        │ ⛔           │ ⛔ needs kind=hf_vjepa2 forward (HF)   │
+│ vjepa_2_0_vitg_ssv2  │ ✅        │ ✅ (20,16,   │ N/A frozen-only (hf_vjepa2 fwd GPU-val │
+│                      │           │    1408)     │    ✓; predictor N/A — skip_predictor) │
 │ lejepa_vitH14        │ ⛔        │ ⛔           │ ⛔ raw artifact → custom loader        │
 │ mc_jepa / d_jepa     │ ⛔        │ ⛔           │ ⛔ weights gated/unreleased            │
 └──────────────────────┴───────────┴──────────────┴──────────────────────────────────────┘
 ```
 ✅=done · ⏳=running/next · N/A=arch can't (frozen-only) · ⛔=blocked (new loader / trainer / gated).
-Net: ALL 10 weight-available models PASS frozen inference. Sanity-TRAIN ✅ for the 2.1 backbones
-(vitG + vitg, deep-sup) — the scale axis trains end-to-end. Blocked tail (each = a CODE change,
-not a run): (1) 2.0_vitg TRAIN — m09a is 2.1-coupled (`teacher(...,training=True)` + deep-sup loss);
-needs version-aware forward to train the VERSION axis. (2) ssv2 — needs kind=hf_vjepa2 forward.
-(3) lejepa — raw-artifact custom loader. (4) mc/d-jepa — weights gated. FROZEN 2.0_vitg works, so
+Net: ALL 11 weight-available models PASS frozen inference (incl. ssv2 via kind=hf_vjepa2, GPU-val).
+Sanity-TRAIN ✅ for 2.1 (vitG + vitg, deep-sup) AND 2.0_vitg — both scale + version axes train
+end-to-end (m09a deep-sup gated on n_output_distillation>1; 2.1 regression PASS = gates safe).
+ssv2 DONE: hf_vjepa2 forward built + run_eval gates kind-based (not name-prefix) so the vjepa_*-named
+HF model skips the native-ckpt/predictor path. Remaining blocked tail (each = a CODE change, not a
+run): (1) lejepa — raw-artifact custom loader. (2) mc/d-jepa — weights gated. FROZEN 2.0_vitg works, so
 the 2.0 baseline is covered for eval; only 2.0 *continual-pretrain/surgery* needs the trainer fix.
 
 
