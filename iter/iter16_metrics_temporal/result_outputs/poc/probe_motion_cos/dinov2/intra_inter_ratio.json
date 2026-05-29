@@ -1,0 +1,14 @@
+{
+  "encoder": "dinov2",
+  "n_test": 1825,
+  "pos_mean": 0.60465,
+  "neg_mean": 0.588833,
+  "score_mean": 0.015817,
+  "score_ci": {
+    "mean": 0.015817,
+    "ci_lo": 0.014344,
+    "ci_hi": 0.017262,
+    "ci_half": 0.001459
+  },
+  "elapsed_sec": 0.02
+}

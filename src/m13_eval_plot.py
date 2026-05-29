@@ -41,6 +41,7 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -410,7 +411,6 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
         print("  [hero-table] no metrics present — skip")
         return
     scorable = [c for c in cat if c[3] in ("higher", "lower")]
-    n_scorable = len(scorable)
     ordered = [frozen] + [e for e in encoders if e != frozen]
     metric_keys = [c[0] for c in cat]
     cmap = plt.get_cmap("RdYlGn")
@@ -421,14 +421,13 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
     for k in metric_keys:
         present = [valmat[(e, k)] for e in ordered if valmat[(e, k)] is not None]
         colstat[k] = (min(present), max(present)) if present else (0.0, 0.0)
-    winner, wins = {}, {e: 0 for e in ordered}
+    winner = {}
     for key, _f, _o, direction, _y, _c, _l in scorable:
         cand = [(e, valmat[(e, key)]) for e in ordered if valmat[(e, key)] is not None]
         if not cand:
             continue
         best = (max if direction == "higher" else min)(cand, key=lambda t: t[1])[0]
         winner[key] = best
-        wins[best] += 1
 
     def _cell_colour(val, key, direction):
         if val is None:
@@ -442,10 +441,14 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
         r, g, b, _ = cmap(t)
         return (r, g, b, 0.55)                                   # alpha keeps black text legible
 
-    text_rows, colour_rows, winner_coords, csv_rows = [], [], [], [["encoder"] + metric_keys + ["WINS"]]
-    for ri, e in enumerate(ordered):
+    # TRANSPOSED (vertical, single-column-paper fit): rows = metrics (+ WINS row); cols = encoders
+    # (short labels) + a WINNER col. Taller-than-wide → fits one paper column far better than the
+    # old 11-wide layout.
+    text_rows, colour_rows, winner_coords = [], [], []
+    csv_rows = [["metric"] + [_short_label(e) for e in ordered] + ["WINNER"]]
+    for ri, (key, _f, _o, direction, _y, _c, _l) in enumerate(cat):
         cells, ccols = [], []
-        for ci, (key, _f, _o, direction, _y, _c, _l) in enumerate(cat):
+        for ci, e in enumerate(ordered):
             be = metrics[key]["by_encoder"].get(e)
             if be is None:
                 cells.append("N/A"); ccols.append(_cell_colour(None, key, direction)); continue
@@ -455,46 +458,38 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
                 dvf = _delta_v_vs_frozen(metrics[key]["deltas"], e, frozen)
                 if dvf and _ci_excludes_zero(dvf[1], dvf[2]):
                     star = "*"
-            cells.append(f"{val:.3f}±{ciw:.3f}{star}")
+            cells.append(f"{val:.3f}\n±{ciw:.3f}{star}")            # value + CI wrapped to 2 lines
             ccols.append(_cell_colour(val, key, direction))
             if winner.get(key) == e:
                 winner_coords.append((ri, ci))
-        wmin, wmax = min(wins.values()), max(wins.values())
-        wt = 0.5 if wmax == wmin else (wins[e] - wmin) / (wmax - wmin)
-        cells.append(f"{wins[e]}/{n_scorable}")
-        ccols.append(tuple(cmap(wt)[:3]) + (0.55,))
+        cells.append(_wrap_name(winner[key]) if key in winner else "—")
+        ccols.append((1.0, 0.96, 0.78, 1.0))
         text_rows.append(cells); colour_rows.append(ccols)
-        csv_rows.append([_display_label(e)] + cells)
-    # WINNER row
-    win_cells = [(_short_label(winner[k]) if k in winner else "—") for k in metric_keys]
-    win_cells.append(f"Σ {sum(wins.values())}/{n_scorable}")
-    text_rows.append(win_cells)
-    colour_rows.append([(1.0, 0.96, 0.78, 1.0)] * len(win_cells))
-    csv_rows.append(["WINNER"] + win_cells)
+        csv_rows.append([key] + cells)
 
-    row_labels = [_display_label(e) for e in ordered] + ["WINNER / metric"]
-    col_labels = [f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat] + ["WINS\n↑ better"]
-    fig, ax = plt.subplots(figsize=(3.0 + 1.5 * len(col_labels), 1.8 + 0.62 * len(row_labels)))
+    row_labels = [f"{c[0]} {_DIR_TAG[c[3]]}" for c in cat]
+    col_labels = [_short_label(e) for e in ordered] + ["WINNER"]
+    fig, ax = plt.subplots(figsize=(2.0 + 1.05 * len(col_labels), 1.8 + 0.62 * len(row_labels)))
     ax.axis("off")
     tbl = ax.table(cellText=text_rows, cellColours=colour_rows,
                    rowLabels=row_labels, colLabels=col_labels, loc="center", cellLoc="center")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(7)
-    tbl.scale(1.0, 1.6)
+    tbl.scale(1.0, 2.0)
     for (ri, ci) in winner_coords:                              # bold the winning cells (+1 for header row)
         tbl[(ri + 1, ci)].set_text_props(fontweight="bold")
-    ax.set_title("HERO scorecard — value ± BCa 95% CI · cell colour = per-metric min-max "
-                 "(green = best), * = Δ-vs-frozen CI excludes 0\n"
-                 f"{len(ordered)} encoders × {len(cat)} metrics · bold + WINNER row = single best "
-                 f"per metric · WINS partitions the {n_scorable} scorable metrics (Σ = {sum(wins.values())}) · {boot_str}",
-                 fontsize=11, fontweight="bold")
+    ax.set_title("HERO scorecard (vertical) — value ± BCa 95% CI · colour = per-metric min-max "
+                 "(green = best) · * = Δ-vs-frozen CI excludes 0\n"
+                 f"{len(cat)} metrics × {len(ordered)} encoders · bold cell + WINNER col = single best "
+                 f"per metric · {boot_str}",
+                 fontsize=10, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_hero_table"))
     import csv
     with open(str(output_dir / "m13_hero_table.csv"), "w", newline="") as f:
         csv.writer(f).writerows(csv_rows)
-    print(f"  [hero-table] m13_hero_table.{{png,pdf,csv}} — {len(ordered)}+winner rows × "
-          f"{len(col_labels)} cols · WINS Σ={sum(wins.values())}/{n_scorable}")
+    print(f"  [hero-table] m13_hero_table.{{png,pdf,csv}} — {len(cat)} metric rows × "
+          f"{len(col_labels)} cols (transposed) · WINNER col = single best per metric")
 
 
 def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Path):
@@ -525,7 +520,7 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
         fin = col[np.isfinite(col)]
         amax = float(np.abs(fin).max()) if fin.size else 0.0
         norm[:, j] = col / amax if amax > 0 else col * 0.0
-    fig, ax = plt.subplots(figsize=(3.0 + 1.75 * len(cat), 2.6 + 1.2 * len(contenders)))
+    fig, ax = plt.subplots(figsize=(3.0 + 1.75 * len(cat), 2.6 + 1.2 * (len(contenders) + 1)))
     # alpha=0.6 → pastel RdYlGn (matches the hero TABLE); keeps red→green meaning while staying
     # light enough for plain BLACK BOLD numbers — no halo/outline needed (iter16 fix).
     im = ax.imshow(np.ma.masked_invalid(norm), cmap="RdYlGn", vmin=-1, vmax=1, aspect="auto", alpha=0.6)
@@ -533,14 +528,29 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     ax.tick_params(length=0)
     ax.set_xticks(range(len(cat)))
     ax.set_xticklabels([f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat], rotation=45, ha="right", fontsize=9)
-    ax.set_yticks(range(len(contenders)))
-    ax.set_yticklabels([_display_label(e) for e in contenders], fontsize=10)
+    ax.set_yticks(list(range(len(contenders))) + [len(contenders)])
+    ax.set_yticklabels([_display_label(e) for e in contenders] + ["WINNER"], fontsize=10)
     # Plain BLACK BOLD numbers (no halo): Δ on top, CI below.
     for (i, j), (sc, clo, chi, _sig) in cells.items():
-        ax.text(j, i - 0.17, _fmt_compact(sc), ha="center", va="center",
+        ax.text(j, i - 0.26, _fmt_compact(sc), ha="center", va="center",
                 fontsize=13, fontweight="bold", color="black")
-        ax.text(j, i + 0.24, f"[{_fmt_compact(clo)}, {_fmt_compact(chi)}]", ha="center", va="center",
-                fontsize=8.5, fontweight="bold", color="black")
+        ax.text(j, i + 0.18, f"[{_fmt_compact(clo)},\n{_fmt_compact(chi)}]", ha="center", va="center",
+                fontsize=8, fontweight="bold", color="black")
+    # WINNER row (champion duel — best-surgery vs best-pretrain per metric), mirroring the grouped
+    # plot's [S/P/=] band. One extra row BELOW the contenders; signed metrics (order) aren't a
+    # win/loss → neutral "·". Verdict single-sourced via _family_verdict (same tally as scoreboard).
+    ny = len(contenders)
+    _verdict_per = _family_verdict(metrics, encoders, frozen)[3]
+    _VC = {"surgery": ((0.17, 0.63, 0.17, 0.6), "S"), "pretrain": ((0.84, 0.15, 0.16, 0.6), "P"),
+           "tie": ((0.6, 0.6, 0.6, 0.35), "=")}
+    for j, c in enumerate(cat):
+        vcol, vlab = _VC.get(_verdict_per.get(c[0]), ((0.85, 0.85, 0.85, 0.35), "·"))
+        ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=vcol, edgecolor="white",
+                               lw=1.0, zorder=2))
+        ax.text(j, ny, vlab, ha="center", va="center", fontsize=14, fontweight="bold",
+                color="black", zorder=3)
+    ax.set_ylim(ny + 0.5, -0.5)                         # extend bottom to include the WINNER row
+    ax.axhline(ny - 0.5, color="black", lw=1.5)         # separator above the WINNER row
     ax.set_title(f"HERO — Δ vs {_display_label(frozen)}  ·  per cell: Δ (top) and 95% BCa CI (bottom), "
                  "sign-corrected so + = better\ncolour: red = worst, green = best (per-metric min-max) · "
                  "column badge ↑/↓ = better-direction",
@@ -549,6 +559,207 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_hero_surgery_vs_frozen"))
     print(f"  [hero-heatmap] m13_hero_surgery_vs_frozen.{{png,pdf}} — {len(contenders)} × {len(cat)} (Δ+CI, bold black)")
+
+
+# ── §3.3d SURGERY-vs-PRETRAIN verdict views — make "who wins overall" unmistakable ──
+# The hero heatmap colours per-column (per-metric winners) but never aggregates pretrain-vs-
+# surgery. These 3 views answer it directly, ALL off ONE canonical tally (_family_verdict =
+# best-surgery vs best-pretrain CHAMPION DUEL per metric, with explicit TIES) so their headline
+# numbers are IDENTICAL — resolving the earlier discrepancy (the scoreboard's per-arm argmax had
+# spuriously awarded dead-heat metrics to pretrain via alphabetical tie-breaking).
+
+_PREDICTOR_KEYS = {"future_mse", "rollout", "causal", "tdist", "teacher_free", "maskratio", "order"}
+_TIE_EPS = 1e-3   # champion-duel |Δ| below this = dead heat. Values separate cleanly here
+                  # (real wins ≥ 0.009, ties ≤ 6e-5) — nothing sits near the threshold.
+_SHORT_DESC = {   # ≤8-word plain-English blurb per metric (under the x-axis; no blank space)
+    "action_top1":  "classify motion class\nfrom frozen features",
+    "motion_cos":   "same-motion clips cluster\nvs different motions",
+    "taxonomy_f1":  "read scene attributes\nfrom features",
+    "future_mse":   "predictor guesses\nmasked next-frame tokens",
+    "rollout":      "error growth over\nmulti-step rollout",
+    "causal":       "predict 2nd half\nfrom 1st half",
+    "tdist":        "accuracy decay vs\nprediction horizon",
+    "teacher_free": "free-run minus\nteacher-forced gap",
+    "maskratio":    "degradation under\nheavier masking",
+    "order":        "reliance on\nframe order",
+}
+
+
+def _arm_family(enc: str) -> str:
+    if "frozen" in enc:
+        return "frozen"
+    if "surgical" in enc or "surgery" in enc:
+        return "surgery"
+    if "pretrain" in enc:
+        return "pretrain"
+    return "other"
+
+
+def _good_orient(d, lo, hi, direction):
+    """Orient (Δ, lo, hi) so POSITIVE = better: lower-better → negate + swap bounds; else as-is."""
+    if direction == "lower":
+        return -d, -hi, -lo
+    return d, lo, hi
+
+
+def _direction_of(key: str) -> str:
+    return next(c[3] for c in _CATALOG if c[0] == key)
+
+
+def _good_vs_frozen_ci(metrics, key, arm, frozen):
+    """Good-oriented Δ(arm − frozen) as (g, glo, ghi) (positive = better), or None."""
+    dv = _delta_v_vs_frozen(metrics[key]["deltas"], arm, frozen)
+    return None if dv is None else _good_orient(dv[0], dv[1], dv[2], _direction_of(key))
+
+
+def _good_vs_frozen(metrics, key, arm, frozen):
+    g = _good_vs_frozen_ci(metrics, key, arm, frozen)
+    return None if g is None else g[0]
+
+
+def _family_champion(metrics, key, frozen, arms):
+    """Best arm in `arms` by good-Δ-vs-frozen for this metric (None if none scorable)."""
+    scored = [(a, _good_vs_frozen(metrics, key, a, frozen)) for a in arms]
+    scored = [(a, g) for a, g in scored if g is not None]
+    return max(scored, key=lambda t: t[1])[0] if scored else None
+
+
+def _scorable_keys(metrics):
+    """Hero metrics minus 'signed' (order's sign is reliance, not a win/loss)."""
+    return [k for k, *_ in _hero_catalog(metrics) if _direction_of(k) != "signed"]
+
+
+def _wrap_name(enc: str) -> str:
+    """Full display name wrapped onto 2 lines (y-axis labels — readable, space-saving)."""
+    parts = _display_label(enc).split(" ")
+    if len(parts) <= 1:
+        return parts[0]
+    mid = (len(parts) + 1) // 2
+    return " ".join(parts[:mid]) + "\n" + " ".join(parts[mid:])
+
+
+def _family_verdict(metrics, encoders, frozen):
+    """CANONICAL surgery-vs-pretrain tally via champion duel (best surgery arm vs best pretrain
+    arm) per metric, with explicit ties. Returns (n_surg, n_pre, n_tie,
+    per{key→'surgery'|'pretrain'|'tie'}, arm_wins{arm→#outright metric wins}). Shared by all 3
+    views so the headline is identical."""
+    surg = [e for e in encoders if _arm_family(e) == "surgery"]
+    pre = [e for e in encoders if _arm_family(e) == "pretrain"]
+    ns = npr = nt = 0
+    per, arm_wins = {}, {a: 0 for a in surg + pre}
+    for key in _scorable_keys(metrics):
+        sc, pc = _family_champion(metrics, key, frozen, surg), _family_champion(metrics, key, frozen, pre)
+        if sc is None or pc is None:
+            continue
+        dv = _delta_v_vs_frozen(metrics[key]["deltas"], sc, pc)
+        if dv is None:
+            continue
+        gd = _good_orient(dv[0], dv[1], dv[2], _direction_of(key))[0]
+        if abs(gd) < _TIE_EPS:
+            per[key] = "tie"; nt += 1
+        elif gd > 0:
+            per[key] = "surgery"; ns += 1; arm_wins[sc] += 1
+        else:
+            per[key] = "pretrain"; npr += 1; arm_wins[pc] += 1
+    return ns, npr, nt, per, arm_wins
+
+
+def plot_scoreboard(metrics, encoders, frozen, output_dir):
+    """#2 scoreboard: per-arm count of OUTRIGHT metric wins (champion duel; ties are NOT awarded
+    to any arm — fixes the old alphabetical-tie-break that inflated pretrain) + the canonical
+    SURGERY · PRETRAIN · TIE family banner shared with the other two views."""
+    arms = [e for e in encoders if _arm_family(e) in ("surgery", "pretrain")]
+    if not arms:
+        print("  [scoreboard] no surgery/pretrain arms — skip"); return
+    ns, npr, nt, _per, arm_wins = _family_verdict(metrics, encoders, frozen)
+    order = sorted(arms, key=lambda a: arm_wins.get(a, 0))
+    fig, ax = plt.subplots(figsize=(10, max(3.0, 0.55 * len(order) + 2)))
+    y = np.arange(len(order))
+    colors = ["#2ca02c" if _arm_family(a) == "surgery" else "#1f77b4" for a in order]
+    ax.barh(y, [arm_wins.get(a, 0) for a in order], color=colors, alpha=0.85)
+    for i, a in enumerate(order):
+        ax.text(arm_wins.get(a, 0), i, f" {arm_wins.get(a, 0)}", va="center", fontsize=10, fontweight="bold")
+    ax.set_yticks(y); ax.set_yticklabels([_wrap_name(a) for a in order], fontsize=8, rotation=20, va="center")
+    ax.set_xlabel(f"# metrics won OUTRIGHT  (of {ns + npr + nt}; {nt} ties not awarded)")
+    champ = "SURGERY" if ns > npr else ("PRETRAIN" if npr > ns else "TIE")
+    fig.suptitle(f"SCOREBOARD —  SURGERY {ns} · PRETRAIN {npr} · TIE {nt}   (champion duel · winner: {champ})",
+                 fontsize=13, fontweight="bold")
+    ax.set_title("green = surgery arm · blue = pretrain arm · bar = outright metric wins by that arm", fontsize=9)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    save_fig(fig, str(output_dir / "m13_scoreboard_surgery_vs_pretrain"))
+    print(f"  [scoreboard] m13_scoreboard_surgery_vs_pretrain — surgery {ns} pretrain {npr} tie {nt}")
+
+
+def plot_grouped_winner(metrics, encoders, frozen, output_dir):
+    """#3 grouped heatmap: rows = PRETRAIN block then SURGERY block; cell = good-Δ-vs-frozen (bold)
+    + its 95% CI on 2 lines; column-normalized colour; + SCORE column (mean per-metric-normalized,
+    0–1) + WINNER row (canonical champion-duel: S/P/= ). Full wrapped y-names; ≤8-word metric
+    blurbs under the x-axis. Block separators + verdict in title."""
+    keys = _scorable_keys(metrics)
+    pre = [e for e in encoders if _arm_family(e) == "pretrain"]
+    surg = [e for e in encoders if _arm_family(e) == "surgery"]
+    arms = pre + surg
+    if not keys or not pre or not surg:
+        print("  [grouped] need metrics + pretrain + surgery — skip"); return
+    M = np.full((len(arms), len(keys)), np.nan)
+    CI = {}
+    for i, a in enumerate(arms):
+        for j, k in enumerate(keys):
+            gci = _good_vs_frozen_ci(metrics, k, a, frozen)
+            if gci is not None:
+                M[i, j] = gci[0]; CI[(i, j)] = (gci[1], gci[2])
+    Mn = np.full_like(M, np.nan)
+    for j in range(len(keys)):
+        col = M[:, j]; lo, hi = np.nanmin(col), np.nanmax(col)
+        Mn[:, j] = 0.5 if hi == lo else (col - lo) / (hi - lo)
+    score = np.nanmean(Mn, axis=1)
+    _ns, _np, _nt, per, _aw = _family_verdict(metrics, encoders, frozen)
+    winner = [{"surgery": "S", "pretrain": "P", "tie": "="}.get(per.get(k, "tie"), "·") for k in keys]
+    nrow, ncol = len(arms) + 1, len(keys) + 1
+    rgba = np.ones((nrow, ncol, 4)); cmap = plt.cm.RdYlGn
+    for j in range(len(keys)):
+        for i in range(len(arms)):
+            if not np.isnan(Mn[i, j]):
+                rgba[i, j] = cmap(Mn[i, j]); rgba[i, j, 3] = 0.6
+    slo, shi = np.nanmin(score), np.nanmax(score)
+    for i, s in enumerate(score):
+        t = 0.5 if shi == slo else (s - slo) / (shi - slo)
+        rgba[i, ncol - 1] = cmap(t); rgba[i, ncol - 1, 3] = 0.6
+    for j, w in enumerate(winner):
+        rgba[nrow - 1, j] = (0.17, 0.63, 0.17, 0.6) if w == "S" else (
+            (0.84, 0.15, 0.16, 0.6) if w == "P" else (0.6, 0.6, 0.6, 0.35))
+    fig, ax = plt.subplots(figsize=(max(11.0, 1.05 * ncol + 3), 0.95 * nrow + 3))
+    ax.imshow(rgba, aspect="auto")
+    for i in range(len(arms)):
+        for j in range(len(keys)):
+            if not np.isnan(M[i, j]):
+                ax.text(j, i - 0.24, _fmt_compact(M[i, j]), ha="center", va="center",
+                        fontsize=10, fontweight="bold", color="black")
+                if (i, j) in CI:
+                    lo, hi = CI[(i, j)]
+                    ax.text(j, i + 0.2, f"[{lo:+.3f},\n{hi:+.3f}]", ha="center", va="center",
+                            fontsize=6, color="black")
+        ax.text(ncol - 1, i, f"{score[i]:.2f}", ha="center", va="center", fontsize=10,
+                fontweight="bold", color="black")
+    for j, w in enumerate(winner):
+        ax.text(j, nrow - 1, w, ha="center", va="center", fontsize=14, fontweight="bold", color="black")
+    ax.set_xticks(range(ncol))
+    ax.set_xticklabels([f"{k}  {_DIR_TAG[_direction_of(k)]}\n{_SHORT_DESC.get(k, '')}" for k in keys]
+                       + ["SCORE\n(norm 0–1)"],
+                       rotation=45, ha="right", fontsize=7)
+    ax.set_yticks(range(nrow))
+    ax.set_yticklabels([_wrap_name(a) for a in arms] + ["WINNER"], fontsize=8, rotation=20, va="center")
+    ax.axhline(len(pre) - 0.5, color="black", lw=2)
+    ax.axhline(len(arms) - 0.5, color="black", lw=1)
+    ax.axvline(len(keys) - 0.5, color="black", lw=1)
+    verdict = "SURGERY" if _ns > _np else ("PRETRAIN" if _np > _ns else "SPLIT")
+    ax.set_title(f"Δ vs frozen (good-oriented, value + 95% CI) · PRETRAIN block / SURGERY block · "
+                 f"SCORE = mean per-metric-normalized (0–1)\n"
+                 f"WINNER row (champion duel — S=surgery, P=pretrain, ==tie):  "
+                 f"surgery {_ns} · pretrain {_np} · tie {_nt}  →  {verdict}", fontsize=10)
+    fig.tight_layout()
+    save_fig(fig, str(output_dir / "m13_grouped_winner_surgery_vs_pretrain"))
+    print(f"  [grouped] m13_grouped_winner_surgery_vs_pretrain — surgery {_ns} pretrain {_np} tie {_nt}")
 
 
 def plot_all_metric_bars(metrics: dict, output_dir: Path, boot_str: str) -> int:
@@ -659,6 +870,10 @@ def main():
         if frozen and len(encoders) >= 2:
             plot_hero_table(metrics, encoders, frozen, args.output_dir, boot_str)
             plot_hero_heatmap(metrics, encoders, frozen, args.output_dir)
+            # §3.3d — surgery-vs-pretrain verdict views (only when both families are present)
+            if any(_arm_family(e) == "surgery" for e in encoders) and any(_arm_family(e) == "pretrain" for e in encoders):
+                plot_scoreboard(metrics, encoders, frozen, args.output_dir)
+                plot_grouped_winner(metrics, encoders, frozen, args.output_dir)
         else:
             print(f"  [hero] skipped — needs a 'frozen' baseline + ≥2 encoders (got {encoders})")
 

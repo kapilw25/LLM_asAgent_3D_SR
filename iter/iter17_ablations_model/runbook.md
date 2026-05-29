@@ -107,3 +107,29 @@ grep -hE "depth=|n_trainable=" logs/iter17_poc_vjepa_2_1_vitg_c1_*.log   # surge
 # headline Δ (surgery_encoder − pretrain_encoder) for this backbone:
 python -c "import json; d=json.load(open('outputs/poc/probe_action/probe_paired_delta.json'))['iter14_paper_deltas']; print({k:v.get('delta_mean') for k,v in d.items() if v and not v.get('skipped')})"
 ```
+
+## 3 · §G aggregate — combined verdict plots across ALL encoders (run LAST)
+
+```bash
+# run_eval STAGE 10 auto-plots per-eval, but §1 frozen SKIPs 10/13 → build the COMBINED §G plot
+# ONCE, after §1+§2 finish. m13 re-reads the SHARED probe roots (they accumulate EVERY encoder
+# across all eval runs) → one hero_table / hero_heatmap / scoreboard / grouped spanning frozen + all arms.
+# Verdict is single-sourced via _family_verdict (champion duel): scoreboard == grouped tally always.
+source venv_walkindia/bin/activate ; export PYTHONPATH=src ; \
+python -u src/m13_eval_plot.py --POC \
+  --action-probe-root       outputs/poc/probe_action \
+  --motion-cos-root         outputs/poc/probe_motion_cos \
+  --future-mse-root         outputs/poc/probe_future_mse \
+  --taxonomy-root           outputs/poc/probe_taxonomy \
+  --predictor-temporal-root outputs/poc/predictor_temporal \
+  --encoder-temporal-root   outputs/poc/encoder_temporal \
+  --output-dir              outputs/poc/probe_plot \
+  --no-wandb 2>&1 | tee logs/iter17_poc_m13_plots_$(date +%Y%m%d_%H%M%S).log
+```
+
+```bash
+# ── VERIFY (plots) ──
+grep -iE "FATAL|Traceback" logs/iter17_poc_m13_plots_*.log                 # MUST be EMPTY (absent temporal "[skip]" lines are EXPECTED, not errors)
+grep -E "\[scoreboard\]|\[grouped\]" logs/iter17_poc_m13_plots_*.log       # champion-duel tally — scoreboard & grouped MUST agree: surgery N · pretrain N · tie N
+ls outputs/poc/probe_plot/eval/{m13_hero_table,m13_hero_surgery_vs_frozen,m13_scoreboard_surgery_vs_pretrain,m13_grouped_winner_surgery_vs_pretrain}.{png,pdf}
+```

@@ -1,0 +1,14 @@
+{
+  "encoder": "ijepa_vitG16",
+  "n_test": 1825,
+  "pos_mean": 0.475136,
+  "neg_mean": 0.456111,
+  "score_mean": 0.019025,
+  "score_ci": {
+    "mean": 0.019025,
+    "ci_lo": 0.017482,
+    "ci_hi": 0.020466,
+    "ci_half": 0.001492
+  },
+  "elapsed_sec": 0.01
+}
