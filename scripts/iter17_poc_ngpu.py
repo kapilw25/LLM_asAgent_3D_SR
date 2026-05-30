@@ -25,6 +25,11 @@ metrics (bounds disk). ENCODER_CKPT is overridden to a present ckpt (vitG defaul
 Usage:
   python -u scripts/iter17_poc_ngpu.py [--mode POC|SANITY] [--gpus 8] [--cache 2|1] [--dry-run]
   (SANITY = tiny data smoke; POC = real 10k numbers. --dry-run prints the schedule, launches nothing.)
+
+RESUME after a failure: re-launch with --cache 1. The scheduler skips TRAIN arms that already
+exported student_encoder.pt and unblocks their evals immediately; eval jobs fast-resume internally
+(m12a/c skip stages whose test_metrics.json exists). Only the failed job(s) + their dependents re-run.
+PREFLIGHT: aborts on low disk; WARNS if cpu-cores < gpus×6 (TAR-decode contention slows the ETA).
 """
 import argparse
 import subprocess
@@ -46,6 +51,16 @@ ARM2ENC = {
     "surgery_noDI_head":         "surgical_noDI_head",
 }
 SURGERY_ARMS = {a for a in ARM2ENC if a.startswith("surgery_")}
+# run_train arm → on-disk m09 output dir (for --resume done-marker: student_encoder.pt).
+ARM2DIR = {
+    "pretrain_encoder":          "m09a_pretrain_encoder",
+    "pretrain_2X_encoder":       "m09a_pretrain_2X_encoder",
+    "pretrain_head":             "m09a_pretrain_head",
+    "surgery_3stage_DI_encoder": "m09c_surgery_3stage_DI_encoder",
+    "surgery_noDI_encoder":      "m09c_surgery_noDI_encoder",
+    "surgery_3stage_DI_head":    "m09c_surgery_3stage_DI_head",
+    "surgery_noDI_head":         "m09c_surgery_noDI_head",
+}
 EVAL_SKIP = "1,4,7,9,9b,9c,12,13,10"   # per-encoder stages only; aggregate+labels+plots → §3
 ENC_CKPT_OVERRIDE = "checkpoints/vjepa2_1_vitg_384.pt"  # present ckpt to satisfy run_eval preflight
 
@@ -110,7 +125,34 @@ def main():
         sys.exit(f"FATAL: insufficient disk — {free_gb:.0f}G free < {req_gb}G for {args.mode}. "
                  f"Use a bigger node or free space.")
 
+    # cpu-core check: each concurrent job spawns ~6-8 CPU threads (TAR decode + producer). At full
+    # fan-out that's gpus×~6 cores; below that, decode I/O contends and the ~10-11h ETA slips. WARN only.
+    import os
+    cores = os.cpu_count() or 0
+    need_cores = args.gpus * 6
+    if cores < need_cores:
+        print(f"  ⚠️  [cpu-preflight] {cores} cores < ~{need_cores} (gpus×6) — TAR-decode will contend at "
+              f"full fan-out; wall-time may exceed the ~10-11h estimate. Use a higher-core node.",
+              flush=True)
+    else:
+        print(f"  [cpu-preflight] {cores} cores ≥ ~{need_cores} (gpus×6) — OK", flush=True)
+
     done, failed, running = set(), {}, {}   # running: gpu→(jid, Popen, log)
+
+    # --resume: when --cache 1, skip TRAIN arms that already exported student_encoder.pt (their eval
+    # dependents then unblock immediately; eval jobs themselves fast-resume internally under cache=1
+    # — m12a/c skip stages whose test_metrics.json already exists). --cache 2 (default) re-runs all.
+    if args.cache == "1":
+        for jid, j in jobs.items():
+            if j["kind"] != "train":
+                continue
+            _, bb, arm = jid.split(":")
+            if (REPO / f"outputs/{mtag}/{bb}/{ARM2DIR[arm]}/student_encoder.pt").exists():
+                done.add(jid)
+        if done:
+            print(f"  [resume --cache 1] skipping {len(done)} already-trained arms: "
+                  f"{sorted(d.split(':', 1)[1] for d in done)}", flush=True)
+
     free = list(range(args.gpus))
 
     print(f"═══ iter17 N-GPU scheduler · mode={args.mode} · gpus={args.gpus} · cache={args.cache} · "

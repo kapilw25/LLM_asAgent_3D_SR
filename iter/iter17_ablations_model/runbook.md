@@ -1,171 +1,200 @@
-# iter17 — Runbook: cross-arch model ablation (frozen baselines → trainable backbones)
+# iter17 — Runbook: cross-arch model ablation (V-JEPA 2.1 vitg + 2.0 vitg)
 
-Order: §1 frozen baselines (eval-only, NO training, ready now) → §2 trainable cross-arch
-(vjepa_2_1_vitg + vjepa_2_0_vitg). Each block runs SANITY (validate code paths, ~tiny data)
-then POC (real 10k numbers). `sleep 10` between train cells lets the prior GPU process release
-VRAM. Stage map: 1=labels 2=feat 3=action-probe 4=action-Δ 5/6=motion_cos 7=motion-Δ
-8/8b/8c=predictor-fwd 9/9b/9c=predictor-Δ 10=action-plot 11=taxonomy-probe 12=taxonomy-Δ 13=taxonomy-plot.
+> **You run ONE script, twice: `--mode SANITY` then `--mode POC`.** It trains both backbones
+> (14 arms), evals all 16 encoders, and builds the §G hero table — end to end. Everything under
+> **Reference** is already DONE or a fallback you only touch if a job fails. Start at "▶ THE RUN".
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ roster                                                                                  │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│ trainable (predictor → surgery)  vjepa_2_1_vitG (done iter16) · vjepa_2_1_vitg ·        │
-│                                  vjepa_2_0_vitg                                         │
-│ frozen baselines (encoder mx · §G predictor cols N/A):                                  │
-│   dinov2 · ijepa_vitH14 · ijepa_vitG16 · lejepa_vitL   (image JEPA / non-JEPA)          │
-│   vjepa_2_0_vitg_ssv2 · vjepa_1_vitL · vjepa_1_vitH · vjepa_2_vitL_256 · vjepa_2_1_vitL │
-│ NOT trainable                    vjepa_2_1_vitL = distilled, no predictor → frozen      │
-│ blocked (no public weights)      mc_jepa · d_jepa                                       │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-```
+---
 
-## 1 · Frozen baselines — eval only (START HERE; zero training)
+## ▶ THE RUN — one script, SANITY then POC
 
 ```bash
-# 9 frozen baselines (native .pt verified present; ijepa/dinov2/ssv2 pull from HF; lejepa = local timm load).
+# ── 0. ON THE CURRENT 1× NODE (BEFORE you tear it down) — push the results you already computed ──
+# Carries the frozen-9 + vitG JSON metrics (+ student_encoder.pt) to HF so the new node's §G can reuse
+# them. NOTE the upload policy DROPS m09_ckpt_best.pt (predictor) + *.npy → trained arms still re-run
+# on the new node (free, parallel), but the eval-only frozen-9/vitG metrics transfer intact.
+HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+#   HF_UPLOAD_MODE=reuse is REQUIRED in a piped/tee'd run — without it the upload prompts on stdin and hangs.
+#   reuse (mirror) is safe here: this node has all frozen-9 + the iter16 champion (vjepa_2_1_*) locally.
+```
+
+```bash
+# ── ON THE NEW 4×/8× NODE ──
+# 1. spin the node (8× RTX Pro 6000, ≥48 cores, ≥350G disk) · bash setup_env_uv.sh · git pull
+# 2. fetch data + native ckpts + the outputs/poc you just uploaded (download outputs/poc is OPTIONAL —
+#    only needed so the already-done frozen-9 + vitG metrics appear in the final §G hero table):
+python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_$(date +%Y%m%d_%H%M%S).log
+python -u src/utils/hf_outputs.py download-data checkpoints       2>&1 | tee logs/download_ckpts_$(date +%Y%m%d_%H%M%S).log
+python -u src/utils/hf_outputs.py download outputs/poc            2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log   # optional, for §G completeness
+#    → confirm checkpoints/{vjepa2_1_vitg_384.pt, vjepa2_0_vitg_384.pt} are present
+
+# 3. SANITY — tiny-data smoke (~10 min). MUST end "all 30 jobs PASSED — running §3":
+python -u scripts/iter17_poc_ngpu.py --mode SANITY --gpus 8 2>&1 | tee logs/ngpu_sanity_$(date +%Y%m%d_%H%M%S).log
+
+# 3b. ONLY after you see "all 30 jobs PASSED" above — drop the throwaway SANITY output to reclaim disk
+#     before POC. Disposable (tiny-data smoke, regenerable by re-running SANITY); POC writes a SEPARATE
+#     outputs/poc/ and reads nothing from here. Literal path (no var) so it can't expand to outputs/.
+rm -rf outputs/sanity/
+
+# 4. POC — real 10k numbers (~10-11h on 8×). Auto-builds §G → outputs/poc/probe_plot/eval/:
+python -u scripts/iter17_poc_ngpu.py --mode POC --gpus 8 2>&1 | tee logs/ngpu_POC_$(date +%Y%m%d_%H%M%S).log
+
+# (validate on the 1× node first?  same step 3 with --gpus 1.   resume after a failure?  add --cache 1.
+#  preview the schedule without launching?  add --dry-run.)
+```
+
+```bash
+# ── VERIFY (that's it — these two checks) ──
+grep -E "all 30 jobs PASSED|✗ " logs/ngpu_POC_*.log | tail     # want "all 30 jobs PASSED"; no ✗
+ls outputs/poc/probe_plot/eval/m13_hero_table.{png,pdf}        # the §G hero table
+# any ✗ → open logs/iter17_ngpu_poc_<train|eval>_<...>.log, fix, re-run step 4 with --cache 1.
+```
+
+```text
+WALL 8×≈10-11h · 4×≈16-18h · 2×≈30h · 1×≈50h     (--gpus picks the node size; same script)
+DISK ~240G at completion, peak ~270G → preflight ABORTS if free <250G → use a ≥350G-disk node
+CPU  ≥ gpus×6 cores (≥48 for 8×) or TAR-decode contends (WARN, not fatal)
+CKPT note: HF upload keeps ONLY *student_encoder.pt, NOT m09_ckpt_best.pt (predictor). So always run
+the scheduler with --cache 2 (default) for complete predictor metrics — re-training is FREE on 8 GPUs
+(vitg & 2.0 pretrain_2X run in parallel, no extra wall). --cache 1 is for resume-after-crash only.
+```
+
+---
+
+## ⚙ How it stays fast — DESIGN (why the N GPUs barely idle)
+
+It is a **greedy work-stealing dispatcher over an arm-level DAG** — NOT fixed waves. Every 10 s tick it
+*launches* every ready job onto a free GPU **and** *reaps* finished ones, returning the GPU to the pool the
+SAME tick. So a GPU freed by `reap` is re-filled by `launch` within one tick — there is no barrier where
+fast GPUs wait for the slowest job in a "wave". `ready` = not done/failed/running · `deps ⊆ done` · labels
+exist (if the job needs them).
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🧩 mechanism                       │ idle it removes                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ ① arm-level DAG (30 nodes) NOT     │ old 2gpu pinned 1 backbone/GPU → only 2-way ║ here every  │
+│   backbone-level (2)               │ arm + eval is a node → ≥8 independent jobs to fill 8 GPUs │
+│ ② greedy dispatch, NO wave barrier │ a freed GPU is refilled the SAME 10s tick if any job is   │
+│   (loop L186-213)                  │ ready — never "wait for the wave's slowest job"           │
+│ ③ reap → GPU back to pool instantly│ `del running[g]; free.append(g)` (L205) → reusable next tick │
+│ ④ eval pipelined WITH train        │ E[arm] fires the INSTANT T[arm] ends (no all-train-then-  │
+│   (no train/eval barrier)          │ all-eval barrier) → light evals backfill the draining tail │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+```mermaid
+flowchart TD
+    T(["⏱️ scheduler tick — every 10s"]) --> L{"a free GPU<br/>AND a ready* job?"}
+    L -- yes --> G["pop GPU g → Popen job<br/>CUDA_VISIBLE_DEVICES=g · running[g]=job"]
+    G --> L
+    L -- no --> R{"any running<br/>job exited?"}
+    R -- "rc==0" --> OK["✓ done → its deps unblock<br/>free.append(g) — GPU reusable NEXT tick"]
+    R -- "rc≠0" --> X["✗ failed → its dependents skipped<br/>free.append(g)"]
+    OK --> R
+    X --> R
+    R -- none --> C{"all 30 settled?"}
+    C -- no --> T
+    C -- yes --> S["✅ run §G aggregate (CPU)"]
+    classDef hot fill:#e6f3ff,stroke:#0366d6;
+    class G,OK hot;
+```
+
+The DAG (per backbone, mirrored ×2 — both share the one GPU pool). 3 dependency levels → dry-run waves 8 → 14 → 8:
+
+```mermaid
+flowchart LR
+    SEED["🌱 vitg pretrain_encoder<br/>SEED · no deps · ~4h"]
+    SEED -. writes .-> LB[["labels.json<br/>ready ~12min in"]]
+    LB --> ROOTS["🚂 roots flood the pool:<br/>pretrain_2X ×2 (~7.5h)<br/>pretrain_head ×2 (light)<br/>2.0 pretrain_encoder (~4h)"]
+    LB --> FRZ["📊 frozen eval ×2"]
+    SEED --> SURG["🔧 surgery ×4 (vitg)<br/>dep: vitg pretrain_encoder · ~3.8h enc"]
+    ROOTS -.->|2.0 PE| SURG2["🔧 surgery ×4 (2.0)"]
+    SEED --> EPE["📊 eval pretrain_encoder ×2bb"]
+    ROOTS --> EROOT["📊 eval pretrain_2X / head ×2bb"]
+    SURG --> ES["📊 eval surgery ×4 (vitg)"]
+    SURG2 --> ES2["📊 eval surgery ×4 (2.0)"]
+```
+
+Critical path = SEED 4h → surgery_enc 3.8h → its eval ≈ **8.3h ≈ the wall**. The dispatcher packs GPUs as
+tightly as the DAG allows; two idle sources remain that are **graph-bound, not scheduler bugs**:
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🔴 idle source (DAG-bound)          │ scheduler mitigation                                     │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ ① cold-start: only the SEED runs    │ SEED emits labels at its FIRST val-checkpoint (~12min),  │
+│   until labels exist                │ not at end-of-train → ramp bounded to ~12 min            │
+│ ② all 8 surgery arms gate on the 2  │ the 2 LONGEST jobs (pretrain_2X, 7.5h) launch first &    │
+│   pretrain_encoder (~4h) → hrs ~1-4 │ span the gap; eval pipelining backfills. On 8× ~4 GPUs   │
+│   only ~4 GPUs have long work       │ idle hrs 1-4 (~66% occ 1st half), ~100% hrs 4-8          │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+→ net ~80-85% GPU occupancy on 8×. 4× packs TIGHTER (1st-half work is ~4-GPU-bound anyway): 8× buys
+  wall-time (~10-11h vs ~16-18h), NOT efficiency. Pick 8× for the deadline, 4× for $/result.
+```
+
+Occupancy over time on an 8× node (illustrative · POC):
+
+```text
+┌────────────┬───────┬─────────────────────────────────────────────────┬─────────────────┐
+│ phase      │ hrs   │ what runs across the 8 GPUs                      │ GPU occupancy   │
+├────────────┼───────┼─────────────────────────────────────────────────┼─────────────────┤
+│ cold-start │ 0–0.2 │ ONLY vitg pretrain_encoder (SEED) — writes labels│ 1/8  (~12 min)  │
+│ roots ramp │ 0.2–2 │ 2×pretrain_encoder · 2×pretrain_2X ·             │ up to 8/8       │
+│            │       │ 2×pretrain_head · 2 frozen evals                 │                 │
+│ DAG bubble │ 2–4   │ pretrain_encoder + pretrain_2X still running;    │ ~4/8 — surgery  │
+│            │       │ heads done, surgery BLOCKED until PE finishes    │ waits PE @ ~4h  │
+│ surgery    │ 4–7.7 │ 8 surgery arms + pretrain_2X tail + evals flood  │ 8/8  (~100%)    │
+│ eval tail  │7.7–8.3│ light per-encoder evals backfill the drain       │ draining        │
+│ §G (CPU)   │ +0.25 │ paired-Δ + m13 plots — no GPU                     │ —               │
+└────────────┴───────┴─────────────────────────────────────────────────┴─────────────────┘
+```
+
+The only idle is the cold-start (~12 min) and the DAG bubble (~hrs 2–4, where surgery is still blocked on
+pretrain_encoder); after ~4h everything floods → ~100% to the tail. Real wall on 8× ≈ ~10-11h with margin.
+
+---
+
+## 📎 Reference — normally untouched (already DONE, or fallback only)
+
+### A · Frozen-9 baselines — DONE → m13_frozen_scorecard.png
+
+The 9 image-JEPA / non-JEPA / other-V-JEPA baselines are NOT in the scheduler (it only trains+evals the 2
+trainable backbones). They are already evaluated; `download outputs/poc` (step 2) carries their metrics into §G.
+Re-run ONLY if the eval registry changed:
+
+```bash
 FROZEN="dinov2 ijepa_vitH14 ijepa_vitG16 vjepa_2_0_vitg_ssv2 vjepa_1_vitL_frozen vjepa_1_vitH_frozen vjepa_2_vitL_256_frozen vjepa_2_1_vitL_frozen lejepa_vitL_frozen"
-# run 1/2/3/5/6/11 = action + motion_cos + taxonomy. SKIP: paired-Δ (no arm pairs here),
-# predictor 8/8b/8c+9 (frozen baselines have no usable predictor → N/A), plots 10/13 (build combined §G later).
-SKIP_FROZEN="4,7,8,8b,8c,9,9b,9c,10,12,13"
+ENCODERS="$FROZEN" SKIP_STAGES="4,7,8,8b,8c,9,9b,9c,10,12,13" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee logs/iter17_poc_frozen9_$(date +%Y%m%d_%H%M%S).log
 ```
+
+### B · Manual §G rebuild — fallback only (the scheduler auto-runs this at the end of step 4)
+
+Use only if you ran arms by hand, or want to re-plot without re-evaling. STEP 1 = rebuild by_encoder
+aggregates over ALL encoders (the frozen-9 land here too); STEP 2 = combined m13 §G plots.
 
 ```bash
-# ── 1a · SANITY (combined smoke — proves the 9-in-one-command path, ~10 min, tiny data) ──
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_frozen9_$(date +%Y%m%d_%H%M%S).log
-```
-
-```bash
-# ── 1b · POC (real 10k §G numbers) ──
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen9_$(date +%Y%m%d_%H%M%S).log
-```
-
-```bash
-# ── 1c · OVERNIGHT (sleepy): SANITY then POC, `;` not `&&` so POC runs even if SANITY hiccups ──
-FROZEN="dinov2 ijepa_vitH14 ijepa_vitG16 vjepa_2_0_vitg_ssv2 vjepa_1_vitL_frozen vjepa_1_vitH_frozen vjepa_2_vitL_256_frozen vjepa_2_1_vitL_frozen lejepa_vitL_frozen" ; SKIP_FROZEN="4,7,8,8b,8c,9,9b,9c,10,12,13" ; \
-ENCODERS="$FROZEN" SKIP_STAGES="$SKIP_FROZEN" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC    2>&1 | tee logs/iter17_poc_frozen9_$(date +%Y%m%d_%H%M%S).log
-```
-
-```bash
-# ── VERIFY (frozen) ──
-grep -iE "FATAL|Traceback|KeyError|invalid choice" logs/iter17_*frozen9*.log   # MUST be EMPTY
-ls outputs/poc/probe_action/{dinov2,ijepa_vitH14,ijepa_vitG16,vjepa_2_0_vitg_ssv2,vjepa_1_vitL_frozen,vjepa_1_vitH_frozen,vjepa_2_vitL_256_frozen,vjepa_2_1_vitL_frozen,lejepa_vitL_frozen}/probe.pt  # 9 action probes
-grep -hE "Test top-1 acc|score_mean=" logs/iter17_poc_frozen9_*.log   # per-encoder action top1 + motion_cos
-```
-
-## 2 · Trainable cross-arch — vjepa_2_1_vitg + vjepa_2_0_vitg (train + eval)
-
-```text
-WS-B3 DONE: predictor_eval is arch-aware (run_eval passes --model-config per backbone) → vitg/2.0_vitg
-get ALL 10 metrics; predictor stages (8/8b/8c/9*) NO LONGER skipped. Surgery inits from THIS backbone's
-m09a_pretrain_encoder ckpt (pipeline.yaml surgery_init, namespaced outputs/<mode>/<BACKBONE>/) →
-pretrain_encoder MUST be the FIRST arm. Both backbones are 1B (40-blk/1408) — ~0.6× the vitG (2B) wall.
-PLAN:  §2.1 SANITY both backbones on 1× node (sequential, validate code) → §2.2 POC on 2× GPU.
-```
-
-### 2.1 · SANITY — BOTH backbones, sequential on 1× node (validate first)
-
-```bash
-# vjepa_2_1_vitg SANITY (7 arms + eval). ✅ ALREADY PASSED 2026-05-30 (0 errors). Re-run only if code changed.
-# vjepa_2_0_vitg SANITY (7 arms + eval) — version axis; FIRST GPU smoke of the 2.0 deep-sup-gated path on THIS box.
-for BACKBONE in vjepa_2_1_vitg vjepa_2_0_vitg ; do \
-  ARMS_EVAL="${BACKBONE}_frozen ${BACKBONE}_pretrain_encoder ${BACKBONE}_pretrain_2X_encoder ${BACKBONE}_pretrain_head ${BACKBONE}_surgical_3stage_DI_encoder ${BACKBONE}_surgical_noDI_encoder ${BACKBONE}_surgical_3stage_DI_head ${BACKBONE}_surgical_noDI_head" ; \
-  for ARM in pretrain_encoder pretrain_2X_encoder surgery_3stage_DI_encoder surgery_noDI_encoder pretrain_head surgery_3stage_DI_head surgery_noDI_head ; do \
-    BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh "$ARM" --SANITY 2>&1 | tee "logs/iter17_sanity_${BACKBONE}_${ARM}_$(date +%Y%m%d_%H%M%S).log" ; \
-    sleep 10 ; \
-  done ; \
-  ENCODERS="$ARMS_EVAL" SKIP_STAGES="" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee "logs/iter17_sanity_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log" ; \
-done
-```
-
-```bash
-# ── VERIFY (SANITY both) — MUST be empty; then proceed to §2.2 POC ──
-grep -iE "FATAL|Traceback|KeyError|RuntimeError|invalid choice" logs/iter17_sanity_vjepa_2_1_vitg_*.log logs/iter17_sanity_vjepa_2_0_vitg_*.log   # MUST be EMPTY
-# 2.0 deep-sup gated OFF (n_output_distillation=1) — must NOT show the 2.1 'training='/'mod=' kwargs error:
-grep -hE "n_output_distillation|deep-sup|Predictor:|Student loaded" logs/iter17_sanity_vjepa_2_0_vitg_a1_pretrain_encoder_*.log | head
-```
-
-### 2.2 · POC — 2× GPU (one backbone per GPU, parallel). RTX Pro 6000 96 GB each.
-
-```text
-SAFE for shared disk: training writes per-backbone outputs/poc/<BACKBONE>/ (distinct); the shared
-data-derivation (train_pool/splits, regenerated every arm) is now ATOMIC-written (clip_splits.py +
-probe_train_subset.py, git iter17) → concurrent identical-content rewrites are race-free. Each lane's
-EVAL runs per-encoder stages only and SKIPS the shared paired-Δ aggregate (4,7,9,9b,9c,12) + plots
-(10,13); the combined paired-Δ + m13 plots run ONCE in §3 over ALL encoders. Orchestrator pins each
-backbone to a GPU via CUDA_VISIBLE_DEVICES and runs both lanes in the background, then waits.
-```
-
-```bash
-# ── 2.2 · launch the 2× GPU orchestrator (backbone 0→GPU0, backbone 1→GPU1, parallel). Takes {SANITY|POC}. ──
-# OPTIONAL: validate the 2× loop on a 2-GPU node first (~minutes), then the real POC:
-./scripts/iter17_poc_2gpu.sh SANITY 2>&1 | tee logs/iter17_2gpu_orch_sanity_$(date +%Y%m%d_%H%M%S).log ; \
-./scripts/iter17_poc_2gpu.sh POC    2>&1 | tee logs/iter17_2gpu_orch_poc_$(date +%Y%m%d_%H%M%S).log
-# default (no arg) = POC. Per-lane logs: logs/iter17_<mode>_<BACKBONE>_<ARM>_*.log + ..._eval_*.log
-# POC wall ≈ ~15h train (both lanes parallel) + ~6h eval (parallel) ≈ ~21h.  Watch live: nvidia-smi -l 5
-```
-
-```bash
-# ── ALT: manual single-GPU POC (no 2× node) — one backbone fully, then the other (~42h total) ──
-for BACKBONE in vjepa_2_1_vitg vjepa_2_0_vitg ; do \
-  ARMS_EVAL="${BACKBONE}_frozen ${BACKBONE}_pretrain_encoder ${BACKBONE}_pretrain_2X_encoder ${BACKBONE}_pretrain_head ${BACKBONE}_surgical_3stage_DI_encoder ${BACKBONE}_surgical_noDI_encoder ${BACKBONE}_surgical_3stage_DI_head ${BACKBONE}_surgical_noDI_head" ; \
-  for ARM in pretrain_encoder pretrain_2X_encoder surgery_3stage_DI_encoder surgery_noDI_encoder pretrain_head surgery_3stage_DI_head surgery_noDI_head ; do \
-    BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh "$ARM" --POC 2>&1 | tee "logs/iter17_poc_${BACKBONE}_${ARM}_$(date +%Y%m%d_%H%M%S).log" ; sleep 10 ; \
-  done ; \
-  ENCODERS="$ARMS_EVAL" SKIP_STAGES="4,7,9,9b,9c,12,13,10" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee "logs/iter17_poc_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log" ; \
-done
-# then run §3 (combined paired-Δ + plots) ONCE.
-```
-
-```bash
-# ── VERIFY (trained backbone) ──
-grep -iE "FATAL|Traceback|KeyError|invalid choice" logs/iter17_poc_vjepa_2_1_vitg_*.log   # MUST be EMPTY
-ls outputs/poc/vjepa_2_1_vitg/m09a_pretrain_encoder/m09a_ckpt_best.pt \
-   outputs/poc/vjepa_2_1_vitg/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt   # arm ckpts landed under the backbone ns
-grep -hE "depth=|n_trainable=" logs/iter17_poc_vjepa_2_1_vitg_c1_*.log   # surgery froze int(40*frac) blocks (40-blk auto-scale)
-# headline Δ (surgery_encoder − pretrain_encoder) for this backbone:
-python -c "import json; d=json.load(open('outputs/poc/probe_action/probe_paired_delta.json'))['iter14_paper_deltas']; print({k:v.get('delta_mean') for k,v in d.items() if v and not v.get('skipped')})"
-```
-
-## 3 · §G aggregate — combined verdict plots across ALL encoders (run LAST)
-
-```bash
-# STEP 1 (MUST run FIRST) — rebuild the by_encoder AGGREGATES over ALL encoders. m13 reads the
-# paired-Δ JSONs (probe_paired_delta / probe_motion_cos_paired / per_dim_acc), and the paired_delta
-# stage is the ONLY place by_encoder is built — but §1 frozen SKIPs stages 4/7/12, so the 9 frozen
-# baselines never landed there → they'd be INVISIBLE in §G. These 3 CPU aggregators auto-discover
-# every encoder subdir present (arms + 9 baselines) and rebuild by_encoder from the on-disk
-# per-encoder test_metrics.json — no GPU, no feature recompute, ~15 min total.
 source venv_walkindia/bin/activate ; export PYTHONPATH=src ; \
 python -u src/m12a_action_top1.py --POC --stage paired_delta --output-root outputs/poc/probe_action     --cache-policy 1 --no-wandb ; \
 python -u src/m12b_motion_cos.py  --POC --stage paired_delta --output-root outputs/poc/probe_motion_cos --cache-policy 1 --no-wandb ; \
-python -u src/m12c_taxonomy_f1.py --POC --stage paired_delta --features-root outputs/poc/probe_action --output-root outputs/poc/probe_taxonomy --cache-policy 1 --no-wandb
-```
-
-```bash
-# STEP 2 — build the COMBINED §G plots. m13 re-reads the SHARED probe roots (now carrying EVERY
-# encoder) → one hero_table / hero_heatmap / scoreboard / grouped spanning frozen + baselines + arms.
-# Verdict is single-sourced via _family_verdict (champion duel): scoreboard == grouped tally always.
-# Frozen reference auto-derives to the arms' same-backbone frozen (vjepa_2_1_frozen), NOT the
-# alphabetically-first 'frozen' baseline. Baselines carry head metrics only (predictor cols N/A).
-source venv_walkindia/bin/activate ; export PYTHONPATH=src ; \
+python -u src/m12c_taxonomy_f1.py --POC --stage paired_delta --features-root outputs/poc/probe_action --output-root outputs/poc/probe_taxonomy --cache-policy 1 --no-wandb ; \
 python -u src/m13_eval_plot.py --POC \
---action-probe-root       outputs/poc/probe_action \
---motion-cos-root         outputs/poc/probe_motion_cos \
---future-mse-root         outputs/poc/probe_future_mse \
---taxonomy-root           outputs/poc/probe_taxonomy \
---predictor-temporal-root outputs/poc/predictor_temporal \
---encoder-temporal-root   outputs/poc/encoder_temporal \
---output-dir              outputs/poc/probe_plot \
---no-wandb 2>&1 | tee logs/iter17_poc_m13_plots_$(date +%Y%m%d_%H%M%S).log
+--action-probe-root outputs/poc/probe_action --motion-cos-root outputs/poc/probe_motion_cos \
+--future-mse-root outputs/poc/probe_future_mse --taxonomy-root outputs/poc/probe_taxonomy \
+--predictor-temporal-root outputs/poc/predictor_temporal --encoder-temporal-root outputs/poc/encoder_temporal \
+--output-dir outputs/poc/probe_plot --no-wandb 2>&1 | tee logs/iter17_poc_m13_plots_$(date +%Y%m%d_%H%M%S).log
 ```
 
-```bash
-# ── VERIFY (plots) ──
-# STEP 1 landed: by_encoder must cover the baselines (frozen-9 → 17 with the iter16 arms), not just 8
-python -c "import json; print('action by_encoder:', len(json.load(open('outputs/poc/probe_action/probe_paired_delta.json'))['by_encoder']))"   # expect 17 (8 arms + 9 baselines)
-grep -E "\[hero-table\]|\[hero-heatmap\]" logs/iter17_poc_m13_plots_*.log   # cols/rows must reflect ALL encoders (e.g. 18 cols, 16 rows)
-grep -iE "FATAL|Traceback" logs/iter17_poc_m13_plots_*.log                 # MUST be EMPTY (absent temporal "[skip]" lines are EXPECTED, not errors)
-grep -E "\[scoreboard\]|\[grouped\]" logs/iter17_poc_m13_plots_*.log       # champion-duel tally — scoreboard & grouped MUST agree: surgery N · pretrain N · tie N
-ls outputs/poc/probe_plot/eval/{m13_hero_table,m13_hero_surgery_vs_frozen,m13_scoreboard_surgery_vs_pretrain,m13_grouped_winner_surgery_vs_pretrain}.{png,pdf}
+### C · Roster + stage map (lookup)
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ trainable (predictor → surgery)  vjepa_2_1_vitG (done iter16) · vjepa_2_1_vitg · vjepa_2_0_vitg │
+│ frozen baselines (encoder mx · §G predictor cols N/A):                                  │
+│   dinov2 · ijepa_vitH14 · ijepa_vitG16 · lejepa_vitL   (image JEPA / non-JEPA)          │
+│   vjepa_2_0_vitg_ssv2 · vjepa_1_vitL · vjepa_1_vitH · vjepa_2_vitL_256 · vjepa_2_1_vitL │
+│ NOT trainable  vjepa_2_1_vitL = distilled, no predictor    blocked  mc_jepa · d_jepa     │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+stage map: 1=labels 2=feat 3=action-probe 4=action-Δ 5/6=motion_cos 7=motion-Δ 8/8b/8c=predictor-fwd
+9/9b/9c=predictor-Δ 10=action-plot 11=taxonomy-probe 12=taxonomy-Δ 13=taxonomy-plot
 ```
