@@ -1,6 +1,6 @@
 # Secrets & Scripts
 .env
-git_push*
+# git_push.sh is tracked ON PURPOSE (token-free — it sources creds from .env). Do NOT ignore it.
 
 # Directories
 trash
