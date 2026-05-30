@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_noDI_head",
+  "metric": "order",
+  "n_test": 1825,
+  "mean": 0.019458,
+  "std": 0.028748,
+  "ci": {
+    "mean": 0.019458,
+    "ci_lo": 0.018132,
+    "ci_hi": 0.020795,
+    "ci_half": 0.001332
+  },
+  "lower_is_better": null,
+  "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/m09c_surgery_noDI_head/m09c_ckpt_best.pt"
+}

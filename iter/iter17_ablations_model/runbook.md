@@ -55,47 +55,66 @@ grep -hE "Test top-1 acc|score_mean=" logs/iter17_poc_frozen9_*.log   # per-enco
 
 ## 2 · Trainable cross-arch — vjepa_2_1_vitg + vjepa_2_0_vitg (train + eval)
 
+```text
+WS-B3 DONE: predictor_eval is arch-aware (run_eval passes --model-config per backbone) → vitg/2.0_vitg
+get ALL 10 metrics; predictor stages (8/8b/8c/9*) NO LONGER skipped. Surgery inits from THIS backbone's
+m09a_pretrain_encoder ckpt (pipeline.yaml surgery_init, namespaced outputs/<mode>/<BACKBONE>/) →
+pretrain_encoder MUST be the FIRST arm. Both backbones are 1B (40-blk/1408) — ~0.6× the vitG (2B) wall.
+PLAN:  §2.1 SANITY both backbones on 1× node (sequential, validate code) → §2.2 POC on 2× GPU.
+```
+
+### 2.1 · SANITY — BOTH backbones, sequential on 1× node (validate first)
+
 ```bash
-# WS-B3 DONE: predictor_eval is arch-aware (run_eval passes --model-config per backbone) → vitg/2.0_vitg
-# get ALL 10 metrics; predictor stages (8/8b/8c/9*) are NO LONGER skipped (validated build+forward).
-# Surgery inits from THIS backbone's m09a_pretrain_encoder ckpt (pipeline.yaml surgery_init,
-# namespaced outputs/<mode>/<BACKBONE>/) → pretrain_encoder MUST run first.
-BACKBONE=vjepa_2_1_vitg          # ← switch to vjepa_2_0_vitg for the version axis (same commands)
+# vjepa_2_1_vitg SANITY (7 arms + eval). ✅ ALREADY PASSED 2026-05-30 (0 errors). Re-run only if code changed.
+# vjepa_2_0_vitg SANITY (7 arms + eval) — version axis; FIRST GPU smoke of the 2.0 deep-sup-gated path on THIS box.
+for BACKBONE in vjepa_2_1_vitg vjepa_2_0_vitg ; do \
+  ARMS_EVAL="${BACKBONE}_frozen ${BACKBONE}_pretrain_encoder ${BACKBONE}_pretrain_2X_encoder ${BACKBONE}_pretrain_head ${BACKBONE}_surgical_3stage_DI_encoder ${BACKBONE}_surgical_noDI_encoder ${BACKBONE}_surgical_3stage_DI_head ${BACKBONE}_surgical_noDI_head" ; \
+  for ARM in pretrain_encoder pretrain_2X_encoder surgery_3stage_DI_encoder surgery_noDI_encoder pretrain_head surgery_3stage_DI_head surgery_noDI_head ; do \
+    BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh "$ARM" --SANITY 2>&1 | tee "logs/iter17_sanity_${BACKBONE}_${ARM}_$(date +%Y%m%d_%H%M%S).log" ; \
+    sleep 10 ; \
+  done ; \
+  ENCODERS="$ARMS_EVAL" SKIP_STAGES="" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee "logs/iter17_sanity_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log" ; \
+done
 ```
 
 ```bash
-# ── 2a · Option A — ONE arm at a time (manual / debug). Run, inspect, then next. SANITY first. ──
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log
-# then, individually (each is one paste): pretrain_2X_encoder · surgery_3stage_DI_encoder ·
-#   surgery_noDI_encoder · pretrain_head · surgery_3stage_DI_head · surgery_noDI_head
-# (swap --SANITY → --POC for the real run)
+# ── VERIFY (SANITY both) — MUST be empty; then proceed to §2.2 POC ──
+grep -iE "FATAL|Traceback|KeyError|RuntimeError|invalid choice" logs/iter17_sanity_vjepa_2_1_vitg_*.log logs/iter17_sanity_vjepa_2_0_vitg_*.log   # MUST be EMPTY
+# 2.0 deep-sup gated OFF (n_output_distillation=1) — must NOT show the 2.1 'training='/'mod=' kwargs error:
+grep -hE "n_output_distillation|deep-sup|Predictor:|Student loaded" logs/iter17_sanity_vjepa_2_0_vitg_a1_pretrain_encoder_*.log | head
+```
+
+### 2.2 · POC — 2× GPU (one backbone per GPU, parallel). RTX Pro 6000 96 GB each.
+
+```text
+SAFE for shared disk: training writes per-backbone outputs/poc/<BACKBONE>/ (distinct); the shared
+data-derivation (train_pool/splits, regenerated every arm) is now ATOMIC-written (clip_splits.py +
+probe_train_subset.py, git iter17) → concurrent identical-content rewrites are race-free. Each lane's
+EVAL runs per-encoder stages only and SKIPS the shared paired-Δ aggregate (4,7,9,9b,9c,12) + plots
+(10,13); the combined paired-Δ + m13 plots run ONCE in §3 over ALL encoders. Orchestrator pins each
+backbone to a GPU via CUDA_VISIBLE_DEVICES and runs both lanes in the background, then waits.
 ```
 
 ```bash
-# ── 2b · Option B — ALL 7 arms + eval, chained (unattended). SANITY: validate the whole loop. ──
-BACKBONE=vjepa_2_1_vitg ; ARMS_EVAL="vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_pretrain_2X_encoder vjepa_2_1_vitg_pretrain_head vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_noDI_encoder vjepa_2_1_vitg_surgical_3stage_DI_head vjepa_2_1_vitg_surgical_noDI_head" ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_2X_encoder       --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-ENCODERS="$ARMS_EVAL" SKIP_STAGES="" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --SANITY 2>&1 | tee logs/iter17_sanity_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log
+# ── 2.2 · launch the 2× GPU orchestrator (backbone 0→GPU0, backbone 1→GPU1, parallel). Takes {SANITY|POC}. ──
+# OPTIONAL: validate the 2× loop on a 2-GPU node first (~minutes), then the real POC:
+./scripts/iter17_poc_2gpu.sh SANITY 2>&1 | tee logs/iter17_2gpu_orch_sanity_$(date +%Y%m%d_%H%M%S).log ; \
+./scripts/iter17_poc_2gpu.sh POC    2>&1 | tee logs/iter17_2gpu_orch_poc_$(date +%Y%m%d_%H%M%S).log
+# default (no arg) = POC. Per-lane logs: logs/iter17_<mode>_<BACKBONE>_<ARM>_*.log + ..._eval_*.log
+# POC wall ≈ ~15h train (both lanes parallel) + ~6h eval (parallel) ≈ ~21h.  Watch live: nvidia-smi -l 5
 ```
 
 ```bash
-# ── 2c · POC (real numbers) — same as 2b with --SANITY → --POC. ──
-BACKBONE=vjepa_2_1_vitg ; ARMS_EVAL="vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_pretrain_2X_encoder vjepa_2_1_vitg_pretrain_head vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_noDI_encoder vjepa_2_1_vitg_surgical_3stage_DI_head vjepa_2_1_vitg_surgical_noDI_head" ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder          --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_2X_encoder       --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_encoder --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_c1_surgery_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_encoder      --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_c1_surgery_noDI_encoder_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_head             --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_3stage_DI_head    --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_c2_surgery_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_noDI_head         --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_c2_surgery_noDI_head_$(date +%Y%m%d_%H%M%S).log ; sleep 10 ; \
-ENCODERS="$ARMS_EVAL" SKIP_STAGES="" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee logs/iter17_poc_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log
-# version axis: re-run 2c with BACKBONE=vjepa_2_0_vitg and ARMS_EVAL prefixed vjepa_2_0_vitg_*
+# ── ALT: manual single-GPU POC (no 2× node) — one backbone fully, then the other (~42h total) ──
+for BACKBONE in vjepa_2_1_vitg vjepa_2_0_vitg ; do \
+  ARMS_EVAL="${BACKBONE}_frozen ${BACKBONE}_pretrain_encoder ${BACKBONE}_pretrain_2X_encoder ${BACKBONE}_pretrain_head ${BACKBONE}_surgical_3stage_DI_encoder ${BACKBONE}_surgical_noDI_encoder ${BACKBONE}_surgical_3stage_DI_head ${BACKBONE}_surgical_noDI_head" ; \
+  for ARM in pretrain_encoder pretrain_2X_encoder surgery_3stage_DI_encoder surgery_noDI_encoder pretrain_head surgery_3stage_DI_head surgery_noDI_head ; do \
+    BACKBONE=$BACKBONE CACHE_POLICY_ALL=2 ./scripts/run_train.sh "$ARM" --POC 2>&1 | tee "logs/iter17_poc_${BACKBONE}_${ARM}_$(date +%Y%m%d_%H%M%S).log" ; sleep 10 ; \
+  done ; \
+  ENCODERS="$ARMS_EVAL" SKIP_STAGES="4,7,9,9b,9c,12,13,10" CACHE_POLICY_ALL=2 ./scripts/run_eval.sh --POC 2>&1 | tee "logs/iter17_poc_${BACKBONE}_eval_$(date +%Y%m%d_%H%M%S).log" ; \
+done
+# then run §3 (combined paired-Δ + plots) ONCE.
 ```
 
 ```bash

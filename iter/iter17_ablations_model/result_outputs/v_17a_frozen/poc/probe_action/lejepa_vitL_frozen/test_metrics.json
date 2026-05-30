@@ -1,0 +1,29 @@
+{
+  "encoder": "lejepa_vitL_frozen",
+  "n_classes": 11,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__upward",
+    "slow__downward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 1825,
+  "top1_acc": 0.4005479452054794,
+  "top1_ci": {
+    "mean": 0.400548,
+    "ci_lo": 0.37863,
+    "ci_hi": 0.423014,
+    "ci_half": 0.022192
+  },
+  "best_val_acc": 0.42572062084257206,
+  "probe_lr": 0.0005,
+  "warmup_pct": 0.0,
+  "epochs": 20
+}

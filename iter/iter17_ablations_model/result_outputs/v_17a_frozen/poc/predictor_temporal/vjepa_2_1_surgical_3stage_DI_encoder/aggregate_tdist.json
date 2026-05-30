@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_encoder",
+  "metric": "tdist",
+  "n_test": 1825,
+  "mean": 0.007826,
+  "std": 0.009329,
+  "ci": {
+    "mean": 0.007826,
+    "ci_lo": 0.007404,
+    "ci_hi": 0.008255,
+    "ci_half": 0.000426
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-\u0394t slope; lower = slower decay w/ distance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt"
+}

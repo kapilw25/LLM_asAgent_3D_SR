@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_1_vitH_frozen",
+  "n_test": 1825,
+  "pos_mean": 0.855259,
+  "neg_mean": 0.848475,
+  "score_mean": 0.006783,
+  "score_ci": {
+    "mean": 0.006783,
+    "ci_lo": 0.006177,
+    "ci_hi": 0.007343,
+    "ci_half": 0.000583
+  },
+  "elapsed_sec": 0.02
+}
