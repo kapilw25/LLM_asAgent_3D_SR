@@ -67,6 +67,32 @@ _PROBE_CFG = get_pipeline_config()["probe"]
 NUM_FRAMES_DEFAULT = _PROBE_CFG["num_frames"]   # was 16 literal
 
 
+def _cleanup_probe_heads(out_dir, keep: bool) -> None:
+    """Delete the per-dim probe_<dim>.pt heads AFTER test_metrics.json is written.
+
+    iter18 (2026-05-30): the heads (~356 MB each × ~16 dims ≈ 5.6 GB per encoder) are PURE
+    INTERMEDIATE — paired_delta (Stage 12) + m13 read test_metrics.json, NEVER the heads, and
+    hf_outputs explicitly drops probe*.pt as "re-trainable in minutes". Left in place they
+    accumulate ~5.6 GB × N_encoders (89 GB at 16 encoders — the probe_taxonomy disk hog) and can
+    OOM a tight disk mid-run. Deleting them as soon as the DURABLE metrics land bounds
+    probe_taxonomy/ to ~one encoder's worth. The small per_clip_*.npy / clip_keys_*.npy are KEPT
+    (plot stage may read them). --keep-probe-heads retains everything (debugging / probe reuse).
+    Safe by construction: only runs after the test_metrics.json write returns, and is scoped to
+    THIS encoder's own probe_*.pt (the files just written above)."""
+    if keep:
+        return
+    from pathlib import Path as _P
+    heads = sorted(_P(out_dir).glob("probe_*.pt"))
+    if not heads:
+        return
+    freed = sum(h.stat().st_size for h in heads)
+    for h in heads:
+        h.unlink()
+    print(f"  [probe-head cleanup] removed {len(heads)} probe_*.pt "
+          f"({freed / 1e9:.2f} GB freed; metrics kept in test_metrics.json) — "
+          f"--keep-probe-heads to retain", flush=True)
+
+
 # ── Label derivation → utils/taxonomy_labels.py + src/m04f_taxonomy_labels.py ──
 # iter16 §3.2: _filter_dims + derive_taxonomy_labels MOVED to utils/taxonomy_labels.py
 # (single source); the `--stage labels` orchestration MOVED to the ANNOTATION-band
@@ -348,6 +374,9 @@ def run_train_stage(args, wb) -> None:
     pbar.close()
     save_json_checkpoint(summary, out_dir / "test_metrics.json")
     print(f"Wrote: {out_dir / 'test_metrics.json'} ({len(summary['dims'])} dim records)")
+    # iter18: free the ~5.6 GB of probe_<dim>.pt heads now that the durable metrics are on disk
+    # (bounds probe_taxonomy/ so a tight 350 GB 2× GPU node doesn't OOM mid-run).
+    _cleanup_probe_heads(out_dir, args.keep_probe_heads)
 
 
 # ── Stage: paired_delta (N-way per-dim) ──────────────────────────────
@@ -537,6 +566,10 @@ def build_parser():
     p.add_argument("--probe-depth", type=int, default=_PROBE_CFG["depth"])
     p.add_argument("--train-batch-size", type=int, default=_PROBE_CFG["batch_size"])
     p.add_argument("--seed", type=int, default=_PROBE_CFG["seed"])
+    p.add_argument("--keep-probe-heads", action="store_true",
+                   help="retain per-dim probe_<dim>.pt heads after metrics (default: DELETE them "
+                        "post-test_metrics.json to bound probe_taxonomy/ disk — heads are re-trainable "
+                        "intermediates; paired_delta/m13 read test_metrics.json, not the heads)")
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p
