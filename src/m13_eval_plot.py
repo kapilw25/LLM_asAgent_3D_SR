@@ -732,6 +732,25 @@ def _pick_frozen_ref(encoders):
     return frozens[0]
 
 
+def _backbone_of(enc):
+    """Map a RAW encoder key → its trained-backbone id (vjepa_2_1_vitG / vjepa_2_1_vitg /
+    vjepa_2_0_vitg) via _canon (champion's legacy vjepa_2_1_<arm> → vjepa_2_1_vitG_) + the _BB_TAG
+    prefixes — the SAME single source of backbone identity the display labels use. External baselines
+    (dinov2 / lejepa / any non-_BB_TAG key) → None (not one of the 3 trained backbones)."""
+    c = _canon(enc)
+    for pre, _long, _short in _BB_TAG:
+        if c.startswith(pre):
+            return pre.rstrip("_")
+    return None
+
+
+def _backbones_present(encoders) -> list:
+    """Distinct trained backbones with ≥1 surgery/pretrain arm, in _BB_TAG display order
+    (ViT-G → ViT-g → ViT-g·2.0). Drives the per-backbone hero breakouts."""
+    have = {_backbone_of(e) for e in encoders if _arm_family(e) in ("surgery", "pretrain")}
+    return [pre.rstrip("_") for pre, _l, _s in _BB_TAG if pre.rstrip("_") in have]
+
+
 def _good_orient(d, lo, hi, direction):
     """Orient (Δ, lo, hi) so POSITIVE = better: lower-better → negate + swap bounds; else as-is."""
     if direction == "lower":
@@ -936,6 +955,21 @@ def plot_all_metric_bars(metrics: dict, output_dir: Path, boot_str: str) -> int:
     return n
 
 
+def _emit_hero_suite(metrics, core, frozen, out_dir, boot_str):
+    """The 4 surgery-vs-pretrain hero views for ONE encoder set, written into out_dir: hero-table +
+    Δ-vs-frozen heatmap always; scoreboard + grouped-winner only when BOTH families are present.
+    Called once for the COMBINED set (all backbones → eval/) and once per backbone (eval/<backbone>/),
+    so combined and per-backbone share ONE code path (identical semantics, no drift). Caller
+    guarantees `frozen` ∈ core and len(core) ≥ 2."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    plot_hero_table(metrics, core, frozen, out_dir, boot_str)
+    plot_hero_heatmap(metrics, core, frozen, out_dir)
+    # §3.3d — surgery-vs-pretrain verdict views (only when both families are present)
+    if any(_arm_family(e) == "surgery" for e in core) and any(_arm_family(e) == "pretrain" for e in core):
+        plot_scoreboard(metrics, core, frozen, out_dir)
+        plot_grouped_winner(metrics, core, frozen, out_dir)
+
+
 # ── CLI ──────────────────────────────────────────────────────────────
 
 def main():
@@ -1020,12 +1054,21 @@ def main():
         core = [e for e in encoders if _arm_family(e) in ("surgery", "pretrain") or e == frozen]
         frozen_only = [e for e in encoders if _arm_family(e) in ("frozen", "other")]
         if frozen and len(core) >= 2:
-            plot_hero_table(metrics, core, frozen, args.output_dir, boot_str)
-            plot_hero_heatmap(metrics, core, frozen, args.output_dir)
-            # §3.3d — surgery-vs-pretrain verdict views (only when both families are present)
-            if any(_arm_family(e) == "surgery" for e in core) and any(_arm_family(e) == "pretrain" for e in core):
-                plot_scoreboard(metrics, core, frozen, args.output_dir)
-                plot_grouped_winner(metrics, core, frozen, args.output_dir)
+            # COMBINED — all backbones in one grid → eval/ (unchanged headline views).
+            _emit_hero_suite(metrics, core, frozen, args.output_dir, boot_str)
+            # PER-BACKBONE breakouts — the SAME 4 views, one backbone at a time, each compared vs its
+            # OWN same-backbone frozen → eval/<backbone>/. The combined grid mixes all 3 backbones
+            # (overwhelming); these split it so each backbone reads cleanly on its own.
+            for bb in _backbones_present(encoders):
+                bb_enc = [e for e in encoders if _backbone_of(e) == bb]
+                bb_frozen = _pick_frozen_ref(bb_enc)
+                bb_core = [e for e in bb_enc if _arm_family(e) in ("surgery", "pretrain") or e == bb_frozen]
+                if bb_frozen and len(bb_core) >= 2:
+                    print(f"  [per-backbone] {bb} → {args.output_dir.name}/{bb}/  "
+                          f"({len(bb_core)} arms vs {_short_label(bb_frozen)})")
+                    _emit_hero_suite(metrics, bb_core, bb_frozen, args.output_dir / bb, boot_str)
+                else:
+                    print(f"  [per-backbone] {bb} — skipped (frozen={bb_frozen}, {len(bb_core)} core arms)")
         else:
             print(f"  [hero] skipped — needs a 'frozen' baseline + ≥2 core encoders (got {core})")
         # FROZEN-only absolute scorecard (image/video baselines + the V-JEPA frozen reference).

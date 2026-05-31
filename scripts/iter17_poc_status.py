@@ -371,6 +371,10 @@ def main():
     #    the paid node can be killed right after completion (not after one big end-of-run upload). ──
     fully_done = bool(s3 and s3.group(1) == "0")
     settled = counts["done"] + counts["failed"] == len(jobs)
+    # §G live preview: rebuild from done-so-far evals WHILE the run is going (the meeting case), and in the
+    # settled-with-failures case where the scheduler SKIPS §3. Skip it once §3 is the scheduler's job
+    # (settled-clean / fully_done) so this preview never races the authoritative final build.
+    plot_msg = maybe_plot(mtag, args.mode) if (not settled or counts["failed"]) and not fully_done else None
     backup_msg = maybe_backup(fully_done)
     if fully_done:
         print("\a\n" + "█" * 78)
@@ -383,6 +387,7 @@ def main():
         print("  The scheduler skips §3 on any failure. Re-run to finish the failed jobs (now fixed)")
         print("  + build §G, THEN it does a final backup + you kill:")
         print(f"       python -u scripts/iter17_poc_ngpu.py --mode {args.mode} --gpus {gpus} --cache 1")
+        print(plot_msg)
         print(backup_msg)
         print("█" * 78)
     elif settled:
@@ -391,6 +396,7 @@ def main():
     else:
         print(f"  🏁 run ETA  ~{_dur(eta_secs)} from now  →  {end_utc:%H:%M} UTC · "
               f"{end_pdt:%H:%M} PDT  (incl. §3 ~15m)")
+        print(plot_msg)
         print(backup_msg)
     if counts["failed"]:
         print("  ❌ failed (recovered on the final --cache 1): "
