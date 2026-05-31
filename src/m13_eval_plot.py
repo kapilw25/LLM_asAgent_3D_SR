@@ -41,9 +41,10 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from matplotlib.patches import Rectangle
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
@@ -76,6 +77,13 @@ _ARM_SHORT = {
     "frozen": "frozen", "pretrain_encoder": "pre-enc", "pretrain_2X_encoder": "pre-2X", "pretrain_head": "pre-hd",
     "surgical_3stage_DI_encoder": "s3DI-enc", "surgical_noDI_encoder": "sNoDI-enc",
     "surgical_3stage_DI_head": "s3DI-hd", "surgical_noDI_head": "sNoDI-hd",
+}
+# Per-backbone header label (name + model size) for the stacked §G overview. Architecture facts are
+# pinned in configs/model/*.yaml (embed_dim/depth VERIFIED there); mirrored here as the plot caption.
+_BB_LABEL = {
+    "vjepa_2_1_vitG": "V-JEPA 2.1   ·   ViT-G   ·   ~2B params   ·   1664-dim, 48 blocks   (CHAMPION)",
+    "vjepa_2_1_vitg": "V-JEPA 2.1   ·   ViT-g   ·   ~1B params   ·   1408-dim, 40 blocks",
+    "vjepa_2_0_vitg": "V-JEPA 2.0   ·   ViT-g   ·   ~1B params   ·   1408-dim, 40 blocks",
 }
 
 
@@ -976,22 +984,38 @@ def _vstack_heroes(output_dir, backbones, out_name):
     A pure image concat of the already-saved eval/<backbone>/m13_hero_surgery_vs_frozen.png files —
     NO cross-backbone math: each panel keeps its own arms vs its OWN frozen (averaging Δs across
     backbones with different frozen baselines is meaningless). Panels stacked top→bottom in order."""
-    paths = [output_dir / bb / "m13_hero_surgery_vs_frozen.png" for bb in backbones]
-    paths = [p for p in paths if p.exists()]
-    if not paths:
+    panels = [(bb, output_dir / bb / "m13_hero_surgery_vs_frozen.png") for bb in backbones]
+    panels = [(bb, Image.open(str(p)).convert("RGB")) for bb, p in panels if p.exists()]
+    if not panels:
         print("  [stack] no per-backbone heroes present — skip combined stack")
         return
-    imgs = [Image.open(str(p)).convert("RGB") for p in paths]
-    w = max(im.width for im in imgs)
-    h = sum(im.height for im in imgs)
-    canvas = Image.new("RGB", (w, h), "white")
+    w = max(im.width for _, im in panels)
+    # Big LABELLED header band per panel so each heatmap's BACKBONE + model size is unmistakable.
+    fpath = font_manager.findfont(font_manager.FontProperties(family="DejaVu Sans", weight="bold"))
+    longest = max((_BB_LABEL.get(bb, bb) for bb, _ in panels), key=len)
+    fsize = 110
+    font = ImageFont.truetype(fpath, fsize)
+    while fsize > 28 and font.getlength(longest) > w * 0.94:       # auto-shrink to fit the panel width
+        fsize -= 4
+        font = ImageFont.truetype(fpath, fsize)
+    band_h = int(fsize * 1.8)
+    total_h = sum(band_h + im.height for _, im in panels)
+    canvas = Image.new("RGB", (w, total_h), "white")
+    draw = ImageDraw.Draw(canvas)
     y = 0
-    for im in imgs:
+    for bb, im in panels:
+        label = _BB_LABEL.get(bb, bb)
+        draw.rectangle([0, y, w - 1, y + band_h - 1], fill=(18, 28, 64))         # dark navy banner
+        bbox = draw.textbbox((0, 0), label, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        draw.text(((w - tw) // 2, y + (band_h - th) // 2 - bbox[1]), label, fill="white", font=font)
+        y += band_h
         canvas.paste(im, (0, y))           # left-aligned; a narrower panel just keeps white margin
         y += im.height
     canvas.save(str(output_dir / f"{out_name}.png"))
-    print(f"  [stack] {out_name}.png — vertical append of {len(paths)} backbone panels "
-          f"({', '.join(p.parent.name for p in paths)}) · NO averaging")
+    canvas.save(str(output_dir / f"{out_name}.pdf"))               # both .png & .pdf (CLAUDE.md plot rule)
+    print(f"  [stack] {out_name}.{{png,pdf}} — vertical append of {len(panels)} LABELLED backbone panels "
+          f"({', '.join(bb for bb, _ in panels)}) · NO averaging")
 
 
 # ── CLI ──────────────────────────────────────────────────────────────
@@ -1113,6 +1137,9 @@ def main():
                 dst = args.output_dir / bb / "m13_hero_surgery_vs_frozen.png"
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(str(src), str(dst))
+                src_pdf = src.with_suffix(".pdf")             # bring the matching .pdf too (both png & pdf)
+                if src_pdf.exists():
+                    shutil.copy(str(src_pdf), str(dst.with_suffix(".pdf")))
                 print(f"  [reference-hero] {bb} ← {png}")
                 if bb not in stacked:
                     stacked.append(bb)
