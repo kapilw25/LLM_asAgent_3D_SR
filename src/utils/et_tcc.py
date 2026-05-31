@@ -70,13 +70,16 @@ def cycle_back_error(feats_a, feats_b, *, temperature):
 def kendalls_tau_alignment(feats_a, feats_b):
     """Hard-NN alignment from A → B (one B-index per A-frame), then Kendall's τ vs the
     monotonic identity ordering. Higher τ (range [-1, 1]) = more order-preserving alignment.
-    Returns a Python float; FAIL LOUD if the hard-NN alignment is constant (degenerate)."""
+    Returns a Python float, or NaN for a DEGENERATE alignment (all A-frames map to one B-index):
+    Kendall's τ is mathematically UNDEFINED when a ranking has zero variance — scipy.kendalltau
+    itself returns NaN for constant input. A degenerate pair (the encoder produced collinear
+    per-frame features — expected for static clips, especially FROZEN encoders) is a valid DATA
+    edge case, NOT a code bug, so it must NOT abort the whole encoder's eval. The m12f orchestrator
+    excludes NaN-τ pairs via nanmean and REPORTS the degenerate count so it stays visible."""
     sim = feats_a @ feats_b.T                                # (T_a, T_b)
     hard_b_idx = sim.argmax(dim=1).cpu().numpy()
     if np.unique(hard_b_idx).size < 2:
-        raise RuntimeError(
-            f"kendalls_tau_alignment: degenerate hard-NN alignment ({hard_b_idx.tolist()}); "
-            "encoder produced collinear per-frame features for this clip pair")
+        return float("nan")                                  # τ undefined for a constant ranking
     tau, _p = kendalltau(np.arange(hard_b_idx.size), hard_b_idx)
     return float(tau)
 

@@ -484,6 +484,13 @@ probe:
   batch_size:          64            # was src/probe_{action,taxonomy}.py:--train-batch-size default
   min_clips_per_class: 34            # was src/probe_action.py:--min-clips-per-class default (stratified-split threshold)
   min_per_split:       5             # was src/probe_action.py:--min-per-split default
+  eval_frame_cache:                  # iter17: decode each eval clip ONCE, shared across the 8 concurrent
+                                     # per-encoder eval processes (memoized inside decode_video_bytes). Was
+                                     # ~7 decodes/encoder × 8 encoders → CPU pinned (load 467/256), GPUs idle.
+    enabled:           true          # run_eval.sh sets EVAL_FRAME_CACHE_DIR when true; OFF for training/data-prep
+    min_free_gb:       80            # stop writing NEW cache entries when free disk < this. clips decode at
+                                     # native ~360x640 → nf16 ≈ 11 MB/clip (full 9130-clip universe ≈ 100 GB);
+                                     # 80 GB floor self-bounds nf64/pace growth + leaves room for eval transients
   future_regress:                    # probe_future_regress.py: future-frame regressor MLP
     epochs:            50            # was REGRESSOR_EPOCHS module constant
     batch_size:        64            # was REGRESSOR_BATCH

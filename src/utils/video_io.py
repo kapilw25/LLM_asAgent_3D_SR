@@ -8,7 +8,9 @@ USAGE:
 """
 import json
 import os
+import shutil
 import sys
+import tempfile
 
 import numpy as np
 import torch
@@ -115,6 +117,71 @@ def _load_av(video_path: str, num_frames: int) -> torch.Tensor:
     return torch.stack(frames[:num_frames])
 
 
+# ── Eval frame cache (iter17) ─────────────────────────────────────────────
+# Every eval module (m12a action, m12d future, m12e predictor-temporal, m12f
+# encoder-temporal) reaches frames through decode_to_tensor → THIS decode_video_bytes,
+# which is also the only decode in frozen_features. The scheduler runs one run_eval.sh
+# PER encoder, so 8 processes decode the SAME ~1.8k clips concurrently (~7 passes each),
+# pinning the CPU (load 467/256) while the GPUs idle. When EVAL_FRAME_CACHE_DIR is set
+# (run_eval.sh ONLY — never training, whose full-pool stream over many epochs would blow
+# the cache), the decoded native (T,C,H,W) uint8 tensor is memoized to disk keyed by
+# (clip_key, num_frames). Decode is deterministic (linspace sampling + fixed decoder), so
+# a hit returns a byte-identical tensor; decode_to_tensor still runs its crop/normalize
+# AFTER, so metrics are unchanged. Unset env → every line below is skipped → zero effect
+# on training / data-prep / the in-flight run (which uses the old run_eval.sh).
+_FRAME_CACHE_ENV = "EVAL_FRAME_CACHE_DIR"
+_FRAME_CACHE_MIN_FREE_ENV = "EVAL_FRAME_CACHE_MIN_FREE_GB"
+
+
+def _frame_cache_path(key: str, num_frames: int):
+    """On-disk cache path for (clip_key, num_frames), or None when the cache is disabled."""
+    cache_dir = os.environ.get(_FRAME_CACHE_ENV)
+    if not cache_dir:
+        return None
+    safe = key.replace("/", "_").replace("\\", "_")
+    if safe.endswith(".mp4"):
+        safe = safe[:-4]
+    return os.path.join(cache_dir, f"{safe}__nf{int(num_frames)}.npy")
+
+
+def _frame_cache_load(cache_path: str):
+    """Cached (T,C,H,W) uint8 tensor, or None on miss / unreadable. Unreadable = a
+    half-written file from a peer still mid-decode → treat as a miss and decode fresh
+    (correctness-preserving: a bad cache file never contaminates the returned frames)."""
+    if not os.path.exists(cache_path):
+        return None
+    try:
+        return torch.from_numpy(np.load(cache_path))
+    except Exception:
+        return None  # partial/corrupt cache file → fall through to a fresh decode
+
+
+def _frame_cache_store(cache_path: str, frames) -> None:
+    """Atomically memoize the decoded tensor. The cache is a pure speed optimization, so a
+    write failure WARNs and continues — the decode already returned the correct frames.
+    Atomic = unique temp in the same dir + os.replace (POSIX-atomic); racing writers write
+    identical bytes so last-rename-wins is safe. A free-disk floor stops the cache from
+    filling the disk on large (FULL) runs: it just stops growing, reads still hit."""
+    try:
+        cache_dir = os.path.dirname(cache_path)
+        os.makedirs(cache_dir, exist_ok=True)
+        min_free_gb = float(os.environ.get(_FRAME_CACHE_MIN_FREE_ENV, "20"))
+        if shutil.disk_usage(cache_dir).free < min_free_gb * (1024 ** 3):
+            return  # disk getting tight → stop adding entries (existing ones still serve hits)
+        arr = frames.numpy() if hasattr(frames, "numpy") else np.asarray(frames)
+        fd, tmp = tempfile.mkstemp(dir=cache_dir, suffix=".npy.tmp")
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                np.save(fh, arr)
+            os.replace(tmp, cache_path)
+        except Exception:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            raise
+    except Exception as e:
+        print(f"  WARN: frame-cache store failed ({cache_path}): {e}")
+
+
 def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
                        num_frames: int) -> torch.Tensor:
     """Write mp4 bytes to temp file, decode frames, delete temp file.
@@ -127,7 +194,16 @@ def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
 
     Returns:
         torch.Tensor: (T, C, H, W) uint8 tensor, or None if decode fails.
+
+    When EVAL_FRAME_CACHE_DIR is set, the (key, num_frames) decode is memoized to disk
+    (see the eval-frame-cache note above) so concurrent per-encoder evals decode each clip
+    ONCE instead of re-decoding it for every encoder/metric.
     """
+    cache_path = _frame_cache_path(key, num_frames)
+    if cache_path is not None:
+        cached = _frame_cache_load(cache_path)
+        if cached is not None:
+            return cached
     safe_key = key.replace("/", "_").replace("\\", "_")
     # HF stream clip keys end in ".mp4" (e.g. "tier1/.../abc-119.mp4"); strip
     # before re-appending so we don't write/read "abc-119.mp4.mp4". The doubled
@@ -137,13 +213,19 @@ def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
     if safe_key.endswith(".mp4"):
         safe_key = safe_key[:-4]
     tmp_path = os.path.join(tmp_dir, f"{safe_key}.mp4")
+    result = None
     try:
+        # iter17 fix: the streaming __iter__ holds ONE TemporaryDirectory across all its yields;
+        # under the DataLoader's multi-worker/prefetch lifecycle that dir can be torn down mid-decode
+        # → ENOENT on the write below → return None → stream_factor FATALs the whole surgery training.
+        # Recreate it (idempotent, cheap) so a transient temp-dir race is survived, not fatal.
+        os.makedirs(tmp_dir, exist_ok=True)
         with open(tmp_path, "wb") as f:
             f.write(mp4_bytes)
         if _USE_TORCHCODEC:
-            return _load_torchcodec(tmp_path, num_frames)
+            result = _load_torchcodec(tmp_path, num_frames)
         else:
-            return _load_av(tmp_path, num_frames)
+            result = _load_av(tmp_path, num_frames)
     except Exception as e:
         print(f"  WARN: decode failed ({key}): {e}")
         return None
@@ -153,3 +235,6 @@ def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
                 os.unlink(tmp_path)
             except OSError:
                 print(f"  WARN: failed to delete temp file {tmp_path}")
+    if cache_path is not None and result is not None:
+        _frame_cache_store(cache_path, result)
+    return result

@@ -153,6 +153,24 @@ ENCODERS="${ENCODERS:-vjepa_2_1_frozen vjepa_2_1_pretrain_encoder vjepa_2_1_pret
 SKIP_STAGES="${SKIP_STAGES:-}"
 NUM_FRAMES="${NUM_FRAMES:-16}"
 
+# ── iter17: shared decoded-frame cache ──────────────────────────────────
+# The scheduler runs ONE run_eval.sh per encoder, so 8 processes decode the same ~1.8k
+# clips concurrently (~7 passes/encoder via m12a/d/e/f → decode_video_bytes) → CPU pinned
+# (load 467/256), GPUs idle. Exporting EVAL_FRAME_CACHE_DIR makes decode_video_bytes memoize
+# each (clip,num_frames) decode to disk so every clip is decoded ONCE and shared across all
+# encoders/metrics. run_train.sh does NOT set this → training is untouched. Content-addressed
+# (clips never change) → safe to reuse across runs. min_free_gb floor bounds disk on FULL.
+FRAME_CACHE_ENABLED="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.enabled)"
+case "$FRAME_CACHE_ENABLED" in
+    false|False|0|"")
+        echo "  ✓ eval frame cache:     disabled (probe.eval_frame_cache.enabled=$FRAME_CACHE_ENABLED)" ;;
+    *)
+        export EVAL_FRAME_CACHE_DIR="${EVAL_FRAME_CACHE_DIR:-${LOCAL_DATA}/m12_frame_cache}"  # in the DATASET dir → durable + reused across iterations (data/ is gitignored)
+        export EVAL_FRAME_CACHE_MIN_FREE_GB="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.min_free_gb)"
+        mkdir -p "$EVAL_FRAME_CACHE_DIR"
+        echo "  ✓ eval frame cache:     $EVAL_FRAME_CACHE_DIR (min free ${EVAL_FRAME_CACHE_MIN_FREE_GB} GB)" ;;
+esac
+
 # iter13 v12 (2026-05-05) / iter15 (2026-05-15): MOTION-flow probe class
 # derivation knobs. `motion_features.npy` is m04d's RAFT optical-flow output
 # (23D × N_clips post-Phase-0), durably stored under

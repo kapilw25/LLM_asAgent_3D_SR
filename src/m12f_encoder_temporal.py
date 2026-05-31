@@ -38,6 +38,7 @@ USAGE:
 """
 import argparse
 import json
+import os
 import queue
 import sys
 import tempfile
@@ -75,6 +76,17 @@ METRICS = {
     "pace": (False, "Pace top-1 over playback rates; higher = encoder is rate-sensitive"),
     "tcc":  (None,  "TCC cycle-back error (lower better) + Kendall's τ (higher better)"),
 }
+
+
+def _resolve_metrics(metric_arg):
+    """Expand --metric all → the 4 metrics, then DROP any listed in ET_SKIP_METRICS (comma list). Lets
+    the orchestrator skip an expensive metric without a code change — e.g. ET_SKIP_METRICS=pace, since
+    pace needs an uncacheable nf64 oversample-decode (~28 s/clip cold) that dwarfs aot/tov/tcc. A single
+    --metric is returned verbatim (the skip-list is ignored — you asked for exactly that one)."""
+    if metric_arg != "all":
+        return [metric_arg]                              # explicit single metric → run exactly it (skip-list ignored)
+    skip = {m.strip() for m in os.environ.get("ET_SKIP_METRICS", "").split(",") if m.strip()}
+    return [m for m in METRICS if m not in skip]
 
 # V-JEPA-only registry mirror (image-JEPAs skipped — they have no native temporal axis here).
 KNOWN_VARIANTS = tuple(n for n, s in ENCODERS.items() if s.get("kind") == "vjepa")
@@ -247,7 +259,7 @@ def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
         by_action.setdefault(a, []).append(i)
     per_clip_cycle = {i: [] for i in range(test_feats_per_frame.shape[0])}
     per_clip_tau = {i: [] for i in range(test_feats_per_frame.shape[0])}
-    n_pairs = 0
+    n_pairs = n_degenerate = 0
     for a, idxs in by_action.items():
         if len(idxs) < 2:
             continue
@@ -260,10 +272,20 @@ def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
                 per_clip_cycle[a_i].append(cyc); per_clip_cycle[b_i].append(cyc)
                 per_clip_tau[a_i].append(tau);   per_clip_tau[b_i].append(tau)
                 n_pairs += 1
+                if np.isnan(tau):                       # degenerate (collinear) → τ undefined
+                    n_degenerate += 1
     if n_pairs == 0:
         raise SystemExit("FATAL: TCC produced 0 pairs — every action class has <2 test clips")
+    # Kendall's τ is NaN for a degenerate pair (collinear per-frame features — expected for static
+    # clips, esp. frozen encoders). nanmean excludes those τ so one bad pair does not abort the eval;
+    # report the count so the degeneracy stays VISIBLE (FAIL-LOUD) rather than silently swallowed.
+    if n_degenerate:
+        print(f"  [tcc] {n_degenerate}/{n_pairs} pairs degenerate (collinear features) → τ=NaN, "
+              f"excluded from per-clip τ mean (cycle-back kept).", flush=True)
     cycle_arr = np.array([np.mean(v) if v else np.nan for v in per_clip_cycle.values()], dtype=np.float32)
-    tau_arr = np.array([np.mean(v) if v else np.nan for v in per_clip_tau.values()], dtype=np.float32)
+    tau_arr = np.array([float(np.mean([x for x in v if not np.isnan(x)]))
+                        if any(not np.isnan(x) for x in v) else np.nan
+                        for v in per_clip_tau.values()], dtype=np.float32)
     keep = ~(np.isnan(cycle_arr) | np.isnan(tau_arr))
     if not keep.any():
         raise SystemExit("FATAL: TCC every test clip lacked a same-action pair")
@@ -280,7 +302,7 @@ def run_forward_stage(args, wb):
         raise SystemExit(
             f"FATAL: m12f forward only supports vjepa_* variants (encoder-temporal "
             f"needs a video encoder); got {args.variant!r}")
-    metrics = list(METRICS) if args.metric == "all" else [args.metric]
+    metrics = _resolve_metrics(args.metric)
 
     check_gpu()
     print_cgroup_header(prefix="[m12f_encoder_temporal]")
@@ -377,7 +399,7 @@ def run_forward_stage(args, wb):
 
 def run_paired_per_variant_stage(args, wb):
     """Pairwise BCa Δ across discovered vjepa variants, per metric."""
-    metrics = list(METRICS) if args.metric == "all" else [args.metric]
+    metrics = _resolve_metrics(args.metric)
     out = {"metrics": {}}
     for m in metrics:
         by_variant = {}
@@ -525,7 +547,7 @@ def _check_required(args):
              "pace": ["pace_strides", "pace_source_frames"],
              "tcc": ["tcc_temperature"]}
     head_needs = ["head_lr", "head_epochs", "head_weight_decay", "head_batch_size"]
-    metrics = list(METRICS) if args.metric == "all" else [args.metric]
+    metrics = _resolve_metrics(args.metric)
     missing = []
     for m in metrics:
         for k in needs.get(m, []):

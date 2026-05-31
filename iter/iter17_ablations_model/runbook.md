@@ -34,20 +34,48 @@ python -u scripts/iter17_poc_ngpu.py --mode SANITY --gpus 8 2>&1 | tee logs/ngpu
 # 3b. ONLY after you see "all 30 jobs PASSED" above — drop the throwaway SANITY output to reclaim disk
 #     before POC. Disposable (tiny-data smoke, regenerable by re-running SANITY); POC writes a SEPARATE
 #     outputs/poc/ and reads nothing from here. Literal path (no var) so it can't expand to outputs/.
-rm -rf outputs/sanity/
+# rm -rf outputs/sanity/  >> thats WRONG >> just delete *.pt files >> so that remaining files can be analyzed while POC is running
+# find outputs/sanity/ *.pt --delete
 
 # 4. POC — real 10k numbers (~10-11h on 8×). Auto-builds §G → outputs/poc/probe_plot/eval/:
 python -u scripts/iter17_poc_ngpu.py --mode POC --gpus 8 2>&1 | tee logs/ngpu_POC_$(date +%Y%m%d_%H%M%S).log
 
-# (validate on the 1× node first?  same step 3 with --gpus 1.   resume after a failure?  add --cache 1.
-#  preview the schedule without launching?  add --dry-run.)
+# 4b. RECOVERY / re-run after a crash or a code fix → use STEP 3 below (--cache 1 skips done arms+evals).
+
+# (validate on the 1× node first?  same step 3 with --gpus 1.   preview without launching?  add --dry-run.)
+```
+
+```bash
+# ── ⚡ EVAL-CACHE PRE-BUILD — kills the eval CPU-decode jam (GPUs ~0%, CPU pinned, ETA climbing) ──
+# Each per-encoder eval re-decodes the SAME ~9k clips on CPU → load ≫ cores, 8 GPUs sit idle. Fix:
+# decode every clip ONCE into a shared cache; then run_eval.sh HITS it → evals go GPU-bound → fast.
+# The cache lives in the DATASET dir → durable, reused by future iterations, uploaded by `upload-data`.
+# Do this AFTER interrupting the scheduler (all CPU cores free). nf16 full universe ≈ 100 GB (80 GB floor).
+# --cache-dir MUST equal run_eval.sh's EVAL_FRAME_CACHE_DIR (= ${LOCAL_DATA}/m12_frame_cache) or STEP 3 misses.
+
+# STEP 2 — pre-build the cache (CPU, all cores, ~a few min):
+cd /workspace/factorjepa && source venv_walkindia/bin/activate && 
+export PYTHONPATH=src && \
+python -u src/utils/eval_frame_cache.py \
+--keys outputs/poc/probe_action/action_labels.json \
+--local-data data/eval_10k_local \
+--cache-dir data/eval_10k_local/m12_frame_cache \
+--num-frames 16 --min-free-gb 80 --workers 96 \
+2>&1 | tee logs/prewarm_$(date +%Y%m%d_%H%M%S).log
+
+# STEP 3 — re-run (evals HIT the cache → GPU-bound → fast; --cache 1 skips done arms+evals, then §3 → §G).
+# ET_SKIP_METRICS=pace DROPS the pace metric: pace alone needs UNCACHEABLE nf64 (64-frame) decode
+# (~28 s/clip cold, 8-way CPU-pinned ≈ 13 h wall); aot/tov/tcc + all else are nf16 cache-hits → ~minutes.
+# (re-run pace later on a cheap box: ENCODERS=<one> ... m12f_encoder_temporal.py --metric pace.)
+ET_SKIP_METRICS=pace python -u scripts/iter17_poc_ngpu.py --mode POC --gpus 8 --cache 1 \
+2>&1 | tee logs/ngpu_POC_rerun_$(date +%Y%m%d_%H%M%S).log
 ```
 
 ```bash
 # ── VERIFY (that's it — these two checks) ──
 grep -E "all 30 jobs PASSED|✗ " logs/ngpu_POC_*.log | tail     # want "all 30 jobs PASSED"; no ✗
 ls outputs/poc/probe_plot/eval/m13_hero_table.{png,pdf}        # the §G hero table
-# any ✗ → open logs/iter17_ngpu_poc_<train|eval>_<...>.log, fix, re-run step 4 with --cache 1.
+# any ✗ → open logs/iter17_ngpu_poc_<train|eval>_<...>.log, fix, re-run STEP 3 (--cache 1).
 ```
 
 ```text

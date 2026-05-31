@@ -1,0 +1,39 @@
+# Checkpoint download registry — SINGLE SOURCE for both:
+#   · setup_env_uv.sh                              → --group trainable      (fast path; unblocks torch)
+#   · src/utils/download_checkpoints.py --group …  → eval_baselines / all   (§G frozen-baseline ckpts,
+#                                                     consumed downstream by run_eval.sh → m12*_*.py)
+#
+# TWO sections so group membership is editable WITHOUT touching URLs:
+#   catalog: canonical filename → upstream URL.  STABLE — the name is what run_eval.sh frozen_ckpt_for +
+#            configs/eval/probe_encoders.yaml expect; aria2c -o renames differently-named upstream assets.
+#            Verified 2026-05-29: each URL HTTP 200 + remote Content-Length == on-disk bytes.
+#   groups:  which catalog entries each consumer fetches.  ITER-SPECIFIC — edit freely as the trained set
+#            changes. A filename may appear in MORE THAN ONE group (no URL duplication).
+
+catalog:
+  vjepa2_1_vitg_384.pt:           https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitg_384.pt
+  vjepa2_0_vitg_384.pt:           https://dl.fbaipublicfiles.com/vjepa2/vitg-384.pt
+  vjepa2_1_vitG_384.pt:           https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt
+  vjepa2_1_vitl_dist_vitG_384.pt: https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitl_dist_vitG_384.pt
+  vjepa2_0_vitl_256.pt:           https://dl.fbaipublicfiles.com/vjepa2/vitl.pt
+  vjepa1_vitL_16.pt:              https://dl.fbaipublicfiles.com/jepa/vitl16/vitl16.pth.tar
+  vjepa1_vitH_16.pt:              https://dl.fbaipublicfiles.com/jepa/vith16/vith16.pth.tar
+  lejepa_l.pt:                    https://huggingface.co/datasets/gajeshladharai/artifacts/resolve/main/core-jepa/lejepa-l.pt
+
+groups:
+  # backbones we TRAIN (setup_env fast path, ~32 GB). iter17 + iter18 plan_baselines.md both train the
+  # 1B vitg (+ 2.0 vitg for iter17's version axis). To train the 2B champion in a FUTURE iter, just add
+  # `vjepa2_1_vitG_384.pt` to this list — it can remain under eval_baselines too (no URL duplication).
+  trainable:
+    - vjepa2_1_vitg_384.pt
+    - vjepa2_0_vitg_384.pt
+
+  # iter16 champion (2.1 ViT-G 2B) + image/version frozen baselines (~59 GB). NOT needed to train on the
+  # iter17 node (§G carries their metrics via outputs/poc); fetch on demand to (re)eval the frozen row.
+  eval_baselines:
+    - vjepa2_1_vitG_384.pt
+    - vjepa2_1_vitl_dist_vitG_384.pt
+    - vjepa2_0_vitl_256.pt
+    - vjepa1_vitL_16.pt
+    - vjepa1_vitH_16.pt
+    - lejepa_l.pt

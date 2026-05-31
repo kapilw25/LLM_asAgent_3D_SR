@@ -53,19 +53,40 @@ from utils.bootstrap import N_BOOTSTRAP
 
 # ── Display helpers (no hardcoded encoder list — derived per-call) ───
 
+def _canon(enc: str) -> str:
+    """The iter16 champion (V-JEPA 2.1 ViT-G) was evaluated under the LEGACY name vjepa_2_1_<arm>;
+    rewrite it to vjepa_2_1_vitG_<arm> so §G labels it consistently with this run's vjepa_2_1_vitg /
+    vjepa_2_0_vitg. Anything else (vjepa_2_1_vitg/_vitL, vjepa_2_0_*, frozen baselines) falls straight
+    through unchanged — DISPLAY ONLY, never used to key into metric data."""
+    if enc.startswith("vjepa_2_1_") and not enc.startswith("vjepa_2_1_vit"):
+        return "vjepa_2_1_vitG_" + enc[len("vjepa_2_1_"):]
+    return enc
+
+
+# (backbone prefix → long tag, short tag) for the 3 trained backbones; everything else (frozen-9) falls through.
+_BB_TAG = (("vjepa_2_1_vitG_", "ViT-G", "G"), ("vjepa_2_1_vitg_", "ViT-g", "g"), ("vjepa_2_0_vitg_", "ViT-g·2.0", "g0"))
+_ARM_LONG = {
+    "frozen": "frozen", "pretrain_encoder": "pretrain encoder", "pretrain_2X_encoder": "pretrain_2X encoder",
+    "pretrain_head": "pretrain head", "surgical_3stage_DI_encoder": "surgery 3stage_DI encoder",
+    "surgical_noDI_encoder": "surgery noDI encoder", "surgical_3stage_DI_head": "surgery 3stage_DI head",
+    "surgical_noDI_head": "surgery noDI head",
+}
+_ARM_SHORT = {
+    "frozen": "frozen", "pretrain_encoder": "pre-enc", "pretrain_2X_encoder": "pre-2X", "pretrain_head": "pre-hd",
+    "surgical_3stage_DI_encoder": "s3DI-enc", "surgical_noDI_encoder": "sNoDI-enc",
+    "surgical_3stage_DI_head": "s3DI-hd", "surgical_noDI_head": "sNoDI-hd",
+}
+
+
 def _display_label(enc: str) -> str:
-    """Human-readable encoder name for plot legends. Falls back to enc verbatim."""
-    return {
-        "vjepa_2_1_frozen":                       "V-JEPA 2.1 frozen",
-        "dinov2":                                 "DINOv2 frozen",
-        "vjepa_2_1_pretrain_encoder":             "pretrain encoder",
-        "vjepa_2_1_pretrain_2X_encoder":          "pretrain_2X encoder",
-        "vjepa_2_1_surgical_3stage_DI_encoder":   "surgery 3stage_DI encoder",
-        "vjepa_2_1_surgical_noDI_encoder":        "surgery noDI encoder",
-        "vjepa_2_1_pretrain_head":                "pretrain head",
-        "vjepa_2_1_surgical_3stage_DI_head":      "surgery 3stage_DI head",
-        "vjepa_2_1_surgical_noDI_head":           "surgery noDI head",
-    }.get(enc, enc.replace("_", " "))
+    """Human-readable encoder name for plot legends. All 3 trained backbones → '<ViT-tag> <arm>';
+    frozen-9 baselines fall through verbatim."""
+    enc = _canon(enc)
+    for pre, long_tag, _ in _BB_TAG:
+        if enc.startswith(pre):
+            arm = enc[len(pre):]
+            return f"{long_tag} {_ARM_LONG.get(arm, arm.replace('_', ' '))}"
+    return {"dinov2": "DINOv2 frozen"}.get(enc, enc.replace("_", " "))
 
 
 _FALLBACK_COLOR_CYCLE = ("blue", "green", "orange", "purple", "red", "cyan", "gold")
@@ -242,14 +263,12 @@ _DIR_TAG = {"higher": "↑ better", "lower": "↓ better", "signed": "± signed"
 
 
 def _short_label(enc: str) -> str:
-    """Compact encoder tag for the hero WINNER row (cells are narrow)."""
-    return {
-        "vjepa_2_1_frozen": "frozen", "dinov2": "dinov2",
-        "vjepa_2_1_pretrain_encoder": "pre-enc", "vjepa_2_1_pretrain_2X_encoder": "pre-2X",
-        "vjepa_2_1_pretrain_head": "pre-hd",
-        "vjepa_2_1_surgical_3stage_DI_encoder": "s3DI-enc", "vjepa_2_1_surgical_noDI_encoder": "sNoDI-enc",
-        "vjepa_2_1_surgical_3stage_DI_head": "s3DI-hd", "vjepa_2_1_surgical_noDI_head": "sNoDI-hd",
-    }.get(enc, enc.replace("vjepa_2_1_", "")[:10])
+    """Compact encoder tag for the hero WINNER row (cells are narrow). '<g-tag>-<arm>' for the 3 backbones."""
+    enc = _canon(enc)
+    for pre, _, short_tag in _BB_TAG:
+        if enc.startswith(pre):
+            return f"{short_tag}-{_ARM_SHORT.get(enc[len(pre):], enc[len(pre):][:8])}"
+    return {"dinov2": "dinov2"}.get(enc, enc.replace("vjepa_", "")[:10])
 
 
 def _fmt_compact(x: float) -> str:

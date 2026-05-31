@@ -79,6 +79,7 @@ _UPLOAD_SKIP_PATTERNS = [
     "**/m11_factor_datasets/m11_per_clip_verify/**",  # gitignore:80
     "**/m10_sam_segment/masks/**",                    # 12,309 .npz mask files (~7 GB) — regeneratable from m10_sam_segment.py
     "**/m10_sam_segment/m10_overlay_verify/**",       # 598 .png overlays (~700 MB) — visual debug only
+    "**/m12_frame_cache/**",                          # ~141 GB decoded-frame cache — regeneratable via src/utils/eval_frame_cache.py; NEVER upload
 ]
 
 _CHECKPOINT_AGE_THRESHOLD = 120  # seconds — skip checkpoints modified within this window
