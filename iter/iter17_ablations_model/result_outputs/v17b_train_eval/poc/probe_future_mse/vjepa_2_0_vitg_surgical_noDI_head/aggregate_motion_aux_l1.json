@@ -1,0 +1,16 @@
+{
+  "variant": "vjepa_2_0_vitg_surgical_noDI_head",
+  "n_test": 1825,
+  "ma_l1_mean": 0.953348,
+  "ma_l1_std": 0.455061,
+  "ma_l1_ci": {
+    "mean": 0.953348,
+    "ci_lo": 0.932631,
+    "ci_hi": 0.974673,
+    "ci_half": 0.021021
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_0_vitg/m09c_surgery_noDI_head/m09c_ckpt_best.pt",
+  "motion_aux_head_loaded_from": "outputs/poc/vjepa_2_0_vitg/m09c_surgery_noDI_head/motion_aux_head.pt",
+  "augment_space_dim": 34
+}

@@ -1,7 +1,8 @@
-encoder,action_top1,motion_cos,future_mse,rollout,causal,tdist,teacher_free,maskratio
+encoder,action_top1,motion_cos,taxonomy_f1,future_mse,rollout,causal,tdist,teacher_free,maskratio
 vjepa_2_1_vitg_frozen,"42.411
 ±2.247","0.007
-±0.001","0.637
+±0.001","0.806
+±0.016","0.637
 ±0.001","0.007
 ±0.000","0.655
 ±0.002","0.007
@@ -10,7 +11,8 @@ vjepa_2_1_vitg_frozen,"42.411
 ±0.001"
 vjepa_2_0_vitg_frozen,"38.356
 ±2.264","0.008
-±0.001","1.645
+±0.001","0.778
+±0.017","1.645
 ±0.002","-0.008
 ±0.000","1.656
 ±0.002","0.004

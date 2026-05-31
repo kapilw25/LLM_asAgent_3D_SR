@@ -43,6 +43,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
+from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
@@ -970,6 +971,29 @@ def _emit_hero_suite(metrics, core, frozen, out_dir, boot_str):
         plot_grouped_winner(metrics, core, frozen, out_dir)
 
 
+def _vstack_heroes(output_dir, backbones, out_name):
+    """COMBINED overview = the per-backbone Δ-vs-frozen heatmaps APPENDED VERTICALLY into one PNG.
+    A pure image concat of the already-saved eval/<backbone>/m13_hero_surgery_vs_frozen.png files —
+    NO cross-backbone math: each panel keeps its own arms vs its OWN frozen (averaging Δs across
+    backbones with different frozen baselines is meaningless). Panels stacked top→bottom in order."""
+    paths = [output_dir / bb / "m13_hero_surgery_vs_frozen.png" for bb in backbones]
+    paths = [p for p in paths if p.exists()]
+    if not paths:
+        print("  [stack] no per-backbone heroes present — skip combined stack")
+        return
+    imgs = [Image.open(str(p)).convert("RGB") for p in paths]
+    w = max(im.width for im in imgs)
+    h = sum(im.height for im in imgs)
+    canvas = Image.new("RGB", (w, h), "white")
+    y = 0
+    for im in imgs:
+        canvas.paste(im, (0, y))           # left-aligned; a narrower panel just keeps white margin
+        y += im.height
+    canvas.save(str(output_dir / f"{out_name}.png"))
+    print(f"  [stack] {out_name}.png — vertical append of {len(paths)} backbone panels "
+          f"({', '.join(p.parent.name for p in paths)}) · NO averaging")
+
+
 # ── CLI ──────────────────────────────────────────────────────────────
 
 def main():
@@ -988,6 +1012,10 @@ def main():
     p.add_argument("--encoder-temporal-root",   type=Path, default=None,
                    help="m12f output dir (encoder_temporal_per_variant.json) — OPTIONAL.")
     p.add_argument("--output-dir",        type=Path, required=True)
+    p.add_argument("--reference-hero", action="append", default=None, metavar="BACKBONE=PNG",
+                   help="Paste a pre-made per-backbone Δ-vs-frozen hero into eval/<BACKBONE>/ verbatim "
+                        "(e.g. a prior-iter champion whose data isn't in THIS run) and include it in the "
+                        "combined vertical stack. Repeatable. Path supplied via CLI — never hardcoded.")
     add_wandb_args(p)
     args = p.parse_args()
     if not (args.SANITY or args.POC or args.FULL):
@@ -1053,12 +1081,19 @@ def main():
         # predictor cells, so they get a SEPARATE absolute-value scorecard (no Δ) instead.
         core = [e for e in encoders if _arm_family(e) in ("surgery", "pretrain") or e == frozen]
         frozen_only = [e for e in encoders if _arm_family(e) in ("frozen", "other")]
+        # Reference heroes: BACKBONE=PNG to paste verbatim (a prior-iter champion not evaluated here).
+        ref_heroes = {}
+        for s in (args.reference_hero or []):
+            if "=" not in s:
+                sys.exit(f"ERROR: --reference-hero must be BACKBONE=PNG, got {s!r}")
+            bb, png = s.split("=", 1)
+            ref_heroes[bb] = png
         if frozen and len(core) >= 2:
-            # COMBINED — all backbones in one grid → eval/ (unchanged headline views).
-            _emit_hero_suite(metrics, core, frozen, args.output_dir, boot_str)
-            # PER-BACKBONE breakouts — the SAME 4 views, one backbone at a time, each compared vs its
-            # OWN same-backbone frozen → eval/<backbone>/. The combined grid mixes all 3 backbones
-            # (overwhelming); these split it so each backbone reads cleanly on its own.
+            # PER-BACKBONE views ONLY — each backbone's arms vs its OWN frozen → eval/<backbone>/.
+            # We deliberately do NOT build a cross-backbone combined grid: the backbones have DIFFERENT
+            # frozen baselines, so averaging / mixing their Δs is meaningless. The combined overview is a
+            # pure VERTICAL IMAGE STACK of these panels (below) — append, never average.
+            stacked = []
             for bb in _backbones_present(encoders):
                 bb_enc = [e for e in encoders if _backbone_of(e) == bb]
                 bb_frozen = _pick_frozen_ref(bb_enc)
@@ -1067,8 +1102,24 @@ def main():
                     print(f"  [per-backbone] {bb} → {args.output_dir.name}/{bb}/  "
                           f"({len(bb_core)} arms vs {_short_label(bb_frozen)})")
                     _emit_hero_suite(metrics, bb_core, bb_frozen, args.output_dir / bb, boot_str)
+                    stacked.append(bb)
                 else:
                     print(f"  [per-backbone] {bb} — skipped (frozen={bb_frozen}, {len(bb_core)} core arms)")
+            # Paste any reference (prior-iter) heroes into their eval/<backbone>/ verbatim, then stack.
+            for bb, png in ref_heroes.items():
+                src = Path(png)
+                if not src.exists():
+                    print(f"  [reference-hero] {bb}: {png} not found — skip"); continue
+                dst = args.output_dir / bb / "m13_hero_surgery_vs_frozen.png"
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(str(src), str(dst))
+                print(f"  [reference-hero] {bb} ← {png}")
+                if bb not in stacked:
+                    stacked.append(bb)
+            # COMBINED = the per-backbone heroes APPENDED VERTICALLY (in _BB_TAG order), NO averaging.
+            bb_order = [pre.rstrip("_") for pre, _lt, _st in _BB_TAG]
+            _vstack_heroes(args.output_dir, [b for b in bb_order if b in stacked],
+                           "m13_grouped_winner_surgery_vs_pretrain")
         else:
             print(f"  [hero] skipped — needs a 'frozen' baseline + ≥2 core encoders (got {core})")
         # FROZEN-only absolute scorecard (image/video baselines + the V-JEPA frozen reference).

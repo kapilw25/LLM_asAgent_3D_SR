@@ -416,9 +416,16 @@ def run_paired_delta_stage(args, wb) -> None:
         keys_cache = {}
         for e in names:
             ed = args.output_root / e
-            per_clip_cache[e] = np.load(ed / f"per_clip_{dim_name}.npy")
-            keys_cache[e] = [str(k) for k in np.load(ed / f"clip_keys_test_{dim_name}.npy",
-                                                     allow_pickle=True)]
+            pcf = ed / f"per_clip_{dim_name}.npy"
+            kcf = ed / f"clip_keys_test_{dim_name}.npy"
+            if not (pcf.exists() and kcf.exists()):
+                # An encoder missing this dim's per-clip arrays (e.g. an incomplete baseline) must NOT
+                # abort the whole comparison — exclude it from THIS dim's paired-Δ. Loud, not silent.
+                print(f"  [skip] {e}: no per-clip arrays for dim '{dim_name}' — excluded from its paired-Δ")
+                continue
+            per_clip_cache[e] = np.load(pcf)
+            keys_cache[e] = [str(k) for k in np.load(kcf, allow_pickle=True)]
+        names = sorted(per_clip_cache)   # only encoders that loaded participate in the pairwise Δ
         for i, a in enumerate(names):
             for b in names[i + 1:]:
                 ka, kb = keys_cache[a], keys_cache[b]

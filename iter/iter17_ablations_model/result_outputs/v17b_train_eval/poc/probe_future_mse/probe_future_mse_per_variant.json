@@ -167,8 +167,28 @@
       },
       "n": 1825
     },
-    "vjepa_2_0_vitg_surgical_3stage_DI_head": null,
-    "vjepa_2_0_vitg_surgical_noDI_head": null,
+    "vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "mse_mean": 1.755175,
+      "mse_std": 0.048796,
+      "mse_ci": {
+        "mean": 1.755175,
+        "ci_lo": 1.752907,
+        "ci_hi": 1.757451,
+        "ci_half": 0.002272
+      },
+      "n": 1825
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head": {
+      "mse_mean": 1.755767,
+      "mse_std": 0.049605,
+      "mse_ci": {
+        "mean": 1.755767,
+        "ci_lo": 1.753415,
+        "ci_hi": 1.758011,
+        "ci_half": 0.002298
+      },
+      "n": 1825
+    },
     "dinov2": "n/a \u2014 no future-frame predictor"
   },
   "pairwise_deltas": {
@@ -289,6 +309,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_0_vitg_frozen_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -0.109699,
+      "delta_ci_lo": -0.112346,
+      "delta_ci_hi": -0.107055,
+      "delta_ci_half": 0.002646,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_frozen_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -0.110291,
+      "delta_ci_lo": -0.113031,
+      "delta_ci_hi": -0.107587,
+      "delta_ci_half": 0.002722,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_encoder": {
       "n": 1825,
       "delta_mean": 0.00455,
@@ -397,6 +435,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.118674,
+      "delta_ci_lo": -1.121147,
+      "delta_ci_hi": -1.116183,
+      "delta_ci_half": 0.002482,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.119266,
+      "delta_ci_lo": -1.121762,
+      "delta_ci_hi": -1.116722,
+      "delta_ci_half": 0.00252,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_pretrain_2X_encoder": {
       "n": 1825,
       "delta_mean": -0.006794,
@@ -496,6 +552,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.123224,
+      "delta_ci_lo": -1.125607,
+      "delta_ci_hi": -1.120825,
+      "delta_ci_half": 0.002391,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_pretrain_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.123816,
+      "delta_ci_lo": -1.126207,
+      "delta_ci_hi": -1.121367,
+      "delta_ci_half": 0.00242,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_pretrain_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_pretrain_2X_encoder_minus_vjepa_2_1_vitg_pretrain_head": {
       "n": 1825,
       "delta_mean": 0.002001,
@@ -586,6 +660,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_pretrain_2X_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.11643,
+      "delta_ci_lo": -1.118757,
+      "delta_ci_hi": -1.114095,
+      "delta_ci_half": 0.002331,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_pretrain_2X_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.117022,
+      "delta_ci_lo": -1.119357,
+      "delta_ci_hi": -1.114657,
+      "delta_ci_half": 0.00235,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_pretrain_2X_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_pretrain_head_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
       "n": 1825,
       "delta_mean": 0.008454,
@@ -667,6 +759,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_pretrain_head - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_pretrain_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.118431,
+      "delta_ci_lo": -1.120879,
+      "delta_ci_hi": -1.115926,
+      "delta_ci_half": 0.002476,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_pretrain_head - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_pretrain_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.119023,
+      "delta_ci_lo": -1.121552,
+      "delta_ci_hi": -1.116475,
+      "delta_ci_half": 0.002538,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_pretrain_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_pretrain_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_surgical_noDI_encoder": {
       "n": 1825,
       "delta_mean": -0.007482,
@@ -739,6 +849,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.126885,
+      "delta_ci_lo": -1.129417,
+      "delta_ci_hi": -1.124483,
+      "delta_ci_half": 0.002467,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.127477,
+      "delta_ci_lo": -1.129973,
+      "delta_ci_hi": -1.124981,
+      "delta_ci_half": 0.002496,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_surgical_noDI_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_head": {
       "n": 1825,
       "delta_mean": 0.003623,
@@ -802,6 +930,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_surgical_noDI_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_surgical_noDI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_surgical_noDI_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.119403,
+      "delta_ci_lo": -1.12189,
+      "delta_ci_hi": -1.116953,
+      "delta_ci_half": 0.002469,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_noDI_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_surgical_noDI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_surgical_noDI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.119995,
+      "delta_ci_lo": -1.122538,
+      "delta_ci_hi": -1.117532,
+      "delta_ci_half": 0.002503,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_noDI_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_surgical_noDI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_surgical_noDI_head": {
       "n": 1825,
       "delta_mean": -0.000173,
@@ -856,6 +1002,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_head - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_surgical_3stage_DI_head_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.123026,
+      "delta_ci_lo": -1.12537,
+      "delta_ci_hi": -1.12065,
+      "delta_ci_half": 0.00236,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_head - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_surgical_3stage_DI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.123618,
+      "delta_ci_lo": -1.126008,
+      "delta_ci_hi": -1.121226,
+      "delta_ci_half": 0.002391,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_surgical_3stage_DI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_1_vitg_surgical_noDI_head_minus_vjepa_2_0_vitg_pretrain_encoder": {
       "n": 1825,
       "delta_mean": -1.123279,
@@ -901,6 +1065,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_1_vitg_surgical_noDI_head - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_1_vitg_surgical_noDI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_1_vitg_surgical_noDI_head_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -1.122853,
+      "delta_ci_lo": -1.125158,
+      "delta_ci_hi": -1.120429,
+      "delta_ci_half": 0.002364,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_noDI_head - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_1_vitg_surgical_noDI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_1_vitg_surgical_noDI_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -1.123445,
+      "delta_ci_lo": -1.125742,
+      "delta_ci_hi": -1.120993,
+      "delta_ci_half": 0.002374,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_surgical_noDI_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_1_vitg_surgical_noDI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_pretrain_2X_encoder": {
       "n": 1825,
       "delta_mean": -0.027912,
@@ -937,6 +1119,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_pretrain_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": 0.000426,
+      "delta_ci_lo": -0.000365,
+      "delta_ci_hi": 0.001216,
+      "delta_ci_half": 0.00079,
+      "p_value": 0.2856,
+      "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_pretrain_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -0.000166,
+      "delta_ci_lo": -0.000965,
+      "delta_ci_hi": 0.000636,
+      "delta_ci_half": 0.000801,
+      "p_value": 0.695,
+      "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_pretrain_head": {
       "n": 1825,
       "delta_mean": 0.137734,
@@ -964,6 +1164,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": 0.028338,
+      "delta_ci_lo": 0.025456,
+      "delta_ci_hi": 0.031277,
+      "delta_ci_half": 0.00291,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": 0.027746,
+      "delta_ci_lo": 0.024821,
+      "delta_ci_hi": 0.030749,
+      "delta_ci_half": 0.002964,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_3stage_DI_encoder": {
       "n": 1825,
       "delta_mean": -0.07248,
@@ -982,6 +1200,24 @@
       "p_value": 0.0,
       "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_pretrain_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
     },
+    "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -0.109396,
+      "delta_ci_lo": -0.111993,
+      "delta_ci_hi": -0.106737,
+      "delta_ci_half": 0.002628,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_pretrain_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -0.109989,
+      "delta_ci_lo": -0.112623,
+      "delta_ci_hi": -0.107327,
+      "delta_ci_half": 0.002648,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
     "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
       "n": 1825,
       "delta_mean": 0.002974,
@@ -990,6 +1226,51 @@
       "delta_ci_half": 0.000815,
       "p_value": 0.0,
       "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_encoder; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -0.036917,
+      "delta_ci_lo": -0.03816,
+      "delta_ci_hi": -0.035688,
+      "delta_ci_half": 0.001236,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -0.037509,
+      "delta_ci_lo": -0.038779,
+      "delta_ci_hi": -0.036226,
+      "delta_ci_half": 0.001276,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_surgical_noDI_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n": 1825,
+      "delta_mean": -0.039891,
+      "delta_ci_lo": -0.041108,
+      "delta_ci_hi": -0.038652,
+      "delta_ci_half": 0.001228,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_surgical_noDI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_3stage_DI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_surgical_noDI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -0.040483,
+      "delta_ci_lo": -0.041784,
+      "delta_ci_hi": -0.039212,
+      "delta_ci_half": 0.001286,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_noDI_encoder has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n": 1825,
+      "delta_mean": -0.000592,
+      "delta_ci_lo": -0.00141,
+      "delta_ci_hi": 0.000218,
+      "delta_ci_half": 0.000814,
+      "p_value": 0.1536,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has HIGHER MSE (worse future-frame prediction) than vjepa_2_0_vitg_surgical_noDI_head; lower MSE = better."
     }
   }
 }

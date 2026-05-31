@@ -220,7 +220,8 @@ def maybe_plot(mtag, mode):
             f"python -u src/m13_eval_plot.py --{mode} --action-probe-root {out}/probe_action "
             f"--motion-cos-root {out}/probe_motion_cos --future-mse-root {out}/probe_future_mse "
             f"--taxonomy-root {out}/probe_taxonomy --predictor-temporal-root {out}/predictor_temporal "
-            f"--encoder-temporal-root {out}/encoder_temporal --output-dir {out}/probe_plot --no-wandb",
+            f"--reference-hero vjepa_2_1_vitG=iter/iter16_metrics_temporal/result_outputs/poc/probe_plot/eval/m13_hero_surgery_vs_frozen.png "
+            f"--output-dir {out}/probe_plot --no-wandb",
         ])
         plog = REPO / "logs" / f"plot_preview_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.log"
         with open(plog, "wb") as fh:
