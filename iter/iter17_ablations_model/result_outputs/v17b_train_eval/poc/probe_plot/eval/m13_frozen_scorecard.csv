@@ -1,0 +1,9 @@
+encoder,action_top1,motion_cos,future_mse
+vjepa_2_1_vitg_frozen,"42.411
+±2.247","0.007
+±0.001","0.637
+±0.001"
+vjepa_2_0_vitg_frozen,"38.356
+±2.264","0.008
+±0.001","1.645
+±0.002"

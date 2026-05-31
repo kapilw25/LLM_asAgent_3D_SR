@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_0_vitg_frozen",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 1.657756,
+    "std": 0.213372,
+    "ci": {
+      "mean": 1.657756,
+      "ci_lo": 1.648122,
+      "ci_hi": 1.667752,
+      "ci_half": 0.009815
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.597078,
+    "std": 0.111926,
+    "ci": {
+      "mean": 0.597078,
+      "ci_lo": 0.591791,
+      "ci_hi": 0.602036,
+      "ci_half": 0.005122
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "checkpoints/vjepa2_0_vitg_384.pt"
+}

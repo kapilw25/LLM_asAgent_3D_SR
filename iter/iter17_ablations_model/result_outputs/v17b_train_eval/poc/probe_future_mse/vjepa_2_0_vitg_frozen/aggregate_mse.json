@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_0_vitg_frozen",
+  "n_test": 1825,
+  "mse_mean": 1.645476,
+  "mse_std": 0.048684,
+  "mse_ci": {
+    "mean": 1.645476,
+    "ci_lo": 1.643261,
+    "ci_hi": 1.647736,
+    "ci_half": 0.002237
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "checkpoints/vjepa2_0_vitg_384.pt"
+}

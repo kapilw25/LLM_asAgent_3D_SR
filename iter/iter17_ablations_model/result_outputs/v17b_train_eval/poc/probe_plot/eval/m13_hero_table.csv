@@ -1,0 +1,53 @@
+metric,g0-frozen,g0-pre-2X,g0-pre-enc,g0-pre-hd,g0-s3DI-enc,g0-sNoDI-enc,g-pre-2X,g-pre-enc,g-pre-hd,g-s3DI-enc,g-s3DI-hd,g-sNoDI-enc,g-sNoDI-hd,WINNER
+action_top1,"38.356
+±2.264","49.973
+±2.301*","50.027
+±2.329*","38.959
+±2.219","49.260
+±2.274*","49.644
+±2.329*","48.219
+±2.274*","46.411
+±2.274*","42.740
+±2.329*","47.781
+±2.274*","46.466
+±2.283*","46.630
+±2.301*","47.123
+±2.247*","ViT-g·2.0 pretrain
+encoder"
+motion_cos,"0.008
+±0.001","0.228
+±0.006*","0.113
+±0.004*","0.009
+±0.001*","0.121
+±0.004*","0.124
+±0.004*","0.044
+±0.002*","0.042
+±0.002*","0.011
+±0.001*","0.044
+±0.002*","0.050
+±0.002*","0.057
+±0.002*","0.063
+±0.002*","ViT-g·2.0 pretrain_2X
+encoder"
+taxonomy_f1,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,tie
+future_mse,"1.645
+±0.002","1.784
+±0.003*","1.756
+±0.002*","1.646
+±0.002","1.718
+±0.002*","1.715
+±0.002*","0.639
+±0.001*","0.632
+±0.001*","0.637
+±0.001*","0.628
+±0.001*","0.632
+±0.001*","0.636
+±0.001*","0.632
+±0.001*","ViT-g surgery
+3stage_DI encoder"
+rollout,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,tie
+causal,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,tie
+tdist,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,tie
+teacher_free,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,tie
+maskratio,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,tie
+order,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,—

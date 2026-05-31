@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_0_vitg_pretrain_encoder",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.062186,
+  "std": 0.01207,
+  "ci": {
+    "mean": 0.062186,
+    "ci_lo": 0.061647,
+    "ci_hi": 0.062736,
+    "ci_half": 0.000545
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_0_vitg/m09a_pretrain_encoder/m09a_ckpt_best.pt"
+}

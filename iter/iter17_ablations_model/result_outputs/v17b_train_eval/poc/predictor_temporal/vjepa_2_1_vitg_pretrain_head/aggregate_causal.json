@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_pretrain_head",
+  "metric": "causal",
+  "n_test": 1825,
+  "mean": 0.655149,
+  "std": 0.034144,
+  "ci": {
+    "mean": 0.655148,
+    "ci_lo": 0.653587,
+    "ci_hi": 0.656715,
+    "ci_half": 0.001564
+  },
+  "lower_is_better": true,
+  "interpretation": "causal future-block L1; lower = better",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg/m09a_pretrain_head/m09a_ckpt_best.pt"
+}

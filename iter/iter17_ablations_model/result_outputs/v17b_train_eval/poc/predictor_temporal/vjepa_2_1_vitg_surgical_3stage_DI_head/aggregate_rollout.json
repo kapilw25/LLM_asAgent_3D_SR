@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_3stage_DI_head",
+  "metric": "rollout",
+  "n_test": 1825,
+  "mean": 0.005372,
+  "std": 0.005413,
+  "ci": {
+    "mean": 0.005372,
+    "ci_lo": 0.005123,
+    "ci_hi": 0.00562,
+    "ci_half": 0.000248
+  },
+  "lower_is_better": true,
+  "interpretation": "free-run drift slope; lower = stabler dynamics",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg/m09c_surgery_3stage_DI_head/m09c_ckpt_best.pt"
+}

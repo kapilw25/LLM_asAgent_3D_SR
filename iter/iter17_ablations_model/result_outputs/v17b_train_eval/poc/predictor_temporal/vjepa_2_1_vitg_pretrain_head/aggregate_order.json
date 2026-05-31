@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_pretrain_head",
+  "metric": "order",
+  "n_test": 1825,
+  "mean": 0.022689,
+  "std": 0.032714,
+  "ci": {
+    "mean": 0.022689,
+    "ci_lo": 0.021189,
+    "ci_hi": 0.024158,
+    "ci_half": 0.001484
+  },
+  "lower_is_better": null,
+  "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg/m09a_pretrain_head/m09a_ckpt_best.pt"
+}

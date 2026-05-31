@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_vitg_pretrain_2X_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.638746,
+  "mse_std": 0.024757,
+  "mse_ci": {
+    "mean": 0.638746,
+    "ci_lo": 0.63756,
+    "ci_hi": 0.639873,
+    "ci_half": 0.001157
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg/m09a_pretrain_2X_encoder/m09a_ckpt_best.pt"
+}

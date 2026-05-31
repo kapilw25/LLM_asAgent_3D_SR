@@ -1,0 +1,13 @@
+{
+  "mode": "poc",
+  "n_train": 7724,
+  "n_val": 451,
+  "max_epochs": 2,
+  "batch_size": 32,
+  "total_steps": 484,
+  "best_epoch": 1,
+  "best_val_loss": 2.5497095251823474,
+  "wall_sec": 2905.4,
+  "head_params": 369954,
+  "init_ckpt_path": "/workspace/factorjepa/checkpoints/vjepa2_0_vitg_384.pt"
+}

@@ -1,0 +1,16 @@
+{
+  "variant": "vjepa_2_1_vitg_pretrain_encoder",
+  "n_test": 1825,
+  "ma_l1_mean": 0.66105,
+  "ma_l1_std": 0.280901,
+  "ma_l1_ci": {
+    "mean": 0.66105,
+    "ci_lo": 0.648467,
+    "ci_hi": 0.674591,
+    "ci_half": 0.013062
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg/m09a_pretrain_encoder/m09a_ckpt_best.pt",
+  "motion_aux_head_loaded_from": "outputs/poc/vjepa_2_1_vitg/m09a_pretrain_encoder/motion_aux_head.pt",
+  "augment_space_dim": 34
+}

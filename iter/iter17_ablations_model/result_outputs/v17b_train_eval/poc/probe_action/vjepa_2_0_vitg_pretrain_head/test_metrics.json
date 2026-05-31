@@ -1,0 +1,29 @@
+{
+  "encoder": "vjepa_2_0_vitg_pretrain_head",
+  "n_classes": 11,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__upward",
+    "slow__downward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 1825,
+  "top1_acc": 0.38958904109589043,
+  "top1_ci": {
+    "mean": 0.389589,
+    "ci_lo": 0.367123,
+    "ci_hi": 0.411507,
+    "ci_half": 0.022192
+  },
+  "best_val_acc": 0.4212860310421286,
+  "probe_lr": 0.0005,
+  "warmup_pct": 0.0,
+  "epochs": 20
+}

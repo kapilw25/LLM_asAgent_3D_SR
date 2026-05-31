@@ -1,0 +1,20 @@
+{
+  "mode": "poc",
+  "adapted_encoder": "vjepa_2_1_surgical_3stage_DI_head",
+  "stage_name": "stage0_head_only_DI",
+  "mode_mixture": {
+    "L": 0.15,
+    "A": 0.15,
+    "I": 0.7
+  },
+  "n_train": 7724,
+  "n_val": 451,
+  "max_epochs": 2,
+  "batch_size": 32,
+  "total_steps": 484,
+  "best_epoch": 1,
+  "best_val_loss": 2.0156700248993156,
+  "wall_sec": 3426.9,
+  "head_params": 369954,
+  "init_ckpt_path": "/workspace/factorjepa/outputs/poc/vjepa_2_1_vitg/m09a_pretrain_encoder/m09a_ckpt_best.pt"
+}

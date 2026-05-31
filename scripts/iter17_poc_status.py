@@ -90,12 +90,14 @@ def _tail(path, nbytes=8000):
 
 
 def _running_total(jobs, jid, elapsed, prior):
-    """Total-duration estimate for a RUNNING job. Only PRETRAIN jobs extrapolate — from Epoch e/N,
-    whose epochs are ~equal so the fraction is whole-job-meaningful. SURGERY (unequal stages: short
-    LP-FT stage0 vs long layout/agent/interaction) and EVAL (multi-stage feat→probes→temporal) can't
-    be read off a single inner bar — extrapolating them gave wild ETAs (17h off the m12f[aot]
-    cold-start; ~29m off surgery STAGE 1/4) — so they use the prior, which self-corrects once the
-    first job of that type completes. All capped at prior×2.5 so no parse can blow up the run ETA."""
+    """Total-duration estimate for a RUNNING job, read from its own log:
+      · PRETRAIN — extrapolate from the whole-job STEP/Epoch tqdm (epochs ~equal → fraction meaningful).
+      · EVAL — from the current stage's RECENT rate ('recent=<R>s/clip'): remaining ≈ (tot-cur)×R. This
+        tracks the live bottleneck (e.g. m12e predictor-rollout ~50min). tqdm's OVERALL 'remaining' is
+        cold-start-inflated (m12f reads 1h40m while recent=0.6s/clip → ~16m), so the recent rate is used
+        (it matches tqdm's own 'ETA0.3h'). The prior is the mean of COMPLETED evals — but those are
+        resume-SKIPPED (~70s) → it used to pin every running eval to a useless ~5m floor that never moved.
+      · else (surgery) — prior, capped at prior×2.5."""
     cap = max(prior * 2.5, elapsed + 600)
     if _arm_of(jid).startswith("pretrain"):
         tmpl = jobs[jid]["log"]
@@ -117,6 +119,19 @@ def _running_total(jobs, jid, elapsed, prior):
                 cur, tot = int(me[-1][0]), int(me[-1][1])
                 if 0 < cur <= tot:
                     return min(max(elapsed * tot / cur, elapsed + 120), cap)
+    if _arm_of(jid) == "eval":
+        tmpl = jobs[jid]["log"]
+        cands = sorted(REPO.glob(tmpl.format(ts="*")), key=lambda p: p.stat().st_mtime)
+        if cands:
+            txt = _tail(cands[-1])
+            # current stage bar: '<cur>/<tot> [… recent=<R>s/clip …]'. Use the RECENT rate, NOT tqdm's
+            # overall 'remaining' (cold-start-inflated: m12f reads 1h40m while recent=0.6s/clip → ~16m,
+            # which matches tqdm's own 'ETA0.3h'). remaining ≈ (tot-cur) × recent_rate; capped at 3h.
+            cp = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
+            rr = re.findall(r"recent=([\d.]+)s/clip", txt)
+            if cp and rr and int(cp[-1][1]) and int(cp[-1][0]) >= 5:
+                cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
+                return min(elapsed + (tot - cur) * rate, 3 * 3600)
     return min(max(prior, elapsed + 300), cap)
 
 
@@ -164,6 +179,57 @@ def maybe_backup(fully_done):
             done_flag.write_text(name)
             return f"  ✅ FINAL HF backup done ({name}) — you can kill the vast.ai node now."
         return f"  ✅ HF backup done ({name}) · next in ~{UPLOAD_EVERY_MIN}m"
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+# Rebuild the §G plots from whatever evals are DONE this often (minutes) — a LIVE preview to show in a
+# meeting while the run finishes. CPU-only (paired-Δ aggregation + m13). The final §3 rebuilds it complete.
+PLOT_EVERY_MIN = 5
+
+
+def maybe_plot(mtag, mode):
+    """Every PLOT_EVERY_MIN min, rebuild the §G plots from the evals done SO FAR (CPU: paired-Δ + m13) →
+    a live partial hero table you can screen-share in a meeting. SAFE: paired_delta always re-aggregates
+    (no cache skip), so the scheduler's final §3 rebuilds the COMPLETE §G at the end — this preview can't
+    corrupt it. The 60s `watch` + a stamp file drive the cadence; the chain uses ';' so an early metric
+    with too few done evals won't block — m13 is graceful and plots whatever JSONs exist."""
+    last = REPO / "logs" / ".plot_preview.LAST"
+    lock = REPO / "logs" / ".plot_preview.LOCK"
+    now_ts = datetime.now(timezone.utc).timestamp()
+    hero = REPO / f"outputs/{mtag}/probe_plot/eval/m13_hero_table.png"
+    if lock.exists() and (now_ts - lock.stat().st_mtime) > 2 * PLOT_EVERY_MIN * 60:
+        lock.unlink(missing_ok=True)
+    age_min = (now_ts - last.stat().st_mtime) / 60 if last.exists() else 1e9
+    if age_min < PLOT_EVERY_MIN:
+        return (f"  🖼  §G preview: rebuilt {int(age_min)}m ago · next in ~{max(int(PLOT_EVERY_MIN - age_min), 0)}m"
+                f" → outputs/{mtag}/probe_plot/eval/m13_hero_table.png")
+    try:
+        _fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(_fd)
+    except FileExistsError:
+        return "  🖼  §G preview already rebuilding — leaving it."
+    try:
+        last.write_text("")
+        out = f"outputs/{mtag}"
+        chain = " ; ".join([   # same chain the scheduler runs at §3, into the SAME probe_plot/eval/ dir
+            f"python -u src/m12a_action_top1.py --{mode} --stage paired_delta --output-root {out}/probe_action --cache-policy 1 --no-wandb",
+            f"python -u src/m12b_motion_cos.py  --{mode} --stage paired_delta --output-root {out}/probe_motion_cos --cache-policy 1 --no-wandb",
+            f"python -u src/m12c_taxonomy_f1.py --{mode} --stage paired_delta --features-root {out}/probe_action --output-root {out}/probe_taxonomy --cache-policy 1 --no-wandb",
+            f"python -u src/m12d_future_mse.py  --{mode} --stage paired_per_variant --output-root {out}/probe_future_mse --cache-policy 1 --no-wandb",
+            f"python -u src/m13_eval_plot.py --{mode} --action-probe-root {out}/probe_action "
+            f"--motion-cos-root {out}/probe_motion_cos --future-mse-root {out}/probe_future_mse "
+            f"--taxonomy-root {out}/probe_taxonomy --predictor-temporal-root {out}/predictor_temporal "
+            f"--encoder-temporal-root {out}/encoder_temporal --output-dir {out}/probe_plot --no-wandb",
+        ])
+        plog = REPO / "logs" / f"plot_preview_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.log"
+        with open(plog, "wb") as fh:
+            rc = subprocess.run(chain, shell=True, executable="/bin/bash", cwd=str(REPO),
+                                env=dict(os.environ, PYTHONPATH="src"),
+                                stdout=fh, stderr=subprocess.STDOUT).returncode
+        if hero.exists():
+            return f"  🖼  §G preview REBUILT (rc={rc}) → outputs/{mtag}/probe_plot/eval/ · next in ~{PLOT_EVERY_MIN}m"
+        return f"  🖼  §G preview rc={rc} — partial/blocked, see {plog.name} · next in ~{PLOT_EVERY_MIN}m"
     finally:
         lock.unlink(missing_ok=True)
 
@@ -225,6 +291,17 @@ def main():
             remaining[jid] = max(_running_total(jobs, jid, elapsed(jid), prior) - elapsed(jid), 60)
         else:
             remaining[jid] = prior
+
+    # A FRESH eval's m12e (predictor rollout) is ~50min — far above the resume-contaminated eval prior
+    # (~70s, mean of resume-skipped evals). Lift each PENDING eval to the slowest RUNNING eval's remaining:
+    # the pending surgical-head evals hit the SAME m12e wall, so without this the run ETA reads a fixed
+    # ~21m that never moves while the real work grinds. (No-op once a fresh eval completes and est rises.)
+    run_eval_rem = [remaining[j] for j in jobs if classify(j) == "running" and _arm_of(j) == "eval"]
+    if run_eval_rem:
+        floor = max(run_eval_rem)
+        for jid in jobs:
+            if classify(jid) == "pending" and _arm_of(jid) == "eval":
+                remaining[jid] = max(remaining[jid], floor)
 
     # ── forward DAG sim over the GPU pool → finish time (secs from now) per job ──
     done_set = {j for j in jobs if classify(j) in ("done", "failed")}
