@@ -281,17 +281,12 @@ def _short_label(enc: str) -> str:
 
 
 def _fmt_compact(x: float) -> str:
-    """Sign-prefixed compact number for tight heatmap cells."""
-    if x == 0:
+    """Sign-prefixed number ROUNDED TO 2 decimals (0.01) for heatmap cells. Anything that rounds to
+    zero prints '0' (so −0.0003 → 0, −0.07 stays −0.07, +5.81 stays +5.81)."""
+    r = round(float(x), 2)
+    if r == 0:                                # also catches -0.0 (e.g. round(-0.0003, 2))
         return "0"
-    ax = abs(x)
-    if ax >= 100:
-        return f"{x:+.0f}"
-    if ax >= 1:
-        return f"{x:+.2f}"
-    if ax >= 0.01:
-        return f"{x:+.3f}"
-    return f"{x:+.4f}"
+    return f"{r:+.2f}"
 
 
 def _taxonomy_f1_by_encoder(taxonomy_json: dict, encoders: list) -> dict:
@@ -581,15 +576,18 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     _pre = [e for e in contenders if _arm_family(e) == "pretrain"]
     _per = _family_verdict(metrics, encoders, frozen)[3]
     _row = {e: i for i, e in enumerate(contenders)}
-    col_winner = {}                                     # j (metric col) -> i (winning-arm row); decisive only
+    spotlight = set()                                   # cells to blue-box: decisive→winner; TIE→BOTH champions
     for j, (key, *_r) in enumerate(cat):
         v = _per.get(key)
-        champ = (_family_champion(metrics, key, frozen, _surg) if v == "surgery"
-                 else _family_champion(metrics, key, frozen, _pre) if v == "pretrain" else None)
-        if champ in _row:
-            col_winner[j] = _row[champ]
+        champs = ([_family_champion(metrics, key, frozen, _surg), _family_champion(metrics, key, frozen, _pre)]
+                  if v == "tie"
+                  else [_family_champion(metrics, key, frozen, _surg) if v == "surgery"
+                        else _family_champion(metrics, key, frozen, _pre) if v == "pretrain" else None])
+        for champ in champs:
+            if champ in _row:
+                spotlight.add((_row[champ], j))
     for (i, j), (sc, clo, chi, _sig) in cells.items():
-        win = col_winner.get(j) == i
+        win = (i, j) in spotlight
         ax.text(j, i - 0.26, _fmt_compact(sc), ha="center", va="center",
                 fontsize=18 if win else 13, fontweight="bold", color="black")
         ax.text(j, i + 0.18, f"[{_fmt_compact(clo)},\n{_fmt_compact(chi)}]", ha="center", va="center",
@@ -895,16 +893,27 @@ def plot_grouped_winner(metrics, encoders, frozen, output_dir):
             (0.84, 0.15, 0.16, 0.6) if w == "P" else (0.6, 0.6, 0.6, 0.35))
     fig, ax = plt.subplots(figsize=(max(11.0, 1.05 * ncol + 3), 0.95 * nrow + 3))
     ax.imshow(rgba, aspect="auto")
-    col_winner = {j: int(np.nanargmax(M[:, j])) for j in range(len(keys)) if np.any(~np.isnan(M[:, j]))}
+    # Spotlight (blue box + bigger Δ): a DECISIVE metric → its single winning arm; a TIE → BOTH family
+    # champions (best surgery cell + best pretrain cell) — a tie shows TWO boxes, not one.
+    spotlight = set()
+    for j, k in enumerate(keys):
+        if not np.any(~np.isnan(M[:, j])):
+            continue
+        if per.get(k) == "tie":
+            for champ in (_family_champion(metrics, k, frozen, surg), _family_champion(metrics, k, frozen, pre)):
+                if champ in arms:
+                    spotlight.add((arms.index(champ), j))
+        else:
+            spotlight.add((int(np.nanargmax(M[:, j])), j))
     for i in range(len(arms)):
         for j in range(len(keys)):
             if not np.isnan(M[i, j]):
-                win = col_winner.get(j) == i           # per-metric best arm → spotlight (blue box + bigger Δ)
+                win = (i, j) in spotlight              # decisive→winner; tie→both champions
                 ax.text(j, i - 0.24, _fmt_compact(M[i, j]), ha="center", va="center",
                         fontsize=15 if win else 10, fontweight="bold", color="black")
                 if (i, j) in CI:
                     lo, hi = CI[(i, j)]
-                    ax.text(j, i + 0.2, f"[{lo:+.3f},\n{hi:+.3f}]", ha="center", va="center",
+                    ax.text(j, i + 0.2, f"[{_fmt_compact(lo)},\n{_fmt_compact(hi)}]", ha="center", va="center",
                             fontsize=6, color="black")
                 if win:
                     ax.add_patch(Rectangle((j - 0.5, i - 0.5), 1, 1, fill=False,
