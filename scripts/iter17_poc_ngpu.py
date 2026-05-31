@@ -61,9 +61,8 @@ ARM2DIR = {
     "surgery_3stage_DI_head":    "m09c_surgery_3stage_DI_head",
     "surgery_noDI_head":         "m09c_surgery_noDI_head",
 }
-EVAL_SKIP = "1,4,7,9,9b,9c,12,13,10,8c"   # per-encoder stages only; aggregate+labels+plots → §3.
-# 8c = m12f encoder_temporal (aot/tov/pace/tcc) DROPPED (iter17): ~1h45m/enc of CPU head-training,
-# and surgery's win is in the PREDICTOR (m12e / stage 8b), NOT encoder metrics. Keep 8b, drop 8c.
+EVAL_SKIP = "1,4,7,9,9b,9c,12,13,10,8c"   # per-encoder stages only; aggregate+labels+plots → §3
+# (8c/9c encoder-temporal retired iter17 — encoder metrics dropped; surgery wins on the predictor.)
 ENC_CKPT_OVERRIDE = "checkpoints/vjepa2_1_vitg_384.pt"  # present ckpt to satisfy run_eval preflight
 
 

@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_0_vitg_surgical_noDI_encoder",
+  "metric": "causal",
+  "n_test": 1825,
+  "mean": 1.718616,
+  "std": 0.048017,
+  "ci": {
+    "mean": 1.718616,
+    "ci_lo": 1.716401,
+    "ci_hi": 1.720852,
+    "ci_half": 0.002226
+  },
+  "lower_is_better": true,
+  "interpretation": "causal future-block L1; lower = better",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_0_vitg/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt"
+}

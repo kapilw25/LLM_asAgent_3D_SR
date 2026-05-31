@@ -51,6 +51,16 @@
         "ci_half": 0.003715
       }
     },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "score_mean": 0.119249,
+      "n": 1825,
+      "score_ci": {
+        "mean": 0.119249,
+        "ci_lo": 0.115668,
+        "ci_hi": 0.122935,
+        "ci_half": 0.003633
+      }
+    },
     "vjepa_2_0_vitg_surgical_noDI_encoder": {
       "score_mean": 0.123895,
       "n": 1825,
@@ -59,6 +69,16 @@
         "ci_lo": 0.120175,
         "ci_hi": 0.127555,
         "ci_half": 0.00369
+      }
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head": {
+      "score_mean": 0.126255,
+      "n": 1825,
+      "score_ci": {
+        "mean": 0.126255,
+        "ci_lo": 0.122523,
+        "ci_hi": 0.130054,
+        "ci_half": 0.003766
       }
     },
     "vjepa_2_1_vitg_frozen": {
@@ -183,6 +203,16 @@
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_0_vitg_frozen has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_encoder"
     },
+    "vjepa_2_0_vitg_frozen_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.111626,
+      "delta_ci_lo": -0.115163,
+      "delta_ci_hi": -0.108292,
+      "delta_ci_half": 0.003435,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_frozen has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_head"
+    },
     "vjepa_2_0_vitg_frozen_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
       "n_shared": 1825,
       "delta_mean": -0.116271,
@@ -192,6 +222,16 @@
       "p_value": 0.0,
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_frozen has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_frozen_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.118631,
+      "delta_ci_lo": -0.12228,
+      "delta_ci_hi": -0.115159,
+      "delta_ci_half": 0.003561,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_frozen - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_frozen has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
     },
     "vjepa_2_0_vitg_frozen_minus_vjepa_2_1_vitg_frozen": {
       "n_shared": 1825,
@@ -303,6 +343,16 @@
       "gate_pass": true,
       "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_encoder"
     },
+    "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.109074,
+      "delta_ci_lo": 0.106122,
+      "delta_ci_hi": 0.11197,
+      "delta_ci_half": 0.002924,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_head"
+    },
     "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
       "n_shared": 1825,
       "delta_mean": 0.104429,
@@ -312,6 +362,16 @@
       "p_value": 0.0,
       "gate_pass": true,
       "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.102068,
+      "delta_ci_lo": 0.099184,
+      "delta_ci_hi": 0.104852,
+      "delta_ci_half": 0.002834,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_pretrain_2X_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_2X_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
     },
     "vjepa_2_0_vitg_pretrain_2X_encoder_minus_vjepa_2_1_vitg_frozen": {
       "n_shared": 1825,
@@ -413,6 +473,16 @@
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_0_vitg_pretrain_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_encoder"
     },
+    "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.00624,
+      "delta_ci_lo": -0.006484,
+      "delta_ci_hi": -0.00601,
+      "delta_ci_half": 0.000237,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_pretrain_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_head"
+    },
     "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
       "n_shared": 1825,
       "delta_mean": -0.010886,
@@ -422,6 +492,16 @@
       "p_value": 0.0,
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_pretrain_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.013246,
+      "delta_ci_lo": -0.013678,
+      "delta_ci_hi": -0.012817,
+      "delta_ci_half": 0.00043,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_pretrain_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
     },
     "vjepa_2_0_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_frozen": {
       "n_shared": 1825,
@@ -513,6 +593,16 @@
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_0_vitg_pretrain_head has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_encoder"
     },
+    "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.109856,
+      "delta_ci_lo": -0.11334,
+      "delta_ci_hi": -0.106588,
+      "delta_ci_half": 0.003376,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_pretrain_head has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_head"
+    },
     "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
       "n_shared": 1825,
       "delta_mean": -0.114502,
@@ -522,6 +612,16 @@
       "p_value": 0.0,
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_pretrain_head has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.116862,
+      "delta_ci_lo": -0.120471,
+      "delta_ci_hi": -0.113465,
+      "delta_ci_half": 0.003503,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_head has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
     },
     "vjepa_2_0_vitg_pretrain_head_minus_vjepa_2_1_vitg_frozen": {
       "n_shared": 1825,
@@ -603,6 +703,16 @@
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_pretrain_head - vjepa_2_1_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_pretrain_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_head"
     },
+    "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.001728,
+      "delta_ci_lo": 0.001398,
+      "delta_ci_hi": 0.002027,
+      "delta_ci_half": 0.000314,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_3stage_DI_head"
+    },
     "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
       "n_shared": 1825,
       "delta_mean": -0.002917,
@@ -612,6 +722,16 @@
       "p_value": 0.0,
       "gate_pass": false,
       "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.005278,
+      "delta_ci_lo": -0.00567,
+      "delta_ci_hi": -0.00491,
+      "delta_ci_half": 0.00038,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
     },
     "vjepa_2_0_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_frozen": {
       "n_shared": 1825,
@@ -693,6 +813,116 @@
       "gate_pass": true,
       "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_encoder - vjepa_2_1_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_encoder has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_head"
     },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_0_vitg_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_mean": -0.004645,
+      "delta_ci_lo": -0.004987,
+      "delta_ci_hi": -0.004288,
+      "delta_ci_half": 0.00035,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_0_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.007006,
+      "delta_ci_lo": -0.007236,
+      "delta_ci_hi": -0.006772,
+      "delta_ci_half": 0.000232,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_frozen": {
+      "n_shared": 1825,
+      "delta_mean": 0.112248,
+      "delta_ci_lo": 0.108949,
+      "delta_ci_hi": 0.115723,
+      "delta_ci_half": 0.003387,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_frozen > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_frozen"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_pretrain_2X_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.074835,
+      "delta_ci_lo": 0.07241,
+      "delta_ci_hi": 0.077357,
+      "delta_ci_half": 0.002473,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_pretrain_2X_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_2X_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.077226,
+      "delta_ci_lo": 0.074711,
+      "delta_ci_hi": 0.079774,
+      "delta_ci_half": 0.002531,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_pretrain_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.107889,
+      "delta_ci_lo": 0.104689,
+      "delta_ci_hi": 0.111256,
+      "delta_ci_half": 0.003284,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_pretrain_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_head"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.075483,
+      "delta_ci_lo": 0.07297,
+      "delta_ci_hi": 0.078013,
+      "delta_ci_half": 0.002521,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.068914,
+      "delta_ci_lo": 0.066574,
+      "delta_ci_hi": 0.071267,
+      "delta_ci_half": 0.002346,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_3stage_DI_head"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.062373,
+      "delta_ci_lo": 0.060033,
+      "delta_ci_hi": 0.064692,
+      "delta_ci_half": 0.00233,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_3stage_DI_head_minus_vjepa_2_1_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.05652,
+      "delta_ci_lo": 0.054345,
+      "delta_ci_hi": 0.058766,
+      "delta_ci_half": 0.00221,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_3stage_DI_head - vjepa_2_1_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_3stage_DI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_head"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_encoder_minus_vjepa_2_0_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": -0.00236,
+      "delta_ci_lo": -0.002737,
+      "delta_ci_hi": -0.002022,
+      "delta_ci_half": 0.000357,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_encoder - vjepa_2_0_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_noDI_encoder has stronger intra-class motion clustering than vjepa_2_0_vitg_surgical_noDI_head"
+    },
     "vjepa_2_0_vitg_surgical_noDI_encoder_minus_vjepa_2_1_vitg_frozen": {
       "n_shared": 1825,
       "delta_mean": 0.116893,
@@ -772,6 +1002,86 @@
       "p_value": 0.0,
       "gate_pass": true,
       "interpretation": "vjepa_2_0_vitg_surgical_noDI_encoder - vjepa_2_1_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_noDI_encoder has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_head"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_frozen": {
+      "n_shared": 1825,
+      "delta_mean": 0.119254,
+      "delta_ci_lo": 0.115795,
+      "delta_ci_hi": 0.122845,
+      "delta_ci_half": 0.003525,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_frozen > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_frozen"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_pretrain_2X_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.08184,
+      "delta_ci_lo": 0.079256,
+      "delta_ci_hi": 0.084521,
+      "delta_ci_half": 0.002633,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_pretrain_2X_encoder > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_2X_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.084231,
+      "delta_ci_lo": 0.081593,
+      "delta_ci_hi": 0.086935,
+      "delta_ci_half": 0.002671,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_pretrain_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.114895,
+      "delta_ci_lo": 0.111551,
+      "delta_ci_hi": 0.118379,
+      "delta_ci_half": 0.003414,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_pretrain_head > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_head"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.082489,
+      "delta_ci_lo": 0.079834,
+      "delta_ci_hi": 0.085131,
+      "delta_ci_half": 0.002648,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_surgical_3stage_DI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.07592,
+      "delta_ci_lo": 0.073414,
+      "delta_ci_hi": 0.078366,
+      "delta_ci_half": 0.002476,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_surgical_3stage_DI_head > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_3stage_DI_head"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_surgical_noDI_encoder": {
+      "n_shared": 1825,
+      "delta_mean": 0.069379,
+      "delta_ci_lo": 0.066922,
+      "delta_ci_hi": 0.0718,
+      "delta_ci_half": 0.002439,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_surgical_noDI_encoder > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_encoder"
+    },
+    "vjepa_2_0_vitg_surgical_noDI_head_minus_vjepa_2_1_vitg_surgical_noDI_head": {
+      "n_shared": 1825,
+      "delta_mean": 0.063526,
+      "delta_ci_lo": 0.061234,
+      "delta_ci_hi": 0.065871,
+      "delta_ci_half": 0.002319,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_0_vitg_surgical_noDI_head - vjepa_2_1_vitg_surgical_noDI_head > 0 means vjepa_2_0_vitg_surgical_noDI_head has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_noDI_head"
     },
     "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_2X_encoder": {
       "n_shared": 1825,

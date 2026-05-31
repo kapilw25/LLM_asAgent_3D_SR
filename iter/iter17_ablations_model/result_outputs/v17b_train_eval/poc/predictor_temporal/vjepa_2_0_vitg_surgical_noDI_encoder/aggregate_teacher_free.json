@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_0_vitg_surgical_noDI_encoder",
+  "metric": "teacher_free",
+  "n_test": 1825,
+  "mean": 0.038555,
+  "std": 0.011959,
+  "ci": {
+    "mean": 0.038555,
+    "ci_lo": 0.038016,
+    "ci_hi": 0.039113,
+    "ci_half": 0.000548
+  },
+  "lower_is_better": true,
+  "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_0_vitg/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt"
+}

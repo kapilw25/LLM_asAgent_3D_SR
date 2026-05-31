@@ -131,21 +131,10 @@ ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
 OUTPUT_ACTION="${OUTPUT_ACTION:-${DEFAULT_OUTPUT_PREFIX}/probe_action}"
 OUTPUT_COS="${OUTPUT_COS:-${DEFAULT_OUTPUT_PREFIX}/probe_motion_cos}"
 OUTPUT_MSE="${OUTPUT_MSE:-${DEFAULT_OUTPUT_PREFIX}/probe_future_mse}"
-# iter16 §3.3: temporal-metric suites (m12e predictor 6 + m12f encoder 4) — Stages 8b/8c/9b/9c.
+# iter16 §3.3: predictor-temporal metric suite (m12e, 6 metrics) — Stages 8b/9b.
+# (iter17: encoder-temporal suite RETIRED — encoder metrics dropped; archived in src/legacy/.)
 OUTPUT_PREDTEMP="${OUTPUT_PREDTEMP:-${DEFAULT_OUTPUT_PREFIX}/predictor_temporal}"
-OUTPUT_ENCTEMP="${OUTPUT_ENCTEMP:-${DEFAULT_OUTPUT_PREFIX}/encoder_temporal}"
 PT_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.predictor_temporal.batch_size)"
-ET_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.batch_size)"
-ET_TUBELET="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.tubelet_size)"
-ET_TOV_NPERM="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.tov_n_permutations)"
-ET_PACE_STRIDES="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.pace_strides)"
-ET_PACE_SRCFRAMES="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.pace_source_frames)"
-ET_TCC_TEMP="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.tcc_temperature)"
-ET_HEAD_LR="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_lr)"
-ET_HEAD_EPOCHS="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_epochs)"
-ET_HEAD_WD="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_weight_decay)"
-ET_HEAD_BS="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_batch_size)"
-ET_HEAD_TRAIN_CAP="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.encoder_temporal.head_train_cap)"
 OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${DEFAULT_OUTPUT_PREFIX}/probe_taxonomy}"
 OUTPUT_PLOTS="${OUTPUT_PLOTS:-${DEFAULT_OUTPUT_PREFIX}/probe_plot}"
 TAG_TAXONOMY="${TAG_TAXONOMY:-configs/tag_taxonomy.json}"
@@ -690,11 +679,11 @@ n_lrs=$(echo "$LR_SWEEP" | wc -w)
 
 PER_ENC_ANY=0
 # iter16 §3.3: list ALL per-encoder stages so the loop isn't skipped when only a
-# subset is requested. Was "2 3 5 6 8" — omitted 11 (taxonomy) AND the new 8b/8c
-# (predictor/encoder temporal), so e.g. SKIP_STAGES=2,3,5,6,8 wrongly skipped them.
-for s in 2 3 11 5 6 8 8b 8c; do should_skip "$s" || PER_ENC_ANY=1; done
+# subset is requested. Was "2 3 5 6 8" — omitted 11 (taxonomy) AND the new 8b
+# (predictor temporal), so e.g. SKIP_STAGES=2,3,5,6,8 wrongly skipped them.
+for s in 2 3 11 5 6 8 8b; do should_skip "$s" || PER_ENC_ANY=1; done
 if [ "$PER_ENC_ANY" -eq 1 ]; then
-    stamp "PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
+    stamp "PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
     # ── iter17: background aggregate-ETA heartbeat. Prints whole-pipeline progress
     # (tqdm-style bar + hh:mm ETA across ALL encoders) into THIS eval log every
     # ETA_HEARTBEAT_INTERVAL (default 120s), so no separate monitor script is needed —
@@ -972,41 +961,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             fi
         fi
 
-        # ── STAGE 8c — encoder_temporal (m12f, 4 metrics: aot/tov/pace/tcc) ── (iter16 §6/§3.3)
-        if ! should_skip 8c && [ "$ENC_KIND" = vjepa ]; then
-            if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
-                ECKPT="$(encoder_ckpt_for "$ENC")"   # encoder-only (lighter; m12f needs no predictor — §3.3 R2)
-                if [ -e "$ECKPT" ]; then
-                    stamp "  STAGE 8c · encoder_temporal (4 metrics) for $ENC"
-                    python -u src/m12f_encoder_temporal.py "--$MODE" \
-                        --stage forward --metric all \
-                        --variant "$ENC" --encoder-ckpt "$ECKPT" \
-                        --model-config "$ENC_MCFG" \
-                        --action-probe-root "$OUTPUT_ACTION" \
-                        --local-data "$LOCAL_DATA" \
-                        --output-root "$OUTPUT_ENCTEMP" \
-                        --num-frames "$NUM_FRAMES" \
-                        --tubelet-size "$ET_TUBELET" \
-                        --batch-size "$ET_BATCH" \
-                        --tov-n-permutations "$ET_TOV_NPERM" \
-                        --pace-strides "$ET_PACE_STRIDES" \
-                        --pace-source-frames "$ET_PACE_SRCFRAMES" \
-                        --tcc-temperature "$ET_TCC_TEMP" \
-                        --head-lr "$ET_HEAD_LR" \
-                        --head-epochs "$ET_HEAD_EPOCHS" \
-                        --head-weight-decay "$ET_HEAD_WD" \
-                        --head-batch-size "$ET_HEAD_BS" \
-                        --head-train-cap "$ET_HEAD_TRAIN_CAP" \
-                        --cache-policy "$P_MSE" \
-                        --no-wandb \
-                        2>&1 | tee "logs/m12f_encoder_temporal_forward_${ENC}.log"
-                else
-                    echo "  ⚠️  Stage 8c SKIP $ENC: encoder ckpt missing ($ECKPT)"
-                fi
-            else
-                echo "  Stage 8c SKIP $ENC (not in STAGE8_ENCODERS preflight set)"
-            fi
-        fi
+        # (Stage 8c encoder_temporal retired iter17 — encoder metrics dropped; see src/legacy/.)
 
         # ─── End-of-per-encoder cleanup (iter15 Phase 5 V6, 2026-05-15) ──
         # Delete features_test.npy + clip_keys_test.npy + .probe_features_test_
@@ -1124,17 +1079,7 @@ if ! should_skip 9b; then
         2>&1 | tee logs/m12e_predictor_temporal_paired.log
 fi
 
-# ── STAGE 9c — encoder_temporal paired (m12f, 4 metrics) ── (iter16 §6/§3.3)
-if ! should_skip 9c; then
-    stamp "STAGE 9c · encoder_temporal paired_per_variant (CPU)"
-    python -u src/m12f_encoder_temporal.py "--$MODE" \
-        --stage paired_per_variant --metric all \
-        --output-root "$OUTPUT_ENCTEMP" \
-        --tubelet-size "$ET_TUBELET" \
-        --cache-policy "$P_MSE" \
-        --no-wandb \
-        2>&1 | tee logs/m12f_encoder_temporal_paired.log
-fi
+# (Stage 9c encoder_temporal paired retired iter17 — encoder metrics dropped; see src/legacy/.)
 
 # ── STAGE 10 — plots (m08d, CPU, always-recompute) ─────────────────────
 # Pure visualization — no cache_policy. Wipes its own output_dir on entry
@@ -1147,7 +1092,6 @@ if ! should_skip 10; then
         --future-mse-root   "$OUTPUT_MSE" \
         --taxonomy-root     "$OUTPUT_TAXONOMY" \
         --predictor-temporal-root "$OUTPUT_PREDTEMP" \
-        --encoder-temporal-root   "$OUTPUT_ENCTEMP" \
         --output-dir        "$OUTPUT_PLOTS" \
         --no-wandb \
         2>&1 | tee logs/m13_eval_plot.log
