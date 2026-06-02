@@ -1,4 +1,14 @@
 encoder,action_top1,motion_cos,taxonomy_f1,future_mse,rollout,causal,tdist,teacher_free,maskratio
+vjepa_2_1_frozen,"44.384
+±2.274","0.009
+±0.001","0.793
+±0.016","0.557
+±0.001","0.009
+±0.000","0.583
+±0.001","0.007
+±0.000","0.046
+±0.000","0.072
+±0.001"
 vjepa_2_1_vitg_frozen,"42.411
 ±2.247","0.007
 ±0.001","0.806
