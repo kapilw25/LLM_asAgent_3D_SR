@@ -4,6 +4,8 @@
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
 ## Mon, June 1, 2026
+- Compared surgery, pretrain, and frozen across three V-JEPA backbones (2B, newer 1B, older 1B).
+- Surgery never loses to pretrain on 2B, leads newer 1B; older 2.0 favors pretrain.
 - Next: Surgery vs finetuning baselines → best-adaptation claim
 
 ## Fri, May 29, 2026

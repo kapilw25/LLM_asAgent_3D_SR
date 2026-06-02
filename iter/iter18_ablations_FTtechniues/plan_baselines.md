@@ -30,6 +30,29 @@ ADD (4 baselines = 4 train configs + 3 tiny code deltas):
 
 ---
 
+## 0.5 · ROI ranking — which baselines to build first
+
+```text
+ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost )
+┌──────────────────────────────┬───────────────┬───────────────────────────────┬─────────┬─────┐
+│ Technique                    │ Reviewer pull │ Can surgery beat it?          │ Build   │ ROI │
+├──────────────────────────────┼───────────────┼───────────────────────────────┼─────────┼─────┤
+│ B4 Full-FT (forget ceiling)  │ mandatory     │ YES - it forgets temporal     │ config  │ A+  │
+│ B4 LP-FT (Kumar'22)          │ strong        │ YES - surgery minus factors   │ config  │ A+  │
+│ B1 PEFT  LoRA -> DoRA        │ mandatory     │ YES on temporal; lose action  │ low     │ A   │
+│ B3 CaSSLe + EWC              │ strong        │ likely; close on retention    │ low     │ A-  │
+│ B2 Auto-RGN Surgical-FT      │ MANDATORY     │ HARD - the closest rival      │ ~15 ln  │ B   │
+│ SSIAT (1 shared adapter)     │ venue/CITA    │ YES - lowest PET capacity     │ medium  │ B-  │
+│ SAFE / SAPT / SEEKR (PET)    │ venue/CITA    │ YES on temporal (PET ceiling) │ HIGH    │ C   │
+└──────────────────────────────┴───────────────┴───────────────────────────────┴─────────┴─────┘
+```
+
+> A+/A = build first (cheap, mandatory, surgery wins by mechanism) · B = mandatory but HARDEST
+> (B2 Auto-RGN is the published namesake — budget-match trainable params exactly) · B-/C = defer
+> to the PET iter (CITA #4).
+
+---
+
 ## 1 · Architecture: where each baseline plugs in
 
 ```mermaid
