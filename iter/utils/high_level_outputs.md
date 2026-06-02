@@ -640,3 +640,53 @@ tiers: 1️⃣ winner · 2️⃣ recoverable drops · 3️⃣ load-bearing drops
 - 🟢 Δ escapes 5 pp threshold · 🟠 marginal 3-5 pp · 🟡 noise <3 pp · 🚨 regression >5 pp · ⏳ pending · 🔴 lost/dropped
 - 🆔 = canonical encoder name (configs/eval/probe_encoders.yaml; src/utils/frozen_features.ENCODERS)
 
+---
+
+## 📊 iter17 POC — Model-scale × version ablation: surgery vs pretrain across 3 backbones (✅ COMPLETE 2026-06-02 · N=1825 BCa · paired-CI verdict)
+
+> Source: `outputs/poc/{probe_action,probe_motion_cos,probe_future_mse,probe_taxonomy,predictor_temporal}/` (m13 inputs); champion grafted from iter16. Cause analysis: `iter/iter17_ablations_model/result_outputs/why_surgery_loses_on_vjepa2_0.md`.
+
+### 🧬 3 backbones × the same 8 arms (frozen · pretrain{,_2X,_head} · surgery{3stage_DI,noDI}×{enc,head})
+
+```
+┌─ 🦣 backbone ───────┬ ver ┬ params ┬ dim  ┬ blocks ┬ 📜 role ───────────────────┐
+│ 🥇 vjepa_2_1_vitG   │ 2.1 │ ~2B    │ 1664 │   48   │ CHAMPION (grafted iter16)  │
+│ 🥈 vjepa_2_1_vitg   │ 2.1 │ ~1B    │ 1408 │   40   │ smaller · newer            │
+│ 🔴 vjepa_2_0_vitg   │ 2.0 │ ~1B    │ 1408 │   40   │ smaller · OLDER            │
+└─────────────────────┴─────┴────────┴──────┴────────┴────────────────────────────┘
+```
+
+### 🏆 Verdict — surgery vs pretrain champion duel (paired surgery−pretrain 95% BCa CI · 9 metrics)
+
+```
+┌─ backbone ────────┬ 🟢 surgery ┬ 🔴 pretrain ┬ 🤝 tie ┬ 🚩 headline ──────────────────┐
+│ 🥇 2.1-vitG [2B]  │     4      │      0      │   5    │ surgery NEVER loses           │
+│ 🥈 2.1-vitg [1B]  │     5      │      2      │   2    │ surgery leads                 │
+│ 🔴 2.0-vitg [1B]  │     0      │      5      │   4    │ pretrain leads (base-quality) │
+└───────────────────┴────────────┴─────────────┴────────┴───────────────────────────────┘
+👉 9 scorable: action_top1 · motion_cos · taxonomy_f1 · future_mse · rollout · causal · tdist · teacher_free · maskratio
+👉 m12f encoder-temporal metrics RETIRED this iter (surgery wins on the PREDICTOR, not the encoder)
+```
+
+### 🧊 Frozen base quality — the driver (older 2.0 base weaker, esp. predictor dynamics)
+
+```
+┌─ 🧊 FROZEN base ────┬ arch  ┬ action ┬ motion ┬ future↓ ┬ causal↓ ┬ taxonomy ┬ 🏅 ┐
+│ 2.1-vitG [2B]       │ 48blk │  44.38 │ 0.0091 │  0.5571 │  0.5831 │  0.7934  │ 🥇 │
+│ 2.1-vitg [1B]       │ 40blk │  42.41 │ 0.0070 │  0.6365 │  0.6551 │  0.8062  │ 🥈 │
+│ 2.0-vitg [1B]       │ 40blk │  38.36 │ 0.0076 │  1.6455 │  1.6562 │  0.7782  │ 🔴 │
+└─────────────────────┴───────┴────────┴────────┴─────────┴─────────┴──────────┴────┘
+👉 2.0 frozen future/causal ~2.6× WORSE — the root of the 0/5/4
+```
+
+### 🔬 Why surgery loses on 2.0 (same arch as 2.1-vitg → it is the checkpoint, not the recipe)
+
+```
+┌─ mechanism ──────────────────────────┬ evidence (2.0-vitg) ───────────────────────────────┬ 🚦 ┐
+│ 💪 motion: 2× raw compute wins        │ frozen 0.008 -> pretrain_2X 0.228 vs surgery 0.126 │ 🔴 │
+│ 🥶 predictor: 2.0 encoder too fragile │ surgery < frozen on 5 metrics; pretrain_HEAD holds │ 🔴 │
+│ 🩺 surgery training health on 2.0     │ loss 0.5386->0.4774, drift 0.0034, no NaN = CLEAN  │ 🟢 │
+└──────────────────────────────────────┴────────────────────────────────────────────────────┴────┘
+👉 NOT a bug — a base-quality scope boundary: surgery > pretrain holds where pretrained dynamics are already good (modern 2.1)
+```
+

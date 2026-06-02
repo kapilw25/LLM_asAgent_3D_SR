@@ -1,4 +1,4 @@
-# 🧪 iter15 — Head-only vs Encoder-update surgery (paper §3 Method figures)
+# 🧪 iter15→17 — Surgery method (§3) + model-scale ablation results (§4) · paper figures
 > ## 🎯 Paper goal:  `vjepa_surgery` [X_epochs(surgery) +X_epochs(pretrain)] ≫ `vjepa_pretrain` [2X epochs] ≫ `vjepa_frozen` on motion / temporal features
 > 🎯 Claim: `head-only surgery` ≈ `encoder-update surgery` on motion features ⇒ 1/40× GPU.
 > Diagrams only — paper-figure aesthetic. One concept per diagram.
@@ -7,6 +7,8 @@
 ---
 
 ## § 1 — 🔬 Research question
+
+> 📌 iter17 added the MODEL-SCALE question — does surgery ≥ pretrain hold across backbone scale/version? Verdict in **§ 11**.
 
 ```mermaid
 flowchart LR
@@ -22,11 +24,13 @@ flowchart LR
 
 ---
 
-## § 2 — 🧬 Encoder zoo (8 arms compared at eval · iter15 Phase 8)
+## § 2 — 🧬 Encoder zoo (8 arms · iter17: replicated ×3 backbones = 24 eval encoders)
+
+> 📌 iter15 showed 1 backbone (ViT-G). iter17 runs the SAME 8 arms for 3 backbones (run_train.sh BACKBONE) → model-scale verdict in **§ 11**.
 
 ```mermaid
 flowchart LR
-    M["🦣 V-JEPA 2.1 ViT-G<br>🧮 1.84 B · 🏛️ Meta init"]
+    M["🦣 backbone ×3 (iter17 axis)<br>🥇 2.1 ViT-G 2B · 🥈 2.1 ViT-g 1B · 🔴 2.0 ViT-g 1B"]
     M --> A0["0️⃣ 🧊 frozen<br>🎯 zero-shot baseline"]
     M --> A1["1️⃣ 🏋️ pretrain · 2 ep<br>🔄 continual SSL"]
     M --> A2["2️⃣ 🔁 pretrain_2X · 4 ep<br>⚖️ Δ3 compute control"]
@@ -119,6 +123,8 @@ flowchart LR
 
 ## § 5 — 🧪 iter15 7-cell paired-Δ matrix (iter15 Phase 8 + pret2X compute control)
 
+> 📌 iter17: these 7 cells run for EACH of 3 backbones; the verdict is the champion-duel (paired surgery−pretrain CI per backbone), not the named Δ5/Δ6/Δ7 → **§ 11**.
+
 ```mermaid
 flowchart LR
     subgraph EU["🔓 encoder-update · ViT-G backward · ⏱️ ~25 min/cell at POC"]
@@ -157,6 +163,8 @@ flowchart LR
 
 ## § 6 — 📊 Paired-Δ tests · POC compute-matched verdicts (paper §4 Results)
 
+> 📌 iter15 single-backbone slice (N=220). Superseded headline = **§ 11** model-scale ablation (3 backbones, N=1825).
+
 ```mermaid
 flowchart LR
     subgraph Tests["📐 paired BCa 95% CI · 🎲 10K resample · POC N=220"]
@@ -188,22 +196,28 @@ flowchart LR
 
 ---
 
-## § 7 — 🔭 Probe-trio evaluation protocol
+## § 7 — 🔭 Probe-SUITE evaluation protocol (iter17 · 9 scorable metrics · N=1825 held-out test)
+
+> 📌 iter17 expanded the iter15 probe-TRIO (top1 / motion_cos / future_l1, N=1000) → a 9-metric SUITE; future_l1 → future_mse; m12f encoder-temporal was tried + RETIRED (surgery wins on the PREDICTOR, not the encoder).
 
 ```mermaid
 flowchart LR
-    enc["🧬 encoder<br>(any arm)"]
-    enc -->|"🎞️ N = 1000 val clips"| pool["🧮 pooled features"]
-    pool --> p1["🎯 probe_top1<br>🧪 LOOCV kNN · 🏷️ 14 motion cls"]
-    pool --> p2["🧭 motion_cos<br>📐 cos(feat, RAFT flow)"]
-    pool --> p3["⏭️ future_l1<br>📏 next-frame latent L1"]
-    p1 --> headline["⭐ 🏆 paper headline metric"]
+    enc["🧬 encoder (any arm)<br>🎞️ N = 1825 held-out test clips"]
+    enc --> p1["🎯 action_top1<br>📦 m12a · motion-class probe"]
+    enc --> p2["🧭 motion_cos<br>📦 m12b · cos(feat, RAFT flow)"]
+    enc --> p3["🏷️ taxonomy_f1<br>📦 m12c · 15 scene dims"]
+    enc --> p4["🔮 future_mse<br>📦 m12d · next-latent L2"]
+    enc --> p5["⏱️ predictor-temporal ×6<br>📦 m12e · rollout · causal · tdist<br>teacher_free · maskratio · order"]
+    p2 --> H["⭐ 🏆 motion + temporal<br>= paper headline · surgery ≫ pretrain ≫ frozen"]
+    p4 --> H
+    p5 --> H
     style enc fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
-    style pool fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style p1 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style p2 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style p3 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
-    style headline fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style p4 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style p5 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style H fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
 ```
 
 ---
@@ -320,4 +334,23 @@ flowchart LR
     style Coin fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style SM fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style Out fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+```
+
+---
+
+## § 11 — 📐 iter17 model-scale × version ablation · surgery vs pretrain across backbones (N=1825)
+
+```mermaid
+flowchart LR
+    BBG["🥇 V-JEPA 2.1 ViT-G<br>🧮 ~2B · 🧱 48 blk<br>✅ surgery 4 · pretrain 0 · tie 5"]
+    BBg["🥈 V-JEPA 2.1 ViT-g<br>🧮 ~1B · 🧱 40 blk<br>✅ surgery 5 · pretrain 2 · tie 2"]
+    BB0["🔴 V-JEPA 2.0 ViT-g<br>🧮 ~1B · 🧱 40 blk<br>🔻 surgery 0 · pretrain 5 · tie 4"]
+    BBG --> WIN["🏆 surgery ≥ pretrain<br>on adaptation-friendly 2.1 bases"]
+    BBg --> WIN
+    BB0 --> LOSE["🧊 2.0 base weaker + fragile<br>💪 motion: 2× raw compute wins<br>🥶 predictor: encoder too fragile to adapt"]
+    style BBG fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style BBg fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style BB0 fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style WIN fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
+    style LOSE fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
 ```

@@ -3,6 +3,11 @@
 # AUDIENCE has knowledge about ONLY plots from @iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/poc/probe_plot/eval/
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
+## Tue, June 2, 2026
+- Surgery's edge holds on modern 2.1 bases; older 2.0's fragile pretrained dynamics explain its loss.
+- Picked the fine-tuning baselines surgery must beat to claim best adaptation.
+- Next: run those baselines, starting with the closest competitor, to lock the best-adaptation claim.
+
 ## Mon, June 1, 2026
 - Compared surgery, pretrain, and frozen across three V-JEPA backbones (2B, newer 1B, older 1B).
 - Surgery never loses to pretrain on 2B, leads newer 1B; older 2.0 favors pretrain.

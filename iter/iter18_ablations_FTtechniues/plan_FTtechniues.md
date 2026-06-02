@@ -19,6 +19,34 @@ input-conditioned routing**. SAFE/SEEKR/SSIAT/SAPT each add exactly one of those
 are the right "did you beat the obvious alternatives?" baselines.
 
 ═══════════════════════════════════════════════════════════════════════════════
+§1.5 · Reviewer-pull RE-ASSESSMENT (websearch June 2026) — venue-specific, NOT AAAI-mandatory
+═══════════════════════════════════════════════════════════════════════════════
+
+> venue/CITA = these 4 are in scope ONLY because of CITA's ARR-review (ACL Rolling Review) ask #4
+> ("run SAFE/SEEKR/SSIAT/SAPT") — NOT because general AAAI/A* reviewers demand them. All four target a
+> DIFFERENT setting: class-incremental image classification (SAFE/SSIAT) or LLM continual learning
+> (SAPT/SEEKR), all MULTI-session/task with a classification or language-model head. Our paper is a
+> SINGLE-session continual-SSL adaptation of a VIDEO world-model (no classes, no sessions, JEPA
+> predictor) → the obvious-competitor set is Full-FT / LoRA / Surgical-FT / CaSSLe+EWC, not these four.
+
+```text
+┌────────┬───────────────────────────────────────┬─────────────────────────────────────────┬──────────────────────────────────┐
+│ method │ FULL FORM · venue · arXiv             │ built FOR (domain it targets)           │ re-assessed AAAI pull            │
+├────────┼───────────────────────────────────────┼─────────────────────────────────────────┼──────────────────────────────────┤
+│ SAFE   │ Slow-and-Fast Parameter-Efficient     │ class-incremental image classification  │ LOW · top of 4 (vision ViT;      │
+│        │ tuning · NeurIPS'24 · 2411.02175      │ (ViT); needs SESSIONS + a class head    │ slow/fast ≈ our staged-unfreeze) │
+│ SSIAT  │ Semantically-Shifted Incremental      │ class-incremental classification (ViT); │ LOW · vision ViT, cheapest       │
+│        │ Adapter-Tuning · CVPR'24 · 2403.19979 │ PROTOTYPES + semantic-shift / SESSIONS  │ (lowest PET capacity)            │
+│ SAPT   │ Shared Attention fwk for Parameter-   │ continual INSTRUCTION tuning of LLMs    │ LOWEST · LLM (wrong domain)      │
+│        │ efficient CL · ACL'24 · 2401.08295    │ (T5/LLaMA); per-input routing / TASKS   │                                  │
+│ SEEKR  │ Selective attEntion-guided Knowledge  │ continual learning of LLMs; attn-head   │ LOWEST · LLM (wrong domain)      │
+│        │ Retention · EMNLP'24 · 2411.06171     │ selective KD + replay over a TASK seq   │                                  │
+└────────┴───────────────────────────────────────┴─────────────────────────────────────────┴──────────────────────────────────┘
+```
+> Re-assessed pull order: **SAFE > SSIAT > SAPT ≈ SEEKR** (vision-ViT nearer to V-JEPA than LLM-CL). Build
+> ONE only if a CL-leaning reviewer appears: SAFE (most pull) or SSIAT (cheapest); otherwise defer all four.
+
+═══════════════════════════════════════════════════════════════════════════════
 §2 · The four techniques — definition · mechanism · vs ours
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -53,10 +81,12 @@ Adapter  bottleneck MLP inserted after attn/MLP sublayers      LoRA  low-rank Δ
 SSF      per-feature scale+shift (γ⊙x+β) after each sublayer   VPT   learnable prompt tokens prepended
 ```
 
-Citations: SAFE — [arXiv 2411.02175](https://arxiv.org/abs/2411.02175) (NeurIPS 2024) ·
-SAPT — [arXiv 2401.08295](https://arxiv.org/abs/2401.08295) (ACL 2024). SEEKR + SSIAT: per the
-source landscape doc (SEEKR ≈ selective-attention KD retention; SSIAT ≈ semantic-shift Incremental
-Adapter Tuning, CVPR 2024) — ⚠️ verify exact arXiv IDs before citing in the paper.
+Citations (ALL verified — websearch June 2026): SAFE — [arXiv 2411.02175](https://arxiv.org/abs/2411.02175)
+(NeurIPS 2024) · SSIAT — [arXiv 2403.19979](https://arxiv.org/abs/2403.19979) (CVPR 2024) ·
+SAPT — [arXiv 2401.08295](https://arxiv.org/abs/2401.08295) (ACL 2024) ·
+SEEKR — [arXiv 2411.06171](https://arxiv.org/abs/2411.06171) (EMNLP 2024 — NOT CVPR/vision as the landscape
+doc guessed). All four target class-incremental classification (SAFE/SSIAT) or LLM continual learning
+(SAPT/SEEKR) — see § 1.5 for why their AAAI reviewer-pull is LOW.
 
 ═══════════════════════════════════════════════════════════════════════════════
 §3 · Full landscape table (vs the vanilla anchors)
