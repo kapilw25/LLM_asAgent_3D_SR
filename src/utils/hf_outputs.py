@@ -9,13 +9,10 @@ USAGE:
 
     # Upload/download: from outputs/full/ ONLY
     python -u src/utils/hf_outputs.py upload outputs/poc  2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py download outputs/full 2>&1 | tee logs/download_outputs_full_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py download outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py download-data 2>&1 | tee logs/download_data_$(date +%Y%m%d_%H%M%S).log
-    
-    python -u src/utils/hf_outputs.py upload-data data/full_local 2>&1 | tee logs/upload_data_full_local_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
     
     # from @checkpoints/

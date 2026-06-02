@@ -244,10 +244,13 @@ def main():
         f"python -u src/m12b_motion_cos.py  --{args.mode} --stage paired_delta --output-root {out}/probe_motion_cos --cache-policy 1 --no-wandb",
         f"python -u src/m12c_taxonomy_f1.py --{args.mode} --stage paired_delta --features-root {out}/probe_action --output-root {out}/probe_taxonomy --cache-policy 1 --no-wandb",
         f"python -u src/m12d_future_mse.py  --{args.mode} --stage paired_per_variant --output-root {out}/probe_future_mse --cache-policy 1 --no-wandb",
+        # graft the prior-iter champion (vjepa_2_1_vitG) aggregates back in AFTER paired_delta rebuilds the
+        # JSONs (which would otherwise drop it — its per-clip arrays were cleaned up). Idempotent; m13 then
+        # renders it as a NATIVE 3rd backbone with this code (paired-CI verdict, rounding, tie-boxes).
+        f"python -u src/utils/graft_aggregates.py --target {out} --source iter/iter16_metrics_temporal/result_outputs/poc",
         f"python -u src/m13_eval_plot.py --{args.mode} --action-probe-root {out}/probe_action "
         f"--motion-cos-root {out}/probe_motion_cos --future-mse-root {out}/probe_future_mse "
         f"--taxonomy-root {out}/probe_taxonomy --predictor-temporal-root {out}/predictor_temporal "
-        f"--reference-hero vjepa_2_1_vitG=iter/iter16_metrics_temporal/result_outputs/poc/probe_plot/eval/m13_hero_surgery_vs_frozen.png "
         f"--output-dir {out}/probe_plot --no-wandb",
     ])
     rc = subprocess.call(

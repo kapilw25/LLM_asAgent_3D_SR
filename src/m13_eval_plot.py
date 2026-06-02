@@ -21,7 +21,7 @@ Reads (auto-discovers encoders from each JSON; graceful — absent source → th
 Writes (under <output-dir>/eval/{head,predictor,encoder}/):
   one bar-with-CI panel per available metric (legacy names kept for the 3 v15a headline panels:
   probe_action_acc_compare / probe_motion_cos_compare / probe_future_mse_compare; the rest m13_*).
-  (§3.3c-hero will add m13_hero_table + m13_hero_surgery_vs_frozen.)
+  (§3.3c-hero will add m13_hero_table + m13_hero_raw_values.)
 
 USAGE:
   python -u src/m13_eval_plot.py --SANITY \\
@@ -289,6 +289,38 @@ def _fmt_compact(x: float) -> str:
     return f"{r:+.2f}"
 
 
+def _fmt_fine(x: float) -> str:
+    """Adaptive-precision sign-prefixed number for the PAIRED-diff heatmap, where the values are tiny
+    (predictor Δs ~1e-3) — 0.01 rounding would collapse a significant Δ to a misleading '0'. Keeps 2–4
+    sig decimals so a coloured 'SURGERY' cell never reads as 0."""
+    if isinstance(x, float) and np.isnan(x):
+        return "nan"
+    ax = abs(x)
+    if ax >= 1:
+        return f"{x:+.2f}"
+    if ax >= 0.01:
+        return f"{x:+.3f}"
+    if ax > 0:
+        return f"{x:+.4f}"
+    return "0"
+
+
+def _fmt_val(x: float) -> str:
+    """Adaptive-precision RAW metric value (NO forced sign — these are absolute values, not deltas).
+    Raw metrics span ~0.009 (predictor) → ~53 (action top1), so a fixed 0.01 rounding would collapse the
+    tiny ones; big numbers stay terse (1 decimal), small ones get the precision they need."""
+    if isinstance(x, float) and np.isnan(x):
+        return "nan"
+    ax = abs(x)
+    if ax >= 10:
+        return f"{x:.1f}"
+    if ax >= 1:
+        return f"{x:.2f}"
+    if ax >= 0.01:
+        return f"{x:.3f}"
+    return f"{x:.4f}"
+
+
 def _taxonomy_f1_by_encoder(taxonomy_json: dict, encoders: list) -> dict:
     """taxonomy_f1 per encoder = mean over the 15 dims of per-dim test_mean; ci = mean of the
     per-dim ci_half (a conservative aggregate of the per-dim BCa half-widths)."""
@@ -446,7 +478,7 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
         colstat[k] = (min(present), max(present)) if present else (0.0, 0.0)
     # WINNER = canonical surgery-vs-pretrain CHAMPION DUEL (same _family_verdict the heatmap WINNER
     # row / scoreboard / grouped use) — NOT a raw best-encoder argmax (which never ties and could
-    # even crown the frozen baseline). Decisive metric → the winning arm; dead-heat (|Δ|<ε) → tie
+    # even crown the frozen baseline). Decisive metric → the winning arm; paired CI overlaps 0 → tie
     # (no winner, no blue box). Keeps all four §G views telling ONE story.
     _surg = [e for e in ordered if _arm_family(e) == "surgery"]
     _pre = [e for e in ordered if _arm_family(e) == "pretrain"]
@@ -520,7 +552,7 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
     ax.set_title("HERO scorecard (vertical) — value ± BCa 95% CI · colour = per-metric min-max "
                  "(green = best) · * = Δ-vs-frozen CI excludes 0\n"
                  f"{len(scorable)} metrics × {len(ordered)} encoders · WINNER col + BLUE BOX = "
-                 f"surgery-vs-pretrain champion duel (tie if within ε) · {boot_str}",
+                 f"surgery-vs-pretrain champion duel (tie = paired 95% CI overlaps 0) · {boot_str}",
                  fontsize=10, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_hero_table"))
@@ -532,34 +564,39 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
 
 
 def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Path):
-    """B2: direction-normalized Δ-vs-frozen heatmap WITH numbers. rows=contenders, cols=hero
-    metrics. Colour = sign-corrected Δ (positive=better; lower-better metrics negated),
-    per-column normalized to [-1,1] for cross-metric comparability (RdYlGn). Each cell now
-    PRINTS the sign-corrected Δ and its 95% BCa CI [lo, hi] in the metric's native units
-    (iter16 fix — was colour-only); BOLD when the CI excludes 0 (significant vs frozen)."""
+    """B2: per-metric RAW-VALUE heatmap WITH numbers. TOP row = FROZEN baseline, then the contender arms,
+    cols = hero metrics. Each cell PRINTS that arm's raw metric value 95% BCa CI [min, max] in native
+    units — the paired surgery−pretrain comparison is NOT in the cells (it lives in the WINNER row + the
+    dedicated m13_paired_diff_heatmap). Colour = good-oriented per-metric min-max WITH FROZEN INCLUDED, so
+    a reader can read each arm's growth over the frozen baseline (green = best, red = worst), RdYlGn."""
     cat = [c for c in _hero_catalog(metrics) if c[3] in ("higher", "lower")]  # win/loss metrics only — signed (order) is diagnostic, lives in hero-table CSV
     contenders = [e for e in encoders if e != frozen]
     if not cat or not contenders:
         print("  [hero-heatmap] need a frozen baseline + ≥1 contender + metrics — skip")
         return
-    raw = np.full((len(contenders), len(cat)), np.nan)
-    cells = {}                                          # (i,j) -> (sc, clo, chi, sig)
-    for i, e in enumerate(contenders):
+    rows = [frozen] + contenders                        # FROZEN baseline = row 0 (top), then the arms
+    raw = np.full((len(rows), len(cat)), np.nan)        # RAW metric value (drives per-metric colour)
+    cells = {}                                          # (i,j) -> (raw_lo, raw_hi) — the value's 95% CI
+    for i, e in enumerate(rows):
         for j, (key, _fam, _on, direction, _yl, _cap, _lay) in enumerate(cat):
-            dvf = _delta_v_vs_frozen(metrics[key]["deltas"], e, frozen)
-            if dvf is None:
+            be = metrics[key]["by_encoder"].get(e)
+            if be is None:
                 continue
-            d, lo, hi = dvf
-            sc, clo, chi = (d, lo, hi) if direction != "lower" else (-d, -hi, -lo)  # +=better, bounds too
-            raw[i, j] = sc
-            cells[(i, j)] = (sc, clo, chi, _ci_excludes_zero(lo, hi))
-    norm = np.full_like(raw, np.nan)
-    for j in range(raw.shape[1]):
+            val, ciw = be                               # raw value + symmetric BCa half-width
+            raw[i, j] = val
+            cells[(i, j)] = (val - ciw, val + ciw)      # the value's 95% CI [min, max], native units
+    norm = np.full_like(raw, np.nan)                    # colour = good-oriented per-metric min-max, FROZEN included → shows growth
+    for j, (_k, _f, _o, direction, *_z) in enumerate(cat):
         col = raw[:, j]
         fin = col[np.isfinite(col)]
-        amax = float(np.abs(fin).max()) if fin.size else 0.0
-        norm[:, j] = col / amax if amax > 0 else col * 0.0
-    fig, ax = plt.subplots(figsize=(3.0 + 1.75 * len(cat), 2.6 + 1.2 * (len(contenders) + 1)))
+        if fin.size == 0:
+            continue
+        lo_, hi_ = float(fin.min()), float(fin.max())
+        t = (col - lo_) / (hi_ - lo_) if hi_ > lo_ else col * 0.0 + 0.5  # 0..1, high raw = 1
+        if direction == "lower":
+            t = 1.0 - t                                 # low value = good = green
+        norm[:, j] = 2.0 * t - 1.0                      # 0..1 → -1..1 for RdYlGn vmin/vmax = -1/+1
+    fig, ax = plt.subplots(figsize=(3.0 + 1.75 * len(cat), 2.6 + 1.2 * (len(rows) + 1)))
     # alpha=0.6 → pastel RdYlGn (matches the hero TABLE); keeps red→green meaning while staying
     # light enough for plain BLACK BOLD numbers — no halo/outline needed (iter16 fix).
     im = ax.imshow(np.ma.masked_invalid(norm), cmap="RdYlGn", vmin=-1, vmax=1, aspect="auto", alpha=0.6)
@@ -567,15 +604,16 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     ax.tick_params(length=0)
     ax.set_xticks(range(len(cat)))
     ax.set_xticklabels([f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat], rotation=45, ha="right", fontsize=9)
-    ax.set_yticks(list(range(len(contenders))) + [len(contenders)])
-    ax.set_yticklabels([_display_label(e) for e in contenders] + ["WINNER"], fontsize=10)
+    ax.set_yticks(list(range(len(rows))) + [len(rows)])
+    ax.set_yticklabels([f"{_display_label(frozen)}  (baseline)"]
+                       + [_display_label(e) for e in contenders] + ["WINNER"], fontsize=10)
     # Plain BLACK BOLD numbers (no halo): Δ on top, CI below. SPOTLIGHT (thick blue outline +
     # enlarged Δ font) = the champion-duel WINNING ARM per metric — SAME _family_verdict as the
     # WINNER row / hero table / scoreboard, NOT raw best-Δ. Tie metric → no box (no single winner).
     _surg = [e for e in contenders if _arm_family(e) == "surgery"]
     _pre = [e for e in contenders if _arm_family(e) == "pretrain"]
     _per = _family_verdict(metrics, encoders, frozen)[3]
-    _row = {e: i for i, e in enumerate(contenders)}
+    _row = {e: i for i, e in enumerate(rows)}           # display-row index (frozen=0, arms 1..n)
     spotlight = set()                                   # cells to blue-box: decisive→winner; TIE→BOTH champions
     for j, (key, *_r) in enumerate(cat):
         v = _per.get(key)
@@ -586,19 +624,32 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
         for champ in champs:
             if champ in _row:
                 spotlight.add((_row[champ], j))
-    for (i, j), (sc, clo, chi, _sig) in cells.items():
+    # per-metric PAIRED surgery−pretrain Δ + CI (good-oriented: + = surgery ahead) — the DECIDER the
+    # WINNER row + boxed sub-lines now show, so a tie is self-explanatory (its paired CI overlaps 0).
+    _paired = {}                                       # j -> (surgery_row, pretrain_row, d, lo, hi)
+    for j, (key, *_r) in enumerate(cat):
+        _sc = _family_champion(metrics, key, frozen, _surg)
+        _pc = _family_champion(metrics, key, frozen, _pre)
+        if _sc not in _row or _pc not in _row:
+            continue
+        _dv = _delta_v_vs_frozen(metrics[key]["deltas"], _sc, _pc)
+        if _dv is None:
+            continue
+        _d, _lo, _hi = _good_orient(_dv[0], _dv[1], _dv[2], _direction_of(key))
+        _paired[j] = (_row[_sc], _row[_pc], _d, _lo, _hi)
+    for (i, j), (rlo, rhi) in cells.items():
         win = (i, j) in spotlight
-        ax.text(j, i - 0.26, _fmt_compact(sc), ha="center", va="center",
-                fontsize=18 if win else 13, fontweight="bold", color="black")
-        ax.text(j, i + 0.18, f"[{_fmt_compact(clo)},\n{_fmt_compact(chi)}]", ha="center", va="center",
-                fontsize=8, fontweight="bold", color="black")
+        # Each cell shows ONLY that arm's RAW metric value 95% CI [min, max] — no Δ, no sub-line.
+        _ci = "nan" if (np.isnan(rlo) or np.isnan(rhi)) else f"[{_fmt_val(rlo)},\n{_fmt_val(rhi)}]"
+        ax.text(j, i, _ci, ha="center", va="center",
+                fontsize=11 if win else 9, fontweight="bold", color="black")
         if win:
             ax.add_patch(Rectangle((j - 0.5, i - 0.5), 1, 1, fill=False,
                                    edgecolor="#1a3cff", linewidth=3.0, zorder=4))
     # WINNER row (champion duel — best-surgery vs best-pretrain per metric), mirroring the grouped
     # plot's [S/P/=] band. One extra row BELOW the contenders; signed metrics (order) aren't a
     # win/loss → neutral "·". Verdict single-sourced via _family_verdict (same tally as scoreboard).
-    ny = len(contenders)
+    ny = len(rows)                                      # WINNER row sits below frozen + all arms
     _verdict_per = _per                                 # reuse (computed above for the spotlight)
     _VC = {"surgery": ((0.17, 0.63, 0.17, 0.6), "S"), "pretrain": ((0.84, 0.15, 0.16, 0.6), "P"),
            "tie": ((0.6, 0.6, 0.6, 0.35), "=")}
@@ -606,19 +657,25 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
         vcol, vlab = _VC.get(_verdict_per.get(c[0]), ((0.85, 0.85, 0.85, 0.35), "·"))
         ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=vcol, edgecolor="white",
                                lw=1.0, zorder=2))
-        ax.text(j, ny, vlab, ha="center", va="center", fontsize=14, fontweight="bold",
+        ax.text(j, ny - 0.22, vlab, ha="center", va="center", fontsize=12, fontweight="bold",
                 color="black", zorder=3)
+        _pj = _paired.get(j)                           # the decider shown numerically: paired S−P Δ + 95% CI
+        if _pj:
+            _wci = "(≈ equal)" if (np.isnan(_pj[3]) or np.isnan(_pj[4])) else f"[{_fmt_fine(_pj[3])}, {_fmt_fine(_pj[4])}]"
+            ax.text(j, ny + 0.20, f"S−P = {_fmt_fine(_pj[2])}\n{_wci}",
+                    ha="center", va="center", fontsize=6.5, color="black", zorder=3)
     ax.set_ylim(ny + 0.5, -0.5)                         # extend bottom to include the WINNER row
+    ax.axhline(0.5, color="#444444", lw=1.3, ls="--")  # separator BELOW the FROZEN baseline (row 0)
     ax.axhline(ny - 0.5, color="black", lw=1.5)         # separator above the WINNER row
-    ax.set_title(f"HERO — Δ vs {_display_label(frozen)}  ·  per cell: Δ (top) and 95% BCa CI (bottom), "
-                 "sign-corrected so + = better\ncolour: red = worst, green = best (per-metric min-max) · "
-                 "column badge ↑/↓ = better-direction · BLUE BOX + big Δ = champion-duel winning arm "
-                 "(none on ties — matches WINNER row)",
+    ax.set_title("HERO — raw metric value  ·  per cell: that arm's value 95% BCa CI [min, max] · "
+                 "TOP ROW = FROZEN baseline (read each arm's growth over it)\ncolour: red = worst, green "
+                 "= best (per-metric min-max incl. frozen, good-oriented) · BLUE BOX = champion-duel "
+                 "winner · WINNER row = paired surgery − pretrain Δ + 95% CI (tie = CI overlaps 0)",
                  fontsize=11, fontweight="bold")
-    fig.colorbar(im, ax=ax, shrink=0.7, label="red = worst   →   green = best (per-metric normalized Δ)")
+    fig.colorbar(im, ax=ax, shrink=0.7, label="red = worst   →   green = best (per-metric normalized value, good-oriented)")
     fig.tight_layout()
-    save_fig(fig, str(output_dir / "m13_hero_surgery_vs_frozen"))
-    print(f"  [hero-heatmap] m13_hero_surgery_vs_frozen.{{png,pdf}} — {len(contenders)} × {len(cat)} (Δ+CI, bold black)")
+    save_fig(fig, str(output_dir / "m13_hero_raw_values"))
+    print(f"  [hero-heatmap] m13_hero_raw_values.{{png,pdf}} — {len(rows)} rows (frozen + {len(contenders)} arms) × {len(cat)} (raw value CI)")
 
 
 def plot_frozen_scorecard(metrics: dict, frozen_encoders: list, output_dir: Path, boot_str: str):
@@ -817,8 +874,12 @@ def _family_verdict(metrics, encoders, frozen):
         dv = _delta_v_vs_frozen(metrics[key]["deltas"], sc, pc)
         if dv is None:
             continue
-        gd = _good_orient(dv[0], dv[1], dv[2], _direction_of(key))[0]
-        if abs(gd) < _TIE_EPS:
+        gd, glo, ghi = _good_orient(dv[0], dv[1], dv[2], _direction_of(key))
+        # TIE = the PAIRED surgery−pretrain 95% BCa CI overlaps 0 → the two arms are statistically
+        # indistinguishable on the SAME clips (the publishable test, NOT a mean point-estimate). A
+        # degenerate (nan) CI falls back to the mean ε-guard. (iter17: was mean-only |gd|<_TIE_EPS.)
+        is_tie = (abs(gd) < _TIE_EPS) if (np.isnan(glo) or np.isnan(ghi)) else (glo <= 0 <= ghi)
+        if is_tie:
             per[key] = "tie"; nt += 1
         elif gd > 0:
             per[key] = "surgery"; ns += 1; arm_wins[sc] += 1
@@ -934,7 +995,7 @@ def plot_grouped_winner(metrics, encoders, frozen, output_dir):
     verdict = "SURGERY" if _ns > _np else ("PRETRAIN" if _np > _ns else "SPLIT")
     ax.set_title(f"Δ vs frozen (good-oriented, value + 95% CI) · PRETRAIN block / SURGERY block · "
                  f"SCORE = mean per-metric-normalized (0–1) · BLUE BOX + big Δ = best arm per metric\n"
-                 f"WINNER row (champion duel — S=surgery, P=pretrain, ==tie):  "
+                 f"WINNER row (champion duel — S=surgery P=pretrain ==tie · tie = paired 95% CI overlaps 0):  "
                  f"surgery {_ns} · pretrain {_np} · tie {_nt}  →  {verdict}", fontsize=10)
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_grouped_winner_surgery_vs_pretrain"))
@@ -973,6 +1034,158 @@ def plot_all_metric_bars(metrics: dict, output_dir: Path, boot_str: str) -> int:
     return n
 
 
+def plot_paired_forest(metrics, encoders, frozen, output_dir, boot_str):
+    """Paired-difference FOREST plot: one row per metric = the champion-duel surgery−pretrain Δ + 95%
+    BCa CI, on a per-metric SE-standardized x-axis so all metrics share ONE axis. Vertical line at 0 =
+    no difference; shaded band = ±1.96 SE (the 95% 'not-significant' zone). A CI crossing 0 = TIE
+    (grey); entirely right of 0 = surgery sig. better (green); entirely left = pretrain sig. better
+    (red). Raw Δ [lo,hi] printed per row. Shows the DIFFERENCE directly (the convention for 'is A
+    different from B across metrics' — forest plots; cf. Demšar 2006 JMLR critical-difference diagrams)
+    so a tie is self-evident — no asking the reader to subtract two vs-frozen numbers."""
+    surg = [e for e in encoders if _arm_family(e) == "surgery"]
+    pre = [e for e in encoders if _arm_family(e) == "pretrain"]
+    keys = _scorable_keys(metrics)
+    if not surg or not pre or not keys:
+        print("  [forest] need surgery + pretrain + metrics — skip")
+        return
+    rows = []
+    for k in keys:
+        sc = _family_champion(metrics, k, frozen, surg)
+        pc = _family_champion(metrics, k, frozen, pre)
+        if sc is None or pc is None:
+            continue
+        dv = _delta_v_vs_frozen(metrics[k]["deltas"], sc, pc)
+        if dv is None:
+            continue
+        d, lo, hi = _good_orient(dv[0], dv[1], dv[2], _direction_of(k))
+        rows.append((k, d, lo, hi))
+    if not rows:
+        print("  [forest] no paired deltas — skip")
+        return
+    clip, n = 5.0, len(rows)
+    fig, ax = plt.subplots(figsize=(12.5, 0.62 * n + 2.6))
+    ax.axvspan(-1.96, 1.96, color="#c8c8c8", alpha=0.30, zorder=0)        # 95% 'not significant' zone
+    ax.axvline(0, color="black", lw=1.3, zorder=1)
+    ns = npr = nt = 0
+    for idx, (k, d, lo, hi) in enumerate(rows):
+        if np.isnan(lo) or np.isnan(hi) or hi <= lo:                      # degenerate CI → mean-tie fallback
+            tie = abs(d) < _TIE_EPS
+            z = 0.0 if tie else (clip if d > 0 else -clip)
+            zlo = zhi = z
+        else:
+            se = (hi - lo) / 3.9199                                       # 95% CI width = 2 × 1.96 SE
+            z, zlo, zhi = d / se, lo / se, hi / se
+            tie = lo <= 0 <= hi
+        if tie:
+            verdict, color = "tie", "#9e9e9e"; nt += 1
+        elif d > 0:
+            verdict, color = "SURGERY", "#2ca02c"; ns += 1
+        else:
+            verdict, color = "pretrain", "#d62728"; npr += 1
+        zc = max(-clip, min(clip, z))
+        zloc = max(-clip, min(clip, zlo))
+        zhic = max(-clip, min(clip, zhi))
+        ax.errorbar([zc], [idx], xerr=[[max(0.0, zc - zloc)], [max(0.0, zhic - zc)]], fmt="o",
+                    color=color, ecolor=color, elinewidth=2.6, capsize=4, markersize=8, zorder=3)
+        _ci_txt = "(≈ equal, no spread)" if (np.isnan(lo) or np.isnan(hi)) else f"[{_fmt_fine(lo)}, {_fmt_fine(hi)}]"
+        ax.text(clip + 0.4, idx, f"{_fmt_fine(d)}  {_ci_txt}   {verdict}",
+                ha="left", va="center", fontsize=8, fontweight="bold", color=color)
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([f"{r[0]}  {_DIR_TAG[_direction_of(r[0])]}" for r in rows], fontsize=9)
+    ax.invert_yaxis()                                                     # first metric at the top
+    ax.set_xlim(-clip - 0.6, clip + 6.8)
+    ax.set_xticks([-clip, -1.96, 0, 1.96, clip])
+    ax.set_xticklabels(["≤−5", "−1.96", "0", "+1.96", "≥+5"], fontsize=8)
+    ax.set_xlabel("standardized surgery − pretrain effect (Δ / SE) · shaded = ±1.96 (95% not-significant) · 0 = no difference",
+                  fontsize=9)
+    _bb = _backbone_of(surg[0]) if surg else None
+    _label = _BB_LABEL.get(_bb, _display_label(frozen))
+    _v = "SURGERY" if ns > npr else ("PRETRAIN" if npr > ns else "SPLIT")
+    ax.set_title(f"PAIRED forest — surgery − pretrain (champion duel) · {_label}\n"
+                 f"surgery {ns} · pretrain {npr} · tie {nt}  →  {_v}   (green = surgery sig · "
+                 f"red = pretrain sig · grey = tie, CI crosses 0) · {boot_str}",
+                 fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    save_fig(fig, str(output_dir / "m13_paired_forest_surgery_vs_pretrain"))
+    print(f"  [forest] m13_paired_forest_surgery_vs_pretrain.{{png,pdf}} — {n} metrics · "
+          f"surgery {ns} pretrain {npr} tie {nt}")
+
+
+def plot_paired_diff_heatmap(metrics, encoders, output_dir, boot_str):
+    """COMBINED, appealing surgery−pretrain view: a metrics × backbones grid (like the hero heatmaps)
+    where each cell is the champion-duel PAIRED Δ (surgery − pretrain, good-oriented, + = surgery) — the
+    DIFFERENCE itself, not two vs-frozen numbers — coloured RdYlGn by the standardized effect (deep
+    green = surgery sig. better, deep red = pretrain, pale grey = TIE / 95% CI crosses 0), with the Δ +
+    95% CI + verdict printed per cell, and a per-backbone S/P/tie summary row. The 'effect-size +
+    significance heatmap' convention: dense + colourful AND a tie is self-evident."""
+    bbs = _backbones_present(encoders)
+    keys = _scorable_keys(metrics)
+    if not bbs or not keys:
+        print("  [paired-heatmap] no backbones / metrics — skip")
+        return
+    nk, nb = len(keys), len(bbs)
+    grid, tally, labels = {}, {j: [0, 0, 0] for j in range(nb)}, {}
+    for j, bb in enumerate(bbs):
+        be = [e for e in encoders if _backbone_of(e) == bb]
+        frz = _pick_frozen_ref(be)
+        surg = [e for e in be if _arm_family(e) == "surgery"]
+        pre = [e for e in be if _arm_family(e) == "pretrain"]
+        labels[j] = "\n".join(_BB_LABEL.get(bb, bb).split(" · ")[:3])
+        for i, k in enumerate(keys):
+            sc = _family_champion(metrics, k, frz, surg) if surg else None
+            pc = _family_champion(metrics, k, frz, pre) if pre else None
+            if sc is None or pc is None:
+                continue
+            dv = _delta_v_vs_frozen(metrics[k]["deltas"], sc, pc)
+            if dv is None:
+                continue
+            d, lo, hi = _good_orient(dv[0], dv[1], dv[2], _direction_of(k))
+            if np.isnan(lo) or np.isnan(hi):
+                tie, z = abs(d) < _TIE_EPS, 0.0
+            else:
+                se = (hi - lo) / 3.9199
+                z, tie = (d / se if se > 0 else 0.0), (lo <= 0 <= hi)
+            grid[(i, j)] = (d, lo, hi, tie, z)
+            tally[j][0 if (not tie and d > 0) else (1 if (not tie and d < 0) else 2)] += 1
+    fig, ax = plt.subplots(figsize=(3.0 + 2.8 * nb, 2.2 + 0.98 * nk))
+    cmap = plt.cm.RdYlGn
+    for (i, j), (d, lo, hi, tie, z) in grid.items():
+        yy = nk - 1 - i
+        if tie:
+            face = (0.90, 0.90, 0.87, 1.0)
+        else:
+            r, g, b, _a = cmap(0.5 + 0.5 * max(-1.0, min(1.0, z / 4.0)))
+            face = (r, g, b, 0.80)
+        ax.add_patch(Rectangle((j, yy), 1, 1, facecolor=face, edgecolor="white", lw=1.6))
+        ci = "≈ equal" if (np.isnan(lo) or np.isnan(hi)) else f"[{_fmt_fine(lo)}, {_fmt_fine(hi)}]"
+        ax.text(j + 0.5, yy + 0.66, _fmt_fine(d), ha="center", va="center", fontsize=13, fontweight="bold")
+        ax.text(j + 0.5, yy + 0.40, ci, ha="center", va="center", fontsize=7)
+        ax.text(j + 0.5, yy + 0.15, "TIE" if tie else ("SURGERY" if d > 0 else "PRETRAIN"),
+                ha="center", va="center", fontsize=7.5, fontweight="bold", color="black")
+    for j in range(nb):
+        ns, npr, nt = tally[j]
+        ax.add_patch(Rectangle((j, -1), 1, 1, facecolor=(0.96, 0.96, 0.96, 1.0), edgecolor="white", lw=1.6))
+        ax.text(j + 0.5, -0.5, f"Surgery {ns}\nPretrain {npr}\ntie {nt}", ha="center", va="center",
+                fontsize=8.5, fontweight="bold")
+    ax.set_xlim(0, nb)
+    ax.set_ylim(-1, nk)
+    ax.set_xticks([j + 0.5 for j in range(nb)])
+    ax.set_xticklabels([labels[j] for j in range(nb)], fontsize=8, fontweight="bold")
+    ax.set_yticks([nk - 1 - i + 0.5 for i in range(nk)] + [-0.5])
+    # NO ↑/↓ "better" tag: the cell Δ is already good-oriented (surgery − pretrain), so + = surgery won,
+    # − = pretrain won regardless of the raw metric's direction — the per-metric arrow would mislead here.
+    ax.set_yticklabels([keys[i] for i in range(nk)] + ["WINS"], fontsize=9)
+    ax.tick_params(length=0)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.set_title("PAIRED  surgery − pretrain  (champion duel) across backbones · per cell: Δ + 95% BCa CI\n"
+                 "deep green = surgery sig. better · deep red = pretrain · pale grey = TIE (95% CI crosses 0) · "
+                 + boot_str, fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    save_fig(fig, str(output_dir / "m13_paired_diff_heatmap"))
+    print(f"  [paired-heatmap] m13_paired_diff_heatmap.{{png,pdf}} — {nk} metrics × {nb} backbones")
+
+
 def _emit_hero_suite(metrics, core, frozen, out_dir, boot_str):
     """The 4 surgery-vs-pretrain hero views for ONE encoder set, written into out_dir: hero-table +
     Δ-vs-frozen heatmap always; scoreboard + grouped-winner only when BOTH families are present.
@@ -986,17 +1199,17 @@ def _emit_hero_suite(metrics, core, frozen, out_dir, boot_str):
     if any(_arm_family(e) == "surgery" for e in core) and any(_arm_family(e) == "pretrain" for e in core):
         plot_scoreboard(metrics, core, frozen, out_dir)
         plot_grouped_winner(metrics, core, frozen, out_dir)
+        plot_paired_forest(metrics, core, frozen, out_dir, boot_str)
 
 
-def _vstack_heroes(output_dir, backbones, out_name):
-    """COMBINED overview = the per-backbone Δ-vs-frozen heatmaps APPENDED VERTICALLY into one PNG.
-    A pure image concat of the already-saved eval/<backbone>/m13_hero_surgery_vs_frozen.png files —
-    NO cross-backbone math: each panel keeps its own arms vs its OWN frozen (averaging Δs across
-    backbones with different frozen baselines is meaningless). Panels stacked top→bottom in order."""
-    panels = [(bb, output_dir / bb / "m13_hero_surgery_vs_frozen.png") for bb in backbones]
+def _vstack_panels(output_dir, backbones, src_name, out_name):
+    """COMBINED overview = the per-backbone <src_name>.png panels APPENDED VERTICALLY into one PNG with
+    a labelled header band per backbone. A pure image concat — NO cross-backbone math (each panel keeps
+    its own arms vs its OWN frozen). Panels stacked top→bottom in the given order."""
+    panels = [(bb, output_dir / bb / f"{src_name}.png") for bb in backbones]
     panels = [(bb, Image.open(str(p)).convert("RGB")) for bb, p in panels if p.exists()]
     if not panels:
-        print("  [stack] no per-backbone heroes present — skip combined stack")
+        print(f"  [stack] no per-backbone {src_name} panels present — skip")
         return
     w = max(im.width for _, im in panels)
     # Big LABELLED header band per panel so each heatmap's BACKBONE + model size is unmistakable.
@@ -1143,7 +1356,7 @@ def main():
                 src = Path(png)
                 if not src.exists():
                     print(f"  [reference-hero] {bb}: {png} not found — skip"); continue
-                dst = args.output_dir / bb / "m13_hero_surgery_vs_frozen.png"
+                dst = args.output_dir / bb / "m13_hero_raw_values.png"
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(str(src), str(dst))
                 src_pdf = src.with_suffix(".pdf")             # bring the matching .pdf too (both png & pdf)
@@ -1152,10 +1365,14 @@ def main():
                 print(f"  [reference-hero] {bb} ← {png}")
                 if bb not in stacked:
                     stacked.append(bb)
-            # COMBINED = the per-backbone heroes APPENDED VERTICALLY (in _BB_TAG order), NO averaging.
+            # COMBINED = the per-backbone panels APPENDED VERTICALLY (in _BB_TAG order), NO averaging.
             bb_order = [pre.rstrip("_") for pre, _lt, _st in _BB_TAG]
-            _vstack_heroes(args.output_dir, [b for b in bb_order if b in stacked],
-                           "m13_grouped_winner_surgery_vs_pretrain")
+            _present = [b for b in bb_order if b in stacked]
+            _vstack_panels(args.output_dir, _present, "m13_hero_raw_values",
+                           "m13_hero_raw_values")
+            # COMBINED surgery-vs-pretrain overview = a colourful paired-diff HEATMAP (metrics ×
+            # backbones), NOT the sparse stacked forests. Per-backbone forests still live in eval/<bb>/.
+            plot_paired_diff_heatmap(metrics, encoders, args.output_dir, boot_str)
         else:
             print(f"  [hero] skipped — needs a 'frozen' baseline + ≥2 core encoders (got {core})")
         # FROZEN-only absolute scorecard (image/video baselines + the V-JEPA frozen reference).
