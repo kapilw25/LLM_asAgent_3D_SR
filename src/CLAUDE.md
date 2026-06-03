@@ -9,7 +9,7 @@
 - Shell scripts are THIN wrappers — all logic in Python. No `python -c` inline, no `bc -l` math in shell.
 
 # GPU HARDWARE & SOFTWARE
-- **SANITY**: RTX Pro 4000 (24GB, ~$0.2/hr). **FULL**: RTX Pro 6000 Blackwell (96GB, ~$0.8/hr). **Mac**: CPU/lint only.
+- **SANITY**: RTX Pro 5000 (48GB, ~$1/hr). **FULL**: RTX Pro 6000 Blackwell (96GB, ~$1.5/hr). **Mac**: CPU/lint only.
 - Stack: PyTorch 2.12.0+cu128 nightly, CUDA 12.8, FA2 2.8.3, FAISS-GPU 1.14.1, cuML 26.04, SAM 3.1, Python 3.12, UV.
 - **GPU util ≥85% is TOP PRIORITY.** Idle GPU = wasted money. Fix I/O pipeline (parallelize TAR readers, increase DECODE_WORKERS/PREFETCH_QUEUE), not the model.
 - **No CPU fallback** in inference/compute scripts (m04/m05/m06/m07/m09/m10). FATAL if GPU path missing. Exception: m08 (plotting, CPU-only).

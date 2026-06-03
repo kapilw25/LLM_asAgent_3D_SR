@@ -276,7 +276,8 @@
       "Bash(awk '/python -u src\\\\/m12a_action_top1.py/{f=1; print NR\": INVOCATION\"} f && /motion-features|min-clips-per-class|min-per-split/{print NR\": \"$0} /tee /{f=0}' scripts/run_eval.sh)",
       "Bash(curl -fSL \"https://huggingface.co/datasets/gajeshladharai/artifacts/resolve/main/core-jepa/lejepa-l.pt\" -o checkpoints/lejepa_l.pt)",
       "Bash(echo \"exit=$?\")",
-      "Bash(ps -eo pid,cmd)"
+      "Bash(ps -eo pid,cmd)",
+      "Bash(grep -nE '^## |^flowchart|^```mermaid|subgraph|style ' plan_baselines_roadmap.md)"
     ]
   }
 }

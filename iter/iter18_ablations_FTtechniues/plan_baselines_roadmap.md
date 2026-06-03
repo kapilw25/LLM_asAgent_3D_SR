@@ -13,21 +13,22 @@
 ## 📖 Glossary — abbrev → FULL FORM (repeated EVERYWHERE on purpose; re-read = remember)
 
 ```text
-┌ abbrev ─────┬ FULL FORM   (+ source) ────────────────────────────────────────────────────┐
-│ Auto-RGN    │ Automatic Relative Gradient Norm      (Surgical-FT, Lee et al. ICLR'23)      │
-│ RGN         │ Relative Gradient Norm = ||grad(theta_blk)|| / ||theta_blk||                 │
-│ EWC         │ Elastic Weight Consolidation          (Kirkpatrick et al. PNAS'17)           │
-│ LoRA        │ Low-Rank Adaptation                   (Hu et al. 2021)                       │
-│ DoRA        │ Weight-Decomposed Low-Rank Adaptation (Liu et al. 2024)                      │
-│ PEFT        │ Parameter-Efficient Fine-Tuning                                              │
-│ LP-FT       │ Linear-Probing then Fine-Tuning       (Kumar et al. ICLR'22)                 │
-│ Full-FT     │ Full Fine-Tuning                                                             │
-│ CaSSLe      │ continual self-supervised distillation (stylized name; Fini et al. CVPR'22)  │
-│ SSL         │ Self-Supervised Learning                                                     │
-│ SPD         │ Selective Projection Decay            (Tian et al. NeurIPS'24)               │
-│ SALT        │ Self-Anchored Latent Teacher          (Apple 2025)                           │
-│ surgery     │ staged factor-curriculum continual-FT    (OURS)                              │
-└─────────────┴──────────────────────────────────────────────────────────────────────────────┘
+┌ abbrev ──┬ FULL FORM   (+ source) ─────────────────────────────────────────────────────┐
+│ Auto-RGN │ Automatic Relative Gradient Norm      (Surgical-FT, Lee et al. ICLR'23)     │
+│ RGN      │ Relative Gradient Norm = ||grad(theta_blk)|| / ||theta_blk||                │
+│ EWC      │ Elastic Weight Consolidation          (Kirkpatrick et al. PNAS'17)          │
+│ LoRA     │ Low-Rank Adaptation                   (Hu et al. 2021)                      │
+│ DoRA     │ Weight-Decomposed Low-Rank Adaptation (Liu et al. 2024)                     │
+│ PEFT     │ Parameter-Efficient Fine-Tuning                                             │
+│ LP-FT    │ Linear-Probing then Fine-Tuning       (Kumar et al. ICLR'22)                │
+│ Full-FT  │ Full Fine-Tuning                                                            │
+│ CaSSLe   │ continual self-supervised distillation (stylized name; Fini et al. CVPR'22) │
+│ SSL      │ Self-Supervised Learning                                                    │
+│ SPD      │ Selective Projection Decay            (Tian et al. NeurIPS'24)              │
+│ SALT     │ Self-Anchored Latent Teacher          (Apple 2025)                          │
+│ m09a1    │ vanilla continual SSL  (vanilla continual-FT anchor; OURS)                  │
+│ surgery  │ staged factor-curriculum continual-FT    (OURS)                             │
+└──────────┴─────────────────────────────────────────────────────────────────────────────┘
 ```
 > CONVENTION for this iter — write every abbrev as `abbrev (FULL FORM)` at EVERY mention, in *.md /
 > *.sh / *.py / *.yaml / logs / configs — NEVER the bare abbrev alone. CaSSLe is a STYLIZED method name
@@ -162,17 +163,17 @@ ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost 
 
 ```mermaid
 flowchart LR
-    RAW["🎬 RAW clips · pretrain pool"]
-    FAC["🧩 FACTOR clips · D_L→D_A→D_I<br>m10 SAM masks → m11 factor sets"]
-    INIT["⚓ vanilla continual SSL (m09a1)<br>Self-Supervised Learning on RAW<br>= shared student init"]
+    RAW["🎬 RAW clips ·<br>pretrain pool"]
+    FAC["🧩 FACTOR clips ·<br>D_L→D_A→D_I<br>m10 SAM masks →<br>m11 factor sets"]
+    INIT["⚓ vanilla continual<br>SSL (m09a1)<br>Self-Supervised<br>Learning on RAW<br>= shared student init"]
     RAW --> INIT
 
-    INIT --> B4F["B4(a) Full-FT (Full Fine-Tuning)<br>🔓 ALL blocks · RAW"]
-    INIT --> B4L["B4(b) LP-FT (Linear-Probing then Fine-Tuning)<br>🧠 head warmup → 🔓 unfreeze · RAW"]
-    INIT --> B1["LoRA (Low-Rank Adaptation) →<br>DoRA (Weight-Decomposed Low-Rank Adaptation)<br>🔌 tiny adapters · RAW"]
-    INIT --> B2["Auto-RGN (Automatic Relative Gradient Norm)<br>✂️ gradient-picked blocks · RAW"]
-    INIT --> B3["CaSSLe + EWC (Elastic Weight Consolidation)<br>🧊 distill old + 🔒 anchor weights · RAW"]
-    INIT --> SURG["⭐ SURGERY (ours)<br>🔧 staged 4/8/8 blocks · FACTOR"]
+    INIT --> B4F["B4(a) Full-FT<br>(Full Fine-Tuning)<br>🔓 ALL blocks · RAW"]
+    INIT --> B4L["B4(b) LP-FT<br>(Linear-Probing then<br>Fine-Tuning)<br>🧠 head warmup →<br>🔓 unfreeze · RAW"]
+    INIT --> B1["LoRA<br>(Low-Rank Adaptation)<br>→ DoRA<br>(Weight-Decomposed<br>Low-Rank Adaptation)<br>🔌 tiny adapters · RAW"]
+    INIT --> B2["Auto-RGN<br>(Automatic Relative<br>Gradient Norm)<br>✂️ gradient-picked<br>blocks · RAW"]
+    INIT --> B3["CaSSLe + EWC<br>(Elastic Weight<br>Consolidation)<br>🧊 distill old +<br>🔒 anchor weights · RAW"]
+    INIT --> SURG["⭐ SURGERY (ours)<br>🔧 staged 4/8/8 blocks<br>· FACTOR"]
 
     FAC ==> SURG
 
@@ -182,7 +183,7 @@ flowchart LR
     B2 --> EXP
     B3 --> EXP
     SURG --> EXP
-    EXP --> EVAL["📊 eval m12a–m12e · 9 metrics<br>N=1825 · paired surgery−pretrain BCa 95% CI"]
+    EXP --> EVAL["📊 eval m12a–m12e ·<br>9 metrics<br>N=1825 · paired<br>surgery − vanilla<br>cont-SSL · BCa 95% CI"]
 
     style SURG fill:#cfc,stroke:#080,stroke-width:3px,color:#000
     style B2 fill:#fdd,stroke:#a00,stroke-width:2px,color:#000
@@ -194,21 +195,21 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    CKPT["V-JEPA 2.1 ViT-g (1B)\ncheckpoints/vjepa2_1_vitg_384.pt"] --> SEL{adaptation family}
+    CKPT["V-JEPA 2.1<br>ViT-g (1B)<br>checkpoints/<br>vjepa2_1_vitg_384.pt"] --> SEL{adaptation family}
 
-    SEL -->|"B1 PEFT (Parameter-Efficient Fine-Tuning)"| B1["m09b_peft.py\nLoRA (Low-Rank Adaptation) / DoRA\n(Weight-Decomposed Low-Rank Adaptation)\nadapters on attn.qkv + mlp (rank 16)"]
-    SEL -->|"B2 Surgical-FT"| B2["m09c1 + auto_rgn freeze\nRGN = ||g_block|| / ||θ_block||\ntop-k blocks, RAW clips"]
-    SEL -->|"B3 Cont-SSL"| B3["m09a1 + CaSSLe distill\n(FROZEN teacher) + EWC\n(Elastic Weight Consolidation)\nFisher anchor, RAW clips"]
-    SEL -->|"B4(a) Full-FT (Full Fine-Tuning) / B4(b) LP-FT (Linear-Probing then Fine-Tuning)"| B4["m09a1\nB4(a): unfreeze_below=1.0 (full)\nB4(b): lp-ft-stage0 then unfreeze"]
-    SEL -->|"PROPOSED"| S["m09c1 surgery\nfactor curriculum D_L→D_A→D_I\nSALT + SPD + saliency + replay"]
+    SEL -->|"B1 PEFT<br>(Parameter-Efficient<br>Fine-Tuning)"| B1["m09b_peft.py<br>LoRA<br>(Low-Rank Adaptation)<br>→ DoRA<br>(Weight-Decomposed<br>Low-Rank Adaptation)<br>adapters on<br>attn.qkv + mlp (r=16)"]
+    SEL -->|"B2 Surgical-FT"| B2["m09c1 + auto_rgn<br>freeze<br>RGN = ||g_block|| /<br>||θ_block||<br>top-k blocks,<br>RAW clips"]
+    SEL -->|"B3 Cont-SSL"| B3["m09a1 + CaSSLe<br>distill<br>(FROZEN teacher) +<br>EWC (Elastic Weight<br>Consolidation)<br>Fisher anchor,<br>RAW clips"]
+    SEL -->|"B4(a) Full-FT<br>(Full Fine-Tuning) /<br>B4(b) LP-FT<br>(Linear-Probing<br>then Fine-Tuning)"| B4["m09a1<br>B4(a):<br>unfreeze_below=1.0<br>(full)<br>B4(b): lp-ft-stage0<br>then unfreeze"]
+    SEL -->|"PROPOSED"| S["m09c1 surgery<br>factor curriculum<br>D_L→D_A→D_I<br>SALT + SPD +<br>saliency + replay"]
 
-    B1 & B2 & B3 & B4 & S --> EXP["student_encoder.pt (+ predictor)\nexport_student_for_eval()"]
-    EXP --> REG["configs/eval/probe_encoders.yaml\n(one row per baseline×arm)"]
-    REG --> EVAL["run_eval.sh → m12a..f\n14 metrics + BCa 95% CI"]
-    EVAL --> HERO["m13 §G hero table\nsurgery vs 4 baselines vs anchors"]
+    B1 & B2 & B3 & B4 & S --> EXP["student_encoder.pt<br>(+ predictor)<br>export_student_<br>for_eval()"]
+    EXP --> REG["configs/eval/<br>probe_encoders.yaml<br>(one row per<br>baseline×arm)"]
+    REG --> EVAL["run_eval.sh →<br>m12a..f<br>14 metrics +<br>BCa 95% CI"]
+    EVAL --> HERO["m13 §G hero table<br>surgery vs 4<br>baselines vs anchors"]
 
-    style S fill:#cfc,stroke:#080
-    style B2 fill:#fdd,stroke:#a00
+    style S fill:#cfc,stroke:#080,color:#000
+    style B2 fill:#fdd,stroke:#a00,color:#000
 ```
 
 ---
@@ -341,15 +342,15 @@ framing:      call D_L/D_A/D_I a "structured curriculum over disentangled factor
 ```mermaid
 flowchart LR
     subgraph PROPOSED
-      F["factorized clips\nD_L → D_A → D_I curriculum"] --> SF["surgery\n(SALT+SPD+saliency)"]
+      F["factorized clips<br>D_L → D_A → D_I<br>curriculum"] --> SF["surgery<br>(SALT+SPD+saliency)"]
     end
     subgraph CONTROL["compute-matched"]
-      R["RAW clips\n(same steps, same recipe)"] --> SR["surgery_raw / pretrain_2X"]
+      R["RAW clips<br>(same steps,<br>same recipe)"] --> SR["surgery_raw /<br>pretrain_2X"]
     end
-    SF --> M1["motion / future / rollout / teacher_free"]
+    SF --> M1["motion / future /<br>rollout /<br>teacher_free"]
     SR --> M1
-    M1 --> D["Δ = factorized − raw  (BCa CI)\nHEADLINE: CI-separated win"]
-    style D fill:#cfc,stroke:#080
+    M1 --> D["Δ = factorized − raw<br>(BCa CI)<br>HEADLINE:<br>CI-separated win"]
+    style D fill:#cfc,stroke:#080,color:#000
 ```
 
 ---
