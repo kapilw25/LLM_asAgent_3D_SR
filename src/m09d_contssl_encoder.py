@@ -1,21 +1,23 @@
-"""Ch11 Factor Surgery — 3-stage progressive unfreezing with D_L/D_A/D_I factor datasets. GPU-only.
+"""iter18 B3 BASELINE · CaSSLe + EWC — continual-SSL anti-forgetting baselines (NOT the novelty). GPU-only.
+Copy-first (cp m09c1_surgery_encoder.py → m09d_contssl_encoder.py, 2026-06-03): the all-48-block JEPA
+fine-tune is inherited verbatim; the two regularizers bolt on config-gated via utils.contssl.
+
 Gold standard #1 (training loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
-Gold standard #2 (mask-conditioned video SSL paradigm): https://github.com/MCG-NJU/MGMAE
-Gold standard #3 (foundational video masked SSL): https://github.com/MCG-NJU/VideoMAE
-Claude Code: re-WebSearch all 3 URLs on every read of this file (each verified live 2026-05-09).
+Gold standard #2 (CaSSLe — self-supervised continual learning): https://github.com/DonkeyShot21/cassle  (Fini CVPR'22)
+Gold standard #3 (EWC — elastic weight consolidation): https://github.com/moskomule/ewc.pytorch  (Kirkpatrick PNAS'17)
+Claude Code: re-WebSearch all 3 URLs on every read of this file.
 
-Split from m09_pretrain.py on 2026-04-15 (#49). Pairs with m09a1_pretrain_encoder.py (vanilla Ch10)
-and m09b_explora.py (LoRA variant). Shared primitives live in utils.training.
-
-Pipeline: m10 (Grounded-SAM) → m11 (factor datasets) → m09c (surgery training).
-The paper novelty — factor-disentangled surgery on a frozen V-JEPA 2.1 encoder.
+method ∈ {cassle, ewc} (cfg["contssl"]["method"]):
+  cassle → trainable predictor g distills the FROZEN teacher (= previous model) feature (utils.contssl.run_cassle_step).
+  ewc    → online diagonal Fisher anchors weights to the pretrained init θ* (utils.contssl.add_ewc_grads).
+The must-beat: vjepa_surgery (structured factor blocks) > CaSSLe / EWC (unstructured anti-forgetting), CI-separated.
 
 USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
 Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml
 data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for other tiers):
-    python -u src/m09c1_surgery_encoder.py --FULL \
+    python -u src/m09d_contssl_encoder.py --FULL \
         --model-config         configs/model/vjepa2_1.yaml \
-        --train-config         configs/train/surgery_3stage_DI_encoder.yaml \
+        --train-config         configs/train/cassle_encoder.yaml \
         --subset               <LD>/train_pool.json \
         --local-data           <LD> \
         --factor-dir           <LD>/m11_factor_datasets \
@@ -26,7 +28,7 @@ data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for oth
         --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
         --motion-features-path <LD>/m04d_motion_features/motion_features.npy \
         --taxonomy-labels-json outputs/<M>/probe_taxonomy/taxonomy_labels.json \
-        --output-dir           outputs/<M>/m09c_surgery_3stage_DI_encoder \
+        --output-dir           outputs/<M>/m09d_cassle_encoder \
         --cache-policy         <1=keep|2=recompute> \
         --teacher-mode         <surgery.teacher_mode> \
         --lp-ft-stage0         <surgery.lp_ft_stage0.enabled → on|off> \
@@ -145,6 +147,11 @@ from utils.multi_task_loss import (
 from utils.motion_aux_loss import (
     build_motion_aux_head_from_cfg,
     attach_motion_aux_to_optimizer, run_motion_aux_step,
+)
+# iter18 B3 (CaSSLe + EWC continual-SSL regularizers). cp-first novelty stayed in m09c1; this is m09d.
+from utils.contssl import (
+    build_cassle_predictor, attach_cassle_to_optimizer, run_cassle_step,
+    init_fisher, accumulate_fisher, add_ewc_grads,
 )
 from utils.probe_labels import ensure_probe_labels_for_mode
 from torch.utils.data import DataLoader
@@ -553,6 +560,30 @@ def train(cfg: dict, args):
     # m04d RAFT-flow vec_motion. Builds head + clip_key→(class_id, vec_motion) lookup;
     # ma_head=None when motion_aux disabled (graceful no-op throughout).
     ma_head, ma_lookup, ma_cfg = build_motion_aux_head_from_cfg(cfg, device)
+
+    # iter18 B3: CaSSLe / EWC continual-SSL regularizer state (utils.contssl). `method` gates which
+    # anti-forgetting term rides on top of the all-48-block JEPA fine-tune:
+    #   cassle → a trainable predictor g distills the FROZEN teacher (= previous model) feature.
+    #   ewc    → an online diagonal Fisher anchors weights to the pretrained init θ* (= init_params).
+    contssl_cfg = cfg["contssl"]
+    contssl_method = contssl_cfg["method"]
+    cassle_head = None
+    fisher = None
+    if contssl_method == "cassle":
+        cassle_head = build_cassle_predictor(
+            cfg["model"]["embed_dim"], contssl_cfg["cassle"]["hidden_dim"]).to(device)
+        print(f"  [CaSSLe] distill predictor g: {cfg['model']['embed_dim']}→"
+              f"{contssl_cfg['cassle']['hidden_dim']}→{cfg['model']['embed_dim']}, "
+              f"weight={contssl_cfg['cassle']['weight']} (target = FROZEN teacher feature)")
+    elif contssl_method == "ewc":
+        fisher = init_fisher(student)
+        print(f"  [EWC] online diagonal Fisher over first "
+              f"{contssl_cfg['ewc']['n_fisher_batches']} steps; λ={contssl_cfg['ewc']['lambda']} "
+              f"(anchor → pretrained init θ*)")
+    else:
+        raise ValueError(
+            f"contssl.method must be 'cassle' or 'ewc', got {contssl_method!r} "
+            f"(configs/train/{{cassle,ewc}}_encoder.yaml)")
 
     mask_generators = build_mask_generators(cfg)
 
@@ -1227,6 +1258,14 @@ def train(cfg: dict, args):
             # (same rationale as multi-task above — fresh optimizer drops it).
             attach_motion_aux_to_optimizer(optimizer, ma_head, ma_cfg, cfg["optimization"]["lr"])
 
+            # iter18 B3: attach the CaSSLe predictor g to the freshly-rebuilt optimizer every stage
+            # (fresh optimizer drops the param group, same rationale as motion_aux above). No-op for
+            # the ewc arm (cassle_head is None).
+            if cassle_head is not None:
+                attach_cassle_to_optimizer(
+                    optimizer, cassle_head, cfg["optimization"]["lr"],
+                    contssl_cfg["cassle"]["head_lr_multiplier"])
+
             # Per-stage LR scheduler (warmup then constant)
             def lr_lambda(step, ws=warmup_steps):
                 if step < ws:
@@ -1388,6 +1427,13 @@ def train(cfg: dict, args):
                         print(f"  OOM at step {global_step}: sub-batch shrunk to "
                               f"{train_sizer.size}, retrying SAME macro")
 
+                # iter18 B3 EWC: snapshot the diagonal Fisher from the PURE JEPA grads (read HERE —
+                # before multi_task/motion_aux contaminate them) over the first n_fisher_batches steps,
+                # where θ≈θ* (online-EWC estimate of the Kirkpatrick Fisher at the pretrained init).
+                if fisher is not None and global_step < contssl_cfg["ewc"]["n_fisher_batches"]:
+                    accumulate_fisher(student, fisher, contssl_cfg["ewc"]["n_fisher_batches"],
+                                      scaler.get_scale())
+
                 # Multi-task forward+backward (no-op when mt_head is None or
                 # batch_keys empty). Accumulates onto the same param.grad
                 # buffer as the JEPA grads → single optimizer.step() consumes both.
@@ -1416,13 +1462,35 @@ def train(cfg: dict, args):
                           f"discarding step, continuing")
                     continue
 
+                # iter18 B3 CaSSLe: distill g(student) → FROZEN teacher feature. Scaled backward
+                # accumulates onto the shared grad buffer (single optimizer.step consumes JEPA +
+                # motion_aux + this). No-op for the ewc arm (cassle_head is None).
+                if cassle_head is not None:
+                    try:
+                        run_cassle_step(
+                            student, teacher, cassle_head, batch_clips, scaler,
+                            mp_cfg, dtype, device, contssl_cfg["cassle"]["weight"])
+                    except torch.cuda.OutOfMemoryError:
+                        optimizer.zero_grad()
+                        torch.cuda.empty_cache()
+                        print(f"  OOM at step {global_step} (CaSSLe distill forward): "
+                              f"discarding step, continuing")
+                        continue
+
                 # Single optimizer step per macro batch — preserves effective BS = batch_size
                 scaler.unscale_(optimizer)
+                # iter18 B3 EWC: add the analytic anchor grad 2λF(θ−θ*) AFTER unscale_ (grads now in the
+                # true domain). No-op for the cassle arm (fisher is None); waits until the Fisher is
+                # populated (global_step ≥ n_fisher_batches).
+                if fisher is not None and global_step >= contssl_cfg["ewc"]["n_fisher_batches"]:
+                    add_ewc_grads(student, fisher, init_params, contssl_cfg["ewc"]["lambda"])
                 _clip_params = list(student.parameters()) + list(predictor.parameters())
                 if mt_head is not None:
                     _clip_params += list(mt_head.parameters())
                 if ma_head is not None:
                     _clip_params += list(ma_head.parameters())
+                if cassle_head is not None:
+                    _clip_params += list(cassle_head.parameters())
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     _clip_params,
                     cfg["optimization"]["grad_clip"])

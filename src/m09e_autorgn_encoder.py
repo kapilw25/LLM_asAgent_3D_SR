@@ -1,14 +1,15 @@
-"""Ch11 Factor Surgery — 3-stage progressive unfreezing with D_L/D_A/D_I factor datasets. GPU-only.
-Gold standard #1 (training loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
-Gold standard #2 (mask-conditioned video SSL paradigm): https://github.com/MCG-NJU/MGMAE
-Gold standard #3 (foundational video masked SSL): https://github.com/MCG-NJU/VideoMAE
-Claude Code: re-WebSearch all 3 URLs on every read of this file (each verified live 2026-05-09).
+"""iter18 B2 BASELINE · Auto-RGN (Automatic Relative Gradient Norm) surgical fine-tuning. GPU-only.
+This is NOT the paper novelty — it is a comparison BASELINE that surgery must beat. The gradient
+picks the top-k blocks to train (RGN = ||grad||/||theta||), budget-matched to surgery's deepest stage.
+Gold standard #1 (Auto-RGN / surgical fine-tuning): https://github.com/anniesch/surgical-finetuning  (Lee et al. ICLR'23)
+Gold standard #2 (training-loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
+Claude Code: re-WebSearch both URLs on every read of this file.
 
-Split from m09_pretrain.py on 2026-04-15 (#49). Pairs with m09a1_pretrain_encoder.py (vanilla Ch10)
-and m09b_explora.py (LoRA variant). Shared primitives live in utils.training.
-
-Pipeline: m10 (Grounded-SAM) → m11 (factor datasets) → m09c (surgery training).
-The paper novelty — factor-disentangled surgery on a frozen V-JEPA 2.1 encoder.
+COPY-FIRST-THEN-FACTOR (iter18): copied verbatim from m09c1_surgery_encoder.py so it inherits the
+complete, tested trainer (no m09a1↔m09c1 missing-function drift). The ONLY baseline-unique logic is
+the Auto-RGN block selector (utils.training.select_blocks_auto_rgn; freeze_rule=auto_rgn read from
+configs/train/surgical_autorgn_encoder.yaml). Shared primitives stay in utils.training; further dedup
+across the B1–B4 baselines is the post-copy factor phase (tracker #19).
 
 USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
 Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml
@@ -127,7 +128,7 @@ from utils.training import (
     build_optimizer, build_scheduler, update_weight_decay,  # noqa: F401 — build_scheduler/update_weight_decay kept for future stage schedulers
     save_training_checkpoint, cleanup_old_checkpoints, cleanup_stage_checkpoints, load_training_checkpoint,  # noqa: F401 — cleanup_old_checkpoints/load_training_checkpoint kept for resume
     export_student_for_eval,
-    set_trainable_prefix, enable_gradient_checkpointing,
+    set_trainable_prefix, select_blocks_auto_rgn, enable_gradient_checkpointing,
     FactorSampler, build_factor_index, load_factor_clip,
     StreamingFactorDataset, build_streaming_indices, _streaming_worker_init,
     run_probe_val_loss, compute_trajectory_stats,
@@ -181,6 +182,8 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     # wrong recipe into a multi-hour run.
     cfg["surgery"]["teacher_mode"] = args.teacher_mode
     cfg["surgery"]["lp_ft_stage0"]["enabled"] = (args.lp_ft_stage0 == "on")
+    # iter18 B2 baseline (m09e auto_rgn): freeze_rule comes straight from the yaml
+    # (surgical_autorgn_encoder.yaml → auto_rgn) — this script is auto_rgn-only, no CLI override.
 
     # iter14 recipe-v3 ablation switches: A4 warmup, A2 saliency, #4 spd, #5 replay.
     # (#3 surgical-subset axis RETIRED 2026-05-26 — recipe_v3 4/8/8 won in iter14 over the
@@ -1199,9 +1202,40 @@ def train(cfg: dict, args):
                 print(f"  Inter-stage cleanup: {(total - free) / 1e9:.1f} GB used / "
                       f"{total / 1e9:.1f} GB total after releasing Stage {stage_idx} state")
 
-            # Set trainable prefix for this stage — surgery's staged unfreeze_below: the deepest
-            # n_trainable blocks become trainable, shallower blocks stay frozen. Driven per-stage by train().
-            set_trainable_prefix(student, n_trainable)
+            # Set trainable prefix — OR iter18 B2 Auto-RGN (Automatic Relative Gradient Norm) gradient
+            # block selection. When freeze_rule==auto_rgn we score RGN on a few warmup batches (same
+            # data path as training), pick the top-k blocks, and freeze the rest BEFORE build_optimizer
+            # (so it only allocates state for the kept blocks). Auto-RGN picks ONCE (stage 0); the
+            # surgical_autorgn.yaml uses a single stage. Else: surgery's staged unfreeze_below prefix.
+            if cfg["surgery"]["freeze_rule"] == "auto_rgn":
+                if stage_idx == 0:
+                    _ar = cfg["surgery"]["auto_rgn"]
+                    _n_score = _ar["n_score_batches"]
+                    _score_clips = []
+                    if streaming_enabled:
+                        _score_ds = StreamingFactorDataset(
+                            mp4_index=mp4_index, mask_index=mask_index,
+                            factor_manifest=streaming_manifest, factor_cfg=factor_cfg_streaming,
+                            mode_mixture=mode_mixture, num_frames=num_frames, crop_size=crop_size,
+                            di_legacy_index=di_legacy_index, base_seed=seed + 9000,
+                            steps_per_epoch=_n_score * batch_size,
+                            interaction_cfg=cfg["interaction_mining"],
+                            raw_replay_pct=cfg["replay"]["raw_pretrain_pct"], raw_clip_keys=None)
+                        for _sb in DataLoader(_score_ds, batch_size=batch_size, num_workers=0):
+                            _score_clips.append(_sb["tensor"].to(device).permute(0, 2, 1, 3, 4))
+                            if len(_score_clips) >= _n_score:
+                                break
+                    else:
+                        _samp = FactorSampler(factor_index, mode_mixture)
+                        for _ in range(_n_score):
+                            _ts = [load_factor_clip(_samp.sample()[2], num_frames, crop_size)
+                                   for _ in range(batch_size)]
+                            _score_clips.append(torch.stack(_ts).to(device).permute(0, 2, 1, 3, 4))
+                    select_blocks_auto_rgn(student, teacher, predictor, _score_clips, mask_generators,
+                                           cfg, dtype, mp_cfg, scaler, train_sizer, loss_exp,
+                                           init_params, depth, device, _ar["k_blocks"])
+            else:
+                set_trainable_prefix(student, n_trainable)
 
             # Rebuild optimizer (only trainable params)
             # iter14 recipe-v3 (2026-05-09): pass init_params so SPDAdamW can

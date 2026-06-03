@@ -131,25 +131,27 @@ ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost 
 ### 🚦 BUILD ORDER (de-risk-first) — run the kill-shot FIRST
 
 ```text
-┌──────┬─────────────────────────────────────────────────────────────┬───────────────────────────┐
-│ wave │ build                                                       │ why                       │
-├──────┼─────────────────────────────────────────────────────────────┼───────────────────────────┤
-│ 1    │ B2 Auto-RGN (Automatic Relative Gradient Norm) — ~15-line   │ KILL-SHOT: the ONLY arm   │
-│      │ freeze rule in m09c1 ; train on vitg 1B, budget-matched, vs │ that can invalidate the   │
-│      │ surgery AND vs pretrain_2X (RAW control, already computed)  │ thesis. Learn worst news  │
-│      │ ‖ parallel (near-free): Full-FT (Full Fine-Tuning) + LP-FT  │ in week 1. Also the desk- │
-│      │ (Linear-Probing then Fine-Tuning) — config-only             │ reject namesake.          │
-│ 2    │ B3 CaSSLe + EWC (Elastic Weight Consolidation) · B1 LoRA    │ confirmatory; reuse SALT  │
-│      │ (Low-Rank Adaptation) → DoRA (Weight-Decomposed Low-Rank    │ (Self-Anchored Latent     │
-│      │ Adaptation)                                                 │ Teacher) + SPD slots      │
-│ 3    │ expand B2 Auto-RGN (Automatic Relative Gradient Norm) +     │ headline-matched          │
-│      │ the A+ set to vitG 2B (headline backbone)                   │ namesake                  │
-│ 4    │ STOP for AAAI · PET (Parameter-Efficient Tuning):           │ scope-creep guard vs      │
-│      │ SAFE/SAPT/SEEKR → later revision (different setting)        │ July 25                   │
-└──────┴─────────────────────────────────────────────────────────────┴───────────────────────────┘
+┌──────┬────────────────────────────────────────────────────────────┬───────────────────────────┐
+│ wave │ build                                                      │ why                       │
+├──────┼────────────────────────────────────────────────────────────┼───────────────────────────┤
+│ 1    │ B2 Auto-RGN (Automatic Relative Gradient Norm) — ~25-line  │ KILL-SHOT: the ONLY arm   │
+│      │ freeze rule in m09c1 ; train on vitG 2B (the BIGGEST,      │ that can invalidate the   │
+│      │ surgery's best 4/0/5; run_train default), budget-matched,  │ thesis. Learn worst news  │
+│      │ vs surgery AND vs pretrain_2X (RAW control)                │ in week 1. Also the desk- │
+│      │ ‖ parallel (near-free): Full-FT (Full Fine-Tuning) + LP-FT │ reject namesake.          │
+│      │ (Linear-Probing then Fine-Tuning) — config-only            │                           │
+│ 2    │ B3 CaSSLe + EWC (Elastic Weight Consolidation) · B1 LoRA   │ confirmatory; reuse SALT  │
+│      │ (Low-Rank Adaptation) → DoRA (Weight-Decomposed Low-Rank   │ (Self-Anchored Latent     │
+│      │ Adaptation) — same vitG 2B backbone                        │ Teacher) + SPD slots      │
+│ 3    │ STOP for AAAI · PET (Parameter-Efficient Tuning):          │ scope-creep guard vs      │
+│      │ SAFE/SAPT/SEEKR → later revision (different setting).      │ July 25                   │
+│      │ 1B vitg / 2.0 vitg = surgery's iter17 scale axis — NOT     │                           │
+│      │ needed for the FT-baseline comparison (2B = the headline). │                           │
+└──────┴────────────────────────────────────────────────────────────┴───────────────────────────┘
 ```
-> 🚩 Run the Auto-RGN (Automatic Relative Gradient Norm) kill-shot on vitg 1B / vitG 2B — NOT on vJEPA
-> 2.0, where surgery already loses 0/5/4 (a 2.0 run gives a FALSE kill signal). Budget-match the
+> 🚩 Run the Auto-RGN (Automatic Relative Gradient Norm) kill-shot on the BIGGEST model = vitG 2B (surgery's
+> best there, 4/0/5; run_train's default BACKBONE) — NOT the 1B vitg (weaker 5/2/2) or vJEPA 2.0 (surgery
+> loses 0/5/4 = FALSE kill signal). Budget-match the
 > trainable-param count EXACTLY. Read it next to the RAW control (pretrain_2X) so a win is attributable
 > to the factor curriculum, not just "more aggressive adaptation". Decide the 2.0 framing now = honest
 > scope boundary (surgery > pretrain where the pretrained dynamics are already good).
@@ -158,8 +160,9 @@ ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost 
 
 ## 0.6 · 🗺️ Data + model pipeline (all baselines at a glance)
 
-> Every node is `abbrev (FULL FORM)`. Green = surgery (OURS). Red = B2 Auto-RGN (Automatic Relative
-> Gradient Norm) = the must-beat namesake. Dotted/thick = RAW vs FACTOR data.
+> Every node is `abbrev (FULL FORM)`. Solid green = surgery on FACTOR (OURS). Dashed green = SURGERY-RAW
+> (the SAME method on RAW = the causal CONTROL: surgery − surgery_raw = the factor-curriculum effect, Figure-1).
+> Red = B2 Auto-RGN (Automatic Relative Gradient Norm) = the must-beat namesake. Thick arrow ⇒ FACTOR data.
 
 ```mermaid
 flowchart LR
@@ -174,6 +177,7 @@ flowchart LR
     INIT --> B2["Auto-RGN<br>(Automatic Relative<br>Gradient Norm)<br>✂️ gradient-picked<br>blocks · RAW"]
     INIT --> B3["CaSSLe + EWC<br>(Elastic Weight<br>Consolidation)<br>🧊 distill old +<br>🔒 anchor weights · RAW"]
     INIT --> SURG["⭐ SURGERY (ours)<br>🔧 staged 4/8/8 blocks<br>· FACTOR"]
+    INIT --> SURGR["⭐ SURGERY-RAW<br>(control)<br>🔧 SAME 4/8/8 blocks<br>· RAW (factors OFF)"]
 
     FAC ==> SURG
 
@@ -183,9 +187,11 @@ flowchart LR
     B2 --> EXP
     B3 --> EXP
     SURG --> EXP
+    SURGR --> EXP
     EXP --> EVAL["📊 eval m12a–m12e ·<br>9 metrics<br>N=1825 · paired<br>surgery − vanilla<br>cont-SSL · BCa 95% CI"]
 
     style SURG fill:#cfc,stroke:#080,stroke-width:3px,color:#000
+    style SURGR fill:#dfd,stroke:#080,stroke-dasharray:6 4,color:#000
     style B2 fill:#fdd,stroke:#a00,stroke-width:2px,color:#000
 ```
 
@@ -195,20 +201,22 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    CKPT["V-JEPA 2.1<br>ViT-g (1B)<br>checkpoints/<br>vjepa2_1_vitg_384.pt"] --> SEL{adaptation family}
+    CKPT["V-JEPA 2.1<br>ViT-G (2B)<br>= BIGGEST avail.<br>checkpoints/<br>vjepa2_1_vitG_384.pt"] --> SEL{adaptation family}
 
     SEL -->|"B1 PEFT<br>(Parameter-Efficient<br>Fine-Tuning)"| B1["m09b_peft.py<br>LoRA<br>(Low-Rank Adaptation)<br>→ DoRA<br>(Weight-Decomposed<br>Low-Rank Adaptation)<br>adapters on<br>attn.qkv + mlp (r=16)"]
     SEL -->|"B2 Surgical-FT"| B2["m09c1 + auto_rgn<br>freeze<br>RGN = ||g_block|| /<br>||θ_block||<br>top-k blocks,<br>RAW clips"]
     SEL -->|"B3 Cont-SSL"| B3["m09a1 + CaSSLe<br>distill<br>(FROZEN teacher) +<br>EWC (Elastic Weight<br>Consolidation)<br>Fisher anchor,<br>RAW clips"]
     SEL -->|"B4(a) Full-FT<br>(Full Fine-Tuning) /<br>B4(b) LP-FT<br>(Linear-Probing<br>then Fine-Tuning)"| B4["m09a1<br>B4(a):<br>unfreeze_below=1.0<br>(full)<br>B4(b): lp-ft-stage0<br>then unfreeze"]
     SEL -->|"PROPOSED"| S["m09c1 surgery<br>factor curriculum<br>D_L→D_A→D_I<br>SALT + SPD +<br>saliency + replay"]
+    SEL -->|"CONTROL"| SR["m09c1 surgery<br>factors OFF · RAW<br>= surgery_raw<br>(the ablation)"]
 
-    B1 & B2 & B3 & B4 & S --> EXP["student_encoder.pt<br>(+ predictor)<br>export_student_<br>for_eval()"]
+    B1 & B2 & B3 & B4 & S & SR --> EXP["student_encoder.pt<br>(+ predictor)<br>export_student_<br>for_eval()"]
     EXP --> REG["configs/eval/<br>probe_encoders.yaml<br>(one row per<br>baseline×arm)"]
     REG --> EVAL["run_eval.sh →<br>m12a..f<br>14 metrics +<br>BCa 95% CI"]
     EVAL --> HERO["m13 §G hero table<br>surgery vs 4<br>baselines vs anchors"]
 
     style S fill:#cfc,stroke:#080,color:#000
+    style SR fill:#dfd,stroke:#080,stroke-dasharray:6 4,color:#000
     style B2 fill:#fdd,stroke:#a00,color:#000
 ```
 
@@ -254,10 +262,10 @@ delta:   LoRA (Low-Rank Adaptation) already injects A·B into attn.qkv + mlp.fc1
          train magnitude m + direction ΔV via LoRA (Low-Rank Adaptation).
          → use peft>=0.12 LoraConfig(use_dora=True)  OR  custom 8-line wrapper (W_dora below).
 export:  training.export_student_for_eval(student, …, explora_enabled=True)  ← MERGES adapters
-         into the base weights so the eval loads a plain ViT-g (no PEFT (Parameter-Efficient
+         into the base weights so the eval loads a plain ViT-G (no PEFT (Parameter-Efficient
          Fine-Tuning) dep at eval time).
 arms:    run_train.sh add `peft_lora`, `peft_dora` cases → m09b_peft dispatch.
-registry: vjepa_2_1_vitg_peft_lora , vjepa_2_1_vitg_peft_dora  {kind: vjepa, arch: vit_giant_xformers_2_1}
+registry: vjepa_2_1_peft_lora , vjepa_2_1_peft_dora  {kind: vjepa, arch: vit_gigantic_xformers, crop: 384, embed_dim: 1664}  # 2B ViT-G
 ```
 
 ```python
@@ -309,7 +317,7 @@ EWC (Elastic Weight Consolidation):  reuse the SPD (Selective Projection Decay) 
          SPD (Selective Projection Decay) already anchors n_anchored=492 params to init; EWC (Elastic
          Weight Consolidation) = SPD (Selective Projection Decay) with per-param Fisher weights.
 clips:   RAW (continual SSL on the new domain; no factors).
-arms:    cassle, ewc.   registry rows vjepa_2_1_vitg_{cassle,ewc}.
+arms:    cassle, ewc.   registry rows vjepa_2_1_{cassle,ewc}  (2B ViT-G; arch vit_gigantic_xformers, embed_dim 1664).
 ```
 
 ### B4 · config-only pair — B4(a) Full-FT (Full Fine-Tuning, the forgetting ceiling) + B4(b) LP-FT (Linear-Probing then Fine-Tuning, Kumar ICLR'22)
@@ -339,6 +347,23 @@ framing:      call D_L/D_A/D_I a "structured curriculum over disentangled factor
               (layout→agent→interaction)", NOT augmentation → compositional/causal generalization.
 ```
 
+> ⚠ The confound a reviewer scrutinizes HARDEST: surgery changes TWO things vs the baselines —
+> DATA (factor vs raw) AND METHOD (surgery vs others). The `surgery_raw` arm isolates them:
+
+```text
+┌───────────────────────────┬────────┬─────────┬─────────────────────────────────────────────────────┐
+│ arm                       │ data   │ method  │ what it isolates                                    │
+├───────────────────────────┼────────┼─────────┼─────────────────────────────────────────────────────┤
+│ surgery        (PROPOSED) │ FACTOR │ surgery │ the FULL method (factor curriculum + 4/8/8 blocks)  │
+│ surgery_raw  (← the CTRL) │ RAW    │ surgery │ method ALONE — does surgery win WITHOUT factors?    │
+│ all B1-B4 baselines       │ RAW    │ other   │ family coverage: PEFT / Surgical-FT / cont-SSL / FT │
+└───────────────────────────┴────────┴─────────┴─────────────────────────────────────────────────────┘
+```
+
+> → surgery − surgery_raw = the FACTOR-curriculum effect (Figure-1, the headline causal claim) ·
+> surgery_raw − baselines = the METHOD effect. WITHOUT surgery_raw, the win is a confound.
+
+
 ```mermaid
 flowchart LR
     subgraph PROPOSED
@@ -358,47 +383,47 @@ flowchart LR
 ## 4 · The comparison grid (what the hero table must show)
 
 ```text
-┌─────────────────────────┬────────┬───────────────────────────────────────────────────────┐
-│ row (vjepa_2_1_vitg_…)  │ clips  │ role                                                  │
-├─────────────────────────┼────────┼───────────────────────────────────────────────────────┤
-│ frozen                  │ —      │ floor (anchor, have)                                  │
-│ full_ft                 │ raw    │ forgetting ceiling (B4(a) Full-FT = Full Fine-Tuning) │
-│ pretrain_2X             │ raw    │ compute-matched continual SSL (anchor, have)          │
-│ lpft                    │ raw    │ LP-FT (Linear-Probing then Fine-Tuning) (B4(b))       │
-│ peft_lora / peft_dora   │ raw    │ PEFT (Parameter-Efficient Fine-Tuning) family (B1):   │
-│                         │        │ LoRA (Low-Rank Adaptation) / DoRA (Weight-            │
-│                         │        │ Decomposed Low-Rank Adaptation)                       │
-│ surgical_autorgn        │ raw    │ Surgical-FT namesake (B2 Auto-RGN =                   │
-│                         │        │ Automatic Relative Gradient Norm)                     │
-│ cassle / ewc            │ raw    │ continual-SSL anti-forgetting (B3 CaSSLe +            │
-│                         │        │ EWC = Elastic Weight Consolidation)                   │
-│ surgery_3stage_DI  *    │ FACTOR │ PROPOSED — must top all above, CI-separated           │
-│ surgery_raw (=ablation) │ raw    │ Q1.1 control (factor OFF)                             │
-└─────────────────────────┴────────┴───────────────────────────────────────────────────────┘
+┌─────────────────────────┬────────┬────────────────────────────────────────────────────────┐
+│ row (vjepa_2_1_…)       │ clips  │ role                                                   │
+├─────────────────────────┼────────┼────────────────────────────────────────────────────────┤
+│ frozen                  │ —      │ floor (anchor, have)                                   │
+│ full_ft                 │ raw    │ forgetting ceiling (B4(a) Full-FT = Full Fine-Tuning)  │
+│ pretrain_2X             │ raw    │ compute-matched continual SSL (anchor, have)           │
+│ lpft                    │ raw    │ LP-FT (Linear-Probing then Fine-Tuning) (B4(b))        │
+│ peft_lora / peft_dora   │ raw    │ PEFT (Parameter-Efficient Fine-Tuning) family (B1):    │
+│                         │        │ LoRA (Low-Rank Adaptation) / DoRA (Weight-             │
+│                         │        │ Decomposed Low-Rank Adaptation)                        │
+│ surgical_autorgn        │ raw    │ Surgical-FT namesake (B2 Auto-RGN =                    │
+│                         │        │ Automatic Relative Gradient Norm)                      │
+│ cassle / ewc            │ raw    │ continual-SSL anti-forgetting (B3 CaSSLe +             │
+│                         │        │ EWC = Elastic Weight Consolidation)                    │
+│ surgery_3stage_DI  *    │ FACTOR │ PROPOSED — must top all above, CI-separated            │
+│ surgery_raw (=ablation) │ raw    │ Q1.1 control (factor OFF) — isolates METHOD vs FACTORS │
+└─────────────────────────┴────────┴────────────────────────────────────────────────────────┘
 metrics: 14 (action, motion_cos, taxonomy, future_mse, +6 predictor-temporal, +4 encoder-temporal).
-scale:   POC 10k, leakage-safe split, 1B vitg backbone, BCa 95% CI. (validated, 2-wk-feasible)
+scale:   POC 10k, leakage-safe split, 2B vitG backbone (the BIGGEST — surgery's headline), BCa 95% CI.
 ```
 
 ---
 
-## 5 · Day-level schedule (build ORDER = § 0.5 BUILD ORDER waves — Auto-RGN (Automatic Relative Gradient Norm) FIRST; this is just the calendar · single 1× GPU ~$1.3/hr)
+## 5 · Day-level schedule (build ORDER = § 0.5 BUILD ORDER waves — Auto-RGN (Automatic Relative Gradient Norm) FIRST; this is just the calendar · single 1× Pro 6000 96 GB ~$1.5/hr — 2B ViT-G needs the big box)
 
 ```text
-┌───────┬───────────────────────────────────────────────────────────────────────────┐
-│ day   │ task                                                                      │
-├───────┼───────────────────────────────────────────────────────────────────────────┤
-│ 1-2   │ B1 DoRA (Weight-Decomposed Low-Rank Adaptation) wrapper + revive m09b ;   │
-│       │ B2 auto_rgn (Auto-RGN = Automatic Relative Gradient Norm) freeze fn ;     │
-│       │ 3-check + SANITY each                                                     │
-│ 3     │ B3 CaSSLe loss term + EWC (Elastic Weight Consolidation) Fisher reg       │
-│       │ (reuse FROZEN teacher + SPD = Selective Projection Decay slot) ; SANITY   │
-│ 4     │ B4 + raw/factor configs (config-only); registry rows; run_eval SANITY all │
-│ 5-10  │ POC train (vitg): full_ft, lpft, peft_lora, peft_dora, surgical_autorgn,  │
-│       │ cassle, ewc, surgery_raw  (~2-6h each on 1B) + per-arm eval               │
-│ 11-12 │ §G aggregate (m13) ; Figure-1 factorized-vs-raw Δ ; CI-separation check   │
-│ 13-14 │ write-up: baseline table, ablation, statistical rigor paragraph           │
-└───────┴───────────────────────────────────────────────────────────────────────────┘
-all baselines reuse run_train.sh BACKBONE=vjepa_2_1_vitg <arm> --POC + run_eval. No new loop.
+┌───────┬─────────────────────────────────────────────────────────────────────────────┐
+│ day   │ task                                                                        │
+├───────┼─────────────────────────────────────────────────────────────────────────────┤
+│ 1-2   │ B1 DoRA (Weight-Decomposed Low-Rank Adaptation) wrapper + revive m09b ;     │
+│       │ B2 auto_rgn (Auto-RGN = Automatic Relative Gradient Norm) freeze fn ;       │
+│       │ 3-check + SANITY each                                                       │
+│ 3     │ B3 CaSSLe loss term + EWC (Elastic Weight Consolidation) Fisher reg         │
+│       │ (reuse FROZEN teacher + SPD = Selective Projection Decay slot) ; SANITY     │
+│ 4     │ B4 + raw/factor configs (config-only); registry rows; run_eval SANITY all   │
+│ 5-10  │ POC train (vitG 2B): full_ft, lpft, peft_lora, peft_dora, surgical_autorgn, │
+│       │ cassle, ewc, surgery_raw  (~4-12h each on 2B) + per-arm eval                │
+│ 11-12 │ §G aggregate (m13) ; Figure-1 factorized-vs-raw Δ ; CI-separation check     │
+│ 13-14 │ write-up: baseline table, ablation, statistical rigor paragraph             │
+└───────┴─────────────────────────────────────────────────────────────────────────────┘
+all baselines reuse run_train.sh BACKBONE=vjepa_2_1_vitG <arm> --POC + run_eval (vitG 2B = run_train's default; the BIGGEST). No new loop.
 ```
 
 ## 6 · Risks / reviewer-proofing

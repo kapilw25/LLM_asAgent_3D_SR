@@ -1,14 +1,47 @@
 # iter18 · plan_baselines_CODE.md — DETAILED code plan per FT (Fine-Tuning) baseline
 
 > Companion to `plan_baselines_roadmap.md`. **Every abbrev is written `abbrev (FULL FORM)` at every mention.**
-> Reference modules RE-READ for this plan (line numbers below are from these): `scripts/run_train.sh`
-> (SUBCMD dispatch 263-488), `src/m09a1_pretrain_encoder.py`, `src/m09c1_surgery_encoder.py`,
-> `src/utils/training.py` (shared primitives), `configs/train/{base_optimization,surgery_base,
-> pretrain_encoder,surgery_3stage_DI_encoder}.yaml`.
-> Official-code repos that ground every snippet → the `§ 2` "Official code" table in
-> `plan_baselines_roadmap.md` (each repo's core file was READ, June 2026).
+> Reference modules RE-READ for this plan: `scripts/run_train.sh` (surgery dispatch 324-419),
+> `src/m09c1_surgery_encoder.py` (THE COPY SOURCE — complete, tested trainer), `src/utils/training.py`
+> (shared primitives), `configs/train/{base_optimization,surgery_base,surgical_autorgn_encoder}.yaml`.
+> Official-code repos grounding every snippet → the `§ 2` "Official code" table in `plan_baselines_roadmap.md`
+> (each repo's core file was READ, June 2026).
 
-## 📖 Full forms used below (read them again)
+---
+
+## 0 · ARCHITECTURE — each baseline is its OWN script (copy-first-then-factor)
+
+```text
+┌ rule ─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. Each FT baseline B1-B4 gets its OWN full trainer script — NEVER an if/freeze_rule branch inside    │
+│    m09c1_surgery_encoder.py. The paper NOVELTY (m09c1) stays un-polluted; the comparison stays        │
+│    un-attackable ("did surgery win because of a shared code path?" → no, every arm is isolated).      │
+│ 2. BUILD each by COPYING m09c1 VERBATIM FIRST (cp), THEN specialize its loop. m09c1 is the complete,  │
+│    battle-tested trainer — copying it means the baseline inherits EVERY already-built function. Do    │
+│    NOT build from scratch and do NOT revive a stale module.                                           │
+│ 3. WE CAN AFFORD REDUNDANCY; WE CANNOT MISS AN ALREADY-BUILT FUNCTION. A helper duplicated across 4   │
+│    copies costs a little disk; a MISSING helper costs a multi-error debug cycle — exactly the         │
+│    m09a1↔m09c1 drift (functions built+tested in m09a1 were absent in m09c1) that motivated this rule. │
+│ 4. Factoring genuinely-common helpers to src/utils/ is a SEPARATE post-copy phase (tracker #19),      │
+│    done AFTER all four scripts exist + pass SANITY. utils/training.py stays technique-agnostic (#49). │
+│ 5. EXCEPTION: surgery_raw IS surgery on raw clips → it stays a CONFIG of m09c1, not a new script.     │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+```text
+┌ baseline ─────────────────┬ own script (cp m09c1) ───────┬ status ──────────────┐
+│ B2 Auto-RGN               │ src/m09e_autorgn_encoder.py  │  BUILT this iter     │
+│ B1 LoRA → DoRA            │ src/m09b_peft_encoder.py     │ cp pending (#14)     │
+│ B3 CaSSLe + EWC           │ src/m09d_contssl_encoder.py  │ cp pending (#15)     │
+│ B4 Full-FT / LP-FT        │ src/m09f_naiveft_encoder.py  │ cp pending (#12)     │
+│ surgery_raw (RAW control) │ m09c1 + config (IS surgery)  │ config pending (#16) │
+│ surgery (OURS / novelty)  │ src/m09c1_surgery_encoder.py │ — untouched          │
+└───────────────────────────┴──────────────────────────────┴──────────────────────┘
+```
+
+---
+
+## 0.1 · Full forms used below (read them again)
 
 ```text
 ┌ abbrev ──┬ FULL FORM ─────────────────────────────────────────────────────────────┐
@@ -25,27 +58,26 @@
 │ SALT     │ Self-Anchored Latent Teacher       (Apple 2025)                        │
 └──────────┴────────────────────────────────────────────────────────────────────────┘
 ```
-> 🔒 **NAMING RULE (MANDATORY, enforced in review):** in every new `*.py` / `*.sh` / `*.yaml` / log
-> string / docstring, write the abbrev as `abbrev (FULL FORM)` at EVERY mention — never the bare
-> abbrev. Example config comment: `# freeze_rule: auto_rgn  → Auto-RGN (Automatic Relative Gradient
-> Norm), Lee et al. ICLR'23`. Example log: `print("[Auto-RGN (Automatic Relative Gradient Norm)] kept blocks", keep)`.
+> 🔒 **NAMING RULE (MANDATORY):** in every new `*.py` / `*.sh` / `*.yaml` / log string / docstring,
+> write the abbrev as `abbrev (FULL FORM)` at EVERY mention — never the bare abbrev. Arm names always
+> carry the `_encoder` suffix (`surgical_autorgn_encoder`, `peft_lora_encoder`, … — never bare).
 
 ---
 
-## 0 · The CONTRACT every new trainer must honor (so eval is FREE)
+## 0.2 · The CONTRACT every script must honor (so eval is FREE)
 
-Every m09* trainer in this repo emits the SAME two artifacts; honor them and `run_eval.sh` runs the
-9-metric suite with zero new eval code. The export helpers (REAL names, verified in `src/utils/training.py`):
+Every m09* trainer emits the SAME two artifacts; honor them and `run_eval.sh` runs the 9-metric suite
+with zero new eval code. Because each baseline is a COPY of m09c1, it inherits these calls for free.
 
 ```text
-┌ helper (src/utils/training.py) ──┬ writes ──────────────────────────────────────────────────────────┐
-│ export_student_for_eval(student, │ student_encoder.pt (key "student_state_dict", encoder only).     │
-│   path, explora_enabled=False)   │ explora_enabled=True FIRST merges LoRA/DoRA adapters into the    │
-│   :1372                          │ base → a PLAIN ViT (the PEFT export path). m09a1 calls it :1339. │
-│ finalize_outputs(*, student,     │ BOTH student_encoder.pt + <ckpt_prefix>_ckpt_best.pt (keys       │
-│   output_dir, ckpt_prefix, …)    │ "student"+"predictor"). The single keyword-only export path —    │
-│   :243                           │ m09a2 / m09c2 use it verbatim; reuse it in m09b/m09d.            │
-└──────────────────────────────────┴──────────────────────────────────────────────────────────────────┘
+┌ helper (src/utils/training.py) ──┬ writes ─────────────────────────────────────────────────────────┐
+│ export_student_for_eval(student, │ student_encoder.pt (key "student_state_dict", encoder only).    │
+│   path, explora_enabled=False)   │ explora_enabled=True FIRST merges LoRA/DoRA adapters into the   │
+│                                  │ base → a PLAIN ViT (the PEFT export path).                      │
+│ finalize_outputs(*, student,     │ BOTH student_encoder.pt + <ckpt_prefix>_ckpt_best.pt (keys      │
+│   output_dir, ckpt_prefix, …)    │ "student"+"predictor"). m09a2 / m09c2 use it verbatim; every    │
+│                                  │ copied baseline keeps its m09c1 call (just change ckpt_prefix). │
+└──────────────────────────────────┴─────────────────────────────────────────────────────────────────┘
 ```
 ```text
 ┌ artifact ────────────┬ schema / why ───────────────────────────────────────────────────────┐
@@ -53,175 +85,137 @@ Every m09* trainer in this repo emits the SAME two artifacts; honor them and `ru
 │                      │ taxonomy) load this.                                                │
 │ m09X_ckpt_best.pt    │ keys "student" + "predictor" — Stage 8 future_mse (m12d) + Stage 8b │
 │                      │ predictor-temporal (m12e) REQUIRE the "predictor" key. No predictor │
-│                      │ key → m12d/m12e FATAL for that arm (run_eval.sh:442-484 preflight). │
+│                      │ key → m12d/m12e FATAL for that arm (run_eval.sh preflight).         │
 │ configs/eval/        │ one row per arm {kind: vjepa, arch, crop, embed_dim} → run_eval.sh  │
 │  probe_encoders.yaml │ ENCODERS=<arm> → m12a–m12e → 9 metrics + paired BCa 95% CI.         │
 └──────────────────────┴─────────────────────────────────────────────────────────────────────┘
 ```
-> ⚠ PEFT (Parameter-Efficient Fine-Tuning) arms must STILL emit the `predictor` key (m12d/m12e). After
-> `merge_and_unload()`, pass the (unchanged) JEPA predictor through `finalize_outputs(... ckpt_prefix=…)`
-> so `m09b_ckpt_best.pt` carries both keys — else future_mse / predictor-temporal FATAL for that arm.
+> ⚠ PEFT arms must STILL emit the `predictor` key (m12d/m12e). After `merge_and_unload()`, pass the
+> (unchanged) JEPA predictor through `finalize_outputs(... ckpt_prefix="m09b")` so `m09b_ckpt_best.pt`
+> carries both keys — else future_mse / predictor-temporal FATAL for that arm.
 
 ---
 
-## 1 · Shared scaffolding — REUSE, do NOT rebuild (CLAUDE.md #49 isolation, but shared primitives)
+## 1 · Shared scaffolding — already in utils/training.py (every copy inherits it)
 
-Every technique below is a *small delta*; it reuses these `src/utils/training.py` primitives exactly as
-m09a1/a2/c1/c2 do (line numbers verified in the re-read):
+The copy-first rule means each baseline starts with m09c1's full set of calls into these tested
+primitives. Specialize only the loop body; never re-implement these.
 
 ```text
-┌ primitive (src/utils/training.py) ───┬ role ────────────────────────────────────────────────────────────┐
-│ build_student_predictor(mcfg, dcfg)  │ :216 → (student ViT, predictor) — identical kwargs across m09a/c │
-│ build_optimizer(student, predictor,  │ :833 → param groups. init_params=θ* anchors θ→θ* (SPD =          │
-│   cfg_opt, init_params=None)         │ Selective Projection Decay slot); Fisher-weight it → EWC         │
-│                                      │ (Elastic Weight Consolidation)                                   │
-│ set_trainable_prefix(student, n)     │ :1626 → unfreeze a CONTIGUOUS prefix of n blocks (surgery's      │
-│                                      │ per-stage unfreeze_below). Auto-RGN REPLACES this selection.     │
-│ build_scheduler(opt, opt_cfg, steps) │ single front-loaded warmup (capped 10%)                          │
-│ producer_thread(cfg,q,…)             │ RAW-clip CPU decode → GPU (m09a1/a2 path)                        │
-│ StreamingFactorDataset + _build_     │ on-the-fly D_L/D_A/D_I FACTOR clips (m09c1/c2 path)              │
-│   factor_loader(...)                 │                                                                  │
-│ run_motion_aux_step(student, ma_head │ motion_aux head CE+MSE (head cells; also aux on encoder cells)   │
-│   , …)                               │                                                                  │
-│ assert_encoder_frozen(student) :1389 │ freeze guard (head cells + Auto-RGN sanity)                      │
-│ export_student_for_eval :1372 /      │ the export CONTRACT (§ 0) — student_encoder.pt + ckpt_best.pt    │
-│   finalize_outputs :243              │                                                                  │
-│ AdaptiveBatchSizer + cuda_cleanup    │ OOM safety (24 GB SANITY / 96 GB FULL)                           │
-└──────────────────────────────────────┴──────────────────────────────────────────────────────────────────┘
+┌ primitive (src/utils/training.py) ─────┬ role ─────────────────────────────────────────────────────────────┐
+│ build_student_predictor(mcfg, dcfg)    │ :216 → (student ViT, predictor) — identical kwargs across m09*    │
+│ build_optimizer(student, predictor,    │ :833 → param groups. init_params=θ* anchors θ→θ* (SPD slot);      │
+│   cfg_opt, init_params=None)           │ Fisher-weight it → EWC (Elastic Weight Consolidation)             │
+│ set_trainable_prefix(student, n)       │ :1626 → unfreeze a CONTIGUOUS prefix of n blocks. Auto-RGN /      │
+│                                        │ Full-FT REPLACE this selection with their own.                    │
+│ select_blocks_auto_rgn(...)            │ :1642 → B2 Auto-RGN primitive (OOM-retry + gradient-checkpoint    │
+│                                        │ scoring built in). Called by m09e; technique-agnostic (#49).      │
+│ build_scheduler(opt, opt_cfg, steps)   │ single front-loaded warmup (capped 10%)                           │
+│ StreamingFactorDataset / FactorSampler │ FACTOR clips (surgery path) — OFF for raw baselines via config    │
+│ enable_gradient_checkpointing(model)   │ :922 → ~2-4× activation-memory cut (idempotent)                   │
+│ export_student_for_eval :1372 /        │ the export CONTRACT (§ 0.2) — student_encoder.pt + ckpt_best.pt   │
+│   finalize_outputs :243                │                                                                   │
+│ AdaptiveBatchSizer + cuda_cleanup      │ OOM safety (48 GB SANITY / 96 GB FULL) — sub-batch + on_oom retry │
+└────────────────────────────────────────┴───────────────────────────────────────────────────────────────────┘
 ```
-> m09a1 freeze knob = `layer_freeze.{enabled, freeze_below}` (m09a1:280-313): freeze blocks `[0, freeze_below)`,
-> train `[freeze_below, n_blocks)`. pretrain_encoder.yaml = `freeze_below: 20` (train 20-48). m09c1 freeze
-> knob = per-stage `surgery.stages[i].unfreeze_below` (depth fraction) → `set_trainable_prefix`.
+> m09a1 freeze knob = `layer_freeze.{enabled, freeze_below}`; pretrain_encoder.yaml `freeze_below: 20`.
+> m09c1 freeze knob = per-stage `surgery.stages[i].unfreeze_below` → `set_trainable_prefix`. A copied
+> baseline picks whichever knob its technique needs (Full-FT = freeze_below 0; LP-FT = lp_ft_stage0).
 
 ---
 
-## 2 · Per-technique code plan — in BUILD ORDER (§ 0.5 of plan_baselines_roadmap.md)
+## 2 · Per-baseline code plan — copy m09c1, then the labelled delta
 
-> Each snippet is grounded in the official repo READ for it (links → roadmap § 2 table). Where our
-> setup forces a deviation from the original, it is labelled **ADAPTATION** and must be stated as such
-> in the paper (CLAUDE.md NO-LAZY / FAIL-LOUD: never present an adaptation as the original method).
+> Each delta is grounded in the official repo READ for it (links → roadmap § 2 table). Where our setup
+> forces a deviation it is labelled **ADAPTATION** and must be stated as such in the paper.
 
-### 🚩 WAVE 1 · B2 · Auto-RGN (Automatic Relative Gradient Norm) — the KILL-SHOT
+### 🚩 B2 · Auto-RGN (Automatic Relative Gradient Norm) — ✅ AS-BUILT (the KILL-SHOT)
 
 ```text
-WHERE            a freeze_rule BRANCH inside src/m09c1_surgery_encoder.py — NOT a new module.
-NEW module?      NO. Auto-RGN = surgery minus factors with gradient-picked blocks; m09c1 already has
-                 the per-stage block-unfreeze loop + the RAW path.
-contract-clean?  YES. freeze_rule is a PARAMETER {depth_fraction (current) | auto_rgn}, resolved from
-                 yaml + a new --freeze-rule CLI arg (required=True, argparse choices=[...]) — NOT an
-                 `if technique==` branch (honors utils/training.py technique-agnostic contract #49).
-data             RAW clips: factor_streaming=false ; EMA teacher ; NO SALT/SPD/saliency/replay.
-budget-match     k = round(n_blocks × surgery_deepest_unfreeze_below) = round(48 × 0.167) = 8 blocks →
-                 EXACTLY surgery's trainable-param count (else the namesake comparison is attackable).
-single-shot      Auto-RGN picks ONCE on a warmup batch (single trainable phase, NOT 3 stages).
+SCRIPT        src/m09e_autorgn_encoder.py  =  cp of m09c1_surgery_encoder.py, docstring relabelled
+              "iter18 B2 BASELINE … NOT the paper novelty". m09c1 itself is UNTOUCHED (pure surgery).
+DELTA         the stage-loop reads cfg["surgery"]["freeze_rule"]==auto_rgn (from the yaml, no CLI arg)
+              → calls utils.training.select_blocks_auto_rgn ONCE at stage 0 instead of set_trainable_prefix.
+PRIMITIVE     select_blocks_auto_rgn lives in utils/training.py (:1642) — shared, technique-agnostic.
+data          RAW clips: replay.raw_pretrain_pct=1.0 ; EMA teacher ; NO SALT/SPD/saliency.
+budget-match  k = round(48 × surgery deepest unfreeze_below 0.167) = 8 blocks → EXACTLY surgery's
+              trainable-param count (else the namesake comparison is attackable).
+single-shot   Auto-RGN picks ONCE on n_score_batches warmup batches (single trainable phase).
 ```
 
-**(a) OFFICIAL RGN scorer — faithful to `anniesch/surgical-finetuning` `main.py`**
-(`get_lr_weights` / `get_grad_norms`): per-PARAMETER-TENSOR, L2/Frobenius, averaged over the first
-5 batches, recomputed each epoch, norm/LayerNorm tensors excluded, gradients from `autograd.grad`
-with NO optimizer step.
+**(a) OFFICIAL RGN scorer — faithful to `anniesch/surgical-finetuning` `main.py`** (`get_lr_weights` /
+`get_grad_norms`): per-PARAMETER-TENSOR, L2/Frobenius, averaged over the first 5 batches, norm/LayerNorm
+tensors excluded, gradients from a fwd+bwd with NO optimizer step. **AS-BUILT** this reuses the real
+training step `_train_step_grad_accum` so masks / EMA-teacher / predictor / JEPA loss are bit-identical.
 
-```python
-# src/m09c1_surgery_encoder.py — RGN (Relative Gradient Norm) scoring (faithful)
-def rgn_scores(student, predictor, batches5, jepa_loss_fn):        # repo: itertools.islice(loader, 5)
-    acc = {}                                                       # name -> [per-batch RGN]
-    for x in batches5:
-        student.zero_grad(set_to_none=True)
-        loss  = jepa_loss_fn(student, predictor, x)                # repo uses F.cross_entropy; SSL → JEPA L1
-        names = [n for n, _ in student.named_parameters()]
-        grads = torch.autograd.grad(loss, [p for _, p in student.named_parameters()],
-                                    retain_graph=False, allow_unused=True)   # NO opt.step() during scoring
-        for (n, p), g in zip(student.named_parameters(), grads):
-            if g is None or "norm" in n.lower(): continue          # repo skips "bn"/LayerNorm tensors
-            acc.setdefault(n, []).append((g.norm() / (p.norm() + 1e-12)).item())   # RGN = ||g||₂ / ||θ||₂
-    return {n: sum(v) / len(v) for n, v in acc.items()}            # repo: mean over the 5 batches
-```
-
-**(b) OFFICIAL selection = SOFT per-tensor LR — we DELIBERATELY do not use it.** The repo keeps EVERY
-tensor trainable and scales its LR: `lr_tensor = (RGN / max RGN) · base_lr` (tiny RGN → lr≈0 = soft
-freeze). That cannot hit a FIXED trainable-param budget, which the namesake comparison vs surgery
-REQUIRES. So we replace it with the budget-matched hard top-k below.
+**(b) OFFICIAL selection = SOFT per-tensor LR — we DELIBERATELY do not use it.** The repo keeps every
+tensor trainable and scales its LR `lr ∝ RGN/maxRGN`. That cannot hit a FIXED trainable-param budget,
+which the comparison vs surgery REQUIRES → replaced by the budget-matched hard top-k.
 
 **(c) OUR budget-matched ADAPTATION — hard top-k BLOCKS (state as an adaptation in the paper).**
-Aggregate the per-tensor RGN to a per-block mean and unfreeze the top-k blocks via `requires_grad`,
-so the trainable-param count EXACTLY equals surgery's deepest stage (k=8 of 48).
 
 ```python
-# src/m09c1_surgery_encoder.py — Auto-RGN block selection (budget-matched ADAPTATION of the soft-LR original)
-def select_blocks_auto_rgn(student, predictor, batches5, jepa_loss_fn, k):
-    rgn = rgn_scores(student, predictor, batches5, jepa_loss_fn)          # faithful RGN (a)
-    per_block = {}                                                        # block idx -> [tensor RGNs]
-    for name, score in rgn.items():
-        if name.startswith("blocks."):
-            b = int(name.split(".")[1]); per_block.setdefault(b, []).append(score)
-    block_rgn = {b: sum(v) / len(v) for b, v in per_block.items()}        # per-block mean (repo-consistent reduction)
-    keep = set(sorted(block_rgn, key=block_rgn.get, reverse=True)[:k])    # top-k loudest blocks
-    for b, blk in enumerate(student.blocks):
-        for p in blk.parameters(): p.requires_grad = (b in keep)          # hard freeze (vs set_trainable_prefix)
-    student.zero_grad(set_to_none=True)
-    print(f"[Auto-RGN (Automatic Relative Gradient Norm)] kept {sorted(keep)} (k={k}, budget-matched)")
-    return sorted(keep)
-# WIRE: in m09c1 train(), when freeze_rule=="auto_rgn" → call this ONCE before the (single) trainable
-# phase, INSTEAD of the per-stage set_trainable_prefix(student, n) depth-fraction path.
+# src/utils/training.py :1642  (AS-BUILT — shared primitive; m09e calls it; m09c1 does NOT)
+def select_blocks_auto_rgn(student, teacher, predictor, score_clips, mask_generators, cfg,
+                           dtype, mp_cfg, scaler, sizer, loss_exp, init_params, depth, device, k):
+    set_trainable_prefix(student, depth)        # ALL blocks trainable → grads flow everywhere
+    enable_gradient_checkpointing(student)      # all-48-block backward → recompute acts (fit 48 GB)
+    for clips in score_clips:                   # n_score_batches warmup batches
+        while True:                             # OOM-retry: sizer halves micro-batch until it fits
+            _bs = sizer.size
+            try: _train_step_grad_accum(...); break          # fwd+bwd, NO opt.step
+            except torch.cuda.OutOfMemoryError:
+                if sizer.size >= _bs: raise RuntimeError("OOM at min sub-batch …")
+        # RGN(tensor) = ||grad||₂ / ||θ||₂ ; skip "norm"/LayerNorm tensors (repo convention)
+    block_rgn = per-block mean of the tensor RGNs           # aggregate tensor→block
+    keep = top-k blocks by mean RGN ; p.requires_grad = (b in keep)   # hard freeze the rest
+    print(f"[Auto-RGN (Automatic Relative Gradient Norm)] kept top-{k} = {sorted(keep)} (budget-matched)")
 ```
 
 ```text
-CONFIG   configs/train/surgical_autorgn.yaml  (clone surgery_3stage_DI_encoder.yaml; set
-         freeze_rule: auto_rgn        # Auto-RGN (Automatic Relative Gradient Norm), Lee et al. ICLR'23
-         auto_rgn: {k_blocks: 8, n_score_batches: 5}   # budget-match k=8/48 ; 5-batch RGN avg (repo)
-         factor_streaming.{sanity,poc,full}: false     # RAW clips, no factor curriculum
-         surgery.teacher_mode: ema ; optimization.spd.enabled: false ; optimization.loss.saliency_weighting: false
-         replay.raw_pretrain_pct: 0.0
-         surgery.stages: [ single stage, unfreeze_below ignored when freeze_rule==auto_rgn ])
-CLI      m09c1 add --freeze-rule {depth_fraction,auto_rgn} (required=True, argparse choices) →
-         cfg["surgery"]["freeze_rule"]. run_train.sh resolves it from yaml via _y (single source).
-RUN      BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_autorgn --POC   (vitg 1B kill-shot)
-REGISTRY probe_encoders.yaml: vjepa_2_1_vitg_surgical_autorgn {kind: vjepa, arch: vit_giant_xformers_2_1}
-EVAL     ENCODERS=vjepa_2_1_vitg_surgical_autorgn ./scripts/run_eval.sh --POC  → 9 metrics, FREE
-VERIFY   3-check → smallest SANITY of m09c1 --freeze-rule auto_rgn on Pro 5000 (assert len(keep)==k)
-COMPARE  surgery > Auto-RGN? AND surgery > vanilla continual SSL 2× (pretrain_2X, RAW control)?
-         → run on vitg 1B / vitG 2B, NEVER vJEPA 2.0 (false-kill, surgery loses there 0/5/4).
+CONFIG   configs/train/surgical_autorgn_encoder.yaml (extends surgery_base):
+         surgery.freeze_rule: auto_rgn            # read straight from yaml (no CLI arg in m09e)
+         surgery.auto_rgn: {k_blocks: 8, n_score_batches: 5}
+         surgery.teacher_mode: EMA ; lp_ft_stage0: false ; spd.enabled: false ; saliency: false
+         replay.raw_pretrain_pct: 1.0             # ALL raw clips = "surgery method on RAW"
+RUN      REPLAY_OVERRIDE=off BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh surgical_autorgn_encoder --SANITY
+         (run_train RUNNER var routes the SUBCMD → m09e; OUT_DIR = …/m09e_autorgn_encoder)
+REGISTRY probe_encoders.yaml: vjepa_2_1_surgical_autorgn_encoder {kind: vjepa, arch: vit_gigantic_xformers,
+         crop: 384, embed_dim: 1664}             # 2B ViT-G, depth 48
+VERIFY   3-check ✅ ; SANITY on the REAL 2B ViT-G (assert "kept top-8", no OOM with the retry).
+COMPARE  surgery > Auto-RGN? AND surgery > vanilla continual SSL 2×? → on vitG 2B (surgery's best 4/0/5).
 ```
 
-### 🚩 WAVE 1 · B4 · Full-FT (Full Fine-Tuning) / LP-FT (Linear-Probing then Fine-Tuning) — config-only
+### 🚩 B4 · Full-FT (Full Fine-Tuning) / LP-FT (Linear-Probing then Fine-Tuning)
 
 ```text
-NO new code. Both reuse existing trainers + freeze knobs.
-
-B4(a) Full-FT (Full Fine-Tuning)   configs/train/full_ft.yaml → m09a1_pretrain_encoder.py with
-                                   layer_freeze.freeze_below: 0   (= all 48 blocks trainable; m09a1
-                                   :289-307 trains [0,n_blocks)), RAW clips, ONE base_lr for every
-                                   block. Standard end-to-end FT — the "forgetting ceiling" expected to
-                                   distort temporal features (Kumar ICLR'22: full-FT underperforms OOD).
-B4(b) LP-FT (Linear-Probing then   configs/train/lpft.yaml → m09c1_surgery_encoder.py with
-  Fine-Tuning, Kumar ICLR'22)      surgery.lp_ft_stage0.enabled: true (m09c1:685-701 prepends a head-
-                                   only warmup stage, unfreeze_below=0.0) THEN unfreeze; factor_
-                                   streaming:false (RAW); NO factor curriculum → = surgery minus factors.
+SCRIPT   src/m09f_naiveft_encoder.py = cp m09c1. ONE script, two configs (Full-FT vs LP-FT).
+DELTA    factor curriculum OFF (raw clips, single stage). Full-FT: all 48 blocks trainable
+         (unfreeze_below 0.0). LP-FT: surgery.lp_ft_stage0.enabled=true (the head-only warmup
+         stage m09c1 already prepends) THEN unfreeze.
 ```
-> **CRITICAL LP-FT detail (Kumar et al. ICLR'22, AnanyaKumar/transfer_learning `run_adaptation_experiments.py`):**
-> phase-2 (encoder unfreeze) LR must be FAR LOWER than phase-1 (head probe) — the paper warms the head
-> at LR ≈ 1e-1 then fine-tunes the backbone at ≈ 1e-5…1e-4 (≈10³–10⁴× lower) so the already-accurate head
-> does not distort pretrained features. So `lpft.yaml`: stage0 `head_lr_multiplier` HIGH for the probe,
-> encoder stages `optimization.base_lr` LOW (≪ the probe LR). Full-FT keeps ONE (un-warmed) LR for all
-> blocks → that LR/distortion contrast IS the LP-FT-vs-Full-FT story.
+> **CRITICAL LP-FT detail (Kumar et al. ICLR'22, AnanyaKumar/transfer_learning):** phase-2 (encoder
+> unfreeze) LR must be FAR LOWER than phase-1 (head probe) — head ≈ 1e-1, backbone ≈ 1e-5…1e-4
+> (≈10³–10⁴× lower) so the already-accurate head does not distort pretrained features. So
+> `lpft_encoder.yaml`: stage0 `head_lr_multiplier` HIGH, encoder stages `base_lr` LOW. Full-FT keeps
+> ONE (un-warmed) LR for all blocks → that LR/distortion contrast IS the LP-FT-vs-Full-FT story.
 
 ```text
-RUN      run_train.sh SUBCMDs `full_ft` (→ m09a1) and `lpft` (→ m09c1) with those yamls.
-REGISTRY vjepa_2_1_vitg_{full_ft, lpft} rows in probe_encoders.yaml.
+CONFIG   full_ft_encoder.yaml (freeze_below 0, one LR) ; lpft_encoder.yaml (lp_ft_stage0 on, low enc LR).
+RUN      run_train.sh SUBCMDs `full_ft_encoder` / `lpft_encoder` → m09f_naiveft_encoder.py (RUNNER var).
+REGISTRY vjepa_2_1_{full_ft_encoder, lpft_encoder} rows (2B ViT-G, vit_gigantic_xformers, embed_dim 1664).
 ```
 
-### WAVE 2 · B1 · PEFT (Parameter-Efficient Fine-Tuning): LoRA (Low-Rank Adaptation) → DoRA (Weight-Decomposed Low-Rank Adaptation)
+### B1 · PEFT (Parameter-Efficient Fine-Tuning): LoRA (Low-Rank Adaptation) → DoRA (Weight-Decomposed LoRA)
 
 ```text
-WHERE        revive src/legacy/m09b_explora.py → src/m09b_peft.py (mv out of legacy). Its own loop (#49).
-NEW module?  REVIVED. m09b already injected LoRA rank-16 on attn.qkv + mlp.fc1/fc2 (ExPLoRA). Swap the
-             hand-rolled injection for HuggingFace peft (gold standard) so DoRA is a one-flag delta.
-loop         mirrors m09a1 continual SSL on RAW, but trains ONLY the adapters (+ DoRA magnitude vector).
-export       MERGE adapters into base → eval loads a PLAIN ViT (no PEFT dep at eval).
+SCRIPT   src/m09b_peft_encoder.py = cp m09c1 (NOT a revive of the stale m09b_explora — copy-first avoids
+         its missing-function drift). Specialize: wrap the student in HuggingFace peft adapters; train
+         ONLY the adapters (+ DoRA magnitude vector); MERGE before export → eval loads a PLAIN ViT.
 ```
 
 ```python
-# src/m09b_peft.py — gold-standard PEFT via HuggingFace peft (microsoft/LoRA + NVlabs/DoRA mechanism)
+# src/m09b_peft_encoder.py — gold-standard PEFT via HuggingFace peft (LoRA + DoRA, one flag)
 from peft import LoraConfig, get_peft_model
 TARGETS = ["qkv", "proj", "fc1", "fc2"]          # timm ViT: block.attn.{qkv,proj} + block.mlp.{fc1,fc2}
 
@@ -230,115 +224,109 @@ def wrap_peft(student, r=16, alpha=32, use_dora=False):                 # use_do
                      lora_dropout=0.0, bias="none", use_dora=use_dora)  # scaling = alpha/r
     return get_peft_model(student, cfg)          # base auto-FROZEN; only adapters (+DoRA m) require grad
 
-# LoRA forward (peft lora/layer.py):  y = W0·x + (B @ A)·x · (alpha/r)        # A kaiming, B zeros ⇒ Δ=0 at init
-# DoRA forward (peft lora/dora.py · NVlabs dora.py):  W = m ⊙_out (W0 + B@A·s) / ||W0 + B@A·s||_{dim=1}
-#   m  = per-OUTPUT-channel magnitude, init = ||W0||_{dim=1}  (DoraLinearLayer.weight / weight_m_wdecomp)
-#   the direction-norm denominator is DETACHED (dora_simple) ⇒ grad flows only to m and to A,B.
+# LoRA fwd:  y = W0·x + (B@A)·x·(alpha/r)   (A kaiming, B zeros ⇒ Δ=0 at init)
+# DoRA fwd:  W = m ⊙_out (W0 + B@A·s) / ||W0 + B@A·s||_{dim=1}   (m = per-out-channel magnitude; denom detached)
 
-# EXPORT — eval loads a PLAIN ViT, zero peft dep:
-def export_peft(peft_model, predictor, output_dir):
-    merged = peft_model.merge_and_unload()       # LoRA: W += B@A·s ;  DoRA: W = (m/||·||)·(W0+B@A·s)
+def export_peft(peft_model, predictor, output_dir):                    # eval loads a PLAIN ViT, zero peft dep
+    merged = peft_model.merge_and_unload()       # LoRA: W += B@A·s ; DoRA: W = (m/||·||)·(W0+B@A·s)
     finalize_outputs(student=merged, output_dir=output_dir, ckpt_prefix="m09b",   # keeps predictor key
                      ckpt_payload={"student": merged.state_dict(), "predictor": predictor.state_dict()})
-    # (or export_student_for_eval(merged, output_dir/"student_encoder.pt", explora_enabled=True) for the encoder-only file)
 ```
 
 ```text
 DEP      add `peft>=0.12` to setup_env_uv.sh + requirements_gpu.txt (use_dora needs ≥0.12). Cite in docstring.
-CONFIG   configs/train/peft_lora.yaml (use_dora:false) , peft_dora.yaml (use_dora:true)  (clone explora.yaml)
-RUN      run_train.sh SUBCMDs `peft_lora` / `peft_dora` → m09b_peft dispatch.
-REGISTRY vjepa_2_1_vitg_{peft_lora, peft_dora} rows.
+CONFIG   peft_lora_encoder.yaml (use_dora:false) , peft_dora_encoder.yaml (use_dora:true).
+RUN      run_train.sh SUBCMDs `peft_lora_encoder` / `peft_dora_encoder` → m09b_peft_encoder.py (RUNNER var).
+REGISTRY vjepa_2_1_{peft_lora_encoder, peft_dora_encoder} rows (2B ViT-G).
 NOTE     PEFT may LOOK competitive on action_top1 (capacity) but should LOSE on temporal/world-model
          metrics — that asymmetry IS the story (PEFT adapts features; surgery adapts dynamics).
 ```
 
-### WAVE 2 · B3 · Continual-SSL: CaSSLe + EWC (Elastic Weight Consolidation)
+### B3 · Continual-SSL: CaSSLe + EWC (Elastic Weight Consolidation)
 
 ```text
-WHERE        NEW module src/m09d_contssl.py — sibling of m09a1 (continual SSL on RAW). Own loop (#49).
-NEW module?  YES. Keeps m09a1 clean; adds 2 config-gated losses on top of the m09a1 JEPA loop.
-data         RAW clips (continual SSL on the new domain; no factors).
+SCRIPT   src/m09d_contssl_encoder.py = cp m09c1. Specialize: 2 config-gated regularizers on RAW clips
+         (factors off, all blocks trainable). CaSSLe vs EWC via config.
 ```
 
-**CaSSLe** (Fini CVPR'22 · `DonkeyShot21/cassle` `distillers/predictive.py`, `losses/byol.py`): a
-predictor `g` maps the CURRENT feature to predict the FROZEN previous-model feature; distillation
-REUSES the SSL loss; stop-grad on the frozen target. We already hold a FROZEN teacher (the SALT slot).
+**CaSSLe** (Fini CVPR'22 · `DonkeyShot21/cassle`): a predictor `g` maps the CURRENT feature to predict the
+FROZEN previous-model feature; distillation reuses the SSL loss; stop-grad on the frozen target. We
+already hold a FROZEN teacher (the SALT slot in m09c1).
 
 ```python
-# src/m09d_contssl.py — CaSSLe distillation (reuses the FROZEN SALT teacher already in the recipe)
-g = nn.Sequential(nn.Linear(D, 2048), nn.BatchNorm1d(2048), nn.ReLU(), nn.Linear(2048, D))  # repo: D→2048→D BN-MLP
+# src/m09d_contssl_encoder.py — CaSSLe distillation (reuses the FROZEN teacher already in the m09c1 recipe)
+g = nn.Sequential(nn.Linear(D, 2048), nn.BatchNorm1d(2048), nn.ReLU(), nn.Linear(2048, D))  # repo D→2048→D
 def cassle_loss(z_student, z_frozen_teacher):                 # z_frozen from the FROZEN teacher (no_grad)
     return compute_jepa_loss(g(z_student), z_frozen_teacher.detach())   # reuse SSL loss; sg on target
-# L_total = L_jepa  +  λ_cassle · cassle_loss(z_student, sg(teacher_frozen_feat))    # repo λ ≈ 1.0
-#   (g plays the SAME role as the JEPA predictor — you may clone the predictor head instead of a fresh MLP.)
+# L_total = L_jepa + λ_cassle · cassle_loss(z_student, sg(teacher_frozen_feat))   # repo λ ≈ 1.0
 ```
 
-**EWC** (Kirkpatrick'17 · `moskomule/ewc.pytorch` `utils.py` · `GMvandeVen/continual-learning`): a
-diagonal Fisher `F_i` weights an anchor-to-init penalty. Our anchor slot already exists — SPD
-(Selective Projection Decay) via `build_optimizer(init_params=θ*)` anchors θ→θ* with uniform weight 1;
-EWC = that slot with per-parameter weight `F_i`.
+**EWC** (Kirkpatrick'17 · `moskomule/ewc.pytorch`): a diagonal Fisher `F_i` weights an anchor-to-init
+penalty. The anchor slot already exists — SPD via `build_optimizer(init_params=θ*)` anchors θ→θ* with
+uniform weight 1; EWC = that slot with per-parameter weight `F_i`.
 
 ```python
-# src/m09d_contssl.py — diagonal Fisher (SSL task-loss replaces the classification NLL of the repo)
+# src/m09d_contssl_encoder.py — diagonal Fisher (SSL task-loss replaces the repo's classification NLL)
 def estimate_fisher(student, predictor, subset_batches, jepa_loss_fn):     # N ≈ few-hundred clips, small bs
     F = {n: torch.zeros_like(p) for n, p in student.named_parameters() if p.requires_grad}
-    for x in subset_batches:                                  # repo: model.eval(); 1 sample at a time
+    for x in subset_batches:
         student.zero_grad(set_to_none=True)
         jepa_loss_fn(student, predictor, x).backward()        # ∂L_jepa/∂θ  (NOT NLL — we have no labels)
         for n, p in student.named_parameters():
             if p.requires_grad and p.grad is not None:
                 F[n] += p.grad.detach() ** 2 / len(subset_batches)         # F_i = mean over N of (∂L/∂θ_i)²
     return F
-# L_ewc = λ_ewc · Σ_i  F_i · (θ_i − θ*_i)²        (θ* = pretrained init = the stored SPD anchor)
-# WIRE: build_optimizer(student, predictor, cfg_opt, init_params={"theta_star": θ*, "fisher": F}) →
-#       the SPD anchor term multiplies (θ−θ*)² by F_i instead of 1.0. ONE-time Fisher pass before training.
+# L_ewc = λ_ewc · Σ_i F_i · (θ_i − θ*_i)²   (θ* = pretrained init = the stored SPD anchor). ONE-time pass.
 ```
 
 ```text
-CONFIG   configs/train/cassle.yaml (λ_cassle on, EWC off) , ewc.yaml (EWC Fisher reg on, CaSSLe off)
-         — both clone pretrain_encoder.yaml (RAW continual SSL base). Keys: loss.cassle_lambda,
-         optimization.ewc.{enabled, lambda, fisher_n_batches}.
-RUN      run_train.sh SUBCMDs `cassle` / `ewc` → m09d_contssl dispatch.
-REGISTRY vjepa_2_1_vitg_{cassle, ewc} rows.
+CONFIG   cassle_encoder.yaml (λ_cassle on, EWC off) , ewc_encoder.yaml (EWC Fisher on, CaSSLe off).
+         Keys: loss.cassle_lambda, optimization.ewc.{enabled, lambda, fisher_n_batches}.
+RUN      run_train.sh SUBCMDs `cassle_encoder` / `ewc_encoder` → m09d_contssl_encoder.py (RUNNER var).
+REGISTRY vjepa_2_1_{cassle_encoder, ewc_encoder} rows (2B ViT-G).
 ```
 
-### RAW control · surgery_raw (factor OFF) — disentangles BLOCKS vs DATA
+### RAW control · surgery_raw_encoder (factor OFF) — config-only on m09c1 (THE causal control)
 
 ```text
-NO new code. configs/train/surgery_3stage_DI_encoder.yaml with factor_streaming: false → m09c1 trains
-the STRUCTURED 4/8/8 blocks on RAW clips. Lets you attribute an Auto-RGN (Automatic Relative Gradient
-Norm) win to the factor DATA (surgery vs surgery_raw) vs the structured BLOCKS (surgery_raw vs
-Auto-RGN). Pairs with vanilla continual SSL 2× (pretrain_2X) for the full RAW-vs-FACTOR control
-(§3 of plan_baselines_roadmap.md).
+NO new script (it IS surgery). configs/train/surgery_raw_encoder.yaml = surgery on RAW clips
+(replay.raw_pretrain_pct=1.0, the STRUCTURED 4/8/8 blocks, factors OFF) → m09c1_surgery_encoder.py.
+THE single most important ablation — surgery changes TWO things vs the baselines: DATA (factor vs raw)
+AND METHOD. surgery_raw isolates them:
+  surgery − surgery_raw_encoder   = the FACTOR-curriculum effect (Figure-1, the headline causal claim)
+  surgery_raw_encoder − Auto-RGN  = the METHOD effect (structured blocks vs gradient-heuristic blocks)
+Pairs with vanilla continual SSL 2× (pretrain_2X_encoder) for the full RAW-vs-FACTOR control.
+Registry row vjepa_2_1_surgery_raw_encoder (2B ViT-G). RUNNER stays m09c1 (default).
 ```
 
 ---
 
-## 3 · run_train.sh wiring (new SUBCMDs) — mirror the existing `case "$SUBCMD"` dispatch (263-488)
+## 3 · run_train.sh wiring — RUNNER var routes each SUBCMD to its OWN script
 
-The existing dispatch resolves a `TRAIN_CFG`, builds an `OUT_DIR=outputs/${mode_dir}/${BACKBONE}/<arm>`,
-reads recipe knobs from the yaml via `_y() { yaml_extract.py "$TRAIN_CFG" "$1"; }`, then calls the
-trainer with `--subset $TRAIN_POOL --val-subset $VAL_SPLIT --output-dir $OUT_DIR` (+ `--init-from-ckpt
-$SURGERY_INIT` for c1-derived arms). Add these branches:
+The surgery dispatch (324-419) now sets, per SUBCMD, a `RUNNER` (which `*.py` to exec) + `MODULE_PREFIX`
+(the OUT_DIR / log namespace), both defaulting to m09c1, then `python -u "$RUNNER" …` with the same
+`--subset $TRAIN_POOL --output-dir $OUT_DIR --init-from-ckpt $SURGERY_INIT --cache-policy` plumbing.
 
 ```text
-┌ new SUBCMD ───────────┬ dispatches → ─────────────┬ train-config + key flag ──────────────────────┐
-│ surgical_autorgn      │ m09c1_surgery_encoder.py  │ surgical_autorgn.yaml  --freeze-rule auto_rgn │
-│ full_ft               │ m09a1_pretrain_encoder.py │ full_ft.yaml (layer_freeze.freeze_below=0)    │
-│ lpft                  │ m09c1_surgery_encoder.py  │ lpft.yaml  --lp-ft-stage0 on  (factor off)    │
-│ peft_lora / peft_dora │ m09b_peft.py              │ peft_lora.yaml / peft_dora.yaml               │
-│ cassle / ewc          │ m09d_contssl.py           │ cassle.yaml / ewc.yaml                        │
-│ surgery_raw           │ m09c1_surgery_encoder.py  │ surgery_3stage_DI_encoder.yaml (factor off)   │
-└───────────────────────┴───────────────────────────┴───────────────────────────────────────────────┘
+┌ SUBCMD ──────────────────┬ RUNNER (own script, cp m09c1) ─┬ train-config + key delta ───────────────┐
+│ surgical_autorgn_encoder │ m09e_autorgn_encoder.py        │ surgical_autorgn_encoder.yaml           │
+│                          │                                │   (freeze_rule: auto_rgn, from yaml)    │
+│ full_ft_encoder          │ m09f_naiveft_encoder.py        │ full_ft_encoder.yaml (freeze_below 0)   │
+│ lpft_encoder             │ m09f_naiveft_encoder.py        │ lpft_encoder.yaml (lp_ft_stage0 on)     │
+│ peft_lora_encoder        │ m09b_peft_encoder.py           │ peft_lora_encoder.yaml (use_dora false) │
+│ peft_dora_encoder        │ m09b_peft_encoder.py           │ peft_dora_encoder.yaml (use_dora true)  │
+│ cassle_encoder           │ m09d_contssl_encoder.py        │ cassle_encoder.yaml (cassle_lambda)     │
+│ ewc_encoder              │ m09d_contssl_encoder.py        │ ewc_encoder.yaml (ewc fisher)           │
+│ surgery_raw_encoder      │ m09c1_surgery_encoder.py (def) │ surgery_raw_encoder.yaml (factors off)  │
+└──────────────────────────┴────────────────────────────────┴─────────────────────────────────────────┘
 ```
-- `surgical_autorgn` / `lpft` / `surgery_raw` slot into the EXISTING `surgery_*` case (264-? → 324-407):
-  add to its inner `case "$SUBCMD"` that maps SUBCMD→`TRAIN_CFG`+`VARIANT_TAG`, and pass the new
-  `--freeze-rule $(_y surgery.freeze_rule)` in `RECIPE_V2_ARGS` (resolve from yaml, single source).
-- `full_ft` mirrors the `pretrain_encoder` case (264-323) → m09a1, with its own `TRAIN_CFG`.
-- `peft_lora` / `peft_dora` / `cassle` / `ewc` are NEW cases dispatching to the new modules, reusing the
-  SAME `--subset $TRAIN_POOL --val-subset $VAL_SPLIT --init-from-ckpt $SURGERY_INIT --cache-policy`
-  plumbing + `--no-wandb` + the `outputs/<mode>/<backbone>/<arm>/` namespace.
-- **Also register each arm in `scripts/iter17_poc_ngpu.py` `ARM2ENC` + `ARM2DIR`** so the N-GPU scheduler fans them out.
+- All eight slot into the EXISTING `surgery_*` dispatch case: add each to its inner `case "$SUBCMD"`
+  that maps SUBCMD→`TRAIN_CFG`+`VARIANT_TAG`, and (for the non-default ones) override `RUNNER` +
+  `MODULE_PREFIX` there. The default (set before the inner case) is m09c1 + `m09c_surgery`.
+- The recipe knobs (`--teacher-mode … --replay …`) are resolved from the yaml via `_y` and passed in
+  `RECIPE_V2_ARGS`. Each copied script accepts the SAME args as m09c1 (it's a copy), minus any it drops.
+- **Also register each arm in `scripts/iter17_poc_ngpu.py` `ARM2ENC` + `ARM2DIR`** so the N-GPU scheduler
+  fans them out (OUT_DIR = `outputs/<mode>/<backbone>/<MODULE_PREFIX>_<VARIANT_TAG>`).
 
 ---
 
@@ -349,8 +337,8 @@ $SURGERY_INIT` for c1-derived arms). Add these branches:
    encoder_predictor_ckpt_for() resolves m09X_ckpt_best.pt for Stage 8/8b).
 2. ENCODERS=<arm> ./scripts/run_eval.sh --POC  → m12a (action_top1) · m12b (motion_cos) · m12c
    (taxonomy_f1) · m12d (future_mse) · m12e (predictor-temporal ×6) = the 9-metric suite + paired BCa 95% CI.
-3. §G aggregate (m13_eval_plot) renders the hero grid with surgery vs every baseline (the relabelled
-   "vanilla continual SSL" anchor shows in every plot).
+3. §G aggregate (m13_eval_plot) renders the hero grid: surgery vs every baseline (the "vanilla
+   continual SSL" anchor shows in every plot).
 ```
 
 ---
@@ -358,19 +346,17 @@ $SURGERY_INIT` for c1-derived arms). Add these branches:
 ## 5 · Verification per arm (NEVER skip) + POC↔FULL parity
 
 ```text
-┌────────────────────────────────┬─────────────────────────────────────────────────────────────────────┐
-│ gate                           │ command                                                             │
-├────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
-│ 3-check (after every src edit) │ py_compile + ast.parse + ruff check --select F,E9 (post-edit hook)  │
-│ smallest SANITY (per arm)      │ BACKBONE=vjepa_2_1_vitg run_train.sh <arm> --SANITY on Pro 5000     │
-│                                │ — catches FAIL-LOUD asserts / CLI wiring / dtype before POC spend   │
-│ Auto-RGN selector unit         │ assert len(select_blocks_auto_rgn(...))==k AND trainable-param      │
-│                                │ count == surgery's (logged at startup) — else comparison attackable │
-│ PEFT merge round-trip          │ assert merge_and_unload() output loads as a PLAIN ViT (no peft) +   │
-│                                │ student_encoder.pt has NO lora_/dora_ keys                          │
-│ POC↔FULL parity                │ ONLY n_clips + max_epochs differ; every other yaml/CLI flag byte-   │
-│                                │ identical (CLAUDE.md). No "disable feature X at POC".               │
-└────────────────────────────────┴─────────────────────────────────────────────────────────────────────┘
+┌ gate ──────────────────────────┬ command ─────────────────────────────────────────────────────────────┐
+│ 3-check (after every src edit) │ py_compile + ast.parse + ruff check --select F,E9 (post-edit hook)   │
+│ clean-copy check               │ new m09X has zero traces of OTHER techniques' knobs; m09c1 untouched │
+│ smallest SANITY (per arm)      │ BACKBONE=vjepa_2_1_vitG run_train.sh <arm> --SANITY on the 2B ViT-G  │
+│                                │ — catches FAIL-LOUD asserts / CLI wiring / dtype / OOM before POC    │
+│ Auto-RGN selector unit         │ assert "kept top-8" logged AND trainable-param count == surgery's    │
+│ PEFT merge round-trip          │ merge_and_unload() output loads as a PLAIN ViT (no peft) +           │
+│                                │ student_encoder.pt has NO lora_/dora_ keys                           │
+│ POC↔FULL parity                │ ONLY n_clips + max_epochs differ; every other yaml/CLI flag byte-    │
+│                                │ identical (CLAUDE.md). No "disable feature X at POC".                │
+└────────────────────────────────┴──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -378,18 +364,17 @@ $SURGERY_INIT` for c1-derived arms). Add these branches:
 ## 6 · Module map summary
 
 ```text
-┌ technique ──────────────────────────────────────────────┬ module ──────────────────┬ new? ──────────┐
-│ B2 Auto-RGN (Automatic Relative Gradient Norm)          │ m09c1 freeze_rule branch │ delta (~25 ln) │
-│ B4(a) Full-FT (Full Fine-Tuning)                        │ m09a1 + config           │ config-only    │
-│ B4(b) LP-FT (Linear-Probing then Fine-Tuning)           │ m09c1 + config           │ config-only    │
-│ B1 LoRA (Low-Rank Adaptation) → DoRA (Weight-Decomposed │ m09b_peft.py             │ REVIVE legacy  │
-│    Low-Rank Adaptation)                                 │ (HF peft, use_dora flag) │ + peft dep     │
-│ B3 CaSSLe + EWC (Elastic Weight Consolidation)          │ m09d_contssl.py          │ NEW (sibling)  │
-│ RAW control surgery_raw                                 │ m09c1 + config           │ config-only    │
-│ surgery (OURS)                                          │ m09c1 (have)             │ —              │
-│ vanilla continual SSL (m09a1) / 2× / frozen (anchors)   │ m09a1 / — (have)         │ —              │
-└─────────────────────────────────────────────────────────┴──────────────────────────┴────────────────┘
-Net NEW code: 1 revived module (m09b_peft.py, + peft>=0.12 dep) + 1 new module (m09d_contssl.py) +
-1 ~25-line freeze_rule branch in m09c1 (Auto-RGN scorer + budget-matched selector) + 6 config files +
-1 new --freeze-rule CLI arg on m09c1. NO new training LOOP beyond m09b/m09d. Eval is FREE (the contract).
+┌ technique ───────────────────────────────────────────────┬ own script (cp m09c1) ──────┬ status ───────────┐
+│ B2 Auto-RGN (Automatic Relative Gradient Norm)           │ m09e_autorgn_encoder.py     │  BUILT            │
+│ B4 Full-FT (Full FT) / LP-FT (Linear-Probe then FT)      │ m09f_naiveft_encoder.py     │ cp pending (#12)  │
+│ B1 LoRA (Low-Rank Adaptation) → DoRA (Weight-Decomposed) │ m09b_peft_encoder.py        │ cp + peft dep #14 │
+│ B3 CaSSLe + EWC (Elastic Weight Consolidation)           │ m09d_contssl_encoder.py     │ cp + 2 losses #15 │
+│ RAW control surgery_raw_encoder                          │ m09c1 + config (IS surgery) │ config-only  #16  │
+│ surgery (OURS / novelty)                                 │ m09c1_surgery_encoder.py    │ — untouched       │
+│ anchors: vanilla cont-SSL (m09a1) / 2× / frozen          │ m09a1 / — (have)            │ —                 │
+└──────────────────────────────────────────────────────────┴─────────────────────────────┴───────────────────┘
 ```
+> **NET code:** 4 baseline scripts, each a FULL copy of m09c1 + its labelled delta (REDUNDANCY ACCEPTED —
+> never miss an already-built function), + surgery_raw as config-only on m09c1. The surgery novelty
+> (m09c1) stays untouched. Shared helpers already live in utils/training.py; further dedup across the 4
+> copies is the SEPARATE post-copy factor phase (#19). New deps: `peft>=0.12` (B1). Eval is FREE (§0.2).

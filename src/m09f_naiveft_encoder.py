@@ -1,14 +1,15 @@
-"""Ch11 Factor Surgery — 3-stage progressive unfreezing with D_L/D_A/D_I factor datasets. GPU-only.
-Gold standard #1 (training loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
-Gold standard #2 (mask-conditioned video SSL paradigm): https://github.com/MCG-NJU/MGMAE
-Gold standard #3 (foundational video masked SSL): https://github.com/MCG-NJU/VideoMAE
-Claude Code: re-WebSearch all 3 URLs on every read of this file (each verified live 2026-05-09).
+"""iter18 B4 BASELINE · Naive Fine-Tuning — Full-FT (Full Fine-Tuning) + LP-FT (Linear-Probing then
+Fine-Tuning, Kumar et al. ICLR'22). GPU-only. NOT the paper novelty — the must-beat baselines: surgery
+(structured factor blocks) must outperform full / linear-probe-then fine-tuning, CI-separated.
+Gold standard #1 (LP-FT): https://github.com/AnanyaKumar/transfer_learning  (Kumar et al. ICLR'22, arXiv:2202.10054)
+Gold standard #2 (training-loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
+Claude Code: re-WebSearch both URLs on every read of this file.
 
-Split from m09_pretrain.py on 2026-04-15 (#49). Pairs with m09a1_pretrain_encoder.py (vanilla Ch10)
-and m09b_explora.py (LoRA variant). Shared primitives live in utils.training.
-
-Pipeline: m10 (Grounded-SAM) → m11 (factor datasets) → m09c (surgery training).
-The paper novelty — factor-disentangled surgery on a frozen V-JEPA 2.1 encoder.
+COPY-FIRST-THEN-FACTOR (iter18): copied verbatim from m09c1_surgery_encoder.py so it inherits the
+complete, tested trainer (no m09a1↔m09c1 missing-function drift). Full-FT vs LP-FT is CONFIG-ONLY on this
+copy: full_ft_encoder.yaml (lp_ft_stage0 off, all 48 blocks, unfreeze_below 1.0) vs lpft_encoder.yaml
+(lp_ft_stage0 on = head warmup, THEN unfreeze all at low encoder LR). Both RAW, no factor curriculum.
+Shared primitives stay in utils.training; dedup across B1-B4 is the post-copy factor phase (tracker #19).
 
 USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
 Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml

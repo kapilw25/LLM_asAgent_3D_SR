@@ -389,6 +389,11 @@ def run_motion_aux_step(student, ma_head: "MotionAuxHead | None",
     """
     if ma_head is None or not batch_keys:
         return 0.0, {}
+    # iter18 B1 PEFT: unwrap PeftModel → base ViT so the return_hierarchical toggle below takes (it lives on
+    # the base, not the wrapper — else getattr returns None, no toggle, and the head gets 6656 not D). The
+    # base keeps its LoRA, so the backward still flows into the adapters. No-op for a plain ViT.
+    if hasattr(student, "get_base_model"):
+        student = student.get_base_model()
     # V-JEPA 2.1 ViT has return_hierarchical=True at training time (m09a1_pretrain_encoder.py:351),
     # so student(x) returns (B, N, 4*D) — 4 deep-supervision layers concatenated along
     # the feature dim. The motion_aux head expects (B, D), so we toggle hierarchical OFF

@@ -289,7 +289,7 @@ else:
     print("vjepa2 RoPE dtype patch applied (#44)")
 PYEOF
 
-    # Download ONLY the backbones the scheduler TRAINS — registry group 'trainable' (~32 GB) — so the
+    # Download ONLY the backbones the scheduler TRAINS — registry group 'trainable' (iter18: 2B ViT-G only, ~16 GB) — so the
     # torch / GPU-deps install below does NOT wait behind the ~59 GB of eval-only §G baseline ckpts
     # (iter16 vitG champion + image/version frozen baselines). Those live under group 'eval_baselines'
     # in configs/checkpoints_download.yaml and are fetched ON DEMAND, before (re)evaluating the frozen

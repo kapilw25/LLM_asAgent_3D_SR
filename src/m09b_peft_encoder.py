@@ -1,14 +1,15 @@
-"""Ch11 Factor Surgery — 3-stage progressive unfreezing with D_L/D_A/D_I factor datasets. GPU-only.
-Gold standard #1 (training loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
-Gold standard #2 (mask-conditioned video SSL paradigm): https://github.com/MCG-NJU/MGMAE
-Gold standard #3 (foundational video masked SSL): https://github.com/MCG-NJU/VideoMAE
-Claude Code: re-WebSearch all 3 URLs on every read of this file (each verified live 2026-05-09).
+"""iter18 B1 BASELINE · PEFT (Parameter-Efficient Fine-Tuning) — LoRA / DoRA adapters via HuggingFace peft.
+NOT the paper novelty — a must-beat baseline: surgery (factor-disentangled block surgery) must outperform
+adapter-only fine-tuning, CI-separated. The base ViT is FROZEN; only LoRA/DoRA adapters train.
+Gold standard #1 (PEFT LoRA/DoRA): https://github.com/huggingface/peft  (Hu et al. 2021 LoRA; Liu et al. 2024 DoRA)
+Gold standard #2 (training-loop primitives): https://github.com/facebookresearch/vjepa2/blob/main/app/vjepa_2_1/train.py
+Claude Code: re-WebSearch both URLs on every read of this file.
 
-Split from m09_pretrain.py on 2026-04-15 (#49). Pairs with m09a1_pretrain_encoder.py (vanilla Ch10)
-and m09b_explora.py (LoRA variant). Shared primitives live in utils.training.
-
-Pipeline: m10 (Grounded-SAM) → m11 (factor datasets) → m09c (surgery training).
-The paper novelty — factor-disentangled surgery on a frozen V-JEPA 2.1 encoder.
+COPY-FIRST-THEN-FACTOR (iter18): copied verbatim from m09c1_surgery_encoder.py so it inherits the complete,
+tested trainer. The PEFT delta: wrap the student in get_peft_model (base frozen, adapters trainable), SKIP
+set_trainable_prefix (peft owns trainability), FROZEN teacher target, merge adapters → plain ViT on export.
+LoRA vs DoRA = the use_dora flag (peft_lora_encoder.yaml / peft_dora_encoder.yaml). Shared primitives stay
+in utils.training; dedup across B1-B4 is the post-copy factor phase (tracker #19).
 
 USAGE — FULL arg set (run_train.sh is the canonical caller; it wires EVERY arg below.
 Eyeball to confirm nothing is silently cfg-defaulted. <LD> = pipeline.yaml
@@ -127,13 +128,14 @@ from utils.training import (
     build_optimizer, build_scheduler, update_weight_decay,  # noqa: F401 — build_scheduler/update_weight_decay kept for future stage schedulers
     save_training_checkpoint, cleanup_old_checkpoints, cleanup_stage_checkpoints, load_training_checkpoint,  # noqa: F401 — cleanup_old_checkpoints/load_training_checkpoint kept for resume
     export_student_for_eval,
-    set_trainable_prefix, enable_gradient_checkpointing,
+    enable_gradient_checkpointing,   # set_trainable_prefix dropped — PEFT trainability is owned by the peft wrap
     FactorSampler, build_factor_index, load_factor_clip,
     StreamingFactorDataset, build_streaming_indices, _streaming_worker_init,
     run_probe_val_loss, compute_trajectory_stats,
     run_trio_at_val, track_block_drift_at_val,
     apply_val_cycle_triggers, finalize_training,
 )
+from peft import LoraConfig, get_peft_model   # iter18 B1: HuggingFace PEFT — LoRA/DoRA adapter injection
 from utils.multi_task_loss import (
     build_multi_task_head_from_cfg,
     attach_head_to_optimizer, run_multi_task_step,
@@ -542,6 +544,18 @@ def train(cfg: dict, args):
     # Enabled via configs/train/ch11_surgery.yaml:optimization.gradient_checkpointing.
     if cfg["optimization"]["gradient_checkpointing"]:
         enable_gradient_checkpointing(student)
+
+    # iter18 B1 PEFT: wrap the (frozen-base) student in LoRA/DoRA adapters. get_peft_model freezes the
+    # base + makes ONLY the adapters trainable; build_optimizer then picks up just the adapters
+    # (split_params filters requires_grad). set_trainable_prefix is SKIPPED in the stage loop (peft owns
+    # trainability); the teacher stays the FROZEN plain-ViT init target (no EMA → no peft-name mismatch).
+    _pcfg = cfg["peft"]
+    student = get_peft_model(student, LoraConfig(
+        r=_pcfg["r"], lora_alpha=_pcfg["alpha"], target_modules=_pcfg["target_modules"],
+        lora_dropout=_pcfg["dropout"], bias="none", use_dora=_pcfg["use_dora"]))
+    _n_adapter = sum(p.numel() for p in student.parameters() if p.requires_grad)
+    print(f"  PEFT: {'DoRA' if _pcfg['use_dora'] else 'LoRA'} r={_pcfg['r']} alpha={_pcfg['alpha']} "
+          f"targets={_pcfg['target_modules']} → {_n_adapter:,} trainable adapter params (base FROZEN)")
 
     # Multi-task probe head — adds CrossEntropy/BCE loss on 16 taxonomy dims
     # to JEPA L1. Surgery's factor data path (StreamingFactorDataset OR
@@ -1074,7 +1088,7 @@ def train(cfg: dict, args):
                         "stage_name":  stage_name_,
                         "probe_record": pr,
                     })
-                    export_student_for_eval(student, best_ckpt_path, explora_enabled=False)
+                    export_student_for_eval(student, best_ckpt_path, explora_enabled=True)   # PEFT: merge LoRA/DoRA → plain ViT
                     print(f"  [best] new max trio_top1={current_top1:.4f} "
                           f"(step {global_step_}) → saved student_best.pt")
             # iter13 v13 R3 (2026-05-07): best-ckpt update + 4 early-stop triggers
@@ -1199,9 +1213,10 @@ def train(cfg: dict, args):
                 print(f"  Inter-stage cleanup: {(total - free) / 1e9:.1f} GB used / "
                       f"{total / 1e9:.1f} GB total after releasing Stage {stage_idx} state")
 
-            # Set trainable prefix for this stage — surgery's staged unfreeze_below: the deepest
-            # n_trainable blocks become trainable, shallower blocks stay frozen. Driven per-stage by train().
-            set_trainable_prefix(student, n_trainable)
+            # iter18 B1 PEFT: trainability is owned by the peft wrap (base FROZEN, adapters trainable) — do
+            # NOT call set_trainable_prefix (it would un-freeze base blocks + break the PeftModel structure).
+            print(f"  PEFT: set_trainable_prefix SKIPPED (stage depth-fraction n={n_trainable}); "
+                  f"adapters stay trainable, base frozen")
 
             # Rebuild optimizer (only trainable params)
             # iter14 recipe-v3 (2026-05-09): pass init_params so SPDAdamW can
@@ -1620,7 +1635,12 @@ def train(cfg: dict, args):
               f"at step {best_state['global_step']}, stage {best_state['stage_name']}) "
               f"→ student_encoder.pt")
     else:
-        export_student_for_eval(student, student_path, explora_enabled=False)
+        export_student_for_eval(student, student_path, explora_enabled=True)   # PEFT: merge LoRA/DoRA → plain ViT
+
+    # iter18 B1 PEFT: merge LoRA/DoRA into the base so finalize_training + the predictor ckpt below get a
+    # PLAIN ViT (eval loads student+predictor; no peft dep at eval). Destructive — OK, exports above are done.
+    if hasattr(student, "merge_and_unload"):
+        student = student.merge_and_unload()
 
     # iter13 v13 R4 (2026-05-07): post-export shared finalize_training
     # (assert_diverged + export_multi_task_head + export_motion_aux_head).

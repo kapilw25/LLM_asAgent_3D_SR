@@ -53,7 +53,7 @@ MODE_FLAG="$1"; shift
 # encoder backward → no activation storage); _encoder variants need 96 GB.
 case "$SUBCMD" in
     pretrain_encoder|pretrain_2X_encoder|pretrain_head| \
-    surgery_3stage_DI_encoder|surgery_noDI_encoder| \
+    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder| \
     surgery_3stage_DI_head|surgery_noDI_head) ;;
     *) echo "FATAL: subcommand must be {pretrain_encoder|pretrain_2X_encoder|pretrain_head|surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head} (got: $SUBCMD)" >&2; exit 2 ;;
 esac
@@ -321,8 +321,11 @@ case "$SUBCMD" in
             --no-wandb \
             2>&1 | tee "logs/m09a_${SUBCMD}_${mode_dir}.log"
         ;;
-    surgery_3stage_DI_encoder|surgery_noDI_encoder)
+    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
         # Map subcommand → yaml + variant tag (used in output dir + log name).
+        # RUNNER + MODULE_PREFIX default to the surgery novelty; surgical_autorgn (iter18 B2 baseline)
+        # overrides both → its OWN script m09e_autorgn_encoder.py, keeping the m09c1 novelty un-polluted.
+        RUNNER="src/m09c1_surgery_encoder.py"; MODULE_PREFIX="m09c_surgery"
         case "$SUBCMD" in
             surgery_3stage_DI_encoder)
                 TRAIN_CFG="configs/train/surgery_3stage_DI_encoder.yaml"
@@ -332,10 +335,57 @@ case "$SUBCMD" in
                 TRAIN_CFG="configs/train/surgery_2stage_noDI_encoder.yaml"
                 VARIANT_TAG="noDI_encoder"
                 ;;
+            surgical_autorgn_encoder)
+                # iter18 B2 baseline: Auto-RGN — OWN script (separated from the m09c1 surgery novelty).
+                TRAIN_CFG="configs/train/surgical_autorgn_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09e_autorgn_encoder.py"; MODULE_PREFIX="m09e_autorgn"
+                ;;
+            full_ft_encoder)
+                # iter18 B4(a) baseline: Full-FT (Full Fine-Tuning) — OWN script m09f (cp m09c1).
+                TRAIN_CFG="configs/train/full_ft_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09f_naiveft_encoder.py"; MODULE_PREFIX="m09f_full_ft"
+                ;;
+            lpft_encoder)
+                # iter18 B4(b) baseline: LP-FT (Linear-Probing then Fine-Tuning) — OWN script m09f (cp m09c1).
+                TRAIN_CFG="configs/train/lpft_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09f_naiveft_encoder.py"; MODULE_PREFIX="m09f_lpft"
+                ;;
+            surgery_raw_encoder)
+                # iter18 RAW control: surgery method on RAW clips (causal control) — IS surgery → m09c1 (default RUNNER).
+                TRAIN_CFG="configs/train/surgery_raw_encoder.yaml"
+                VARIANT_TAG="raw_encoder"
+                ;;
+            peft_lora_encoder)
+                # iter18 B1 baseline: PEFT LoRA — OWN script m09b (cp m09c1 + HuggingFace peft).
+                TRAIN_CFG="configs/train/peft_lora_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09b_peft_encoder.py"; MODULE_PREFIX="m09b_peft_lora"
+                ;;
+            peft_dora_encoder)
+                # iter18 B1 baseline: PEFT DoRA — OWN script m09b (cp m09c1 + HuggingFace peft).
+                TRAIN_CFG="configs/train/peft_dora_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09b_peft_encoder.py"; MODULE_PREFIX="m09b_peft_dora"
+                ;;
+            cassle_encoder)
+                # iter18 B3 baseline: CaSSLe distillation — OWN script m09d (cp m09c1 + utils.contssl).
+                TRAIN_CFG="configs/train/cassle_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09d_contssl_encoder.py"; MODULE_PREFIX="m09d_cassle"
+                ;;
+            ewc_encoder)
+                # iter18 B3 baseline: EWC Fisher anchor — OWN script m09d (cp m09c1 + utils.contssl).
+                TRAIN_CFG="configs/train/ewc_encoder.yaml"
+                VARIANT_TAG="encoder"
+                RUNNER="src/m09d_contssl_encoder.py"; MODULE_PREFIX="m09d_ewc"
+                ;;
         esac
         # iter13 v12+ (2026-05-06): renamed probe_surgery_* → m09c_surgery_* to
         # match m09c1_surgery_encoder.py module name. Mirror in run_eval.sh.
-        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09c_surgery_${VARIANT_TAG}"
+        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/${MODULE_PREFIX}_${VARIANT_TAG}"
         # iter13 v12+ Task 3 (2026-05-06): m11 outputs co-located with input
         # under <--local-data>/m11_factor_datasets/. m11 derives this default
         # itself; this consumer just mirrors the same convention.
@@ -377,19 +427,19 @@ case "$SUBCMD" in
         RECIPE_V2_ARGS=(--teacher-mode "$TEACHER" --lp-ft-stage0 "$LPFT" --warmup-mode "$WARMUP" \
                         --subset-mode "$SUBSETM" --saliency "$SALIENCY" --spd "$SPD" --replay "$REPLAY")
 
-        echo "═══ $(date '+%H:%M:%S') · m09c factor surgery [variant=${VARIANT_TAG}] (${MODE}) ═══"
+        echo "═══ $(date '+%H:%M:%S') · ${MODULE_PREFIX} train [variant=${VARIANT_TAG}] (${MODE}) ═══"
         echo "  config:    $TRAIN_CFG"
         echo "  subset:    $TRAIN_POOL  (leakage-safe: universe − val − test)"
         echo "  factor:    $FACTOR_DIR"
         echo "  output:    $OUT_DIR"
-        echo "  init:      $SURGERY_INIT (iter15 — accepts hf:// URI or local path; m09c1 dispatches by prefix)"
+        echo "  init:      $SURGERY_INIT (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)"
         echo "  recipe (MANDATORY, resolved from $TRAIN_CFG + optional env overrides): ${RECIPE_V2_ARGS[*]}"
         mkdir -p "$OUT_DIR"
         # iter14 (2026-05-08): --init-from-ckpt is REQUIRED in m09c (argparse
         # required=True). Always pass the HF URI — single source per CLAUDE.md
         # FAIL LOUD. m09c downloads via hf_hub_download (cached in HF_HOME after
         # first call; subsequent surgery runs hit cache instantly).
-        python -u src/m09c1_surgery_encoder.py "${MODE_FLAG}" \
+        python -u "$RUNNER" "${MODE_FLAG}" \
             --model-config "$MODEL_CFG" \
             --train-config "$TRAIN_CFG" \
             --subset "$TRAIN_POOL" --local-data "$LOCAL_DATA" \
@@ -405,7 +455,7 @@ case "$SUBCMD" in
             "${TAXONOMY_ARGS[@]}" \
             "${RECIPE_V2_ARGS[@]}" \
             --no-wandb \
-            2>&1 | tee "logs/m09c_surgery_${VARIANT_TAG}_${mode_dir}.log"
+            2>&1 | tee "logs/${MODULE_PREFIX}_${VARIANT_TAG}_${mode_dir}.log"
         ;;
     pretrain_head)
         # iter15 Phase 4 (2026-05-14): head-only m09a2. Frozen encoder + frozen
@@ -500,8 +550,8 @@ case "$SUBCMD" in
     pretrain_encoder|pretrain_2X_encoder|pretrain_head)
         FULL_CKPT="${OUT_DIR}/m09a_ckpt_best.pt"
         ;;
-    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head)
-        FULL_CKPT="${OUT_DIR}/m09c_ckpt_best.pt"
+    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
+        FULL_CKPT="${OUT_DIR}/m09c_ckpt_best.pt"   # autorgn (m09e) + naive-FT (m09f) + contssl (m09d) inherit m09c1's m09c_ ckpt prefix
         ;;
 esac
 if [ -f "$FULL_CKPT" ]; then

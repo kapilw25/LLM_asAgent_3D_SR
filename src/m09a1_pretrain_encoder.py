@@ -1234,13 +1234,13 @@ def train(cfg: dict, args):
                     # iter13 disk-budget fix (2026-05-04, after v6 ENOSPC at step 744):
                     # include_optimizer=False → best.pt drops 16 GB optimizer state.
                     # Downstream (m05 re-embed, Stage 8 future_mse) needs only
-                    # student+teacher+predictor; optimizer is dead weight here.
-                    # latest.pt still saves include_optimizer=True for resume.
+                    # student+predictor; teacher + optimizer are dead weight here (EMA-rebuilt on resume).
+                    # latest.pt still saves include_optimizer=True + teacher for resume.
                     save_training_checkpoint(
                         output_dir / f"{CHECKPOINT_PREFIX}_best.pt",
                         student, teacher, predictor, optimizer, scheduler,
                         scaler, step + 1, best_probe_top1,
-                        full=True, include_optimizer=False)
+                        full=True, include_optimizer=False, include_teacher=False)
                     print(f"  🎯 New best probe_top1: {best_probe_top1:.4f} "
                           f"(val_jepa at this step: {val_loss:.4f})")
 
@@ -1330,7 +1330,7 @@ def train(cfg: dict, args):
             best_ckpt_path,
             student, teacher, predictor, optimizer, scheduler,
             scaler, step + 1, best_probe_top1,
-            full=True, include_optimizer=False)
+            full=True, include_optimizer=False, include_teacher=False)
         print(f"  [iter15] Wrote fallback best.pt → {best_ckpt_path}", flush=True)
 
     # iter13 v13 R4 (2026-05-07): end-of-train via shared utils.

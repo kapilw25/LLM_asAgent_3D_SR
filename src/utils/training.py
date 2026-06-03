@@ -1219,7 +1219,7 @@ def save_training_checkpoint(path: Path, student, teacher, predictor,
                               optimizer, scheduler, scaler,
                               step: int, best_metric: float,
                               full: bool = True, uw=None,
-                              include_optimizer: bool = True):
+                              include_optimizer: bool = True, include_teacher: bool = True):
     """Save checkpoint.
 
     iter11 disk-budget fix (2026-04-24, after POC v3 disk-full crash at step 6):
@@ -1236,6 +1236,9 @@ def save_training_checkpoint(path: Path, student, teacher, predictor,
       full=False → SELECTION-ONLY: student ONLY (~4 GB). Use for step*.pt, best.pt,
                    best_prec.pt — they're read only to pick the "best" student and export it;
                    teacher/predictor are rebuilt on resume via student EMA init anyway.
+      include_teacher=False (with full=True) → student + predictor, NO teacher (~8 GB not ~15 GB on
+                   ViT-G). Use for *_ckpt_best.pt: Stage 8 future_mse (m12d) + m12e need only
+                   encoder + predictor; the EMA teacher is dead weight there (rebuilt via EMA on resume).
 
     iter13 disk-budget fix (2026-05-04, after v6 ENOSPC crash at step 744):
       `include_optimizer=False` (with full=True) → eval-ready ckpt with student +
@@ -1258,8 +1261,9 @@ def save_training_checkpoint(path: Path, student, teacher, predictor,
         "has_optimizer": full and include_optimizer,  # marker so load can dispatch
     }
     if full:
-        ckpt["teacher"] = teacher.state_dict()
         ckpt["predictor"] = predictor.state_dict()
+        if include_teacher:                          # best/eval ckpts pass include_teacher=False —
+            ckpt["teacher"] = teacher.state_dict()   # the EMA teacher is dead weight there (EMA-rebuilt on resume)
     if full and include_optimizer:
         ckpt["optimizer"] = optimizer.state_dict()
         ckpt["scheduler"] = scheduler.state_dict()
@@ -1376,8 +1380,9 @@ def export_student_for_eval(student, path: Path, explora_enabled: bool = False):
     # ExPLoRA: merge LoRA weights into base model before saving
     export_model = student
     if explora_enabled and hasattr(student, "merge_and_unload"):
-        print("  Merging LoRA weights into base model for export...")
-        export_model = student.merge_and_unload()
+        print("  Merging LoRA/DoRA weights into base model for export (non-destructive deepcopy)...")
+        import copy as _copy
+        export_model = _copy.deepcopy(student).merge_and_unload()   # deepcopy → live training model keeps adapters
     torch.save({
         "student_state_dict": export_model.state_dict(),
         "model_id": VJEPA_MODEL_ID,
@@ -1637,6 +1642,85 @@ def set_trainable_prefix(student, n_layers: int):
     total = sum(p.numel() for p in student.parameters())
     print(f"  Trainable prefix: {n_layers}/{len(student.blocks)} blocks "
           f"({trainable:,}/{total:,} = {100*trainable/total:.1f}%)")
+
+
+def select_blocks_auto_rgn(student, teacher, predictor, score_clips, mask_generators, cfg,
+                           dtype, mp_cfg, scaler, sizer, loss_exp, init_params, depth, device, k):
+    """iter18 B2 baseline · Auto-RGN (Automatic Relative Gradient Norm) block selection — Lee et al.
+    ICLR'23 (Surgical Fine-Tuning); official repo anniesch/surgical-finetuning (main.py get_lr_weights).
+    Technique-agnostic shared primitive (#49): any m09* trainer can call it with its own forward state.
+
+    BUDGET-MATCHED ADAPTATION (state as such in the paper, NOT the soft-LR original): the official
+    method gives EVERY tensor a learning rate proportional to its RGN; we instead HARD-select the
+    top-k BLOCKS by per-block mean RGN so the trainable-param count EXACTLY equals surgery's deepest
+    stage (the namesake comparison must be un-attackable on the parameter budget).
+
+    RGN(tensor) = ||grad||_2 / ||theta||_2, averaged over score_clips, from a frozen warmup
+    forward+backward with NO optimizer step. norm/LayerNorm tensors excluded (repo convention). The
+    forward REUSES the real training step (_train_step_grad_accum) so masks / EMA-teacher / predictor /
+    JEPA loss are bit-identical to training — no duplicated plumbing. Returns the sorted kept-block idxs.
+    """
+    if not score_clips:
+        raise RuntimeError("Auto-RGN (Automatic Relative Gradient Norm): no score_clips for RGN scoring.")
+    set_trainable_prefix(student, depth)              # all blocks trainable → grads flow to every block
+    # all-48-block backward stores ~all activations → OOMs the 2B ViT-G (iter18 B2 SANITY: 47/48 GiB).
+    # Gradient-checkpoint the scoring forward so the backward RECOMPUTES activations (~2-4× memory cut,
+    # numerically identical, idempotent). Stays on for the k-block training that follows (light). #56.
+    enable_gradient_checkpointing(student)
+    acc = {}                                          # param name -> [per-batch RGN]
+    for clips in score_clips:
+        masks_enc, masks_pred = [], []
+        for mg in mask_generators:
+            m_e, m_p = mg(clips.shape[0])
+            masks_enc.append(m_e.to(device))
+            masks_pred.append(m_p.to(device))
+        # OOM-retry: the all-block RGN backward is the heaviest step in the whole run; on a 48 GB card
+        # the producer batch won't fit. _train_step_grad_accum runs cuda_cleanup()+sizer.on_oom() then
+        # re-raises (L777-780) → retry until the micro-batch fits (30→15→…), like train()'s loop. RGN
+        # uses the full-batch accumulated grad, so the result is identical to whatever micro-batch the
+        # sizer lands on. Give up only when on_oom() can no longer shrink (already at min_size).
+        while True:
+            _bs_before = sizer.size
+            student.zero_grad(set_to_none=True)
+            try:
+                _train_step_grad_accum(student, teacher, predictor, clips, masks_enc, masks_pred,
+                                       cfg, dtype, mp_cfg, scaler, sizer, loss_exp,
+                                       init_params=init_params, drift_cfg=cfg["drift_control"],
+                                       loss_cfg=cfg["optimization"]["loss"], uw=None)   # fwd+bwd, NO opt.step
+                break
+            except torch.cuda.OutOfMemoryError:
+                student.zero_grad(set_to_none=True)
+                if sizer.size >= _bs_before:        # on_oom() could not shrink → at min, won't fit
+                    raise RuntimeError(
+                        "Auto-RGN scoring: CUDA OOM at the minimum sub-batch even with gradient "
+                        "checkpointing — the all-block RGN backward will not fit this GPU. Lower "
+                        "optimization.batch_size or score on a larger card.")
+                # sizer shrank inside the helper → retry the SAME clips at the smaller micro-batch
+        for name, p in student.named_parameters():
+            if p.grad is None or "norm" in name.lower():
+                continue                              # skip LayerNorm/norm tensors (repo convention)
+            acc.setdefault(name, []).append(
+                (p.grad.detach().norm() / (p.detach().norm() + 1e-12)).item())   # RGN = ||g||2 / ||theta||2
+    student.zero_grad(set_to_none=True)
+    rgn = {n: sum(v) / len(v) for n, v in acc.items()}          # mean over score_clips
+    per_block = {}                                              # block idx -> [its tensor RGNs]
+    for name, score in rgn.items():
+        parts = name.split(".")
+        if "blocks" in parts:
+            bi = parts.index("blocks") + 1
+            if bi < len(parts) and parts[bi].isdigit():
+                per_block.setdefault(int(parts[bi]), []).append(score)
+    if not per_block:
+        raise RuntimeError("Auto-RGN (Automatic Relative Gradient Norm): no 'blocks.<i>.' params "
+                           "scored — check student.blocks naming.")
+    block_rgn = {b: sum(v) / len(v) for b, v in per_block.items()}   # per-block mean (repo-consistent)
+    keep = set(sorted(block_rgn, key=block_rgn.get, reverse=True)[:k])
+    for b, blk in enumerate(student.blocks):
+        for p in blk.parameters():
+            p.requires_grad = (b in keep)                       # hard freeze all but the top-k blocks
+    print(f"  [Auto-RGN (Automatic Relative Gradient Norm)] scored {len(block_rgn)} blocks; kept top-{k} "
+          f"by RGN = {sorted(keep)} (budget-matched to surgery's deepest stage)")
+    return sorted(keep)
 
 
 def create_train_val_split(clip_keys, split_ratio: float, seed: int,
@@ -2470,6 +2554,11 @@ def run_probe_val_loss(student, teacher, predictor, probe_clips: list,
     per-batch motion_aux compute mirroring multi_task. Closes asymmetry
     where surgery's primary aux loss (motion_aux) was invisible at val time.
     """
+    # iter18 B1 PEFT: unwrap a PeftModel → its base ViT so the return_hierarchical toggles below actually
+    # take (the attribute lives on the base, not the wrapper — else getattr returns None and 6656 leaks).
+    # get_base_model keeps the injected LoRA, so the probed features stay adapted. No-op for a plain ViT.
+    if hasattr(student, "get_base_model"):
+        student = student.get_base_model()
     n = len(probe_clips)
     if n < 10:
         raise ValueError(f"probe val-loss N={n} too small for stable mean")
@@ -2765,6 +2854,10 @@ def run_trio_at_val(student, predictor, probe_clips, probe_labels, mask_gen,
 
     Returns the trio dict on success, None on failure (already logged).
     """
+    # iter18 B1 PEFT: unwrap PeftModel → base ViT (the return_hierarchical toggle lives on the base; the
+    # base keeps its LoRA so the trio's features stay adapted). No-op for a plain ViT.
+    if hasattr(student, "get_base_model"):
+        student = student.get_base_model()
     # Lazy imports to avoid circular: probe_trio imports from utils.training
     # via build_probe_clips path indirectly. log_metrics is wandb wrapper.
     from utils.probe_trio import compute_metric_trio
@@ -2826,6 +2919,11 @@ def track_block_drift_at_val(student, init_params: dict, freeze_below: int,
     end-of-training gate.
     """
     from utils.plots import compute_block_drift, plot_block_drift_heatmap
+    if hasattr(student, "get_base_model"):
+        # iter18 B1 PEFT: the base ViT is FROZEN (only LoRA adapts) → per-block weight drift is moot, AND
+        # the LoRA name-change (qkv.weight → qkv.base_layer.weight) breaks the init_params lookup. Skip it.
+        probe_record["block_drift_mean"] = 0.0
+        return
     try:
         drift_per_block = compute_block_drift(student, init_params)
         drift_record = {

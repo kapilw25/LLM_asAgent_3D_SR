@@ -1,0 +1,27 @@
+# iter18 RAW control · surgery_raw — the SURGERY METHOD (structured 4/8/8 stages, FROZEN teacher, SPD,
+# saliency — the full surgery recipe) run on RAW clips instead of factor (D_L/D_A/D_I) clips. THE causal
+# control that resolves the data-vs-method confound:
+#   surgery − surgery_raw   = the FACTOR-curriculum effect (Figure-1, the headline causal claim)
+#   surgery_raw − Auto-RGN  = the METHOD effect (structured blocks vs gradient-picked blocks)
+# NOT a new script — it IS surgery (m09c1), so it stays a CONFIG of m09c1. Forked from
+# surgery_3stage_DI_encoder.yaml 2026-06-03 — inherits the EXACT recipe; ONLY the data changes (raw).
+#
+# USAGE (2B ViT-G = run_train's default BACKBONE = the BIGGEST):
+#   POC/FULL:  BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh surgery_raw_encoder --POC
+#   SANITY:    REPLAY_OVERRIDE=off BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh surgery_raw_encoder --SANITY
+
+extends: surgery_3stage_DI_encoder.yaml
+
+data:
+  adapted_encoder: vjepa_2_1_surgery_raw_encoder       # unique per-arm (m05/m06 outputs don't collide)
+  output_dir: outputs/full/m09c_surgery_raw_encoder    # auto-overridden by run_train.sh
+
+# RAW clips (no factor decomposition) → no D_I interaction tubes.
+interaction_mining:
+  enabled: false
+
+replay:
+  raw_pretrain_pct: 1.0            # ALL raw clips = "surgery method on RAW" (factors OFF). The 3-stage
+                                   # structured unfreezing (the METHOD) is inherited unchanged; only the
+                                   # DATA changes. POC/FULL stream (raw_replay needs factor_streaming.enabled
+                                   # =true); SANITY REPLAY_OVERRIDE=off → 0.0 → FactorSampler code-smoke.

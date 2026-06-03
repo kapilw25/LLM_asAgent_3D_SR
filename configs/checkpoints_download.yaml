@@ -21,12 +21,13 @@ catalog:
   lejepa_l.pt:                    https://huggingface.co/datasets/gajeshladharai/artifacts/resolve/main/core-jepa/lejepa-l.pt
 
 groups:
-  # backbones we TRAIN (setup_env fast path, ~32 GB). iter17 + iter18 plan_baselines_roadmap.md both train the
-  # 1B vitg (+ 2.0 vitg for iter17's version axis). To train the 2B champion in a FUTURE iter, just add
-  # `vjepa2_1_vitG_384.pt` to this list — it can remain under eval_baselines too (no URL duplication).
+  # backbones we TRAIN (setup_env fast path). iter18 (2026-06-03): FT baselines train on the 2B ViT-G
+  # champion — the BIGGEST available (surgery's best, 4/0/5) per the "always use the biggest model"
+  # decision. The 1B vitg + 2.0 vitg (iter17 scale/version axis) are ALREADY in checkpoints/ locally, so
+  # they are DROPPED from the download list → setup_env fetches ONLY the 2B (~16 GB). vjepa2_1_vitG_384.pt
+  # also appears under eval_baselines (no URL duplication — the catalog above is the single filename→url source).
   trainable:
-    - vjepa2_1_vitg_384.pt
-    - vjepa2_0_vitg_384.pt
+    - vjepa2_1_vitG_384.pt
 
   # iter16 champion (2.1 ViT-G 2B) + image/version frozen baselines (~59 GB). NOT needed to train on the
   # iter17 node (§G carries their metrics via outputs/poc); fetch on demand to (re)eval the frozen row.
