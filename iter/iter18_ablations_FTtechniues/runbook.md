@@ -1,17 +1,16 @@
 # iter18 — Runbook · baseline SANITY (48 GB) → POC/FULL (96 GB) · 2B ViT-G
 
-**STATUS 2026-06-03:** all 9 arms BUILT (own scripts) + 48 GB SANITY clean — autorgn fits; the other 8 reach a clean OOM (all-48-block / SPD-anchor / Fisher), no other error. **NEXT → §2 POC on the 96 GB box.** Drift-audit done: autorgn/full_ft/lpft now declare drift-off; surgery+raw spd+drift double-anchor LEFT as-is (a knob for its own ablation — do NOT flip).
+**STATUS 2026-06-03:** all 9 arms BUILT (own scripts). 48 GB only CODE-SMOKED them — autorgn passed, the other 8 hit OOM there (code clean up to the wall, but **OOM is NOT a pass**). **NEXT → re-run §1 SANITY on the 96 GB box; every arm must COMPLETE real training (steps + ckpt, no "0 successful") BEFORE §2 POC.** Drift-audit done: autorgn/full_ft/lpft now declare drift-off; surgery+raw spd+drift double-anchor LEFT as-is (a knob for its own ablation — do NOT flip).
 
-## 1 · SANITY on 48 GB — ✅ COMPLETE
+## 1 · SANITY — must PASS every arm on 96 GB (the gate before POC)
 
 ```bash
 export BACKBONE=vjepa_2_1_vitG
 CACHE_POLICY_ALL=2 ./scripts/run_train.sh pretrain_encoder --SANITY 2>&1 | tee logs/sanity_pretrain_$(date +%Y%m%d_%H%M%S).log
-# fit 48 GB → PASS (autorgn only: ≤8 trainable blocks, no SPD anchor):
+# Run ALL on the 96 GB box so every arm COMPLETES. On 48 GB only autorgn fit; the other 8 OOM'd there
+# (full_ft/lpft = 48-block AdamW · surgery_raw = SPD anchor +7.4 GB · peft = all-48-block activations ·
+# cassle/ewc = all-48-block + Fisher) — code-clean to the wall, but NOT a pass until they finish on 96 GB.
 REPLAY_OVERRIDE=off CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgical_autorgn_encoder --SANITY 2>&1 | tee logs/sanity_b2_autorgn_$(date +%Y%m%d_%H%M%S).log
-# OOM expected on 48 GB (code validated → real run on 96 GB): full_ft/lpft = 48-block AdamW; surgery_raw
-# = SPD anchor +7.4 GB; peft = all-48-block activations; cassle/ewc = all-48-block + (cassle distill 2nd
-# forward / ewc 7.4 GB diagonal Fisher):
 REPLAY_OVERRIDE=off CACHE_POLICY_ALL=2 ./scripts/run_train.sh full_ft_encoder     --SANITY 2>&1 | tee logs/sanity_b4a_full_ft_$(date +%Y%m%d_%H%M%S).log
 REPLAY_OVERRIDE=off CACHE_POLICY_ALL=2 ./scripts/run_train.sh lpft_encoder        --SANITY 2>&1 | tee logs/sanity_b4b_lpft_$(date +%Y%m%d_%H%M%S).log
 REPLAY_OVERRIDE=off CACHE_POLICY_ALL=2 ./scripts/run_train.sh surgery_raw_encoder --SANITY 2>&1 | tee logs/sanity_ctrl_surgery_raw_$(date +%Y%m%d_%H%M%S).log
@@ -21,17 +20,18 @@ REPLAY_OVERRIDE=off CACHE_POLICY_ALL=2 ./scripts/run_train.sh cassle_encoder    
 REPLAY_OVERRIDE=off CACHE_POLICY_ALL=2 ./scripts/run_train.sh ewc_encoder         --SANITY 2>&1 | tee logs/sanity_b3_ewc_$(date +%Y%m%d_%H%M%S).log
 ```
 
-## 1.1 · verify (only OOM acceptable)
+## 1.1 · verify — every arm PASSED on 96 GB (real training, no OOM)
 
 ```bash
-grep -iE "FATAL|Traceback|KeyError|invalid choice" logs/sanity_*.log | grep -ivE "OutOfMemory|SURGERY FAILED: 0 successful|run_train.sh aborted"   # MUST be EMPTY
-grep -hE "kept top-8" logs/sanity_b2_*.log
-grep -hE "48/48 blocks|SURGERY FAILED: 0 successful.*OOMed" logs/sanity_b4*.log
-grep -hE "CaSSLe. distill predictor|EWC. online diagonal Fisher|PEFT: (Lo|Do)RA" logs/sanity_b1_*.log logs/sanity_b3_*.log   # B1/B3 new code built before the OOM
-find outputs/sanity/vjepa_2_1_vitG -maxdepth 2 \( -name student_encoder.pt -o -name '*_ckpt_best.pt' \) | sort
+# PASS = the run FINISHED with real optimizer steps. The step-0 probe writes a frozen-init student_best.pt
+# even on an OOM run, so ckpt-exists is NOT proof — the "0 successful" FATAL is the fail signal.
+grep -lE "SURGERY FAILED: 0 successful|OutOfMemory" logs/sanity_*.log   # MUST be EMPTY — any file listed did NOT pass
+grep -iE "FATAL|Traceback|KeyError|invalid choice" logs/sanity_*.log    # MUST be EMPTY
+grep -hE "kept top-8" logs/sanity_b2_*.log                              # autorgn picked its blocks
+find outputs/sanity/vjepa_2_1_vitG -maxdepth 2 -name '*_ckpt_best.pt' | sort
 ```
 
-## 2 · POC on 96 GB — ▶ NEXT STEP (run this on the 96 GB box)
+## 2 · POC on 96 GB — only AFTER §1 SANITY passes for every arm
 
 ```bash
 export BACKBONE=vjepa_2_1_vitG
