@@ -40,13 +40,13 @@
 
 ```text
 HAVE (anchors, do NOT rebuild):
-  frozen                         floor                         → probe_encoders row, no train
-  m09a1 pretrain_encoder         continual SSL on RAW (1× cmp) → configs/train/pretrain_encoder.yaml
-  m09a1 pretrain_2X_encoder      continual SSL on RAW (2× cmp) → compute-matched RAW control
-  m09c1 surgery_3stage_DI        PROPOSED: factor curriculum   → configs/train/surgery_3stage_DI_encoder.yaml
-  training.py hooks              teacher_mode{EMA,FROZEN}=SALT, SPD anchor, saliency, replay,
-                                 lp-ft-stage0, export_student_for_eval(explora_enabled=…)
-  src/legacy/m09b_explora.py     LoRA (Low-Rank Adaptation) rank-16 (un-retired → baseline #1)
+  frozen                      floor                                → probe_encoders row, no train
+  m09a1 pretrain_encoder      vanilla continual SSL · RAW (1× cmp) → configs/train/pretrain_encoder.yaml
+  m09a1 pretrain_2X_encoder   vanilla continual SSL · RAW (2× cmp) → compute-matched RAW control
+  m09c1 surgery_3stage_DI     PROPOSED: factor curriculum          → configs/train/surgery_3stage_DI_encoder.yaml
+  training.py hooks           teacher_mode{EMA,FROZEN}=SALT, SPD anchor, saliency, replay,
+                              lp-ft-stage0, export_student_for_eval(explora_enabled=…)
+  src/legacy/m09b_explora.py  LoRA (Low-Rank Adaptation) rank-16 (un-retired → baseline #1)
 
 ADD (4 baseline families = 4 train configs + 3 tiny code deltas · every abbrev is spelled out in
      the 📖 Glossary, § 0.5 BUILD ORDER, and the § 0.6 pipeline — read the full forms there):
@@ -56,8 +56,9 @@ ADD (4 baseline families = 4 train configs + 3 tiny code deltas · every abbrev 
       code → 1 freeze-rule fn in m09c1 (~15 lines)
   B3  Continual-SSL:  CaSSLe + EWC (Elastic Weight Consolidation)
       code → 1 distill loss + 1 Fisher reg (reuse FROZEN teacher + SPD slot)
-  B4  Full-FT (Full Fine-Tuning) / LP-FT (Linear-Probing then Fine-Tuning)
-      code → config-only (unfreeze_below=1.0 ; lp-ft-stage0=on, no factors)
+  B4  config-only PAIR (zero new code) — TWO distinct methods, ONE family:
+      B4(a) Full-FT (Full Fine-Tuning)               code → unfreeze_below=1.0 (the forgetting ceiling)
+      B4(b) LP-FT (Linear-Probing then Fine-Tuning)  code → lp-ft-stage0=on, no factors (= surgery minus factors)
 ```
 
 ---
@@ -66,27 +67,27 @@ ADD (4 baseline families = 4 train configs + 3 tiny code deltas · every abbrev 
 
 ```text
 ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost )
-┌─────────────────────────────────────────────────┬──────────────────┬──────────────────────────────┬────────┬─────┐
-│ Technique  (abbrev + FULL FORM)                 │ Reviewer pull    │ Can surgery beat it?         │ Build  │ ROI │
-├─────────────────────────────────────────────────┼──────────────────┼──────────────────────────────┼────────┼─────┤
-│ B4 Full-FT (Full Fine-Tuning) — forget ceiling  │ mandatory        │ YES - it forgets temporal    │ config │ A+  │
-│ B4 LP-FT (Linear-Probing then Fine-Tuning)      │ strong           │ YES - surgery minus factors  │ config │ A+  │
-│ B1 PEFT (Parameter-Efficient Fine-Tuning):      │ mandatory        │ YES on temporal; lose action │ low    │ A   │
-│    LoRA (Low-Rank Adaptation) →                 │                  │                              │        │     │
-│    DoRA (Weight-Decomposed Low-Rank Adaptation) │                  │                              │        │     │
-│ B3 CaSSLe +                                     │ strong           │ likely; close on retention   │ low    │ A-  │
-│    EWC (Elastic Weight Consolidation)           │                  │                              │        │     │
-│ B2 Auto-RGN                                     │ MANDATORY        │ HARD - the closest rival     │ ~15 ln │ B   │
-│    (Automatic Relative Gradient Norm)           │                  │                              │        │     │
-│ SAFE (Slow-and-Fast Parameter-Efficient         │ low · class-incr │ YES - PET capacity ceiling   │ HIGH   │ C   │
-│    tuning, NeurIPS'24) · vision ViT             │                  │                              │        │     │
-│ SSIAT (Semantically-Shifted Incremental         │ low · class-incr │ YES - lowest PET capacity    │ medium │ B-  │
-│    Adapter-Tuning, CVPR'24) · vision ViT        │                  │                              │        │     │
-│ SAPT (Shared Attention fwk for Parameter-       │ low · LLM-CL     │ YES - wrong domain           │ HIGH   │ C   │
-│    efficient CL, ACL'24) · LLM                  │                  │                              │        │     │
-│ SEEKR (Selective attEntion-guided               │ low · LLM-CL     │ YES - wrong domain           │ HIGH   │ C   │
-│    Knowledge Retention, EMNLP'24) · LLM         │                  │                              │        │     │
-└─────────────────────────────────────────────────┴──────────────────┴──────────────────────────────┴────────┴─────┘
+┌───────────────────────────────────────────────────┬──────────────────┬──────────────────────────────┬────────┬─────┐
+│ Technique  (abbrev + FULL FORM)                   │ Reviewer pull    │ Can surgery beat it?         │ Build  │ ROI │
+├───────────────────────────────────────────────────┼──────────────────┼──────────────────────────────┼────────┼─────┤
+│ B4(a) Full-FT (Full Fine-Tuning) — forget ceiling │ mandatory        │ YES - it forgets temporal    │ config │ A+  │
+│ B4(b) LP-FT (Linear-Probing then Fine-Tuning)     │ strong           │ YES - surgery minus factors  │ config │ A+  │
+│ B1 PEFT (Parameter-Efficient Fine-Tuning):        │ mandatory        │ YES on temporal; lose action │ low    │ A   │
+│    LoRA (Low-Rank Adaptation) →                   │                  │                              │        │     │
+│    DoRA (Weight-Decomposed Low-Rank Adaptation)   │                  │                              │        │     │
+│ B3 CaSSLe +                                       │ strong           │ likely; close on retention   │ low    │ A-  │
+│    EWC (Elastic Weight Consolidation)             │                  │                              │        │     │
+│ B2 Auto-RGN                                       │ MANDATORY        │ HARD - the closest rival     │ ~15 ln │ B   │
+│    (Automatic Relative Gradient Norm)             │                  │                              │        │     │
+│ SAFE (Slow-and-Fast Parameter-Efficient           │ low · class-incr │ YES - PET capacity ceiling   │ HIGH   │ C   │
+│    tuning, NeurIPS'24) · vision ViT               │                  │                              │        │     │
+│ SSIAT (Semantically-Shifted Incremental           │ low · class-incr │ YES - lowest PET capacity    │ medium │ B-  │
+│    Adapter-Tuning, CVPR'24) · vision ViT          │                  │                              │        │     │
+│ SAPT (Shared Attention fwk for Parameter-         │ low · LLM-CL     │ YES - wrong domain           │ HIGH   │ C   │
+│    efficient CL, ACL'24) · LLM                    │                  │                              │        │     │
+│ SEEKR (Selective attEntion-guided                 │ low · LLM-CL     │ YES - wrong domain           │ HIGH   │ C   │
+│    Knowledge Retention, EMNLP'24) · LLM           │                  │                              │        │     │
+└───────────────────────────────────────────────────┴──────────────────┴──────────────────────────────┴────────┴─────┘
 ```
 
 > A+/A = build first (cheap, mandatory, surgery wins by mechanism) · B = mandatory but HARDEST
@@ -124,7 +125,7 @@ ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost 
 > They are not *wrong* baselines — just from an adjacent subfield (class-incremental / LLM-CL) → revision-tier /
 > nice-to-have, NOT desk-reject. Re-assessed pull among them (websearch June'26): **SAFE > SSIAT > SAPT ≈ SEEKR**
 > (vision-ViT is nearer to V-JEPA than LLM-CL). Build ONE only if a CL-leaning reviewer appears — SAFE (most pull)
-> or SSIAT (cheapest); else defer. Full table → plan_FTtechniues.md § 1.5.
+> or SSIAT (cheapest); else defer. Full table → plan_SAFE_SSIAT_SAPT_SEEKR.md § 1.5.
 
 ### 🚦 BUILD ORDER (de-risk-first) — run the kill-shot FIRST
 
@@ -163,11 +164,11 @@ ROI ladder  ( high reviewer-pull  x  easy for surgery to win  /  low build cost 
 flowchart LR
     RAW["🎬 RAW clips · pretrain pool"]
     FAC["🧩 FACTOR clips · D_L→D_A→D_I<br>m10 SAM masks → m11 factor sets"]
-    INIT["⚓ pretrain_encoder<br>continual SSL (Self-Supervised Learning) on RAW<br>= shared student init"]
+    INIT["⚓ vanilla continual SSL (m09a1)<br>Self-Supervised Learning on RAW<br>= shared student init"]
     RAW --> INIT
 
-    INIT --> B4F["Full-FT (Full Fine-Tuning)<br>🔓 ALL blocks · RAW"]
-    INIT --> B4L["LP-FT (Linear-Probing then Fine-Tuning)<br>🧠 head warmup → 🔓 unfreeze · RAW"]
+    INIT --> B4F["B4(a) Full-FT (Full Fine-Tuning)<br>🔓 ALL blocks · RAW"]
+    INIT --> B4L["B4(b) LP-FT (Linear-Probing then Fine-Tuning)<br>🧠 head warmup → 🔓 unfreeze · RAW"]
     INIT --> B1["LoRA (Low-Rank Adaptation) →<br>DoRA (Weight-Decomposed Low-Rank Adaptation)<br>🔌 tiny adapters · RAW"]
     INIT --> B2["Auto-RGN (Automatic Relative Gradient Norm)<br>✂️ gradient-picked blocks · RAW"]
     INIT --> B3["CaSSLe + EWC (Elastic Weight Consolidation)<br>🧊 distill old + 🔒 anchor weights · RAW"]
@@ -198,7 +199,7 @@ flowchart TD
     SEL -->|"B1 PEFT (Parameter-Efficient Fine-Tuning)"| B1["m09b_peft.py\nLoRA (Low-Rank Adaptation) / DoRA\n(Weight-Decomposed Low-Rank Adaptation)\nadapters on attn.qkv + mlp (rank 16)"]
     SEL -->|"B2 Surgical-FT"| B2["m09c1 + auto_rgn freeze\nRGN = ||g_block|| / ||θ_block||\ntop-k blocks, RAW clips"]
     SEL -->|"B3 Cont-SSL"| B3["m09a1 + CaSSLe distill\n(FROZEN teacher) + EWC\n(Elastic Weight Consolidation)\nFisher anchor, RAW clips"]
-    SEL -->|"B4 Full-FT (Full Fine-Tuning) / LP-FT (Linear-Probing then Fine-Tuning)"| B4["m09a1\nunfreeze_below=1.0 (full)\n/ lp-ft-stage0 then unfreeze"]
+    SEL -->|"B4(a) Full-FT (Full Fine-Tuning) / B4(b) LP-FT (Linear-Probing then Fine-Tuning)"| B4["m09a1\nB4(a): unfreeze_below=1.0 (full)\nB4(b): lp-ft-stage0 then unfreeze"]
     SEL -->|"PROPOSED"| S["m09c1 surgery\nfactor curriculum D_L→D_A→D_I\nSALT + SPD + saliency + replay"]
 
     B1 & B2 & B3 & B4 & S --> EXP["student_encoder.pt (+ predictor)\nexport_student_for_eval()"]
@@ -213,6 +214,34 @@ flowchart TD
 ---
 
 ## 2 · Per-baseline implementation (config + exact code delta)
+
+> 🔗 **Official code** (verified Jun 2026 — each repo's core file was READ to ground every
+> implementation in `plan_baselines_CODE.md`):
+
+```text
+┌───────────────┬───────────────────────────────────────────────────────────────────────────────┐
+│ baseline      │ official code repo  ·  key file(s)  ·  arXiv  (verified Jun 2026)             │
+├───────────────┼───────────────────────────────────────────────────────────────────────────────┤
+│ B1 · LoRA     │ github.com/microsoft/LoRA  (loralib/layers.py)  ·  HF                         │
+│               │ github.com/huggingface/peft  (peft/tuners/lora/layer.py, config.py)           │
+│               │ ·  arXiv 2106.09685                                                           │
+│ B1 · DoRA     │ github.com/NVlabs/DoRA  ·  github.com/nbasyl/DoRA  (dora.py)  ·  HF           │
+│               │ use_dora=True  (peft/tuners/lora/dora.py, variants.py)                        │
+│               │ ·  arXiv 2402.09353                                                           │
+│ B2 · Auto-RGN │ github.com/anniesch/surgical-finetuning                                       │
+│               │ (main.py: get_lr_weights / get_grad_norms)  ·  arXiv 2210.11466               │
+│               │ [!] official = SOFT per-tensor LR (lr proportional to RGN/maxRGN),            │
+│               │     NOT hard top-k block freeze (see plan_baselines_CODE.md B2)               │
+│ B3 · CaSSLe   │ github.com/DonkeyShot21/cassle                                                │
+│               │ (cassle/distillers/predictive.py, cassle/losses/byol.py)  ·  arXiv 2112.04215 │
+│ B3 · EWC      │ github.com/moskomule/ewc.pytorch  (utils.py)  ·                               │
+│               │ github.com/GMvandeVen/continual-learning                                      │
+│               │ (models/cl/continual_learner.py)  ·  arXiv 1612.00796                         │
+│ B4 · LP-FT    │ github.com/AnanyaKumar/transfer_learning                                      │
+│               │ (run_adaptation_experiments.py, baseline_train.py)  ·  arXiv 2202.10054       │
+│               │ Full-FT = standard end-to-end FT (no special repo)                            │
+└───────────────┴───────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### B1 · LoRA (Low-Rank Adaptation) → DoRA (Weight-Decomposed Low-Rank Adaptation) — PEFT (Parameter-Efficient Fine-Tuning) family — *un-retire m09b_explora*
 
@@ -282,7 +311,7 @@ clips:   RAW (continual SSL on the new domain; no factors).
 arms:    cassle, ewc.   registry rows vjepa_2_1_vitg_{cassle,ewc}.
 ```
 
-### B4 · Full-FT (Full Fine-Tuning) continual — forgetting ceiling — + LP-FT (Linear-Probing then Fine-Tuning) (Kumar ICLR'22)
+### B4 · config-only pair — B4(a) Full-FT (Full Fine-Tuning, the forgetting ceiling) + B4(b) LP-FT (Linear-Probing then Fine-Tuning, Kumar ICLR'22)
 
 ```text
 files:   configs/train/full_ft.yaml , lpft.yaml   (CONFIG-ONLY, zero code)
@@ -328,23 +357,23 @@ flowchart LR
 ## 4 · The comparison grid (what the hero table must show)
 
 ```text
-┌─────────────────────────┬────────┬─────────────────────────────────────────────────────┐
-│ row (vjepa_2_1_vitg_…)  │ clips  │ role                                                │
-├─────────────────────────┼────────┼─────────────────────────────────────────────────────┤
-│ frozen                  │ —      │ floor (anchor, have)                                │
-│ full_ft                 │ raw    │ forgetting ceiling (B4 Full-FT = Full Fine-Tuning)  │
-│ pretrain_2X             │ raw    │ compute-matched continual SSL (anchor, have)        │
-│ lpft                    │ raw    │ LP-FT (Linear-Probing then Fine-Tuning) (B4)        │
-│ peft_lora / peft_dora   │ raw    │ PEFT (Parameter-Efficient Fine-Tuning) family (B1): │
-│                         │        │ LoRA (Low-Rank Adaptation) / DoRA (Weight-          │
-│                         │        │ Decomposed Low-Rank Adaptation)                     │
-│ surgical_autorgn        │ raw    │ Surgical-FT namesake (B2 Auto-RGN =                 │
-│                         │        │ Automatic Relative Gradient Norm)                   │
-│ cassle / ewc            │ raw    │ continual-SSL anti-forgetting (B3 CaSSLe +          │
-│                         │        │ EWC = Elastic Weight Consolidation)                 │
-│ surgery_3stage_DI  *    │ FACTOR │ PROPOSED — must top all above, CI-separated         │
-│ surgery_raw (=ablation) │ raw    │ Q1.1 control (factor OFF)                           │
-└─────────────────────────┴────────┴─────────────────────────────────────────────────────┘
+┌─────────────────────────┬────────┬───────────────────────────────────────────────────────┐
+│ row (vjepa_2_1_vitg_…)  │ clips  │ role                                                  │
+├─────────────────────────┼────────┼───────────────────────────────────────────────────────┤
+│ frozen                  │ —      │ floor (anchor, have)                                  │
+│ full_ft                 │ raw    │ forgetting ceiling (B4(a) Full-FT = Full Fine-Tuning) │
+│ pretrain_2X             │ raw    │ compute-matched continual SSL (anchor, have)          │
+│ lpft                    │ raw    │ LP-FT (Linear-Probing then Fine-Tuning) (B4(b))       │
+│ peft_lora / peft_dora   │ raw    │ PEFT (Parameter-Efficient Fine-Tuning) family (B1):   │
+│                         │        │ LoRA (Low-Rank Adaptation) / DoRA (Weight-            │
+│                         │        │ Decomposed Low-Rank Adaptation)                       │
+│ surgical_autorgn        │ raw    │ Surgical-FT namesake (B2 Auto-RGN =                   │
+│                         │        │ Automatic Relative Gradient Norm)                     │
+│ cassle / ewc            │ raw    │ continual-SSL anti-forgetting (B3 CaSSLe +            │
+│                         │        │ EWC = Elastic Weight Consolidation)                   │
+│ surgery_3stage_DI  *    │ FACTOR │ PROPOSED — must top all above, CI-separated           │
+│ surgery_raw (=ablation) │ raw    │ Q1.1 control (factor OFF)                             │
+└─────────────────────────┴────────┴───────────────────────────────────────────────────────┘
 metrics: 14 (action, motion_cos, taxonomy, future_mse, +6 predictor-temporal, +4 encoder-temporal).
 scale:   POC 10k, leakage-safe split, 1B vitg backbone, BCa 95% CI. (validated, 2-wk-feasible)
 ```
@@ -385,7 +414,9 @@ all baselines reuse run_train.sh BACKBONE=vjepa_2_1_vitg <arm> --POC + run_eval.
 • Keep POC↔FULL parity: every baseline byte-identical scaled-down except subset size + epochs.
 ```
 
-Sources: Surgical-FT / Auto-RGN (Automatic Relative Gradient Norm) (Lee et al. ICLR'23 arXiv 2210.11466) ·
-DoRA (Weight-Decomposed Low-Rank Adaptation, 2402.09353) / ARD-LoRA (Low-Rank Adaptation, 2506.18267) ·
-CaSSLe (continual self-supervised distillation, Fini et al. CVPR'22, 2112.04215) · EWC (Elastic Weight
-Consolidation, Kirkpatrick'17) · LP-FT (Linear-Probing then Fine-Tuning, Kumar et al. ICLR'22, 2202.10054).
+Sources (papers): LoRA (Low-Rank Adaptation, Hu et al. 2021, arXiv 2106.09685) · Surgical-FT / Auto-RGN
+(Automatic Relative Gradient Norm) (Lee et al. ICLR'23, arXiv 2210.11466) · DoRA (Weight-Decomposed
+Low-Rank Adaptation, 2402.09353) / ARD-LoRA (Low-Rank Adaptation, 2506.18267) · CaSSLe (continual
+self-supervised distillation, Fini et al. CVPR'22, 2112.04215) · EWC (Elastic Weight Consolidation,
+Kirkpatrick'17, arXiv 1612.00796) · LP-FT (Linear-Probing then Fine-Tuning, Kumar et al. ICLR'22,
+2202.10054).  Official CODE repos for every baseline → the § 2 "Official code" table above.

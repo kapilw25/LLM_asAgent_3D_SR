@@ -68,13 +68,13 @@ def _canon(enc: str) -> str:
 # (backbone prefix → long tag, short tag) for the 3 trained backbones; everything else (frozen-9) falls through.
 _BB_TAG = (("vjepa_2_1_vitG_", "ViT-G", "G"), ("vjepa_2_1_vitg_", "ViT-g", "g"), ("vjepa_2_0_vitg_", "ViT-g·2.0", "g0"))
 _ARM_LONG = {
-    "frozen": "frozen", "pretrain_encoder": "pretrain encoder", "pretrain_2X_encoder": "pretrain_2X encoder",
-    "pretrain_head": "pretrain head", "surgical_3stage_DI_encoder": "surgery 3stage_DI encoder",
+    "frozen": "frozen", "pretrain_encoder": "vanilla continual-SSL", "pretrain_2X_encoder": "vanilla continual-SSL 2x",
+    "pretrain_head": "vanilla continual-SSL (head)", "surgical_3stage_DI_encoder": "surgery 3stage_DI encoder",
     "surgical_noDI_encoder": "surgery noDI encoder", "surgical_3stage_DI_head": "surgery 3stage_DI head",
     "surgical_noDI_head": "surgery noDI head",
 }
 _ARM_SHORT = {
-    "frozen": "frozen", "pretrain_encoder": "pre-enc", "pretrain_2X_encoder": "pre-2X", "pretrain_head": "pre-hd",
+    "frozen": "frozen", "pretrain_encoder": "vCSSL-enc", "pretrain_2X_encoder": "vCSSL-2X", "pretrain_head": "vCSSL-hd",
     "surgical_3stage_DI_encoder": "s3DI-enc", "surgical_noDI_encoder": "sNoDI-enc",
     "surgical_3stage_DI_head": "s3DI-hd", "surgical_noDI_head": "sNoDI-hd",
 }
@@ -552,7 +552,7 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
     ax.set_title("HERO scorecard (vertical) — value ± BCa 95% CI · colour = per-metric min-max "
                  "(green = best) · * = Δ-vs-frozen CI excludes 0\n"
                  f"{len(scorable)} metrics × {len(ordered)} encoders · WINNER col + BLUE BOX = "
-                 f"surgery-vs-pretrain champion duel (tie = paired 95% CI overlaps 0) · {boot_str}",
+                 f"surgery-vs-vanilla-cont-SSL champion duel (tie = paired 95% CI overlaps 0) · {boot_str}",
                  fontsize=10, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_hero_table"))
@@ -651,7 +651,7 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     # win/loss → neutral "·". Verdict single-sourced via _family_verdict (same tally as scoreboard).
     ny = len(rows)                                      # WINNER row sits below frozen + all arms
     _verdict_per = _per                                 # reuse (computed above for the spotlight)
-    _VC = {"surgery": ((0.17, 0.63, 0.17, 0.6), "S"), "pretrain": ((0.84, 0.15, 0.16, 0.6), "P"),
+    _VC = {"surgery": ((0.17, 0.63, 0.17, 0.6), "S"), "pretrain": ((0.84, 0.15, 0.16, 0.6), "V"),
            "tie": ((0.6, 0.6, 0.6, 0.35), "=")}
     for j, c in enumerate(cat):
         vcol, vlab = _VC.get(_verdict_per.get(c[0]), ((0.85, 0.85, 0.85, 0.35), "·"))
@@ -662,7 +662,7 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
         _pj = _paired.get(j)                           # the decider shown numerically: paired S−P Δ + 95% CI
         if _pj:
             _wci = "(≈ equal)" if (np.isnan(_pj[3]) or np.isnan(_pj[4])) else f"[{_fmt_fine(_pj[3])}, {_fmt_fine(_pj[4])}]"
-            ax.text(j, ny + 0.20, f"S−P = {_fmt_fine(_pj[2])}\n{_wci}",
+            ax.text(j, ny + 0.20, f"S−V = {_fmt_fine(_pj[2])}\n{_wci}",
                     ha="center", va="center", fontsize=6.5, color="black", zorder=3)
     ax.set_ylim(ny + 0.5, -0.5)                         # extend bottom to include the WINNER row
     ax.axhline(0.5, color="#444444", lw=1.3, ls="--")  # separator BELOW the FROZEN baseline (row 0)
@@ -670,7 +670,7 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     ax.set_title("HERO — raw metric value  ·  per cell: that arm's value 95% BCa CI [min, max] · "
                  "TOP ROW = FROZEN baseline (read each arm's growth over it)\ncolour: red = worst, green "
                  "= best (per-metric min-max incl. frozen, good-oriented) · BLUE BOX = champion-duel "
-                 "winner · WINNER row = paired surgery − pretrain Δ + 95% CI (tie = CI overlaps 0)",
+                 "winner · WINNER row = paired surgery − vanilla-cont-SSL Δ + 95% CI (S−V; tie = CI overlaps 0)",
                  fontsize=11, fontweight="bold")
     fig.colorbar(im, ax=ax, shrink=0.7, label="red = worst   →   green = best (per-metric normalized value, good-oriented)")
     fig.tight_layout()
@@ -905,10 +905,10 @@ def plot_scoreboard(metrics, encoders, frozen, output_dir):
         ax.text(arm_wins.get(a, 0), i, f" {arm_wins.get(a, 0)}", va="center", fontsize=10, fontweight="bold")
     ax.set_yticks(y); ax.set_yticklabels([_wrap_name(a) for a in order], fontsize=8, rotation=20, va="center")
     ax.set_xlabel(f"# metrics won OUTRIGHT  (of {ns + npr + nt}; {nt} ties not awarded)")
-    champ = "SURGERY" if ns > npr else ("PRETRAIN" if npr > ns else "TIE")
-    fig.suptitle(f"SCOREBOARD —  SURGERY {ns} · PRETRAIN {npr} · TIE {nt}   (champion duel · winner: {champ})",
+    champ = "SURGERY" if ns > npr else ("VANILLA CONT-SSL" if npr > ns else "TIE")
+    fig.suptitle(f"SCOREBOARD —  SURGERY {ns} · VANILLA CONT-SSL {npr} · TIE {nt}   (champion duel · winner: {champ})",
                  fontsize=13, fontweight="bold")
-    ax.set_title("green = surgery arm · blue = pretrain arm · bar = outright metric wins by that arm", fontsize=9)
+    ax.set_title("green = surgery arm · blue = vanilla continual-SSL arm · bar = outright metric wins by that arm", fontsize=9)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     save_fig(fig, str(output_dir / "m13_scoreboard_surgery_vs_pretrain"))
     print(f"  [scoreboard] m13_scoreboard_surgery_vs_pretrain — surgery {ns} pretrain {npr} tie {nt}")
@@ -938,7 +938,7 @@ def plot_grouped_winner(metrics, encoders, frozen, output_dir):
         Mn[:, j] = 0.5 if hi == lo else (col - lo) / (hi - lo)
     score = np.nanmean(Mn, axis=1)
     _ns, _np, _nt, per, _aw = _family_verdict(metrics, encoders, frozen)
-    winner = [{"surgery": "S", "pretrain": "P", "tie": "="}.get(per.get(k, "tie"), "·") for k in keys]
+    winner = [{"surgery": "S", "pretrain": "V", "tie": "="}.get(per.get(k, "tie"), "·") for k in keys]
     nrow, ncol = len(arms) + 1, len(keys) + 1
     rgba = np.ones((nrow, ncol, 4)); cmap = plt.cm.RdYlGn
     for j in range(len(keys)):
@@ -951,7 +951,7 @@ def plot_grouped_winner(metrics, encoders, frozen, output_dir):
         rgba[i, ncol - 1] = cmap(t); rgba[i, ncol - 1, 3] = 0.6
     for j, w in enumerate(winner):
         rgba[nrow - 1, j] = (0.17, 0.63, 0.17, 0.6) if w == "S" else (
-            (0.84, 0.15, 0.16, 0.6) if w == "P" else (0.6, 0.6, 0.6, 0.35))
+            (0.84, 0.15, 0.16, 0.6) if w == "V" else (0.6, 0.6, 0.6, 0.35))
     fig, ax = plt.subplots(figsize=(max(11.0, 1.05 * ncol + 3), 0.95 * nrow + 3))
     ax.imshow(rgba, aspect="auto")
     # Spotlight (blue box + bigger Δ): a DECISIVE metric → its single winning arm; a TIE → BOTH family
@@ -992,11 +992,11 @@ def plot_grouped_winner(metrics, encoders, frozen, output_dir):
     ax.axhline(len(pre) - 0.5, color="black", lw=2)
     ax.axhline(len(arms) - 0.5, color="black", lw=1)
     ax.axvline(len(keys) - 0.5, color="black", lw=1)
-    verdict = "SURGERY" if _ns > _np else ("PRETRAIN" if _np > _ns else "SPLIT")
-    ax.set_title(f"Δ vs frozen (good-oriented, value + 95% CI) · PRETRAIN block / SURGERY block · "
+    verdict = "SURGERY" if _ns > _np else ("VANILLA CONT-SSL" if _np > _ns else "SPLIT")
+    ax.set_title(f"Δ vs frozen (good-oriented, value + 95% CI) · VANILLA-CONT-SSL block / SURGERY block · "
                  f"SCORE = mean per-metric-normalized (0–1) · BLUE BOX + big Δ = best arm per metric\n"
-                 f"WINNER row (champion duel — S=surgery P=pretrain ==tie · tie = paired 95% CI overlaps 0):  "
-                 f"surgery {_ns} · pretrain {_np} · tie {_nt}  →  {verdict}", fontsize=10)
+                 f"WINNER row (champion duel — S=surgery V=vanilla-cont-SSL ==tie · tie = paired 95% CI overlaps 0):  "
+                 f"surgery {_ns} · vanilla-cont-SSL {_np} · tie {_nt}  →  {verdict}", fontsize=10)
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_grouped_winner_surgery_vs_pretrain"))
     print(f"  [grouped] m13_grouped_winner_surgery_vs_pretrain — surgery {_ns} pretrain {_np} tie {_nt}")
@@ -1081,7 +1081,7 @@ def plot_paired_forest(metrics, encoders, frozen, output_dir, boot_str):
         elif d > 0:
             verdict, color = "SURGERY", "#2ca02c"; ns += 1
         else:
-            verdict, color = "pretrain", "#d62728"; npr += 1
+            verdict, color = "vanilla cont-SSL", "#d62728"; npr += 1
         zc = max(-clip, min(clip, z))
         zloc = max(-clip, min(clip, zlo))
         zhic = max(-clip, min(clip, zhi))
@@ -1096,14 +1096,14 @@ def plot_paired_forest(metrics, encoders, frozen, output_dir, boot_str):
     ax.set_xlim(-clip - 0.6, clip + 6.8)
     ax.set_xticks([-clip, -1.96, 0, 1.96, clip])
     ax.set_xticklabels(["≤−5", "−1.96", "0", "+1.96", "≥+5"], fontsize=8)
-    ax.set_xlabel("standardized surgery − pretrain effect (Δ / SE) · shaded = ±1.96 (95% not-significant) · 0 = no difference",
+    ax.set_xlabel("standardized surgery − vanilla cont-SSL effect (Δ / SE) · shaded = ±1.96 (95% not-significant) · 0 = no difference",
                   fontsize=9)
     _bb = _backbone_of(surg[0]) if surg else None
     _label = _BB_LABEL.get(_bb, _display_label(frozen))
-    _v = "SURGERY" if ns > npr else ("PRETRAIN" if npr > ns else "SPLIT")
-    ax.set_title(f"PAIRED forest — surgery − pretrain (champion duel) · {_label}\n"
-                 f"surgery {ns} · pretrain {npr} · tie {nt}  →  {_v}   (green = surgery sig · "
-                 f"red = pretrain sig · grey = tie, CI crosses 0) · {boot_str}",
+    _v = "SURGERY" if ns > npr else ("VANILLA CONT-SSL" if npr > ns else "SPLIT")
+    ax.set_title(f"PAIRED forest — surgery − vanilla cont-SSL (champion duel) · {_label}\n"
+                 f"surgery {ns} · vanilla cont-SSL {npr} · tie {nt}  →  {_v}   (green = surgery sig · "
+                 f"red = vanilla cont-SSL sig · grey = tie, CI crosses 0) · {boot_str}",
                  fontsize=11, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_paired_forest_surgery_vs_pretrain"))
@@ -1160,12 +1160,12 @@ def plot_paired_diff_heatmap(metrics, encoders, output_dir, boot_str):
         ci = "≈ equal" if (np.isnan(lo) or np.isnan(hi)) else f"[{_fmt_fine(lo)}, {_fmt_fine(hi)}]"
         ax.text(j + 0.5, yy + 0.66, _fmt_fine(d), ha="center", va="center", fontsize=13, fontweight="bold")
         ax.text(j + 0.5, yy + 0.40, ci, ha="center", va="center", fontsize=7)
-        ax.text(j + 0.5, yy + 0.15, "TIE" if tie else ("SURGERY" if d > 0 else "PRETRAIN"),
+        ax.text(j + 0.5, yy + 0.15, "TIE" if tie else ("SURGERY" if d > 0 else "VANILLA CONT-SSL"),
                 ha="center", va="center", fontsize=7.5, fontweight="bold", color="black")
     for j in range(nb):
         ns, npr, nt = tally[j]
         ax.add_patch(Rectangle((j, -1), 1, 1, facecolor=(0.96, 0.96, 0.96, 1.0), edgecolor="white", lw=1.6))
-        ax.text(j + 0.5, -0.5, f"Surgery {ns}\nPretrain {npr}\ntie {nt}", ha="center", va="center",
+        ax.text(j + 0.5, -0.5, f"Surgery {ns}\nVanilla cont-SSL {npr}\ntie {nt}", ha="center", va="center",
                 fontsize=8.5, fontweight="bold")
     ax.set_xlim(0, nb)
     ax.set_ylim(-1, nk)
@@ -1178,8 +1178,8 @@ def plot_paired_diff_heatmap(metrics, encoders, output_dir, boot_str):
     ax.tick_params(length=0)
     for sp in ax.spines.values():
         sp.set_visible(False)
-    ax.set_title("PAIRED  surgery − pretrain  (champion duel) across backbones · per cell: Δ + 95% BCa CI\n"
-                 "deep green = surgery sig. better · deep red = pretrain · pale grey = TIE (95% CI crosses 0) · "
+    ax.set_title("PAIRED  surgery − vanilla cont-SSL  (champion duel) across backbones · per cell: Δ + 95% BCa CI\n"
+                 "deep green = surgery sig. better · deep red = vanilla cont-SSL · pale grey = TIE (95% CI crosses 0) · "
                  + boot_str, fontsize=11, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_paired_diff_heatmap"))

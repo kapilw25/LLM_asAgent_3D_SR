@@ -1,4 +1,4 @@
-metric,G-frozen,G-pre-2X,G-pre-enc,G-pre-hd,G-s3DI-enc,G-s3DI-hd,G-sNoDI-enc,G-sNoDI-hd,WINNER
+metric,G-frozen,G-vCSSL-2X,G-vCSSL-enc,G-vCSSL-hd,G-s3DI-enc,G-s3DI-hd,G-sNoDI-enc,G-sNoDI-hd,WINNER
 action_top1,"44.384
 ±2.274","53.151
 ±2.274*","51.671

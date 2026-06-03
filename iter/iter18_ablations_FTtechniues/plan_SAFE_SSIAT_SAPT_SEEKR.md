@@ -109,6 +109,10 @@ doc guessed). All four target class-incremental classification (SAFE/SSIAT) or L
 │ (ours) surgery │ block unfreeze   │ deep supervision       │         │ anchor + DI drift    │ (raw)  │ stream mixing   │
 └────────────────┴──────────────────┴───────────────────────┴─────────┴─────────────────────┴────────┴─────────────────┘
 ```
+> 🔥 **m09a1 (ours) = "vanilla continual SSL"** (relabelled to match the eval plots) — the vanilla
+> continual-FT anchor (full-block partial-unfreeze SSL on RAW) that surgery must beat. "m09a1" /
+> "pretrain_*" stay as the module + artifact ids (NOT renamed).
+
 Closest overlap: m09c1's staged unfreeze + EMA anchor ≈ SAFE's slow/fast at the block level;
 raw-replay 50% ≈ SEEKR's replay minus the selective-KD. None of ours does PET / shared-adapter /
 routing — so the four are genuinely orthogonal baselines, not re-skins of surgery.

@@ -1,4 +1,4 @@
-metric,g-frozen,g-pre-2X,g-pre-enc,g-pre-hd,g-s3DI-enc,g-s3DI-hd,g-sNoDI-enc,g-sNoDI-hd,WINNER
+metric,g-frozen,g-vCSSL-2X,g-vCSSL-enc,g-vCSSL-hd,g-s3DI-enc,g-s3DI-hd,g-sNoDI-enc,g-sNoDI-hd,WINNER
 action_top1,"42.411
 ±2.247","48.219
 ±2.274*","46.411
@@ -45,8 +45,8 @@ rollout,"0.007
 ±0.000*","0.005
 ±0.000*","0.005
 ±0.000*","0.005
-±0.000*","ViT-g pretrain_2X
-encoder"
+±0.000*","ViT-g vanilla
+continual-SSL 2x"
 causal,"0.655
 ±0.002","0.657
 ±0.002*","0.652
@@ -65,8 +65,8 @@ tdist,"0.007
 ±0.000*","0.008
 ±0.000*","0.009
 ±0.000*","0.008
-±0.000*","ViT-g pretrain
-head"
+±0.000*","ViT-g vanilla
+continual-SSL (head)"
 teacher_free,"0.044
 ±0.001","0.039
 ±0.001*","0.038

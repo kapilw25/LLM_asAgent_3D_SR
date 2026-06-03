@@ -1,6 +1,6 @@
 # iter18 · plan_baselines_CODE.md — DETAILED code plan per FT (Fine-Tuning) baseline
 
-> Companion to `plan_baselines.md`. **Every abbrev is written `abbrev (FULL FORM)` at every mention.**
+> Companion to `plan_baselines_roadmap.md`. **Every abbrev is written `abbrev (FULL FORM)` at every mention.**
 > Reference modules re-read for this plan: `scripts/run_train.sh`, `src/m09a1_pretrain_encoder.py`,
 > `src/m09a2_pretrain_head.py`, `src/m09c1_surgery_encoder.py`, `src/m09c2_surgery_head.py`.
 
@@ -79,7 +79,7 @@ m09a1/a2/c1/c2 do (confirmed in the re-read):
 
 ---
 
-## 2 · Per-technique code plan — in BUILD ORDER (§ 0.5 of plan_baselines.md)
+## 2 · Per-technique code plan — in BUILD ORDER (§ 0.5 of plan_baselines_roadmap.md)
 
 ### 🚩 WAVE 1 · B2 · Auto-RGN (Automatic Relative Gradient Norm) — the KILL-SHOT
 
@@ -205,7 +205,7 @@ NO new code. configs/train/surgery_3stage_DI_encoder.yaml with factor_streaming:
 trains the STRUCTURED 4/8/8 blocks on RAW clips. Lets you attribute an Auto-RGN (Automatic Relative
 Gradient Norm) win to the factor DATA (surgery vs surgery_raw) vs the structured BLOCKS
 (surgery_raw vs Auto-RGN (Automatic Relative Gradient Norm)). Pairs with pretrain_2X for the full
-RAW-vs-FACTOR control (§3 of plan_baselines.md).
+RAW-vs-FACTOR control (§3 of plan_baselines_roadmap.md).
 ```
 
 ---

@@ -21,7 +21,7 @@ catalog:
   lejepa_l.pt:                    https://huggingface.co/datasets/gajeshladharai/artifacts/resolve/main/core-jepa/lejepa-l.pt
 
 groups:
-  # backbones we TRAIN (setup_env fast path, ~32 GB). iter17 + iter18 plan_baselines.md both train the
+  # backbones we TRAIN (setup_env fast path, ~32 GB). iter17 + iter18 plan_baselines_roadmap.md both train the
   # 1B vitg (+ 2.0 vitg for iter17's version axis). To train the 2B champion in a FUTURE iter, just add
   # `vjepa2_1_vitG_384.pt` to this list — it can remain under eval_baselines too (no URL duplication).
   trainable:
