@@ -51,7 +51,8 @@ grep -iE "FATAL|Traceback|not found|missing predictor" logs/sanity_eval_*.log   
 ## 2 · POC on 96 GB — only AFTER §1 SANITY passes for every arm
 
 ```bash
-# MULTI-GPU ALTERNATIVE (2×/4× box): python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1
+# MULTI-GPU ALTERNATIVE (2×/4× box): 
+`python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1`
 #   (--cache 1 = RESUME: skips arms whose student_encoder.pt already exists — the migration flow below
 #    carries the 1×-box overnight progress over. DAG: pretrain → 12 arms fan out → per-encoder evals
 #    pipeline → §3 paired-Δ+m13 finale. Wall from scratch: 1 GPU ≈ 50 h · 2 GPU ≈ 28 h · 4 GPU ≈ 17 h.)
