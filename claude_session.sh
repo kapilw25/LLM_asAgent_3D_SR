@@ -15,9 +15,7 @@ Required SSH alias (Mac ~/.ssh/config):
         IdentityFile ~/.ssh/id_ed25519
 
 Usage:
-    chmod +x claude_session.sh   # once
-
-    ./claude_session.sh --upload
+    bash claude_session.sh --upload
         # Mac -> GPU. Run on a fresh GPU instance.
         # Pushes:
         #   .env         -> /workspace/factorjepa/.env
@@ -25,7 +23,7 @@ Usage:
         #   sessions     -> ~/.claude/projects/-workspace-factorjepa/
         # On GPU after this, run: claude --resume
 
-    ./claude_session.sh --download
+    bash claude_session.sh --download
         # GPU -> Mac. Run BEFORE destroying the GPU instance.
         # Pulls:
         #   GPU ~/.claude/projects/-workspace-factorjepa/

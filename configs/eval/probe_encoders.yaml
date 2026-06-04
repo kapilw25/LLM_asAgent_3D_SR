@@ -62,6 +62,57 @@ encoders:
     crop: 384
     embed_dim: 1664
 
+  # iter18 FT-technique baselines (2026-06-04) — B1 PEFT (m09b), B2 Auto-RGN (m09e),
+  # B3 CaSSLe/EWC (m09d), B4 Full-FT/LP-FT (m09f) + the surgery-on-RAW control (m09c1).
+  # All are vitG students exported by their own trainers — same arch/crop/embed_dim.
+  vjepa_2_1_surgical_autorgn_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_surgery_raw_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_full_ft_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_lpft_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_peft_lora_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_peft_dora_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_cassle_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_ewc_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
   # iter15 Phase 2 (2026-05-14) — HEAD-ONLY siblings of P2/P3 variants. Encoder
   # bit-identical to Meta init (proven via Phase 5 V4); only the ~432K motion_aux
   # head is trained. Paper claim: head-only ≈ encoder-update on Δ-eval, at

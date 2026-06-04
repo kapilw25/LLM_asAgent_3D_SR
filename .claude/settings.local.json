@@ -277,7 +277,8 @@
       "Bash(curl -fSL \"https://huggingface.co/datasets/gajeshladharai/artifacts/resolve/main/core-jepa/lejepa-l.pt\" -o checkpoints/lejepa_l.pt)",
       "Bash(echo \"exit=$?\")",
       "Bash(ps -eo pid,cmd)",
-      "Bash(grep -nE '^## |^flowchart|^```mermaid|subgraph|style ' plan_baselines_roadmap.md)"
+      "Bash(grep -nE '^## |^flowchart|^```mermaid|subgraph|style ' plan_baselines_roadmap.md)",
+      "Bash(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader)"
     ]
   }
 }

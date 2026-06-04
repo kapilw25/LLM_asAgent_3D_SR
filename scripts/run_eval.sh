@@ -75,14 +75,23 @@ source venv_walkindia/bin/activate
 mkdir -p logs
 
 # ── Mode detection (CLI flag wins; falls back to MODE env-var; default FULL) ──
+# iter18 (2026-06-04): --encoders "<space-separated list>" CLI flag added. The ENCODERS env-prefix
+# silently vanished TWICE (terminal paste split the line → plain shell var, not exported → child
+# script fell back to the DEFAULT list and burned GPU re-evaluating it). A CLI arg cannot be lost
+# silently: a broken paste errors loudly instead of running the wrong encoder set.
 MODE="${MODE:-FULL}"
+ENCODERS_CLI=""
+_want_enc=0
 for arg in "$@"; do
+    if [ "$_want_enc" = 1 ]; then ENCODERS_CLI="$arg"; _want_enc=0; continue; fi
     case "$arg" in
         --sanity|--SANITY) MODE="SANITY" ;;
         --poc|--POC)       MODE="POC" ;;
         --full|--FULL)     MODE="FULL" ;;
+        --encoders)        _want_enc=1 ;;
     esac
 done
+[ "$_want_enc" = 1 ] && { echo "FATAL: --encoders requires a quoted space-separated list" >&2; exit 2; }
 case "$MODE" in
     SANITY|POC|FULL) ;;
     *) echo "FATAL: MODE must be SANITY|POC|FULL (got: $MODE)" >&2; exit 2 ;;
@@ -138,6 +147,11 @@ PT_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.predictor_te
 OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${DEFAULT_OUTPUT_PREFIX}/probe_taxonomy}"
 OUTPUT_PLOTS="${OUTPUT_PLOTS:-${DEFAULT_OUTPUT_PREFIX}/probe_plot}"
 TAG_TAXONOMY="${TAG_TAXONOMY:-configs/tag_taxonomy.json}"
+# Priority: --encoders CLI > ENCODERS env > default list.
+if [ -n "$ENCODERS_CLI" ]; then
+    ENCODERS="$ENCODERS_CLI"
+    echo "  [encoders] source = --encoders CLI flag"
+fi
 ENCODERS="${ENCODERS:-vjepa_2_1_frozen vjepa_2_1_pretrain_encoder vjepa_2_1_pretrain_2X_encoder vjepa_2_1_surgical_3stage_DI_encoder vjepa_2_1_surgical_noDI_encoder vjepa_2_1_pretrain_head vjepa_2_1_surgical_3stage_DI_head vjepa_2_1_surgical_noDI_head}"
 SKIP_STAGES="${SKIP_STAGES:-}"
 NUM_FRAMES="${NUM_FRAMES:-16}"
@@ -238,13 +252,25 @@ _arm_dir() {                                    # arm suffix → m09 output dir 
         surgical_noDI_encoder)       echo m09c_surgery_noDI_encoder ;;
         surgical_3stage_DI_head)     echo m09c_surgery_3stage_DI_head ;;
         surgical_noDI_head)          echo m09c_surgery_noDI_head ;;
+        # iter18 FT-technique baselines (2026-06-04) — dirs match each trainer's MODULE_PREFIX in run_train.sh.
+        surgical_autorgn_encoder)    echo m09e_autorgn_encoder ;;
+        surgery_raw_encoder)         echo m09c_surgery_raw_encoder ;;
+        full_ft_encoder)             echo m09f_full_ft_encoder ;;
+        lpft_encoder)                echo m09f_lpft_encoder ;;
+        peft_lora_encoder)           echo m09b_peft_lora_encoder ;;
+        peft_dora_encoder)           echo m09b_peft_dora_encoder ;;
+        cassle_encoder)              echo m09d_cassle_encoder ;;
+        ewc_encoder)                 echo m09d_ewc_encoder ;;
         *) echo "" ;;
     esac
 }
 _split_enc() {                                  # "<bb>_<arm>" → echoes "BACKBONE ARM" (longest arm match)
     local n="$1" arm bb
     for arm in pretrain_2X_encoder surgical_3stage_DI_encoder surgical_noDI_encoder \
-               surgical_3stage_DI_head surgical_noDI_head pretrain_encoder pretrain_head frozen; do
+               surgical_3stage_DI_head surgical_noDI_head \
+               surgical_autorgn_encoder surgery_raw_encoder full_ft_encoder lpft_encoder \
+               peft_lora_encoder peft_dora_encoder cassle_encoder ewc_encoder \
+               pretrain_encoder pretrain_head frozen; do
         if [[ "$n" == *"_$arm" ]]; then
             bb="${n%_$arm}"
             [ "$bb" = vjepa_2_1 ] && bb=vjepa_2_1_vitG   # legacy vitG names (vjepa_2_1_<arm>) → uniform dir
@@ -282,7 +308,9 @@ encoder_predictor_ckpt_for() {                  # encoder+predictor — Stage 8 
     d="$(_arm_dir "$arm")"
     case "$d" in
         m09a_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09a_ckpt_best.pt" ;;
-        m09c_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09c_ckpt_best.pt" ;;
+        # iter18 baselines (m09b/d/e/f) were cp'd from m09c1 → they inherit CHECKPOINT_PREFIX
+        # "m09c_ckpt" and write m09c_ckpt_best.pt (verified: every baseline SANITY dir has it).
+        m09b_*|m09c_*|m09d_*|m09e_*|m09f_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09c_ckpt_best.pt" ;;
         *)      echo "" ;;
     esac
 }
@@ -420,6 +448,18 @@ for ENC in $ENCODERS; do
             if [ ! -e "$CKPT" ]; then
                 echo "  ⚠️  $ENC: $CKPT not found — train via:"
                 echo "       BACKBONE=$_bb ./scripts/run_train.sh ${_arm/surgical_/surgery_} --$MODE"
+                echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
+                continue
+            fi
+            echo "  ✓ $ENC: $CKPT"
+            ;;
+        # iter18 baselines: arm name == run_train subcommand (NO surgical_→surgery_ rename here —
+        # that substitution would corrupt e.g. surgical_autorgn_encoder, whose run_train name keeps 'surgical_').
+        surgical_autorgn_encoder|surgery_raw_encoder|full_ft_encoder|lpft_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
+            CKPT="$(encoder_ckpt_for "$ENC")"
+            if [ ! -e "$CKPT" ]; then
+                echo "  ⚠️  $ENC: $CKPT not found — train via:"
+                echo "       BACKBONE=$_bb ./scripts/run_train.sh ${_arm} --$MODE"
                 echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
                 continue
             fi

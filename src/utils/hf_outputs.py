@@ -11,6 +11,10 @@ USAGE:
     python -u src/utils/hf_outputs.py upload outputs/poc  2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
+    # FULL fidelity (EVERY file incl. m09*_ckpt_best.pt/*.npy, per-dir _full-*.tar) — multi-box migration
+    python -u src/utils/hf_outputs.py upload-full outputs/poc 2>&1 | tee logs/upload_full_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py download-full outputs/poc 2>&1 | tee logs/download_full_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
@@ -301,7 +305,12 @@ def _mirror_cleanup(api, local_path: Path, subfolder: str):
         }
 
         # 3. Anything on remote not in upload_set is stale → delete.
-        stale = sorted(p for p in remote_paths if p not in upload_set)
+        # iter18 (2026-06-04): PROTECT `_full-*.tar` full-fidelity snapshots (upload-full) — they are
+        # deliberately absent from the light upload set (and deleted locally post-upload), so the
+        # light mirror must never purge them. upload_outputs_full does its own scoped remote purge.
+        stale = sorted(p for p in remote_paths
+                       if p not in upload_set
+                       and not (Path(p).name.startswith("_full-") and p.endswith(".tar")))
 
         if not stale:
             print(f"  Mirror: HF in sync ({len(remote_paths)} files on remote, "
@@ -518,7 +527,120 @@ def download_outputs(output_dir: str, subfolder: str = None):
         if len(updated_files) > 10:
             print(f"  ... and {len(updated_files) - 10} more updated files")
 
+    # iter18 (2026-06-04): auto-unpack any full-fidelity `_full-*.tar` shards (upload-full) back
+    # into their directories. No-op when none were downloaded.
+    _post_download_unpack_full(output_path)
+
     return True
+
+
+# ── FULL-FIDELITY outputs snapshot (iter18 multi-box migration, 2026-06-04) ──
+# Why: the light `upload` policy deliberately drops m09*_ckpt_best.pt / motion_aux_head.pt /
+# *.npy — but migrating a half-finished POC to a 2×/4× box needs EVERY file (m09a_ckpt_best.pt
+# is every arm's --init-from-ckpt; m09c_ckpt_best.pt feeds eval Stage 8/8b). upload-full packs
+# each directory's DIRECT files — ALL extensions, nothing skipped — into `_full-*.tar` shards
+# written inside that directory (few large HF objects instead of thousands of small ones), then
+# uploads ONLY the shards into the SAME outputs/<mode> prefix. `download` / `download-full` pulls
+# them and auto-unpacks (then deletes the tars). Local shards are deleted after upload; the
+# original files stay on disk. The light mirror_cleanup PROTECTS remote `_full-*.tar`.
+_FULL_SHARD_TEMPLATE = "_full-{shard:05d}.tar"
+_FULL_SHARD_GLOB = "_full-*.tar"
+
+
+def _pack_outputs_full(output_path: Path, max_shard_gb: float) -> list:
+    """Pack EVERY directory's direct files into per-dir `_full-*.tar` shards. Returns shard paths."""
+    from utils.tar_shard import pack_dir_to_shards
+    # Purge leftovers from an aborted prior run FIRST — otherwise they'd be packed tar-in-tar.
+    leftovers = list(output_path.rglob(_FULL_SHARD_GLOB))
+    if leftovers:
+        print(f"  [upload-full] purging {len(leftovers)} leftover {_FULL_SHARD_GLOB} from a prior run")
+        for t in leftovers:
+            t.unlink()
+    shards = []
+    dirs = [output_path] + sorted(p for p in output_path.rglob("*") if p.is_dir())
+    for d in dirs:
+        if not any(f.is_file() for f in d.iterdir()):
+            continue
+        pack_dir_to_shards(d, str(d / _FULL_SHARD_TEMPLATE), max_shard_gb,
+                           keep_source=True, force=True)
+        shards.extend(sorted(d.glob(_FULL_SHARD_GLOB)))
+    return shards
+
+
+def _purge_remote_full_shards(api, subfolder: str) -> None:
+    """Scoped remote delete of stale `_full-*.tar` under subfolder (shard COUNT can shrink between
+    snapshots — a stale _full-00003.tar would otherwise unpack stale files on the next box)."""
+    from huggingface_hub.hf_api import RepoFile
+    from huggingface_hub.errors import RemoteEntryNotFoundError
+    try:
+        old = [item.path for item in api.list_repo_tree(
+                   HF_OUTPUTS_REPO, path_in_repo=subfolder, repo_type="dataset", recursive=True)
+               if isinstance(item, RepoFile)
+               and Path(item.path).name.startswith("_full-") and item.path.endswith(".tar")]
+    except RemoteEntryNotFoundError:
+        return
+    if not old:
+        return
+    print(f"  [upload-full] purging {len(old)} previous remote {_FULL_SHARD_GLOB} (fresh snapshot)")
+    api.delete_files(repo_id=HF_OUTPUTS_REPO, delete_patterns=old, repo_type="dataset",
+                     commit_message=f"upload-full: purge {len(old)} stale _full shards")
+
+
+def upload_outputs_full(output_dir: str, subfolder: str = None):
+    """FULL-FIDELITY upload — every file under output_dir, no skips (see block comment above)."""
+    token = _get_token()
+    if not token:
+        print("SKIP upload-full: HF_TOKEN not found in .env")
+        return False
+    _ensure_repo(token)
+    output_path = Path(output_dir)
+    if not output_path.is_dir():
+        print(f"SKIP upload-full: {output_dir} is not a directory")
+        return False
+    if subfolder is None:
+        subfolder = str(output_path)            # "outputs/poc" — mirrors HF layout
+    max_shard_gb = _get_pcfg()["data"]["max_tar_shard_gb_full"]
+
+    n_files = sum(1 for p in output_path.rglob("*") if p.is_file())
+    total = sum(p.stat().st_size for p in output_path.rglob("*") if p.is_file())
+    print(f"upload-full: {output_dir} → {HF_OUTPUTS_REPO}/{subfolder}/")
+    print(f"  Policy: EVERYTHING — {n_files} files ({_fmt_size(total)}), all extensions, "
+          f"packed per-dir into {_FULL_SHARD_GLOB} (cap {max_shard_gb:g} GB/shard)")
+    shards = _pack_outputs_full(output_path, max_shard_gb)
+    shard_bytes = sum(t.stat().st_size for t in shards)
+    print(f"  Packed {len(shards)} shard(s) ({_fmt_size(shard_bytes)}) across "
+          f"{len({t.parent for t in shards})} dir(s)")
+
+    api = HfApi(token=token)
+    _purge_remote_full_shards(api, subfolder)
+    t0 = time.time()
+    with _UploadHeartbeat(f"upload-full {subfolder}"):
+        api.upload_folder(
+            folder_path=str(output_path),
+            repo_id=HF_OUTPUTS_REPO,
+            repo_type="dataset",
+            path_in_repo=subfolder,
+            allow_patterns=[f"*{_FULL_SHARD_GLOB}"],   # leading * → matches at any depth
+        )
+    print(f"upload-full complete: {time.time() - t0:.0f}s "
+          f"→ https://huggingface.co/datasets/{HF_OUTPUTS_REPO}")
+    # Reclaim local disk — the ORIGINAL files stay; only the duplicate shards go.
+    _delete_shards_after_unpack(shards, f"{_FULL_SHARD_GLOB} (local, post-upload)")
+    return True
+
+
+def _post_download_unpack_full(output_path: Path) -> None:
+    """Unpack downloaded `_full-*.tar` shards back into their own directories, then delete them."""
+    from utils.tar_shard import unpack_shards_to_dir
+    if not output_path.is_dir():
+        return
+    parents = sorted({t.parent for t in output_path.rglob(_FULL_SHARD_GLOB)})
+    for d in parents:
+        shards = sorted(d.glob(_FULL_SHARD_GLOB))
+        print(f"\n  [hf_outputs] post-download unpack: {d}/{_FULL_SHARD_GLOB} → {d}/")
+        unpack_shards_to_dir(shards_glob=str(d / _FULL_SHARD_GLOB), output_dir=d,
+                             skip_existing=True)
+        _delete_shards_after_unpack(shards, _FULL_SHARD_GLOB)
 
 
 def upload_after_step(output_dir: str):
@@ -978,6 +1100,8 @@ if __name__ == "__main__":
         print("Usage:")
         print("  python -u src/utils/hf_outputs.py upload <output_dir>")
         print("  python -u src/utils/hf_outputs.py download <output_dir>")
+        print("  python -u src/utils/hf_outputs.py upload-full <output_dir>    # EVERY file (ckpts/npy too), per-dir _full-*.tar")
+        print("  python -u src/utils/hf_outputs.py download-full <output_dir>  # pulls + auto-unpacks _full-*.tar")
         print("  python -u src/utils/hf_outputs.py upload-data [data_dir]      # default 'data'")
         print("  python -u src/utils/hf_outputs.py download-data [data_dir]    # default 'data'")
         sys.exit(1)
@@ -988,6 +1112,10 @@ if __name__ == "__main__":
         upload_outputs(sys.argv[2])
     elif cmd == "download" and len(sys.argv) >= 3:
         download_outputs(sys.argv[2])
+    elif cmd == "upload-full" and len(sys.argv) >= 3:
+        upload_outputs_full(sys.argv[2])
+    elif cmd == "download-full" and len(sys.argv) >= 3:
+        download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
     elif cmd == "upload-data":
         # iter13 v12+ (2026-05-06): optional positional <data_dir> override.
         # Default = "data" (project convention). No more hardcoded subfolder list.

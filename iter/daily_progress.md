@@ -3,9 +3,15 @@
 # AUDIENCE has knowledge about ONLY plots from @iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/poc/probe_plot/eval/
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
+
+## Wed, June 3, 2026
+- Built and did SANITY testing on all eight finetuning baselines (surgical_autorgn, surgery_raw, full_ft, lpft, peft_lora, peft_dora, CaSSLe, EWC); every arm trains and evaluates cleanly.
+- All  PREVIOUS four surgery variants join the same run — identical data, identical starting weights, fair duel.
+- Next: full 10k-clip training of all thirteen arms; first surgery-vs-baseline numbers follow.
+
 ## Tue, June 2, 2026
 - Surgery's edge holds on modern 2.1 bases; older 2.0's fragile pretrained dynamics explain its loss.
-- Picked the fine-tuning baselines surgery must beat to claim best adaptation.
+- Built FT baselines [ vjepa_2_1_encoders: surgical_autorgn, surgery_raw, full_ft, lpft, peft_lora, peft_dora, CaSSLe, EWC]
 - Next: run those baselines, starting with the closest competitor, to lock the best-adaptation claim.
 
 ## Mon, June 1, 2026

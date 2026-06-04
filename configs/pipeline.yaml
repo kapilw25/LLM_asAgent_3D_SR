@@ -67,6 +67,11 @@ data:
   # shards; m11 packs D_L/D_A/D_I each into N shards. If WARN fires, bump
   # `--tar-shards` (m10) / `--tar-shards` (m11) on the next run.
   max_tar_shard_gb: 1.0
+  # iter18 (2026-06-04): cap for hf_outputs.py upload-full `_full-*.tar` shards (full-fidelity
+  # outputs snapshot for multi-box migration). Must exceed the largest single file
+  # (m09*_ckpt_best.pt = 7.1 GB at vitG — pack_dir_to_shards FATALs on file > cap) and stay
+  # well under HF's per-file limit.
+  max_tar_shard_gb_full: 20.0
 
 # -- Streaming & checkpointing --
 streaming:
