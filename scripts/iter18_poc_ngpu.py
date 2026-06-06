@@ -124,9 +124,24 @@ def main():
     ap.add_argument("--gpus", type=int, default=4)
     ap.add_argument("--cache", choices=["1", "2"], default="2")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--only", nargs="+", default=None, metavar="ARM",
+                    help="run ONLY these train arms (no eval jobs, no §3 finale). Deps outside the "
+                         "subset are trusted to the operator — run_train FATALs on a missing init "
+                         "ckpt anyway. Used by runbook §0.A5 (1× box trains just pretrain_encoder) "
+                         "and for single-arm crash re-runs.")
     args = ap.parse_args()
 
     jobs, mtag = build_jobs(args.mode)
+
+    if args.only:
+        bad = [a for a in args.only if a not in ARM2ENC]
+        if bad:
+            sys.exit(f"FATAL: unknown arm(s) {bad} — choices: {sorted(ARM2ENC)}")
+        keep = {f"T:{BACKBONE}:{a}" for a in args.only}
+        jobs = {jid: j for jid, j in jobs.items() if jid in keep}
+        for j in jobs.values():
+            j["deps"] &= keep   # outside-subset deps: operator's responsibility (FAIL LOUD in run_train)
+        print(f"  [--only] restricted to {sorted(args.only)} — eval jobs + §3 finale SKIPPED", flush=True)
 
     # disk-preflight: 13 arms × ~14G ckpts ≈ 185G + eval artifacts ≈ ~210G; require margin.
     import shutil
@@ -227,6 +242,11 @@ def main():
             print(f"  ✗ {jid} (rc={rc})")
         print("Fix + re-run with --cache 1 to resume the survivors; NOT running the §3 finale.")
         sys.exit(1)
+
+    if args.only:
+        print(f"═══ --only run complete ({sorted(args.only)}) — §3 finale skipped by design ═══",
+              flush=True)
+        return
 
     # ── §3 finale: ONE run_eval over ALL encoders, per-encoder stages skipped (cached) →
     #    runs the shared paired-Δ + m13 stages with every encoder present. cache=1 keeps caches.

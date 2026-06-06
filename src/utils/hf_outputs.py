@@ -12,8 +12,11 @@ USAGE:
     python -u src/utils/hf_outputs.py download outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
     # FULL fidelity (EVERY file incl. m09*_ckpt_best.pt/*.npy, per-dir _full-*.tar) — multi-box migration
-    python -u src/utils/hf_outputs.py upload-full outputs/poc 2>&1 | tee logs/upload_full_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py download-full outputs/poc 2>&1 | tee logs/download_full_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py upload-full outputs/ 2>&1 | tee logs/upload_full_outputs_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py download-full outputs/ 2>&1 | tee logs/download_full_outputs_$(date +%Y%m%d_%H%M%S).log
+    
+    # verify the snapshot file-by-file (local inventory vs uploaded manifest + remote shard sizes; exit 1 on ANY gap)
+    python -u src/utils/hf_outputs.py verify-full outputs/ 2>&1 | tee logs/verify_full_outputs_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
@@ -27,6 +30,8 @@ USAGE:
 
 
 """
+import fnmatch
+import json
 import os
 import re
 import sys
@@ -41,14 +46,18 @@ try:
 except ImportError:
     load_dotenv = None
 
-# iter16 (2026-05-22): env vars MUST be set BEFORE the huggingface_hub import.
-# huggingface_hub reads HF_HUB_DISABLE_XET + HF_HUB_ENABLE_HF_TRANSFER at module
-# import time and caches the config — setting them later (after import) is too
-# late and Xet stays active. The 2026-05-22 incident: setdefault placed AFTER
-# the import still hit "File size mismatch: expected 14418227 vs downloaded
-# 14446279" on .m04d_checkpoint.npz because Xet was already loaded.
-os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")  # Rust multi-stream transfer
-os.environ.setdefault("HF_HUB_DISABLE_XET", "1")          # Xet has a size-validation bug
+# iter16 (2026-05-22): env vars MUST be set BEFORE the huggingface_hub import —
+# huggingface_hub reads HF_HUB_DISABLE_XET at import time and caches it.
+# Xet stays DISABLED for outputs transfers: our 2026-05-22 incident ("File size
+# mismatch: expected 14418227 vs downloaded 14446279" on .m04d_checkpoint.npz)
+# plus STILL-OPEN silent-corruption reports (huggingface_hub#3643: correct-size
+# blobs with wrong SHA-256; xet-core#581: elevated failure rates) — paper-critical
+# ckpts ride the slower-but-verified plain HTTP path. Throughput is recovered by
+# SHARD-LEVEL parallelism instead: data.max_tar_shard_gb_full caps shards small
+# enough that snapshot_download(max_workers=16) fetches them concurrently.
+# (iter18 2026-06-06: dropped HF_HUB_ENABLE_HF_TRANSFER=1 — hf_transfer was
+# REMOVED in huggingface_hub 1.x; the flag was a silent no-op + FutureWarning.)
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 from huggingface_hub import HfApi, repo_exists, snapshot_download
 from utils.progress import make_pbar
@@ -494,9 +503,11 @@ def download_outputs(output_dir: str, subfolder: str = None):
         rel = rpath[len(subfolder):].lstrip("/") if rpath.startswith(subfolder) else rpath
         print(f"    {rel} ({_fmt_size(size)})")
 
-    # Snapshot before download: track what files exist
+    # Snapshot before download: track what files exist. NOTE: must init as dict —
+    # `set()` crashed `.keys()` at line ~528 when output_dir didn't pre-exist
+    # (fresh box / scratch CWD), i.e. exactly the 4×-box C1 path.
     output_path = Path(output_dir)
-    before = set()
+    before = {}
     if output_path.exists():
         before = {str(p.relative_to(output_path)): p.stat().st_size
                   for p in output_path.rglob("*") if p.is_file()}
@@ -626,6 +637,23 @@ def upload_outputs_full(output_dir: str, subfolder: str = None):
     print(f"  Packed {len(shards)} shard(s) ({_fmt_size(shard_bytes)}) across "
           f"{len({t.parent for t in shards})} dir(s)")
 
+    # Per-snapshot manifest (every packed file + every shard, with sizes) — written at pack
+    # time so verify-full can later prove file-by-file that NOTHING was skipped (runbook §0.A7).
+    mname = artifact("full_manifest")
+    manifest = {
+        "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "root": subfolder,
+        "files": [{"path": str(p.relative_to(output_path)), "size": p.stat().st_size}
+                  for p in sorted(output_path.rglob("*"))
+                  if p.is_file() and not fnmatch.fnmatch(p.name, _FULL_SHARD_GLOB)
+                  and p.name != mname],
+        "shards": [{"path": str(t.relative_to(output_path)), "size": t.stat().st_size}
+                   for t in sorted(shards)],
+    }
+    (output_path / mname).write_text(json.dumps(manifest, indent=1))
+    print(f"  Manifest: {len(manifest['files'])} files + {len(manifest['shards'])} shards "
+          f"→ {output_path / mname}")
+
     api = HfApi(token=token)
     _purge_remote_full_shards(api, subfolder)
     t0 = time.time()
@@ -635,7 +663,7 @@ def upload_outputs_full(output_dir: str, subfolder: str = None):
             repo_id=HF_OUTPUTS_REPO,
             repo_type="dataset",
             path_in_repo=subfolder,
-            allow_patterns=[f"*{_FULL_SHARD_GLOB}"],   # leading * → matches at any depth
+            allow_patterns=[f"*{_FULL_SHARD_GLOB}", mname],   # leading * → matches at any depth
         )
     print(f"upload-full complete: {time.time() - t0:.0f}s "
           f"→ https://huggingface.co/datasets/{HF_OUTPUTS_REPO}")
@@ -656,6 +684,72 @@ def _post_download_unpack_full(output_path: Path) -> None:
         unpack_shards_to_dir(shards_glob=str(d / _FULL_SHARD_GLOB), output_dir=d,
                              skip_existing=True)
         _delete_shards_after_unpack(shards, _FULL_SHARD_GLOB)
+
+
+def verify_outputs_full(output_dir: str, subfolder: str = None):
+    """File-by-file proof that the last upload-full snapshot is COMPLETE (runbook §0.A7).
+
+    Checks, FAIL LOUD (sys.exit 1) on any gap:
+      1. every local file under output_dir appears in the uploaded manifest, size-matched
+         (a file missing here was created/changed AFTER the upload → snapshot is stale);
+      2. every shard the manifest promised exists on HF byte-identical
+         (a missing/short shard = interrupted transfer).
+    """
+    from huggingface_hub import hf_hub_download
+    from huggingface_hub.hf_api import RepoFile
+    token = _get_token()
+    if not token:
+        print("FATAL verify-full: HF_TOKEN not found in .env")
+        sys.exit(1)
+    output_path = Path(output_dir)
+    if subfolder is None:
+        subfolder = str(output_path)
+    mname = artifact("full_manifest")
+
+    mpath = hf_hub_download(HF_OUTPUTS_REPO, f"{subfolder}/{mname}",
+                            repo_type="dataset", token=token)
+    man = json.loads(Path(mpath).read_text())
+    mfiles = {f["path"]: f["size"] for f in man["files"]}
+    mshards = {s["path"]: s["size"] for s in man["shards"]}
+
+    local = {str(p.relative_to(output_path)): p.stat().st_size
+             for p in output_path.rglob("*")
+             if p.is_file() and not fnmatch.fnmatch(p.name, _FULL_SHARD_GLOB)
+             and p.name != mname}
+
+    api = HfApi(token=token)
+    remote = {item.path[len(subfolder) + 1:]: item.size
+              for item in api.list_repo_tree(HF_OUTPUTS_REPO, path_in_repo=subfolder,
+                                             repo_type="dataset", recursive=True)
+              if isinstance(item, RepoFile)}
+
+    not_uploaded = sorted(set(local) - set(mfiles))
+    size_changed = sorted(p for p in set(local) & set(mfiles) if local[p] != mfiles[p])
+    gone_local   = sorted(set(mfiles) - set(local))   # uploaded then deleted locally — info only
+    shard_missing = sorted(p for p in mshards if p not in remote)
+    shard_size_bad = sorted(p for p in mshards if p in remote and remote[p] != mshards[p])
+
+    print(f"verify-full: {output_dir} vs {HF_OUTPUTS_REPO}/{subfolder} "
+          f"(manifest {man['created_utc']})")
+    print(f"  local files            : {len(local)}")
+    print(f"  manifest files         : {len(mfiles)}  · shards: {len(mshards)}")
+    print(f"  remote shards found    : {sum(1 for p in mshards if p in remote)}/{len(mshards)}")
+    for label, items in [("NOT IN UPLOAD (created/changed after snapshot)", not_uploaded),
+                         ("SIZE CHANGED since snapshot", size_changed),
+                         ("shard MISSING on HF", shard_missing),
+                         ("shard SIZE MISMATCH on HF", shard_size_bad)]:
+        if items:
+            print(f"  ❌ {label}: {len(items)}")
+            for p in items[:_LIST_PREVIEW_N]:
+                print(f"       − {p}")
+    if gone_local:
+        print(f"  · uploaded-but-since-deleted locally (info): {len(gone_local)}")
+
+    if not_uploaded or size_changed or shard_missing or shard_size_bad:
+        print("VERIFY-FULL: FAIL — re-run upload-full, then verify-full again.")
+        sys.exit(1)
+    print(f"VERIFY-FULL: PASS — all {len(local)} local files are in the snapshot; "
+          f"all {len(mshards)} shards on HF byte-identical.")
 
 
 def upload_after_step(output_dir: str):
@@ -1131,6 +1225,8 @@ if __name__ == "__main__":
         upload_outputs_full(sys.argv[2])
     elif cmd == "download-full" and len(sys.argv) >= _MIN_CLI_ARGS:
         download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
+    elif cmd == "verify-full" and len(sys.argv) >= _MIN_CLI_ARGS:
+        verify_outputs_full(sys.argv[2])
     elif cmd == "upload-data":
         # iter13 v12+ (2026-05-06): optional positional <data_dir> override.
         # Default = "data" (project convention). No more hardcoded subfolder list.

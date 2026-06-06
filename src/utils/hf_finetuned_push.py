@@ -10,7 +10,7 @@ USAGE:
     #   • surgery training  : m09c --init-from-ckpt reads student_encoder.pt
     #   • probe_eval Stage 8: probe_future_mse reads m09a_ckpt_best.pt (predictor key)
     
-    HF_HUB_ENABLE_HF_TRANSFER=1 python -u src/utils/hf_finetuned_push.py \                                                    
+    HF_XET_HIGH_PERFORMANCE=1 python -u src/utils/hf_finetuned_push.py \                                                    
         --source-dir outputs/full/m09a1_pretrain_encoder \                 
         --repo-id anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep \                                                       
         --base-model facebook/v-jepa-2-vitg \                      

@@ -337,12 +337,13 @@ if not torch.cuda.is_available():
 print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cuda.get_device_name(0)}')
 "
 
-    # 3. Install GPU requirements (includes hf_transfer for fast HF downloads)
+    # 3. Install GPU requirements (hf-xet ships with huggingface_hub >=1.x for fast HF transfers)
     echo ""
     echo "[3/10] Installing GPU requirements (UV - fast)..."
     uv pip install -r requirements_gpu.txt
-    # Enable Rust-based HF transfer (1.5-3x faster downloads per file)
-    export HF_HUB_ENABLE_HF_TRANSFER=1
+    # hf_transfer was REMOVED in huggingface_hub 1.x — HF_HUB_ENABLE_HF_TRANSFER is a silent no-op.
+    # The supported fast path is hf-xet high-performance mode (saturates bandwidth + cores).
+    export HF_XET_HIGH_PERFORMANCE=1
 
     # 4. Install Flash-Attention 2 (auto-detect GPU arch)
     echo ""
@@ -523,9 +524,8 @@ print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cu
         echo "HF SAM 3 already cached: ${SAM3_HF_CACHE}"
     else
         mkdir -p "${HF_HOME}"
-        # Rust multi-stream download (HF_HUB_ENABLE_HF_TRANSFER=1 set at line 289).
-        # ~8 parallel streams per file on modern networks.
-        HF_HUB_ENABLE_HF_TRANSFER=1 hf download facebook/sam3 \
+        # xet chunk-parallel download (high-performance mode saturates bandwidth).
+        HF_XET_HIGH_PERFORMANCE=1 hf download facebook/sam3 \
             --exclude "*.bin" \
             || { echo "FATAL: facebook/sam3 download failed. Accept access at hf.co/facebook/sam3 with your HF_TOKEN, then re-run."; exit 1; }
         echo "HF SAM 3 cached at ${SAM3_HF_CACHE}"
@@ -558,7 +558,7 @@ print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cu
         # / `set -e` to avoid the outer `set -e` killing the whole setup on a non-blocking
         # cache miss.
         set +e
-        HF_HUB_ENABLE_HF_TRANSFER=1 hf download facebook/sam3.1
+        HF_XET_HIGH_PERFORMANCE=1 hf download facebook/sam3.1
         SAM3P1_RC=$?
         set -e
         if [ "$SAM3P1_RC" -eq 0 ]; then
