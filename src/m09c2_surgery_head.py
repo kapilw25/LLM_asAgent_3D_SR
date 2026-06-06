@@ -725,7 +725,7 @@ def train(cfg: dict, args) -> None:
                     best_state_live = {
                         "step": step if best_epoch == epoch else -1,
                         "val_loss_at_best": float(best_val_loss),
-                        "probe_top1": float(probe_record.get("probe_top1", -1.0)),
+                        "top1": float(probe_record.get("probe_top1", -1.0)),   # iter18 2026-06-06: unified best_state key (plots.py:879 strict)
                     }
                     kill_state_live = {"triggered": False, "reason": None}
                     render_val_plots(
@@ -797,7 +797,7 @@ def train(cfg: dict, args) -> None:
         combined_title=f"m09c2 head-only [{_variant_tag}] · ",
         kill_title=f"m09c2 head-only [{_variant_tag}] · val_total\n",
         trio_title=f"m09c2 head-only [{_variant_tag}] · ",
-        best_state={"step": -1, "val_loss_at_best": float("inf"), "probe_top1": -1.0},
+        best_state={"step": -1, "val_loss_at_best": float("inf"), "top1": -1.0},
         kill_state={"triggered": False, "reason": None},
     )
 

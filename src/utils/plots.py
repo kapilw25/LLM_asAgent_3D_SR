@@ -854,7 +854,7 @@ def plot_val_loss_with_kill_switch_overlay(probe_history: list, output_dir,
     `probe_history` empty OR no record has `val_jepa_loss`.
 
     Args:
-        best_state: {"step": int, "probe_top1": float, "val_loss_at_best": float}
+        best_state: {"step": int, "top1": float, "val_loss_at_best": float}
             (compatible with m09a + m09c best_state schemas)
         kill_state: {"triggered": bool, "reason": str}
     """

@@ -1357,6 +1357,24 @@
       </div>
     </div>
 
+    <!-- ── Figure 4: iter18 FT-baseline schema ── -->
+    <div class="columns is-multiline">
+      <div class="column is-12">
+        <div class="plot-container">
+          <a href="static/images/iter18_ft_baselines_pipeline.png" target="_blank" rel="noopener">
+            <img src="static/images/iter18_ft_baselines_pipeline.png" alt="Pipeline schema — raw clips feed a shared continual-SSL init; seven adaptation arms (Full-FT, LP-FT, LoRA/DoRA, Auto-RGN, CaSSLe+EWC, Surgery, Surgery-RAW control) export encoders into one paired evaluation">
+          </a>
+          <p class="plot-caption">🗺️ <strong>The fine-tuning-technique ablation, at a glance.</strong>
+          One shared continual-SSL init fans out into every standard adaptation family
+          (Full-FT, LP-FT, LoRA&rarr;DoRA, Auto-RGN &mdash; the must-beat namesake in red &mdash; CaSSLe+EWC)
+          on RAW clips, plus <strong>Surgery (ours, green)</strong> on the factor curriculum and
+          <strong>Surgery-RAW (dashed)</strong> &mdash; the same method on raw clips, isolating the
+          factor-curriculum effect from the method effect. Every arm exports the same encoder format
+          into one paired evaluation (9 metrics, N=1825 test clips, BCa 95% CI).</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ── What's running now ── -->
     <div style="background: var(--bg-cream); border: 1px dashed var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.4rem; margin-top: 1rem;">
       <p style="font-weight: 700; margin-bottom: 0.3rem;">🔭 In progress &mdash; fine-tuning-technique ablation (13 arms)</p>

@@ -144,6 +144,7 @@ artifacts:
   ablation_winner: "ablation_winner.json"
   # batch-2 (iter18 H1 tail)
   train_split: "train_split.json"
+  train_pool: "train_pool.json"   # clip_splits output {"clip_keys": [...]} — SSL train pool
   val_split: "val_split.json"
   test_split: "test_split.json"
   factor_manifest_quality: "factor_manifest_quality.json"

@@ -489,6 +489,14 @@ def load_motion_aux_head(ckpt_path: "Path | str",
         n_motion_classes=blob["n_motion_classes"],
         n_motion_dims=blob["n_motion_dims"],
         hidden_dim=blob["hidden_dim"],
+        # iter18 (2026-06-06): structurally 0 — this constructor is INFERENCE-ONLY
+        # (head is .eval()'d 2 lines below, so the nn.Dropout layer never fires; the
+        # train-time value lives in the train yaml and is consumed by the training
+        # constructors). NOT a fallback: the export blob deliberately carries no
+        # dropout because no eval consumer may ever train. The 06-06 B4 gate caught
+        # the missing arg: 3 eval jobs died here after H6 removed the signature
+        # default without updating this caller.
+        dropout=0.0,
     )
     head.load_state_dict(blob["state_dict"])      # strict=True default — FAIL LOUD on key drift
     head.eval()

@@ -3096,6 +3096,12 @@ def track_head_drift_at_val(ma_head, head_init_params: dict,
             "rel_l2_per_block": drift_per_block,
             "block_names": block_names,             # iter15 C2: explicit names for HEAD blocks
             "source": "motion_aux_head",            # iter15 C2: disambiguate vs encoder drift
+            # iter18 (2026-06-06): the strict heatmap contract (plots.py:773, H3 no-fallback)
+            # reads freeze_below from EVERY producer. A motion_aux head has no frozen prefix —
+            # all 3 logical blocks train — so freeze_below = 0, DECLARED here rather than
+            # defaulted in the consumer. The 06-06 B4 SANITY gate caught the missing key:
+            # both m09c2 head arms died at their first val cycle.
+            "freeze_below": 0,
         }
         if drift_per_block:
             probe_record["block_drift_mean"] = round(

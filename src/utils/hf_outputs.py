@@ -77,7 +77,17 @@ HF_OUTPUTS_REPO = _get_pcfg()["hf_repos"]["outputs"]   # was "anonymousML123/fac
 # minutes). At vitG this cut outputs/ from ~248 GB → ~tens of GB. NOTE: the glob is
 # `*student_encoder.pt` (not the bare filename) so it matches at ANY depth in BOTH
 # pathlib.rglob (_list_local_files) AND huggingface_hub fnmatch (allow_patterns).
-_UPLOAD_EXTENSIONS = {"*.json", "*.csv", "*.png", "*.pdf", "*.tex", "*student_encoder.pt"}
+# iter18 (2026-06-06, user directive "upload everything"): the light set now carries EVERY
+# result artifact — all .pt (ckpt_best with its PREDICTOR for stage-8/8b evals, motion_aux
+# head, probe heads), .npy/.npz metric arrays, .jsonl logs — so a mid-run box death loses
+# nothing a FINISHED run would keep. Still excluded (and why):
+#   · _UPLOAD_SKIP_PATTERNS — regenerable caches (m12_frame_cache ~141G, masks, D_L/D_A/D_I)
+#   · *ckpt_latest.pt / *_ckpt_step*.pt — in-flight RESUME state the arm itself deletes on
+#     success (TRANSIENT_CKPT_IGNORES below); they only enable resume ON THIS box anyway
+#   · files modified <120s — _stale_checkpoint_ignores age guard (active writer)
+_UPLOAD_EXTENSIONS = {"*.json", "*.csv", "*.png", "*.pdf", "*.tex",
+                      "*.pt", "*.npy", "*.npz", "*.jsonl"}
+_TRANSIENT_CKPT_IGNORES = ["*ckpt_latest.pt", "*_ckpt_step*.pt", "*_ckpt_stage*.pt"]
 
 # Large regeneratable m11 subdirs — mirror .gitignore lines 80-84. These are
 # deliberately EXCLUDED from HF upload because they are cheap to re-compute
@@ -392,7 +402,10 @@ def _stale_checkpoint_ignores(output_path: Path) -> list:
     """
     now = time.time()
     ignore = []
-    for ckpt in output_path.rglob(".*checkpoint*"):
+    # iter18 (2026-06-06): also age-guard the big *ckpt*.pt files — a ckpt_best promotion
+    # writes ~7G over ~30s and must not be tarred/uploaded mid-write.
+    cands = list(output_path.rglob(".*checkpoint*")) + list(output_path.rglob("*ckpt*.pt"))
+    for ckpt in cands:
         age = now - ckpt.stat().st_mtime
         if age < _CHECKPOINT_AGE_THRESHOLD:
             # Relative to output_path for ignore_patterns
@@ -469,7 +482,8 @@ def upload_outputs(output_dir: str, subfolder: str = None):
             repo_type="dataset",
             path_in_repo=subfolder,
             allow_patterns=list(_UPLOAD_EXTENSIONS),
-            ignore_patterns=(["tmp_*"] + _stale_checkpoint_ignores(output_path)
+            ignore_patterns=(["tmp_*"] + _TRANSIENT_CKPT_IGNORES
+                             + _stale_checkpoint_ignores(output_path)
                              + _UPLOAD_SKIP_PATTERNS),
         )
 

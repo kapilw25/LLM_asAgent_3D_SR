@@ -41,13 +41,15 @@ python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee l
 # B3 · pull the fresh pretrain seed; --cache 1 will then skip ONLY pretrain (student_encoder.pt marker)
 python -u src/utils/hf_outputs.py download-full outputs/ 2>&1 | tee logs/hf_outputs_download_full_outputs_sanity_poc_$(date +%Y%m%d_%H%M%S).log
 ls outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/student_encoder.pt \
-   outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt \
-   outputs/poc/probe_action/action_labels.json outputs/poc/probe_taxonomy/taxonomy_labels.json   # all 4 MUST exist
+outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt \
+outputs/poc/probe_action/action_labels.json \
+outputs/poc/probe_taxonomy/taxonomy_labels.json   
+   # all 4 MUST exist
 
 # B4 · final SANITY re-gate of the 13-arm DAG immediately before the ~18 h POC commit (~40 min on 4 GPUs;
 #        cache 2 forces real re-trains — cache 1 would skip-as-done off the §0.B SANITY ckpts. Includes the
 #        6-min pretrain SANITY: ngpu has no arm-subset flag, and a fresh root re-gate is harmless.)
-python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 2 2>&1 | tee logs/iter18_ngpu_sanity_regate_$(date +%Y%m%d_%H%M%S).log
+python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 1 2>&1 | tee logs/iter18_ngpu_sanity_regate_$(date +%Y%m%d_%H%M%S).log
 grep -iE "FATAL|Traceback|KeyError|OutOfMemory|invalid choice" logs/iter18_ngpu_sanity_regate_*.log   # MUST be EMPTY
 
 # B5 · POC: 12 arms (3 waves ≈ 15.6 h measured) + per-encoder evals pipelined onto freed GPUs + §3 m13 finale

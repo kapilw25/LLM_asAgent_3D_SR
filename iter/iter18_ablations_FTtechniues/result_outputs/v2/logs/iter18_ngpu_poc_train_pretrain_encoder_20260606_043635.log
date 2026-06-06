@@ -181,3 +181,44 @@ AdaptiveBatchSizer (training, grad-accum): start=30, max=32 (= effective BS), ta
   [probe-trio] encoding 451 clips...
 /venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
   self.gen = func(*args, **kwds)
+  [probe-trio] step=479 top1=0.3370  motion_cos=0.1567  future_l1=0.5418  causal_l1=0.5643  maskratio=0.0702  (N=451)
+  Saved: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:989: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+m09a1_pretrain_encoder: 100%|█████████▉| 480/482 [4:31:05<01:07, 33.89s/step, E1 loss=0.6337 drift=0.0000 lr=1.00e-05 grad=0.15 0.00 step/s]m09a1_pretrain_encoder: 100%|█████████▉| 481/482 [4:31:05<00:33, 33.82s/step, E1 loss=0.6337 drift=0.0000 lr=1.00e-05 grad=0.15 0.00 step/s]m09a1_pretrain_encoder: 100%|██████████| 482/482 [4:31:30<00:00, 33.80s/step, E1 loss=0.6337 drift=0.0000 lr=1.00e-05 grad=0.15 0.00 step/s]
+--- Epoch 2/2 complete (step 482) ---
+m09a1_pretrain_encoder: 100%|██████████| 482/482 [4:31:30<00:00, 33.80s/step, recent=25.2s/step ETA0.0h]                                    
+
+=== COOLDOWN PHASE ===
+  Frames: 16 → 64
+  LR: 1.00e-05 → 1e-06
+  Epochs: 1
+  Warmup: 0 steps
+  Cooldown LR schedule: 1.00e-05 → 1.00e-06 over 241 steps (linear)
+  NOTE: Full cooldown with 64f data loading requires producer restart.
+  Cooldown is a paper-quality enhancement. POC results valid without it.
+Exported student encoder: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/student_encoder.pt
+  ✓ encoder training-effect verified: ||Δ||/||init|| = 1.718e-02
+Exported motion_aux head: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/motion_aux_head.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_step120.pt: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_step120.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_latest.pt: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_latest.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_step240.pt: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_step240.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_step360.pt: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_step360.pt
+  [cache-policy=2/recompute] deleted m09a checkpoint m09a_ckpt_step480.pt: outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_step480.pt
+
+=== TRAINING COMPLETE ===
+Steps:        482 (2.0 epochs)
+Clips seen:   15,424
+Student:      outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/student_encoder.pt
+Loss log:     outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/loss_log.csv
+Summary:      outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/training_summary.json
+
+═══ 09:08:26 · DONE ═══
+Expected outputs (consumed by scripts/run_eval.sh):
+-rw-rw-r-- 1 root root 6.9G Jun  6 09:08 outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/student_encoder.pt
+-rw-rw-r-- 1 root root 7.1G Jun  6 06:54 outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  → Stage 8 future_mse will use this (carries 'predictor' key).
