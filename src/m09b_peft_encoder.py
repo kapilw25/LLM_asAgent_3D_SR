@@ -93,7 +93,7 @@ from utils.wandb_utils import (
     add_wandb_args, init_wandb, log_metrics, finish_wandb,
 )
 from utils.cache_policy import (
-    resolve_cache_policy_interactive, wipe_output_dir,
+    resolve_cache_policy_interactive, wipe_output_dir, is_recompute,
 )
 # iter13 v13 R1+R2+R5 (2026-05-07): shared CLI + config-merge + probe-pipeline
 # helpers — replaces ~80 LoC of inline boilerplate that was duplicated with
@@ -127,6 +127,7 @@ from utils.training import (
     update_teacher_ema,
     build_optimizer, build_scheduler, update_weight_decay,  # noqa: F401 — build_scheduler/update_weight_decay kept for future stage schedulers
     save_training_checkpoint, cleanup_old_checkpoints, cleanup_stage_checkpoints, load_training_checkpoint,  # noqa: F401 — cleanup_old_checkpoints/load_training_checkpoint kept for resume
+    TimedSaveGate,
     export_student_for_eval,
     enable_gradient_checkpointing,   # set_trainable_prefix dropped — PEFT trainability is owned by the peft wrap
     FactorSampler, build_factor_index, load_factor_clip,
@@ -151,6 +152,7 @@ from utils.motion_aux_loss import (
 from utils.probe_labels import ensure_probe_labels_for_mode
 from torch.utils.data import DataLoader
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+from utils.stream_autotune import resolve_stream_workers  # iter18: num_workers auto-tune
 
 # iter18 W7 (PLR2004): semantic named constants.
 _CKPT_NAME_MIN_PARTS = 3   # ckpt filename: <stem>_<step>_<tag>
@@ -228,7 +230,8 @@ def merge_config_with_args(cfg: dict, args) -> dict:
     if fs_override is not None:
         fs_enabled = fs_override
     cfg["factor_streaming"]["enabled"] = fs_enabled
-    cfg["factor_streaming"]["num_workers"] = fs_cfg["num_workers"][mode_key]
+    cfg["factor_streaming"]["num_workers"] = resolve_stream_workers(   # iter18: "auto" → live cores/concurrency/RAM
+        fs_cfg["num_workers"][mode_key], label=Path(__file__).stem)
 
     # iter14 recipe-v3 audit (2026-05-10): FAIL LOUD when REPLAY=on but the
     # data loader cannot honor it. raw-replay branch lives ONLY in
@@ -845,15 +848,69 @@ def train(cfg: dict, args):
     nan_strikes = 0  # noqa: F841 — wired into future dense NaN guard for surgery loop
 
     global_step = 0
+    # ── iter18 (2026-06-06): RESUME from the newest stage checkpoint ──────────────
+    # m09c saved {CHECKPOINT_PREFIX}_stage{N}.pt at every stage boundary since iter13
+    # but NEVER loaded it back — a killed arm restarted at step 0 (06-06 incident:
+    # 10h at risk per arm on the 4× box). Stage-boundary resume under cache-policy 1:
+    # load model weights from the newest stage ckpt (cleanup keeps exactly one),
+    # skip the completed stages, rebuild best_state from probe_history.jsonl below.
+    # Optimizer/scheduler are deliberately NOT restored — every stage builds a fresh
+    # optimizer at stage entry (param groups differ per stage), so resuming at stage
+    # N+1 is byte-identical to a normal N→N+1 transition. (load_training_checkpoint
+    # is not used here: it requires the optimizer objects, which don't exist yet.)
+    resume_after_stage = -1
+    resume_into_stage = -1
+    resume_local_step = 0
+    _latest_path = output_dir / f"{CHECKPOINT_PREFIX}_latest.pt"
+    _stage_ckpts = sorted(output_dir.glob(f"{CHECKPOINT_PREFIX}_stage*.pt"),
+                          key=lambda p: int(p.stem.rsplit("_stage", 1)[1]))
+    _cands = list(_stage_ckpts) + ([_latest_path] if _latest_path.exists() else [])
+    # resume only under keep-policy ('1'/'keep'); policy is a STRING — route
+    # through is_recompute (== 1 int compare was always-False, dead resume).
+    if _cands and not is_recompute(args.cache_policy):
+        _pick = max(_cands, key=lambda p: p.stat().st_mtime)   # newest save wins
+        _rck = torch.load(_pick, map_location="cuda", weights_only=False)
+        student.load_state_dict(_rck["student"])
+        teacher.load_state_dict(_rck["teacher"])
+        predictor.load_state_dict(_rck["predictor"])
+        if uw_module is not None and "uw" in _rck:
+            uw_module.load_state_dict(_rck["uw"])
+        global_step = int(_rck["step"])
+        if "resume_stage_idx" in _rck:
+            # mid-stage `_latest` anchor (iter18): optimizer/scheduler restored at
+            # the stage entry below (param groups are deterministic per stage).
+            resume_into_stage = int(_rck["resume_stage_idx"])
+            resume_local_step = int(_rck["resume_local_step"])
+            resume_after_stage = resume_into_stage - 1
+            print(f"Resumed from step {global_step} — mid-stage anchor {_pick.name}: "
+                  f"stage {resume_into_stage} continues at local step {resume_local_step}")
+        else:
+            resume_after_stage = int(_pick.stem.rsplit("_stage", 1)[1])
+            print(f"Resumed from step {global_step} — stage {resume_after_stage} "
+                  f"({_pick.name}) complete; skipping stages <= {resume_after_stage}")
+        del _rck
+        torch.cuda.empty_cache()
+    # iter18 (2026-06-06): wall-clock save gate — PyTorch Lightning
+    # ModelCheckpoint(train_time_interval) semantics (WEBSEARCH 2026-06-06; HF
+    # Trainer has no time-based save — open feature request). Backstops the
+    # probe-cadence anchor below: when a loaded box stretches steps so probes
+    # land > timed_save_interval_s apart, _latest.pt still saves every interval
+    # → a kill/crash loses ≤ the interval, never a multi-hour stage.
+    timed_gate = TimedSaveGate(
+        get_pipeline_config()["checkpointing"]["timed_save_interval_s"])
     csv_path = output_dir / artifact("loss_log_csv")
     jsonl_path = output_dir / "loss_log.jsonl"
-    csv_file = open(csv_path, "w", newline="")
+    # Resume appends (the prior run's rows are the same training trajectory);
+    # fresh runs write the header.
+    _log_mode = "a" if resume_after_stage >= 0 else "w"
+    csv_file = open(csv_path, _log_mode, newline="")
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(["step", "stage", "loss_jepa", "loss_masked", "loss_context",
-                         "loss_infonce", "loss_tcc",
-                         "uw_w_jepa", "uw_w_infonce", "uw_w_tcc",
-                         "lr", "grad_norm"])
-    jsonl_file = open(jsonl_path, "w")
+    if _log_mode == "w":
+        csv_writer.writerow(["step", "stage", "loss_jepa", "loss_masked", "loss_context",
+                             "loss_infonce", "loss_tcc",
+                             "uw_w_jepa", "uw_w_infonce", "uw_w_tcc",
+                             "lr", "grad_norm"])
+    jsonl_file = open(jsonl_path, _log_mode)
 
     def _log_step(record):
         jsonl_file.write(json.dumps(record) + "\n")
@@ -933,6 +990,31 @@ def train(cfg: dict, args):
         "stage_name":  "",
         "probe_record": None,
     }
+    # iter18 resume: re-seed best_state from the prior run's probe history so a
+    # worse post-resume probe can NOT overwrite student_best.pt (update_best_state_
+    # on_score compares against best_state[best_ckpt_metric]). Uses the SAME
+    # selector key + direction as the live tracker.
+    if resume_after_stage >= 0:
+        _ph_path = output_dir / "probe_history.jsonl"
+        if _ph_path.exists():
+            from utils.training import BEST_METRIC_DIRECTION as _DIR
+            _metric = probe_cfg["best_ckpt_metric"]
+            _rows = [json.loads(_l) for _l in _ph_path.read_text().splitlines()
+                     if _l.strip() and _metric in _l]
+            _rows = [_r for _r in _rows if _r.get(_metric) is not None]
+            if _rows:
+                _best = (max if _DIR[_metric] else min)(_rows, key=lambda r: r[_metric])
+                best_state.update({
+                    _metric:      _best[_metric],
+                    "top1":       _best["probe_top1"],
+                    "motion_cos": _best["motion_cos"],
+                    "global_step": _best["global_step"],
+                    "stage_name": _best.get("stage_name", ""),
+                    "val_loss_at_best": _best["val_jepa_loss"],
+                    "best_metric": _metric,
+                })
+                print(f"  [resume] best_state re-seeded: {_metric}={_best[_metric]:.4f} "
+                      f"@ step {_best['global_step']} (post-resume probes must beat it)")
     kill_state = {"strikes": 0, "triggered": False, "reason": None}
     # Plateau + BWT trigger state (companion early-stop triggers).
     # v13 bug fix (#79, 2026-04-21): plateau buffers now track `last_stage_idx` and
@@ -1173,6 +1255,10 @@ def train(cfg: dict, args):
 
     try:
         for stage_idx, stage_cfg in enumerate(stages):
+            if stage_idx <= resume_after_stage:
+                print(f"  [resume] skipping stage {stage_idx} ({stage_cfg['name']}) — "
+                      f"completed in the prior run (weights already loaded)")
+                continue
             stage_name = stage_cfg["name"]
             n_trainable = int(depth * stage_cfg["unfreeze_below"])
             stage_pct = stage_cfg["max_epochs_pct"]
@@ -1261,6 +1347,21 @@ def train(cfg: dict, args):
                     return (step + 1) / max(ws, 1)
                 return 1.0
             scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+            # iter18 mid-stage resume: restore THIS stage's optimizer/scheduler/scaler
+            # from the `_latest` anchor; later stages start fresh as usual.
+            stage_start_step = 0
+            if stage_idx == resume_into_stage and _latest_path.exists():
+                _rk2 = torch.load(_latest_path, map_location="cuda", weights_only=False)
+                if _rk2.get("has_optimizer") and "optimizer" in _rk2:
+                    optimizer.load_state_dict(_rk2["optimizer"])
+                    scheduler.load_state_dict(_rk2["scheduler"])
+                    if scaler is not None and _rk2.get("scaler"):
+                        scaler.load_state_dict(_rk2["scaler"])
+                stage_start_step = resume_local_step
+                del _rk2
+                torch.cuda.empty_cache()
+                print(f"  [resume] stage {stage_idx} continues at local step "
+                      f"{stage_start_step}/{stage_steps} (optimizer/scheduler restored)")
 
             # Factor source for this stage — streaming DataLoader (iter9+) or
             # legacy synchronous FactorSampler (iter8 1K POC). Exactly one is
@@ -1305,7 +1406,8 @@ def train(cfg: dict, args):
             else:
                 sampler = FactorSampler(factor_index, mode_mixture)
 
-            pbar = make_pbar(total=stage_steps, desc=f"surgery:{stage_name}", unit="step")
+            pbar = make_pbar(total=stage_steps, desc=f"surgery:{stage_name}", unit="step",
+                             initial=stage_start_step)   # iter18: honest bar on mid-stage resume
 
             # Track last loss values so end-of-stage summary still reports something
             # when every step in this stage early-`continue`s on OOM (matches m09b
@@ -1325,7 +1427,7 @@ def train(cfg: dict, args):
             window_steps = 0
             running_loss = 0.0
 
-            for local_step in range(stage_steps):
+            for local_step in range(stage_start_step, stage_steps):
                 # Build batch from factor clips — streaming DataLoader or legacy sampler.
                 # batch_keys threaded for multi-task probe loss (iter13). Streaming
                 # yields {"tensor", "factor_type", "clip_key"} (utils/training.py:1363);
@@ -1576,6 +1678,35 @@ def train(cfg: dict, args):
                         and not is_last_step_of_stage
                         and global_step % probe_every == 0):
                     _run_probe_at_step(stage_idx, stage_name, global_step)
+                    # iter18 (2026-06-06): mid-stage resume anchor — FULL ckpt (this
+                    # stage's optimizer/scheduler/scaler) + in-stage offset, rotated
+                    # in place atomically (.tmp + os.replace). A killed arm now loses
+                    # at most one probe interval, not the whole stage.
+                    save_training_checkpoint(
+                        output_dir / f"{CHECKPOINT_PREFIX}_latest.pt",
+                        student, teacher, predictor, optimizer, scheduler,
+                        scaler, global_step, best_state[best_ckpt_metric], full=True,
+                        uw=uw_module,
+                        extra={"resume_stage_idx": stage_idx,
+                               "resume_local_step": local_step + 1})
+                    timed_gate.mark()
+
+                # iter18 (2026-06-06): wall-clock anchor — fires when NO full save
+                # (probe-cadence above / stage boundary) landed within
+                # timed_save_interval_s. Same artifact + resume contract as the
+                # probe-cadence save; any full save resets the window (mark()).
+                if timed_gate.due() and not is_last_step_of_stage:
+                    save_training_checkpoint(
+                        output_dir / f"{CHECKPOINT_PREFIX}_latest.pt",
+                        student, teacher, predictor, optimizer, scheduler,
+                        scaler, global_step, best_state[best_ckpt_metric], full=True,
+                        uw=uw_module,
+                        extra={"resume_stage_idx": stage_idx,
+                               "resume_local_step": local_step + 1})
+                    timed_gate.mark()
+                    print(f"  [timed-ckpt] {CHECKPOINT_PREFIX}_latest.pt @ step {global_step} "
+                          f"(stage {stage_idx}, local_step {local_step + 1}) — wall-clock anchor",
+                          flush=True)
 
                 # Early-stop: abort if ANY of kill-switch / plateau / BWT triggered.
                 # Break inner step loop AND flag outer stage loop via same kill_state.
@@ -1597,6 +1728,7 @@ def train(cfg: dict, args):
                                          scaler, global_step, best_state["top1"], full=True,
                                          uw=uw_module)
                 cleanup_stage_checkpoints(output_dir, CHECKPOINT_PREFIX, keep_n=1, cache_policy=args.cache_policy)
+                timed_gate.mark()
                 _run_probe_at_step(stage_idx, stage_name, global_step)
                 break
             save_training_checkpoint(output_dir / f"{CHECKPOINT_PREFIX}_stage{stage_idx}.pt",
@@ -1609,6 +1741,7 @@ def train(cfg: dict, args):
             # preserves one resume anchor for mid-stage crash recovery. Final cleanup
             # (keep_n=0) happens after export_student_for_eval below.
             cleanup_stage_checkpoints(output_dir, CHECKPOINT_PREFIX, keep_n=1, cache_policy=args.cache_policy)
+            timed_gate.mark()
             print(f"  Stage {stage_name} complete: {stage_steps} steps, loss={jepa_val:.4f}")
 
             # Forced stage-boundary probe (BWT anchor) — fires regardless of cadence

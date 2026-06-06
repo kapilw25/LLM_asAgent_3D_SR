@@ -66,7 +66,7 @@ from utils.progress import make_pbar
 from utils.wandb_utils import (
     add_wandb_args, init_wandb, log_metrics, finish_wandb,
 )
-from utils.cache_policy import resolve_cache_policy_interactive, wipe_output_dir
+from utils.cache_policy import resolve_cache_policy_interactive, wipe_output_dir, is_recompute
 from utils.m09_common import add_m09_common_args, merge_m09_common_config
 # iter17 DRY #31: ViT/predictor constructors now live behind utils.training.build_student_predictor
 from utils import data_paths   # iter17: canonical local-data path accessors (single source)
@@ -82,6 +82,7 @@ from utils.training import (
     # iter15 Phase 6 C1+C2 (2026-05-16): trio + head-drift wiring for head cells.
     build_probe_clips, run_trio_at_val, track_head_drift_at_val,
     build_mask_generators,
+    TimedSaveGate, atomic_torch_save,   # iter18 (2026-06-06): wall-clock resume anchor
 )
 from utils.action_labels import load_action_labels
 from utils.motion_aux_loss import (
@@ -95,6 +96,7 @@ from utils.probe_labels import ensure_probe_labels_for_mode
 # encoder-cell layout.
 from utils.plots import render_val_plots   # iter17 DRY #33: shared 4-plot per-val render
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+from utils.stream_autotune import resolve_stream_workers  # iter18: num_workers auto-tune
 
 # iter18 W7 (PLR2004): semantic named constants.
 _CKPT_NAME_MIN_PARTS = 3   # ckpt filename: <stem>_<step>_<tag>
@@ -160,7 +162,8 @@ def merge_config_with_args(cfg: dict, args) -> dict:
               f"(surgery_*_head.yaml declares factor_streaming.sanity=true).")
         sys.exit(1)
     cfg["factor_streaming"]["enabled"] = fs_enabled
-    cfg["factor_streaming"]["num_workers"] = fs_cfg["num_workers"][mode_key]
+    cfg["factor_streaming"]["num_workers"] = resolve_stream_workers(   # iter18: "auto" → live cores/concurrency/RAM
+        fs_cfg["num_workers"][mode_key], label=Path(__file__).stem)
 
     # === Output dir: explicit --output-dir, or auto from mode ===
     if args.output_dir is not None:
@@ -578,19 +581,48 @@ def train(cfg: dict, args) -> None:
 
     best_val_loss = float("inf")
     best_epoch = -1
-    pbar = make_pbar(total=total_steps, desc=f"m09c2 head-only [{stage_name}]", unit="step")
-    step = 0
+    # iter18 (2026-06-06): wall-clock resume anchor (head-only). Saved every
+    # checkpointing.timed_save_interval_s in the step loop below (PyTorch
+    # Lightning train_time_interval semantics — same TimedSaveGate as the
+    # m09c-family encoder trainers); loaded here under --cache-policy 1 so a
+    # killed head arm resumes at (step, optimizer, scheduler, best) instead of
+    # restarting its multi-hour run. Encoder + predictor are FROZEN
+    # (deterministic from --init-from-ckpt) → only head/optimizer/scheduler/
+    # scaler/counters persist (~MBs). Data order deviates on resume (the
+    # factor stream re-iterates) — same accepted contract as the m09c-family
+    # encoder resume.
+    timed_gate = TimedSaveGate(_pcfg["checkpointing"]["timed_save_interval_s"])
+    resume_path = output_dir / f"{CHECKPOINT_PREFIX}{artifact('ckpt_resume_suffix')}"
+    resume_step = 0
+    if resume_path.exists() and not is_recompute(args.cache_policy):
+        _ra = torch.load(resume_path, map_location="cpu", weights_only=False)
+        ma_head.load_state_dict(_ra["ma_head"])
+        optimizer.load_state_dict(_ra["optimizer"])
+        scheduler.load_state_dict(_ra["scheduler"])
+        scaler.load_state_dict(_ra["scaler"])
+        resume_step = int(_ra["step"])
+        best_val_loss = float(_ra["best_val_loss"])
+        best_epoch = int(_ra["best_epoch"])
+        del _ra
+        print(f"Resumed from step {resume_step} ({resume_path.name}) — "
+              f"best val_loss={best_val_loss:.4f} @ epoch {best_epoch}")
+    pbar = make_pbar(total=total_steps, initial=resume_step,
+                     desc=f"m09c2 head-only [{stage_name}]", unit="step")
+    step = resume_step
     t_start = time.time()
 
     try:
         loader_iter = iter(loader)
         for epoch in range(max_epochs):
+            if (epoch + 1) * steps_per_epoch <= resume_step:
+                continue   # iter18 resume: epoch fully covered by the anchor
             ma_head.train()
             student.eval()
             epoch_train_losses = []
             epoch_started = time.time()
 
-            for _ in range(steps_per_epoch):
+            # iter18 resume: the first resumed epoch runs only its remaining steps.
+            for _ in range(steps_per_epoch - max(0, resume_step - epoch * steps_per_epoch)):
                 try:
                     batch = next(loader_iter)
                 except StopIteration:
@@ -623,6 +655,22 @@ def train(cfg: dict, args) -> None:
                 epoch_train_losses.append(float(loss_val))
                 step += 1
                 pbar.update(1)
+
+                # iter18 (2026-06-06): wall-clock resume anchor — head + optimizer
+                # state only (~MBs; encoder frozen). Atomic tmp + os.replace.
+                if timed_gate.due():
+                    atomic_torch_save(resume_path, {
+                        "ma_head": ma_head.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": scheduler.state_dict(),
+                        "scaler": scaler.state_dict(),
+                        "step": step,
+                        "best_val_loss": best_val_loss,
+                        "best_epoch": best_epoch,
+                    })
+                    timed_gate.mark()
+                    print(f"  [timed-ckpt] {resume_path.name} @ step {step} (epoch {epoch}) "
+                          f"— wall-clock anchor", flush=True)
                 if step % 20 == 0:
                     cur_lr = optimizer.param_groups[0]["lr"]
                     row = {

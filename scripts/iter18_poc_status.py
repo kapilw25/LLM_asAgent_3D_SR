@@ -145,6 +145,27 @@ def _running_total(jobs, jid, elapsed, prior):
         if cp and rr and int(cp[-1][1]) and int(cp[-1][0]) >= _MIN_EVAL_POINTS:
             cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
             return min(elapsed + (tot - cur) * rate, 3 * 3600)
+    # Multi-stage arm progress (2026-06-06 fix: concurrent factor-streaming runs 60-140
+    # s/step vs the 27 s/step solo prior, so the prior-clamp printed 'remaining ~5m' at
+    # elapsed 10h). Honest estimate from the arm's OWN log: completed-stage step counts +
+    # live stage bar position + the stage plan banners give true global progress; the last
+    # recent= window gives the true current rate.
+    if _arm_of(jid) in _MULTI_STAGE_ARMS and cands:
+        try:
+            full = cands[-1].read_text(errors="replace")
+        except OSError:
+            full = txt
+        done_steps = sum(int(n) for n in re.findall(r"Stage \w+ complete: (\d+) steps", full))
+        planned = [int(n) for n in re.findall(r"\| (\d+) steps \| warmup", full)]
+        bar = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
+        rr = re.findall(r"recent=([\d.]+)s/step", full)
+        if bar:
+            cur, stage_tot = int(bar[-1][0]), int(bar[-1][1])
+            gstep = done_steps + min(cur, stage_tot)
+            total = sum(planned) if planned else None
+            steps_left = (total - gstep) if total and total > gstep else (stage_tot - cur)
+            rate = float(rr[-1]) if rr else (elapsed / max(gstep, 1))
+            return min(elapsed + steps_left * rate, elapsed + 12 * 3600)
     return min(max(prior, elapsed + 300), cap)
 
 

@@ -97,7 +97,7 @@ def build_jobs(mode):
         deps = set() if arm == "pretrain_encoder" else {seed_id}
         jobs[jid] = dict(
             id=jid, kind="train", deps=deps, needs_labels=(jid != seed_id),
-            cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} BACKBONE={BACKBONE} CACHE_POLICY_ALL={{cache}} "
+            cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} NGPU_CONCURRENCY={{conc}} BACKBONE={BACKBONE} CACHE_POLICY_ALL={{cache}} "
                  f"./scripts/run_train.sh {arm} {mflag}"),
             log=f"logs/iter18_ngpu_{mtag}_train_{arm}_{{ts}}.log")
     # eval jobs: frozen + pretrain references + the 12 contender arms (= m13 needs all three families)
@@ -210,7 +210,7 @@ def main():
                 continue
             g = free.pop(0)
             log = jobs[jid]["log"].format(ts=ts())
-            cmd = jobs[jid]["cmd"].format(gpu=g, cache=args.cache)
+            cmd = jobs[jid]["cmd"].format(gpu=g, cache=args.cache, conc=args.gpus)
             print(f"[{now()}] GPU{g} ◀ {jid}  → {log}", flush=True)
             lf = open(REPO / log, "w")
             p = subprocess.Popen(cmd, shell=True, cwd=str(REPO), stdout=lf, stderr=subprocess.STDOUT)

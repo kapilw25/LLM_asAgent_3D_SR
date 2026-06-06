@@ -61,7 +61,7 @@ from utils.progress import make_pbar
 from utils.wandb_utils import (
     add_wandb_args, init_wandb, log_metrics, finish_wandb,
 )
-from utils.cache_policy import resolve_cache_policy_interactive, wipe_output_dir
+from utils.cache_policy import resolve_cache_policy_interactive, wipe_output_dir, is_recompute
 from utils.m09_common import add_m09_common_args, merge_m09_common_config
 # iter17 DRY #31: ViT/predictor constructors now live behind utils.training.build_student_predictor
 from utils.training import (
@@ -74,6 +74,7 @@ from utils.training import (
     # iter15 Phase 6 C1+C2 (2026-05-16): trio + head-drift wiring for head cells.
     build_probe_clips, run_trio_at_val, track_head_drift_at_val,
     build_mask_generators,
+    TimedSaveGate, atomic_torch_save,   # iter18 (2026-06-06): wall-clock resume anchor
 )
 from utils.action_labels import load_action_labels
 # iter15 Phase 6 audit (2026-05-16): emit-parity with m09a1 — add plot calls so
@@ -362,12 +363,35 @@ def train(cfg: dict, args) -> None:
     wb_run = init_wandb("m09a2", mode_label, config=vars(args),
                           enabled=not args.no_wandb)
 
+    # iter18 (2026-06-06): wall-clock resume anchor (head-only) — mirrors m09c2
+    # (sibling parity). Saved every checkpointing.timed_save_interval_s in the
+    # step loop below; loaded here under --cache-policy 1. Must run BEFORE the
+    # producer thread starts so processed_steps gets the resumed step (the
+    # producer then enqueues exactly the remaining-step budget).
+    timed_gate = TimedSaveGate(_pcfg["checkpointing"]["timed_save_interval_s"])
+    resume_path = output_dir / f"{CHECKPOINT_PREFIX}{artifact('ckpt_resume_suffix')}"
+    resume_step = 0
+    best_val_loss = float("inf")
+    best_epoch = -1
+    if resume_path.exists() and not is_recompute(args.cache_policy):
+        _ra = torch.load(resume_path, map_location="cpu", weights_only=False)
+        ma_head.load_state_dict(_ra["ma_head"])
+        optimizer.load_state_dict(_ra["optimizer"])
+        scheduler.load_state_dict(_ra["scheduler"])
+        scaler.load_state_dict(_ra["scaler"])
+        resume_step = int(_ra["step"])
+        best_val_loss = float(_ra["best_val_loss"])
+        best_epoch = int(_ra["best_epoch"])
+        del _ra
+        print(f"Resumed from step {resume_step} ({resume_path.name}) — "
+              f"best val_loss={best_val_loss:.4f} @ epoch {best_epoch}")
+
     # === Producer-consumer for train clips (CPU decode → GPU forward) ===
     q = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)
     stop_event = threading.Event()
     producer = threading.Thread(
         target=producer_thread,
-        args=(cfg, q, stop_event, set(train_keys), 0),
+        args=(cfg, q, stop_event, set(train_keys), resume_step),
         daemon=True,
     )
     producer.start()
@@ -385,20 +409,24 @@ def train(cfg: dict, args) -> None:
         "loss_multi_task", "loss_motion_aux",
         "lr", "grad_norm", "throughput", "val_loss"])
 
-    best_val_loss = float("inf")
-    best_epoch = -1
-    pbar = make_pbar(total=total_steps, desc="m09a2 head-only", unit="step")
-    step = 0
+    # best_val_loss / best_epoch initialized (and possibly restored) by the
+    # resume block above — do NOT re-init here (would clobber the anchor).
+    pbar = make_pbar(total=total_steps, initial=resume_step,
+                     desc="m09a2 head-only", unit="step")
+    step = resume_step
     t_start = time.time()
 
     try:
         for epoch in range(max_epochs):
+            if (epoch + 1) * steps_per_epoch <= resume_step:
+                continue   # iter18 resume: epoch fully covered by the anchor
             ma_head.train()
             student.eval()  # always eval — encoder forward only, never trains
             epoch_train_losses = []
             epoch_started = time.time()
 
-            for _ in range(steps_per_epoch):
+            # iter18 resume: the first resumed epoch runs only its remaining steps.
+            for _ in range(steps_per_epoch - max(0, resume_step - epoch * steps_per_epoch)):
                 try:
                     item = q.get(timeout=600)  # 10-min stall = fatal
                 except queue.Empty:
@@ -437,6 +465,22 @@ def train(cfg: dict, args) -> None:
                 epoch_train_losses.append(float(loss_val))
                 step += 1
                 pbar.update(1)
+
+                # iter18 (2026-06-06): wall-clock resume anchor — head + optimizer
+                # state only (~MBs; encoder frozen). Atomic tmp + os.replace.
+                if timed_gate.due():
+                    atomic_torch_save(resume_path, {
+                        "ma_head": ma_head.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": scheduler.state_dict(),
+                        "scaler": scaler.state_dict(),
+                        "step": step,
+                        "best_val_loss": best_val_loss,
+                        "best_epoch": best_epoch,
+                    })
+                    timed_gate.mark()
+                    print(f"  [timed-ckpt] {resume_path.name} @ step {step} (epoch {epoch}) "
+                          f"— wall-clock anchor", flush=True)
                 if step % 20 == 0:
                     cur_lr = optimizer.param_groups[0]["lr"]
                     # JSONL: m09a1-compatible schema (encoder-frozen → loss_jepa/

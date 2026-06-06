@@ -109,6 +109,7 @@ from utils.training import (
     build_optimizer, build_scheduler, update_weight_decay,
     run_validation,
     save_training_checkpoint, load_training_checkpoint,
+    TimedSaveGate,
     enable_gradient_checkpointing,
     build_probe_clips,
     cleanup_old_checkpoints,
@@ -523,6 +524,13 @@ def train(cfg: dict, args):
     print(f"Epochs: {max_epochs} | Steps/epoch: {steps_per_epoch:,} | Total steps: {total_steps:,}")
     print(f"Checkpoint every {ckpt_interval} steps ({saves_per_epoch}x/epoch, keep last {keep_last_n})")
     print(f"Validation every {val_interval} steps ({saves_per_epoch}x/epoch, {len(val_key_set)} val clips)")
+    # iter18 (2026-06-06): wall-clock save gate — PyTorch Lightning
+    # ModelCheckpoint(train_time_interval) semantics (WEBSEARCH 2026-06-06).
+    # Backstops the step-based ckpt_interval above: when a loaded box stretches
+    # steps so the interval lands > timed_save_interval_s apart, ckpt_latest
+    # still saves every interval → a kill/crash loses ≤ the interval.
+    timed_gate = TimedSaveGate(
+        get_pipeline_config()["checkpointing"]["timed_save_interval_s"])
 
     # Optimizer & scheduler (cosine over total_steps)
     optimizer = build_optimizer(student, predictor, cfg["optimization"])
@@ -1064,6 +1072,19 @@ def train(cfg: dict, args):
                     scaler, step + 1, best_sel_score, full=True)
                 cleanup_old_checkpoints(output_dir, prefix=CHECKPOINT_PREFIX,
                                         keep_n=keep_last_n)
+                timed_gate.mark()
+
+            # iter18 (2026-06-06): wall-clock anchor (Lightning train_time_interval
+            # semantics) — backstops the step-based ckpt_interval when a loaded box
+            # stretches steps past timed_save_interval_s. Same artifact + the
+            # existing load_training_checkpoint resume path above.
+            if timed_gate.due():
+                save_training_checkpoint(
+                    ckpt_path, student, teacher, predictor, optimizer, scheduler,
+                    scaler, step + 1, best_sel_score, full=True)
+                timed_gate.mark()
+                print(f"  [timed-ckpt] {ckpt_path.name} @ step {step + 1} — wall-clock anchor",
+                      flush=True)
 
             # Periodic validation (every val_interval steps)
             if (step + 1) % val_interval == 0 and val_batches:

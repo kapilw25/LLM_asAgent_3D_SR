@@ -73,8 +73,11 @@ factor_streaming:
   full:   true                    # 🎯 unlocks scale ladder
   num_workers:
     sanity: 0                     # in-process debug path, deterministic
-    poc:    4
-    full:   16                    # scipy gaussian σ=15 is CPU-bound; need processes
+    poc:    auto                  # iter18 (2026-06-06): was 4 — fixed caps starved GPUs under
+                                  #   multi-arm concurrency (60-140 s/step vs 27 solo). "auto" =
+                                  #   utils.stream_autotune resolves from live cores/concurrency/
+                                  #   RAM; constants in pipeline.yaml streaming.worker_autotune.
+    full:   auto                  # same resolver (scipy gaussian σ=15 is CPU-bound; needs processes)
   prefetch_factor:     4          # 2 full batches lead → GPU never stalls
   persistent_workers:  true       # amortize worker-fork cost within a stage
   pin_memory:          true

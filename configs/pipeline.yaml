@@ -164,6 +164,7 @@ artifacts:
   subset_fmt: "subset_{}k.json"       # m00c derived subset name
   # checkpoint suffix/glob family (composed onto CHECKPOINT_PREFIX)
   ckpt_latest_suffix: "_latest.pt"
+  ckpt_resume_suffix: "_resume.pt"    # head-only (m09a2/m09c2) wall-clock resume anchor — f"{CHECKPOINT_PREFIX}{suffix}"
   ckpt_step_glob: "_step*.pt"
   ckpt_stage_glob: "_stage*.pt"
   ckpt_any_glob: "_*.pt"
@@ -189,11 +190,36 @@ artifacts:
   city_matrix: "city_matrix.json"
   m04b_vlm_comparison: "m04b_vlm_comparison.json"
 
+# -- Wall-clock-gated resume saves (iter18, 2026-06-06). Mirrors PyTorch Lightning
+# ModelCheckpoint(train_time_interval=...) — the field-standard time-based ckpt
+# (HF Trainer has none; open feature request). Every m09* trainer checks the gate
+# at step end and writes its resume anchor (encoder arms: *_ckpt_latest.pt full
+# ckpt; head arms: *_ckpt_resume.pt head+optimizer) once the interval has elapsed
+# since the last full save → a kill/crash loses ≤ this interval on EVERY arm,
+# regardless of probe/val cadence, stage length, or box load (06-06 incident:
+# noDI stage1 ran ~10 h between durable saves under 4-arm CPU contention).
+checkpointing:
+  timed_save_interval_s: 3600   # 1 h — ViT-G full ckpt save ≈1-2 min → ~2-3% overhead
+
 # -- Streaming & checkpointing --
 streaming:
   max_retries: 5              # HF stream reconnect attempts
   checkpoint_every: 500       # clips between checkpoint saves (m04/m05)
   tar_reader_queue: 256       # iter18 H6: iter_clips_parallel max_queue (was signature default)
+  # -- Runtime worker auto-tune (iter18 2026-06-06) -------------------------------------
+  # Consumed by utils.stream_autotune.resolve_stream_workers when a train yaml declares
+  # num_workers: auto. Measured incident: 3-4 concurrent arms each FIXED at poc:4 workers
+  # fed the GPUs at 60-140 s/step vs 27 s/step solo (box load 5.7/128 cores — the per-arm
+  # worker cap was the bottleneck, not the machine). The resolver computes
+  #   workers = clamp( cores//concurrency − reserve_per_proc, min_workers, max_workers )
+  #   then RAM-clamps: workers ≤ (cgroup_ram × ram_headroom_pct / concurrency) / ram_per_worker_gb
+  # concurrency = NGPU_CONCURRENCY env (fed by iter18_poc_ngpu) → else GPU count → else 1.
+  worker_autotune:
+    reserve_per_proc: 12        # each arm's other CPU threads: 8 TAR readers + main + probe decode
+    min_workers: 4              # never below the old fixed value
+    max_workers: 24             # diminishing returns past this; protects 2-arm boxes from 60+ workers
+    ram_per_worker_gb: 2.0      # decoded-clip buffers per worker (prefetch_factor 4 × ~0.5G batch share)
+    ram_headroom_pct: 0.75      # leave 25% cgroup RAM for models/val-collect (06-06: 90% CRITICAL at peak)
   heartbeat_interval_s: 30.0  # iter18 H6: hf_outputs _UploadHeartbeat pulse (was signature default)
   factor_stream_base_seed: 42 # iter18 H6: StreamingFactorDataset determinism base (was signature default)
   # iter13 (2026-05-05): probe extraction (utils/frozen_features.py) gets a

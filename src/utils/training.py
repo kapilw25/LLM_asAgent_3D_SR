@@ -1222,11 +1222,49 @@ def run_validation(student, teacher, predictor, mask_generators,
 # CHECKPOINT
 # ═════════════════════════════════════════════════════════════════════════
 
+class TimedSaveGate:
+    """Wall-clock gate for periodic resume saves — mirrors PyTorch Lightning
+    ModelCheckpoint(train_time_interval=...): checked at each step end; due()
+    fires once the interval has elapsed since the last full save; ANY full save
+    resets the window via mark(). HF Trainer has no time-based equivalent (open
+    feature request) — this is the field-standard pattern (iter18 WEBSEARCH
+    2026-06-06). Monotonic clock — immune to NTP/wall-clock jumps. The interval
+    comes from configs/pipeline.yaml checkpointing.timed_save_interval_s (no
+    hardcoded value). Technique-agnostic per the #49 contract (pure timing,
+    zero cfg branches)."""
+
+    def __init__(self, interval_s):
+        self.interval_s = float(interval_s)
+        self._last = time.monotonic()
+
+    def due(self) -> bool:
+        return (time.monotonic() - self._last) >= self.interval_s
+
+    def mark(self) -> None:
+        self._last = time.monotonic()
+
+
+def atomic_torch_save(path: Path, obj) -> None:
+    """torch.save via tmp + os.replace — a kill mid-write can't corrupt the
+    previous file (same contract as save_training_checkpoint's atomic write
+    below). For small resume anchors (head-only trainers m09a2/m09c2) that
+    don't need the full encoder ckpt schema."""
+    tmp_path = path.with_suffix(".tmp")
+    try:
+        torch.save(obj, tmp_path)
+        os.replace(tmp_path, path)
+    except (RuntimeError, OSError):
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise
+
+
 def save_training_checkpoint(path: Path, student, teacher, predictor,
                               optimizer, scheduler, scaler,
                               step: int, best_metric: float,
                               full: bool = True, uw=None,
-                              include_optimizer: bool = True, include_teacher: bool = True):
+                              include_optimizer: bool = True, include_teacher: bool = True,
+                              extra: dict = None):
     """Save checkpoint.
 
     iter11 disk-budget fix (2026-04-24, after POC v3 disk-full crash at step 6):
@@ -1267,6 +1305,8 @@ def save_training_checkpoint(path: Path, student, teacher, predictor,
         "is_full": full,                      # marker for load_training_checkpoint fallback
         "has_optimizer": full and include_optimizer,  # marker so load can dispatch
     }
+    if extra:
+        ckpt.update(extra)   # iter18: mid-stage resume metadata (resume_stage_idx / resume_local_step)
     if full:
         ckpt["predictor"] = predictor.state_dict()
         if include_teacher:                          # best/eval ckpts pass include_teacher=False —
