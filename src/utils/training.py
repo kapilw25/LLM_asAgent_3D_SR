@@ -2293,8 +2293,18 @@ def _decode_probe_clip_worker(args):
     import torch.multiprocessing as _torch_mp_worker
     _torch_mp_worker.set_sharing_strategy("file_system")  # iter15 D18 — see module-top
     _torch.set_num_threads(1)
-    from utils.video_io import decode_video_bytes as _decode
-    clip_key, mp4_bytes, tag, num_frames, crop_size, tmp_dir = args
+    from utils.video_io import (
+        decode_video_bytes as _decode,
+        _FRAME_CACHE_ENV as _FC_ENV, _FRAME_CACHE_MIN_FREE_ENV as _FC_MIN_ENV)
+    clip_key, mp4_bytes, tag, num_frames, crop_size, tmp_dir, frame_cache = args
+    if frame_cache is not None:
+        # iter18 (2026-06-06): probe clips are IDENTICAL across all 13 arms (same val
+        # split, same nf=16, deterministic decode) — share the eval frame cache so the
+        # 1st arm decodes each clip once and every later arm + the m12 evals cache-HIT.
+        # Env is SUBPROCESS-local: the trainer's streaming/producer decode paths (other
+        # processes/threads) keep their deliberate no-cache behavior.
+        _os.environ[_FC_ENV] = frame_cache[0]
+        _os.environ[_FC_MIN_ENV] = str(frame_cache[1])
     video_u8 = _decode(mp4_bytes, tmp_dir, clip_key, num_frames)
     if video_u8 is None:
         return None
@@ -2404,6 +2414,16 @@ def build_probe_clips(probe_subset_path: str, probe_local_data: str,
     tag_by_source = {t["source_file"]: t for t in tags_list if "source_file" in t}
 
     tmp_dir = tempfile.mkdtemp(prefix="probe_decode_")
+    # iter18 (2026-06-06): route the probe decode through the SHARED eval frame cache
+    # (probe.eval_frame_cache in pipeline.yaml — same enabled/min_free/subdir knobs as
+    # run_eval.sh). The probe clips are byte-identical across all 13 arms → the 1st arm
+    # builds ~1.4 GB of (clip, nf16) entries, arms 2-13 and the m12 evals read them.
+    # Store is atomic (tmp + os.replace) with a free-disk floor (video_io).
+    _fc_cfg = _pcfg["probe"]["eval_frame_cache"]
+    frame_cache = ((str(Path(probe_local_data) / _fc_cfg["subdir"]), _fc_cfg["min_free_gb"])
+                   if _fc_cfg["enabled"] else None)
+    if frame_cache is not None:
+        print(f"  [probe] frame-cache ON → {frame_cache[0]} (shared across arms + evals)")
     clips = []
     n_no_tag = 0
     # iter13 perf fix (2026-05-03): the prior implementation decoded ~1.5K probe
@@ -2435,7 +2455,7 @@ def build_probe_clips(probe_subset_path: str, probe_local_data: str,
                 n_no_tag += 1
                 continue
             work_items.append((clip_key, mp4_bytes, tag_by_source[source_file],
-                               num_frames, crop_size, tmp_dir))
+                               num_frames, crop_size, tmp_dir, frame_cache))
         tar_stop.set()
 
         if not work_items:

@@ -123,7 +123,8 @@ def _load_av(video_path: str, num_frames: int) -> torch.Tensor:
 # which is also the only decode in frozen_features. The scheduler runs one run_eval.sh
 # PER encoder, so 8 processes decode the SAME ~1.8k clips concurrently (~7 passes each),
 # pinning the CPU (load 467/256) while the GPUs idle. When EVAL_FRAME_CACHE_DIR is set
-# (run_eval.sh ONLY — never training, whose full-pool stream over many epochs would blow
+# (run_eval.sh + the build_probe_clips decode SUBPROCESSES since iter18 — never the
+# training stream/producer, whose full-pool decode over many epochs would blow
 # the cache), the decoded native (T,C,H,W) uint8 tensor is memoized to disk keyed by
 # (clip_key, num_frames). Decode is deterministic (linspace sampling + fixed decoder), so
 # a hit returns a byte-identical tensor; decode_to_tensor still runs its crop/normalize

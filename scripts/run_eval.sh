@@ -163,7 +163,8 @@ case "$FRAME_CACHE_ENABLED" in
     false|False|0|"")
         echo "  ✓ eval frame cache:     disabled (probe.eval_frame_cache.enabled=$FRAME_CACHE_ENABLED)" ;;
     *)
-        export EVAL_FRAME_CACHE_DIR="${EVAL_FRAME_CACHE_DIR:-${LOCAL_DATA}/m12_frame_cache}"  # in the DATASET dir → durable + reused across iterations (data/ is gitignored)
+        FRAME_CACHE_SUBDIR="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.subdir)"  # single source with build_probe_clips (iter18)
+        export EVAL_FRAME_CACHE_DIR="${EVAL_FRAME_CACHE_DIR:-${LOCAL_DATA}/${FRAME_CACHE_SUBDIR}}"  # in the DATASET dir → durable + reused across iterations (data/ is gitignored)
         export EVAL_FRAME_CACHE_MIN_FREE_GB="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.min_free_gb)"
         mkdir -p "$EVAL_FRAME_CACHE_DIR"
         echo "  ✓ eval frame cache:     $EVAL_FRAME_CACHE_DIR (min free ${EVAL_FRAME_CACHE_MIN_FREE_GB} GB)" ;;

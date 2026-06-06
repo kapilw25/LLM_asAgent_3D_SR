@@ -220,6 +220,21 @@ streaming:
     max_workers: 24             # diminishing returns past this; protects 2-arm boxes from 60+ workers
     ram_per_worker_gb: 2.0      # decoded-clip buffers per worker (prefetch_factor 4 × ~0.5G batch share)
     ram_headroom_pct: 0.75      # leave 25% cgroup RAM for models/val-collect (06-06: 90% CRITICAL at peak)
+  # iter18 (2026-06-06): deterministic-decode memoization for the TRAINER decode paths
+  # (factor-stream D_L/D_A/D_I source clips, raw-replay, m09a producer, val-collect).
+  # decode_video_bytes is DETERMINISTIC (linspace sampling, fixed decoder) and all
+  # randomness (tube pick, augmentation, replay coin) applies AFTER decode → training
+  # data is byte-identical with or without the cache. Enabled by
+  # stream_autotune.enable_train_frame_cache (called from m09_common → every m09 trainer
+  # + its fork-workers inherit). Same dir + (clip,nf) keys as probe.eval_frame_cache →
+  # shared with probe decode + the 14 eval jobs. POC: ~7k clips × ~20MB(nf16) ≈ 138G —
+  # fits the 483G page cache → epoch≥2 / stage≥2 / arms 2..N re-decode at RAM speed
+  # (loader-bound shallow stages were 38.9 → 189 s/step under 4-arm contention).
+  train_frame_cache:
+    enabled: true
+    min_free_gb: 200            # stop creating NEW entries below this free-disk floor; a partial
+                                # cache stays correct (miss → fresh decode). FULL (116k ≈ 2.3T) will
+                                # cap out — hottest clips still serve hits.
   heartbeat_interval_s: 30.0  # iter18 H6: hf_outputs _UploadHeartbeat pulse (was signature default)
   factor_stream_base_seed: 42 # iter18 H6: StreamingFactorDataset determinism base (was signature default)
   # iter13 (2026-05-05): probe extraction (utils/frozen_features.py) gets a
@@ -687,6 +702,9 @@ probe:
                                      # per-encoder eval processes (memoized inside decode_video_bytes). Was
                                      # ~7 decodes/encoder × 8 encoders → CPU pinned (load 467/256), GPUs idle.
     enabled:           true          # run_eval.sh sets EVAL_FRAME_CACHE_DIR when true; OFF for training/data-prep
+    subdir:            "m12_frame_cache"  # cache dir under LOCAL_DATA (durable, gitignored). iter18: ALSO used by
+                                     # build_probe_clips' decode workers — the 451 probe clips are identical across
+                                     # all 13 arms (same val split, same nf=16) → arm 1 decodes, arms 2-13 + evals HIT
     min_free_gb:       80            # stop writing NEW cache entries when free disk < this. clips decode at
                                      # native ~360x640 → nf16 ≈ 11 MB/clip (full 9130-clip universe ≈ 100 GB);
                                      # 80 GB floor self-bounds nf64/pace growth + leaves room for eval transients

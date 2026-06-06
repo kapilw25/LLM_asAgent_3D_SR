@@ -26,8 +26,10 @@ USAGE (each m09* trainer, right after flattening the mode-gated yaml value):
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 from utils.config import get_cgroup_memory_gb, get_pipeline_config
+from utils.video_io import _FRAME_CACHE_ENV, _FRAME_CACHE_MIN_FREE_ENV
 
 
 def _detect_concurrency() -> int:
@@ -43,6 +45,37 @@ def _detect_concurrency() -> int:
         if n:
             return n
     return 1
+
+
+def enable_train_frame_cache(local_data: str) -> None:
+    """iter18 (2026-06-06): memoize the DETERMINISTIC decode (video_io.decode_video_bytes —
+    linspace frame sampling + fixed decoder → bit-identical on re-decode) for EVERY trainer
+    decode path: factor-stream D_L/D_A/D_I source clips, raw-replay, the m09a producer,
+    val-collect, probe decode. All randomness (D_I tube pick, augmentation, replay coin)
+    applies AFTER decode on the tensor → training data is byte-identical either way.
+
+    WHY (measured 06-06, 4× box): the streaming loader re-decodes the SAME ~7k-clip pool
+    every epoch, every stage, every arm — shallow loader-bound stages ran 38.9 → 189 s/step
+    under 4-arm contention. With the cache, epoch ≥2 / stage ≥2 / arms 2..N read ~20 MB .npy
+    served from the page cache (POC: ~138 G total, fits 483 G RAM) instead of PyAV-decoding
+    (the disk-backed "stochastic caching" pattern: charl-ai.github.io/blog/dataloaders).
+
+    Called from m09_common.merge_m09_common_config — the one seam every m09 trainer passes
+    through — so DataLoader fork-workers + producer threads inherit the env. Same dir +
+    (clip, nf) keys as probe.eval_frame_cache → shared with probe decode + the eval jobs.
+    Knobs: pipeline.yaml streaming.train_frame_cache (enabled, min_free_gb floor — a partial
+    cache at FULL scale stays correct: miss → fresh decode)."""
+    _pcfg = get_pipeline_config()
+    tfc = _pcfg["streaming"]["train_frame_cache"]
+    if not tfc["enabled"]:
+        print("  [train-frame-cache] disabled (streaming.train_frame_cache.enabled=false)",
+              flush=True)
+        return
+    cache_dir = str(Path(local_data) / _pcfg["probe"]["eval_frame_cache"]["subdir"])
+    os.environ[_FRAME_CACHE_ENV] = cache_dir
+    os.environ[_FRAME_CACHE_MIN_FREE_ENV] = str(tfc["min_free_gb"])
+    print(f"  [train-frame-cache] ON → {cache_dir} (min_free={tfc['min_free_gb']}G) — "
+          f"deterministic decode memoized; shared across epochs/stages/arms/evals", flush=True)
 
 
 def resolve_stream_workers(cfg_value, label: str) -> int:

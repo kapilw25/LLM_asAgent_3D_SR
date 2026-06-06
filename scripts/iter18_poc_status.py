@@ -50,8 +50,17 @@ TRAIN_ORDER = [
 ]
 _HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
 # Factor arms run SEQUENTIAL STAGES (one tqdm bar each: 4 stages DI / 3 noDI / 4 raw) —
-# a per-stage bar must never be extrapolated to the whole job.
-_MULTI_STAGE_ARMS = {"surgery_3stage_DI_encoder", "surgery_noDI_encoder", "surgery_raw_encoder"}
+# a per-stage bar must never be extrapolated to the whole job. Value = total stage count
+# (incl. LP-FT stage0): plan banners print only at STAGE START, so unstarted stages are
+# invisible in the log — the count lets the estimator pad them in (06-06: noDI sat at
+# stage1 bar 100% and read "~1m00s" while its whole 219-step stage2 hadn't begun).
+_MULTI_STAGE_ARMS = {"surgery_3stage_DI_encoder": 4, "surgery_noDI_encoder": 3,
+                     "surgery_raw_encoder": 4}
+_STAGE_NOTE = {}   # jid → "sN/M" live stage marker, filled by _running_total, shown in the cell
+# End-of-training finalize for a multi-stage arm (stage-end probe-trio on 451 clips +
+# best-ckpt reload + student_encoder export) — DI measured ~15m at POC. Shown once every
+# stage's steps are done; "remaining ~1m00s" during a 15-min finalize was a display lie.
+_FINALIZE_PAD_S = 15 * 60
 # COLD-START priors (seconds), used ONLY until a live measurement (a completion, or a running job's
 # step progress) replaces them. Empirical: 06-06 1× pretrain 4h32m; 06-05 enc arms ~5h10m;
 # head arms ~58m; eval = per-encoder stages only (2,3,11,5,6,8,8b) — self-corrects on 1st completion.
@@ -155,16 +164,54 @@ def _running_total(jobs, jid, elapsed, prior):
             full = cands[-1].read_text(errors="replace")
         except OSError:
             full = txt
-        done_steps = sum(int(n) for n in re.findall(r"Stage \w+ complete: (\d+) steps", full))
+        n_total = _MULTI_STAGE_ARMS[_arm_of(jid)]
+        done_list = re.findall(r"Stage \w+ complete: (\d+) steps", full)
+        done_steps = sum(int(n) for n in done_list)
         planned = [int(n) for n in re.findall(r"\| (\d+) steps \| warmup", full)]
-        bar = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
+        # surgery: train-step bars ONLY (desc "surgery:<stage>") — the generic cur/tot
+        # pattern also matched the probe-trio's 451-clip bar and polluted the estimate.
+        bar = re.findall(r"surgery:\S+\s+\d+%\|[^|]*\|\s*(\d+)/(\d+)\s*\[", txt)
         rr = re.findall(r"recent=([\d.]+)s/step", full)
+        # --cache 1 resume: the new log carries neither the skipped stages' "complete"
+        # lines nor their plan banners — fold them in from the resume prints.
+        rm = re.findall(r"Resumed from step (\d+)", full)
+        base = int(rm[-1]) if rm else 0
+        sk = re.findall(r"skipping stages <= (\d+)", full)
+        n_prior = (int(sk[-1]) + 1) if sk else 0
+        cont = re.findall(r"stage (\d+) continues at local step (\d+)", full)
+        if cont and not sk:        # mid-stage _latest anchor: bar starts at initial=L,
+            n_prior = int(cont[-1][0])     # so L is already inside the bar's cur —
+            base -= int(cont[-1][1])       # don't count it twice
+        # pad one entry per not-yet-started stage with the last banner's size
+        # (post-stage0 recipe stages are equal-sized: 50/50 noDI, 30/30 DI/raw tail).
+        missing = n_total - n_prior - len(planned)
+        if planned and missing > 0:
+            planned = planned + [planned[-1]] * missing
         if bar:
             cur, stage_tot = int(bar[-1][0]), int(bar[-1][1])
-            gstep = done_steps + min(cur, stage_tot)
-            total = sum(planned) if planned else None
-            steps_left = (total - gstep) if total and total > gstep else (stage_tot - cur)
-            rate = float(rr[-1]) if rr else (elapsed / max(gstep, 1))
+            # stale-bar guard: when every STARTED stage already printed its "complete"
+            # line, the last bar belongs to a finished stage (between-stages probe is
+            # running) — its steps are already inside done_steps; contribution = 0.
+            live = len(done_list) < (len(planned) - max(missing, 0))
+            contrib = min(cur, stage_tot) if live else 0
+        else:
+            # between-stages the probe-trio bar spam can push the last "surgery:" bar
+            # out of the tail window — the plan + completed counts alone still give an
+            # honest estimate (contribution 0 = stage boundary).
+            cur = stage_tot = contrib = 0
+        if planned or bar:
+            gstep = base + done_steps + contrib
+            total = (base + sum(planned)) if planned else None
+            _STAGE_NOTE[jid] = f"s{min(n_prior + len(done_list) + 1, n_total)}/{n_total}"
+            if total and total > gstep:
+                steps_left = total - gstep
+            elif bar and stage_tot > cur:
+                steps_left = stage_tot - cur
+            else:
+                # every planned stage's steps are done → end-of-training finalize
+                # (stage-end probe + best-ckpt reload + student_encoder export).
+                return elapsed + _FINALIZE_PAD_S
+            rate = float(rr[-1]) if rr else (elapsed / max(done_steps + contrib, 1))
             return min(elapsed + steps_left * rate, elapsed + 12 * 3600)
     return min(max(prior, elapsed + 300), cap)
 
@@ -387,7 +434,9 @@ def main():
         if st == "failed":
             return "❌ FAILED"
         if st == "running":
-            return f"🔄 {_dur(elapsed(jid))}·~{_dur(finish[jid])}"
+            note = _STAGE_NOTE.get(jid)
+            stg = f"·{note}" if note else ""
+            return f"🔄 {_dur(elapsed(jid))}{stg}·~{_dur(finish[jid])}"
         return f"⬚ ~{_dur(finish[jid])}"
 
     def kemoji(arm):

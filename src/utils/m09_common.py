@@ -27,6 +27,7 @@ from utils.config import (
 from utils.cache_policy import add_cache_policy_arg
 from utils.multi_task_loss import merge_multi_task_config
 from utils.motion_aux_loss import merge_motion_aux_config
+from utils.stream_autotune import enable_train_frame_cache
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -168,6 +169,12 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
         cfg["data"]["val_subset"] = args.val_subset
     if args.val_local_data:
         cfg["data"]["val_local_data"] = args.val_local_data
+
+    # iter18 (2026-06-06): deterministic-decode memoization for ALL trainer decode paths
+    # (factor-stream source clips, raw-replay, producer, val-collect). Enabled HERE — the
+    # one seam every m09 trainer passes through — so the env reaches DataLoader fork-
+    # workers + producer threads. See stream_autotune.enable_train_frame_cache.
+    enable_train_frame_cache(cfg["data"]["local_data"])
 
     # 2) optimization overrides
     # Per-mode flatten: max_epochs may be a dict {sanity, poc, full} OR scalar.

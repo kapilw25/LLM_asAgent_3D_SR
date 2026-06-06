@@ -1446,6 +1446,21 @@ def train(cfg: dict, args):
             window_steps = 0
             running_loss = 0.0
 
+            # iter18 (2026-06-06) probe-count fix: EXACT per-stage probe schedule.
+            # Floor-division cadence (global_step % probe_every == 0) plus the FORCED
+            # stage-end probe fired a near-duplicate ~10-min validation 1-2 steps
+            # before stage end whenever stage_steps % probe_every != 0 (autorgn POC:
+            # probes at step 436 AND 438 → 5 where epochs×saves_per_epoch defines 4).
+            # Partition the stage into n = round(stage_steps/probe_every) even
+            # intervals; the FINAL point IS the stage-end forced probe (excluded
+            # here) → exactly n probes per stage, evenly spaced, any divisibility.
+            if probe_every is not None:
+                _n_probes = max(1, round(stage_steps / probe_every))
+                probe_steps_stage = {round(i * stage_steps / _n_probes)
+                                     for i in range(1, _n_probes)}
+            else:
+                probe_steps_stage = set()   # stage_boundary cadence → end-probes only
+
             for local_step in range(stage_start_step, stage_steps):
                 # Build batch from factor clips — streaming DataLoader or legacy sampler.
                 # batch_keys threaded for multi-task probe loss (iter13). Streaming
@@ -1688,14 +1703,14 @@ def train(cfg: dict, args):
                 if global_step % cfg["optimization"]["gc_interval"] == 0:
                     gc.collect()
 
-                # Mid-stage probe: fire every `probe_every` steps under "every_n_steps"
-                # cadence. Excludes local_step == stage_steps - 1 (last step of stage) —
-                # that gets a forced probe below for the BWT anchor guarantee.
+                # Mid-stage probe: fire at the per-stage schedule points (computed
+                # above from probe_every). Excludes the stage's last step — that one
+                # IS the forced stage-end probe below (BWT anchor guarantee), so the
+                # cadence can never duplicate it.
                 is_last_step_of_stage = (local_step == stage_steps - 1)
                 if (probe_clips is not None
-                        and probe_every is not None
                         and not is_last_step_of_stage
-                        and global_step % probe_every == 0):
+                        and (local_step + 1) in probe_steps_stage):
                     _run_probe_at_step(stage_idx, stage_name, global_step)
                     # iter18 (2026-06-06): mid-stage resume anchor — FULL ckpt (this
                     # stage's optimizer/scheduler/scaler) + in-stage offset, rotated

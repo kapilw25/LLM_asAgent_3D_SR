@@ -147,3 +147,30 @@ Exported student encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/s
   [cache-policy=1/keep] preserved m09c stage checkpoint: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_ckpt_stage0.pt — rerun with --cache-policy 2 to delete
   Stage stage1_layout complete: 219 steps, loss=0.4425
   [probe-trio] encoding 451 clips...
+  [probe-trio] step=262 top1=0.2927  motion_cos=0.1501  future_l1=0.5013  causal_l1=0.5296  maskratio=0.0557  (N=451)
+  [probe] step=262 stage=stage1_layout N=451 top-1=0.2927 motion_cos=0.1501 future_l1=0.5013 val_jepa=0.4466
+  Saved: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_block_drift.png + .pdf
+Exported student encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/student_best.pt
+  [best] new best future_l1=0.5013 (step 262) → saved student_best.pt
+/workspace/factorjepa/src/utils/plots.py:989: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_probe_trajectory_trio.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_val_loss_jepa.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_train_loss.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_loss_decomposition.png + .pdf
+
+============================================================
+STAGE 3/3: stage2_agent
+  Layers 0-8 trainable | 219 steps | warmup 0
+  Mixture: {'L': 0.3, 'A': 0.7, 'I': 0.0}
+============================================================
+  Inter-stage cleanup: 16.8 GB used / 102.0 GB total after releasing Stage 2 state
+  Trainable prefix: 8/48 blocks (307,173,376/1,843,937,152 = 16.7%)
+  Optimizer: SPDAdamW (alpha_spd=0.05, n_anchored=588) — 564 param groups
+  StreamingFactorDataset: REQUESTED={'L': 0.3, 'A': 0.7} → ACTUAL={D_L=30%, D_A=70%} (indexed=7021 clips)
+surgery:stage2_agent:   0%|          | 0/219 [00:00<?, ?step/s]  StreamingFactorDataset: raw-replay ENABLED (worker 0/4) raw_pct=50% · raw_clips_local=1756
+  StreamingFactorDataset: raw-replay ENABLED (worker 1/4) raw_pct=50% · raw_clips_local=1755  StreamingFactorDataset: raw-replay ENABLED (worker 2/4) raw_pct=50% · raw_clips_local=1755
+
+  StreamingFactorDataset: raw-replay ENABLED (worker 3/4) raw_pct=50% · raw_clips_local=1755
+
+❌ FATAL: run_train.sh aborted at line 455 (exit=130)
