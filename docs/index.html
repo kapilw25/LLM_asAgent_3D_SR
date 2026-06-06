@@ -1293,34 +1293,81 @@
 <!-- ==================== TAB 3: FactorJEPA — Evaluation ==================== -->
 <div id="tab-factorjepa" class="tab-content" style="display: none;">
 
-<!-- ==================== POC EVAL — 3 COMPARISON PLOTS ==================== -->
+<!-- ==================== ABLATION RESULTS — RESEARCH POSTER ==================== -->
 <section class="section" style="padding-top: 2rem;">
   <div class="container" style="max-width: 1100px;">
-    <h2 class="title is-3 has-text-centered">POC Evaluation &mdash; 7 Trained Encoders</h2>
+
+    <h2 class="title is-3 has-text-centered">Ablation Results &mdash; Backbone Champion &amp; Factor Surgery vs Continual SSL</h2>
     <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-      iter15 POC &middot; N=220 &middot; BCa 10K bootstrap 95% CI &middot; compute-matched 4&nbsp;epochs.
+      10K-clip POC on DenseWorld &middot; every cell carries a BCa 10K-bootstrap 95% CI &middot;
+      paired duels are compute-matched (same data, steps, optimizer &mdash; only the technique differs).
     </p>
 
-    <div class="columns is-multiline">
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/probe_action_acc_compare.png" alt="Bar chart — top-1 accuracy across 7 trained encoders, descending">
-          <p class="plot-caption">🎯 <strong>Action probe top-1</strong> (higher better). <code>pretrain_2X</code> leads at 38.6%; surgery encoders trail by &minus;3.6 to &minus;4.6&nbsp;pp (within POC ±6&nbsp;pp CI).</p>
+    <!-- ── Poster findings strip ── -->
+    <div class="columns is-multiline" style="margin-bottom: 2rem;">
+      <div class="column is-4">
+        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F1 &middot; Frozen video encoders are nearly motion-blind</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">Across <strong>10 frozen backbones</strong> (V-JEPA 1/2.0/2.1, I-JEPA, DINOv2, LeJEPA), motion-cosine separation is &le;&nbsp;0.019 &mdash; essentially zero linearly-readable motion signal, while action top-1 reaches 44%. Semantics are abundant; <em>motion is the missing factor.</em></p>
         </div>
       </div>
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/probe_motion_cos_compare.png" alt="Bar chart — intra-minus-inter cosine, descending">
-          <p class="plot-caption">🧭 <strong>Motion cosine</strong> intra&minus;inter (higher better). 4 surgery variants cluster at 0.077&ndash;0.089; <code>pretrain_head</code> + frozen tail at 0.014&ndash;0.015.</p>
+      <div class="column is-4">
+        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F2 &middot; Surgery beats matched continual SSL on motion/temporal</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">On V-JEPA 2.1 ViT-G (2B): surgery wins <strong>4 metrics, vanilla wins 0</strong>, 5 ties &mdash; all 4 wins are motion/temporal (motion-cos, future-frame, causal, mask-ratio). Crucially, the ties include action top-1 and taxonomy-F1: <em>no semantic forgetting.</em></p>
         </div>
       </div>
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/probe_future_mse_compare.png" alt="Bar chart — future-frame L1, ascending">
-          <p class="plot-caption">🔮 <strong>Future-frame MSE</strong> (lower better). Surgery encoders bottom-of-chart at 0.511 and 0.514 &mdash; the only Δ3 metric where surgery &gt; <code>pretrain_2X</code> escapes BCa CI.</p>
+      <div class="column is-4">
+        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F3 &middot; The effect is representation-dependent</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">The same surgery recipe on the older V-JEPA 2.0 ViT-g flips to <strong>0 wins vs 5</strong> &mdash; factor surgery exploits structure that only the newer V-JEPA 2.1 representation exposes. This selects <strong>V-JEPA 2.1 ViT-G (2B)</strong> as the paper&rsquo;s base model.</p>
         </div>
       </div>
     </div>
+
+    <!-- ── Figure 1: frozen scorecard (backbone selection) ── -->
+    <div class="columns is-multiline">
+      <div class="column is-12">
+        <div class="plot-container">
+          <img src="static/images/m13_frozen_scorecard.png" alt="Scorecard table — 10 frozen encoders × 3 shared metrics with BCa 95% CIs; V-JEPA 2.1 leads action top-1, DINOv2 leads taxonomy-F1, all motion-cos values near zero">
+          <p class="plot-caption">🏆 <strong>Backbone selection (frozen, no &Delta;).</strong> 10 frozen encoders &times; 3 shared head metrics; blue box = best per metric.
+          <strong>V-JEPA 2.1</strong> tops action top-1 (44.4&nbsp;&plusmn;&nbsp;2.3), DINOv2 tops taxonomy-F1 (0.816), and the <em>entire column</em> of motion-cos sits at 0.004&ndash;0.019 &mdash; the quantitative motivation for factor surgery (finding F1).</p>
+        </div>
+      </div>
+
+      <!-- ── Figure 2: the money figure — paired duel heatmap ── -->
+      <div class="column is-12">
+        <div class="plot-container">
+          <img src="static/images/m13_paired_diff_heatmap.png" alt="Paired-difference heatmap — surgery minus vanilla continual SSL across 9 metrics × 3 backbones; green = surgery significant, red = vanilla, grey = tie">
+          <p class="plot-caption">⚔️ <strong>Champion duel: surgery &minus; vanilla continual SSL</strong> (paired per-clip &Delta;, 95% BCa CI; green = surgery significantly better, red = vanilla, grey = CI crosses 0).
+          Column 1 (V-JEPA 2.1 ViT-G 2B): surgery <strong>4&ndash;0</strong> with 5 ties &mdash; wins on motion-cos (+0.010), future-frame (+0.025), causal (+0.019), mask-ratio (+0.009); ties on both semantic metrics.
+          Column 2 (V-JEPA 2.1 ViT-g 1B): surgery <strong>5&ndash;2</strong>.
+          Column 3 (V-JEPA 2.0 ViT-g 1B): <strong>0&ndash;5</strong> &mdash; the reversal behind finding F3.</p>
+        </div>
+      </div>
+
+      <!-- ── Figure 3: raw values (supporting) ── -->
+      <div class="column is-12">
+        <div class="plot-container">
+          <a href="static/images/m13_hero_raw_values.png" target="_blank" rel="noopener">
+            <img src="static/images/m13_hero_raw_values.png" alt="Raw-value grids — per-backbone tables of all encoders × all 10 metrics with CIs (champion V-JEPA 2.1 ViT-G panel on top)">
+          </a>
+          <p class="plot-caption">📋 <strong>Raw values behind the duel</strong> (one panel per backbone; champion 2B panel on top) &mdash; every encoder &times; every metric with its CI, for the paper&rsquo;s appendix tables. Click to open full-resolution.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── What's running now ── -->
+    <div style="background: var(--bg-cream); border: 1px dashed var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.4rem; margin-top: 1rem;">
+      <p style="font-weight: 700; margin-bottom: 0.3rem;">🔭 In progress &mdash; fine-tuning-technique ablation (13 arms)</p>
+      <p style="color: var(--text-secondary); font-size: 0.93rem; margin-bottom: 0;">
+        On the champion backbone, factor surgery is now being compared against the standard adaptation arsenal &mdash;
+        full fine-tune, LP-FT, LoRA, DoRA, AutoRGN, CaSSLe, EWC, raw-data surgery control and head-only variants &mdash;
+        same data, same checkpoint-selection rule (held-out future-frame&nbsp;L1), same 451-clip held-out validation pool.
+        Results land here as the hero grid + paired-&Delta; CIs.
+      </p>
+    </div>
+
   </div>
 </section>
 
@@ -1794,25 +1841,47 @@ function copyBibtex() {
   });
 }
 
-// Tab switching
+// Tab switching — each tab gets its own shareable URL via the hash:
+//   …/#dataset   …/#training   …/#evaluation   …/#foundations
+const HASH2TAB = { dataset: 'denseworld', denseworld: 'denseworld',
+                   training: 'training',
+                   evaluation: 'factorjepa', factorjepa: 'factorjepa',
+                   foundations: 'foundations' };
+const TAB2HASH = { denseworld: 'dataset', training: 'training',
+                   factorjepa: 'evaluation', foundations: 'foundations' };
+
+function activateTab(target, updateHash) {
+  document.querySelectorAll('#main-tabs li').forEach(t =>
+    t.classList.toggle('is-active', t.dataset.tab === target));
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('tab-' + target).style.display = 'block';
+  if (updateHash) history.replaceState(null, '', '#' + TAB2HASH[target]);
+  // Re-render mermaid diagrams when tab with diagrams becomes visible
+  if ((target === 'factorjepa' || target === 'foundations') && window.mermaid) {
+    mermaid.run({ querySelector: '#tab-' + target + ' .mermaid' });
+  }
+}
+
 document.querySelectorAll('#main-tabs li').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const target = tab.dataset.tab;
-    document.querySelectorAll('#main-tabs li').forEach(t => t.classList.remove('is-active'));
-    tab.classList.add('is-active');
-    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-    document.getElementById('tab-' + target).style.display = 'block';
-    // Re-render mermaid diagrams when tab with diagrams becomes visible
-    if ((target === 'factorjepa' || target === 'foundations') && window.mermaid) {
-      mermaid.run({ querySelector: '#tab-' + target + ' .mermaid' });
-    }
-  });
+  tab.addEventListener('click', () => activateTab(tab.dataset.tab, true));
 });
+
+// Deep link: open the tab named in the URL (e.g. shared …/#evaluation),
+// and react to back/forward or manual hash edits.
+function tabFromHash() {
+  const t = HASH2TAB[location.hash.replace('#', '').toLowerCase()];
+  if (t) activateTab(t, false);
+}
+window.addEventListener('hashchange', tabFromHash);
+tabFromHash();
 </script>
 
 <!-- Mermaid.js for system design diagrams (11KB CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { fontSize: '16px', fontFamily: 'Source Sans 3, sans-serif', primaryColor: '#4527a0', primaryTextColor: '#ffffff', primaryBorderColor: '#9575cd', lineColor: '#9e9e9e', secondaryColor: '#1565c0', secondaryTextColor: '#ffffff', tertiaryColor: '#00695c', tertiaryTextColor: '#ffffff', noteBkgColor: '#37474f', noteTextColor: '#ffffff' } });</script>
+<script>mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { fontSize: '16px', fontFamily: 'Source Sans 3, sans-serif', primaryColor: '#4527a0', primaryTextColor: '#ffffff', primaryBorderColor: '#9575cd', lineColor: '#9e9e9e', secondaryColor: '#1565c0', secondaryTextColor: '#ffffff', tertiaryColor: '#00695c', tertiaryTextColor: '#ffffff', noteBkgColor: '#37474f', noteTextColor: '#ffffff' } });
+// Deep-linked diagram tabs (#evaluation/#foundations) load before mermaid does — render now that it exists.
+const _dlTab = HASH2TAB[location.hash.replace('#', '').toLowerCase()];
+if (_dlTab === 'factorjepa' || _dlTab === 'foundations') { mermaid.run({ querySelector: '#tab-' + _dlTab + ' .mermaid' }); }</script>
 
 <!-- Click-to-fullscreen on mermaid diagrams -->
 <script>
