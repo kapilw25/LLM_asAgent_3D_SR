@@ -579,10 +579,15 @@ _FULL_SHARD_GLOB = re.sub(r"\{shard:[^}]*\}", "*", _FULL_SHARD_TEMPLATE)
 def _pack_outputs_full(output_path: Path, max_shard_gb: float) -> list:
     """Pack EVERY directory's direct files into per-dir `_full-*.tar` shards. Returns shard paths."""
     from utils.tar_shard import pack_dir_to_shards
-    # Purge leftovers from an aborted prior run FIRST — otherwise they'd be packed tar-in-tar.
-    leftovers = list(output_path.rglob(_FULL_SHARD_GLOB))
+    # Purge leftovers from a prior run FIRST — otherwise they'd be packed tar-in-tar.
+    # iter18 (2026-06-06): ALSO purge stale `_full-manifest.json` files — the 09:51 run
+    # packed the PREVIOUS upload's manifest into junk shards at outputs/ + outputs/sanity/
+    # (header said 45 files, manifest said 43 — the 2 ghosts). A fresh manifest is
+    # rewritten right after packing, so deleting stale ones here is always safe.
+    leftovers = (list(output_path.rglob(_FULL_SHARD_GLOB))
+                 + list(output_path.rglob(artifact("full_manifest"))))
     if leftovers:
-        print(f"  [upload-full] purging {len(leftovers)} leftover {_FULL_SHARD_GLOB} from a prior run")
+        print(f"  [upload-full] purging {len(leftovers)} leftover shard/manifest file(s) from a prior run")
         for t in leftovers:
             t.unlink()
     shards = []
