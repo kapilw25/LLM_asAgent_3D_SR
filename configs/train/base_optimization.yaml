@@ -377,7 +377,15 @@ probe:
   k:                        6                                          # matches configs/pipeline.yaml eval.K
   bootstrap_iter:           10000                                      # matches utils/bootstrap.N_BOOTSTRAP
   cadence:                  saves_per_epoch                            # reuses checkpoint.saves_per_epoch
-  best_ckpt_enabled:        true                                       # save student_best.pt on each new max top@1
+  best_ckpt_enabled:        true                                       # save student_best.pt on each new best of best_ckpt_metric
+  # iter18 (2026-06-05): selection metric for student_best.pt / *_ckpt_best.pt.
+  # Was probe_top1 (the one heatmap metric where surgery always TIES vanilla);
+  # switched to future_l1 — the headline temporal metric, probed every val cycle.
+  # Direction (lower=better) resolved via utils.training.BEST_METRIC_DIRECTION.
+  # Applied symmetrically to all encoder arms (m09a1/c1/e/f/b/d). m09c2 head arms
+  # keep head-val_loss selection: their encoder+predictor are frozen → future_l1
+  # is constant by construction and physically cannot rank head snapshots.
+  best_ckpt_metric:         future_l1
   # -- Early-stop: top@1 plateau (THE ONLY trigger — iter14 2026-05-08).
   # Stop training if top@1 spread over the last (patience+1) probes < min_delta.
   # At SANITY (1 step) plateau cannot fire (needs patience+1 = 6 probes) → no-op

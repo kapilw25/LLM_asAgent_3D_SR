@@ -1,6 +1,6 @@
 # Safer two-step (recommended — preview before delete):
 
-# 1. dry-run preview (sorted by size, human-readable)
+# 1. DRY-RUN (NO delete) preview (sorted by size, human-readable)
 find . -type f -size +50M -printf "%s\t%p\n" | sort -rn | numfmt --field=1 --to=iec
 
 # 2. DELETE once you're happy with the list:

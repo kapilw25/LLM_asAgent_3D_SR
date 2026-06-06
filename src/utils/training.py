@@ -1506,6 +1506,20 @@ def assert_encoder_diverged_from_init(
     return rel
 
 
+# iter18 (2026-06-05): single source for "which direction is better" per
+# selection metric. Keys = probe_record keys; True = higher is better.
+# yaml `probe.best_ckpt_metric` picks the key; unknown keys FAIL LOUD here
+# rather than silently selecting in the wrong direction.
+BEST_METRIC_DIRECTION = {
+    "probe_top1":    True,
+    "motion_cos":    True,
+    "future_l1":     False,
+    "causal_l1":     False,
+    "maskratio":     False,
+    "val_jepa_loss": False,
+}
+
+
 # iter13 v13 R3 (2026-05-07): shared early-stop / best-ckpt / plateau-reset
 # logic factored out of m09a + m09c val cycles. Both trainers compute val-loss
 # (m09a:run_validation, m09c:run_probe_val_loss), run trio, write jsonl,
@@ -1521,6 +1535,7 @@ def apply_val_cycle_triggers(
     top1_plateau_state: dict,
     # Best-ckpt
     best_ckpt_enabled: bool,
+    best_metric_key: str,
     save_best_callback=None,
     # iter14 (2026-05-08): the ONLY active early-stop trigger = top@1 plateau.
     # val_jepa kill_switch + val_jepa plateau + BWT regression triggers removed
@@ -1536,21 +1551,33 @@ def apply_val_cycle_triggers(
 ) -> None:
     """Apply best-ckpt + top@1-plateau early-stop + plateau resets. Mutates state in place.
 
-    Reads `pr["probe_top1"]`. Caller populates pr BEFORE calling this helper.
-    Stage context (stage_idx / global_step / is_final_stage) passed explicitly
-    so single-stage trainers (m09a) can pass stage_idx=0 is_final_stage=True.
+    Reads `pr[best_metric_key]` for selection (yaml `probe.best_ckpt_metric`;
+    direction via BEST_METRIC_DIRECTION) and `pr["probe_top1"]` for the plateau
+    early-stop. Caller populates pr BEFORE calling this helper. Stage context
+    (stage_idx / global_step / is_final_stage) passed explicitly so single-stage
+    trainers (m09a) can pass stage_idx=0 is_final_stage=True.
 
     iter13 v13 R3 (2026-05-07): factored from m09c:970-1085 — eliminates ~95
     LoC of duplication and provides drop-in primitives for m09a parity.
     iter14 (2026-05-08): trimmed from 4 triggers to 1 (top@1 plateau only).
+    iter18 (2026-06-05): selection metric yaml-declared (was hardcoded probe_top1
+    — the one heatmap metric where surgery always ties vanilla; future_l1 is the
+    paper's temporal headline). top1-plateau early-stop deliberately unchanged.
     """
-    cur_top1 = pr.get("probe_top1", 0.0)
+    cur_top1 = pr["probe_top1"]   # FAIL LOUD: run_trio_at_val populates or raises
 
-    # 1. Best-ckpt tracker (motion-flow probe top-1 = paper-grade gate metric).
-    if best_ckpt_enabled and pr.get("probe_top1") is not None:
+    # 1. Best-ckpt tracker (yaml-selected metric; update_best_state_on_score
+    #    NaN-guards internally — a NaN future_l1 probe never wins).
+    if best_metric_key not in BEST_METRIC_DIRECTION:
+        raise KeyError(
+            f"apply_val_cycle_triggers: unknown best_ckpt_metric "
+            f"'{best_metric_key}' — add it to BEST_METRIC_DIRECTION "
+            f"(utils/training.py) with its higher-is-better direction.")
+    if best_ckpt_enabled:
         update_best_state_on_score(
-            best_state, cur_top1, score_key="probe_top1",
-            higher_is_better=True, step=global_step,
+            best_state, pr[best_metric_key], score_key=best_metric_key,
+            higher_is_better=BEST_METRIC_DIRECTION[best_metric_key],
+            step=global_step,
             save_callback=save_best_callback,
         )
 
@@ -2259,7 +2286,8 @@ def _probe_preprocess(video_uint8: torch.Tensor, crop_size: int) -> torch.Tensor
 def build_probe_clips(probe_subset_path: str, probe_local_data: str,
                       probe_tags_path: str, num_frames: int, crop_size: int,
                       subset_keys_override: set = None,
-                      max_clips: int = None) -> list:
+                      max_clips: int = None, *,
+                      train_pool_keys: set) -> list:
     """Decode + preprocess probe clips ONCE upfront. Returns list of
     (clip_key, tag_dict, tensor[T,C,H,W]).
 
@@ -2274,6 +2302,12 @@ def build_probe_clips(probe_subset_path: str, probe_local_data: str,
     JSON load and use these keys directly.
     max_clips: cap subsample size (deterministic seed=42 for run-reproducibility).
         None = use all clips (legacy behavior; risk of SHM overflow if N > ~5000).
+    train_pool_keys: REQUIRED — the caller's SSL-train clip-key set. The probe
+        is the best-ckpt selection metric (iter18 future_l1) and MUST be disjoint
+        from training data; this fn RAISES on any overlap ([probe-leak guard]).
+        iter18 (2026-06-06): m09a probed a 1000-subsample of action_labels.json,
+        ~77% of which sat inside its own train pool — invisible because no
+        invariant existed at this seam (clip_splits only guards train=univ−val−test).
     """
     if subset_keys_override is not None:
         subset_keys = set(subset_keys_override)
@@ -2300,6 +2334,22 @@ def build_probe_clips(probe_subset_path: str, probe_local_data: str,
                 f"got top-level {type(_data).__name__} with "
                 f"{len(_data) if hasattr(_data, '__len__') else '?'} entries"
             )
+    # iter18 (2026-06-06) [probe-leak guard]: the probe pool MUST be disjoint
+    # from the SSL-train pool. Checked on the FULL resolved pool (pre-subsample)
+    # — a leaky pool is leaky-by-design even if the subsample dodges the overlap.
+    if not isinstance(train_pool_keys, (set, frozenset)):
+        raise ValueError(
+            "build_probe_clips: train_pool_keys must be the trainer's SSL-train "
+            "key set (pass set() ONLY for a trainer with literally no train pool); "
+            f"got {type(train_pool_keys).__name__}")
+    overlap = set(subset_keys) & set(train_pool_keys)
+    if overlap:
+        raise RuntimeError(
+            f"[probe-leak guard] probe pool ∩ SSL-train pool = {len(overlap)} clips "
+            f"(e.g. {sorted(overlap)[:5]}) — the probe is the best-ckpt selection "
+            f"metric and MUST be disjoint from training data. Pass a held-out pool "
+            f"(val split) via subset_keys_override / --probe-subset. "
+            f"(iter18 2026-06-06: m09a probed ~77% of its own train clips.)")
     # iter13 (2026-05-03): subsample BEFORE heavy decode to (a) bound /dev/shm
     # IPC budget — each decoded tensor is ~9.4 MB, /dev/shm cap is ~48 GB on
     # 96 GB box → ~5000 clips max before SHM overflow killed v4 at clip 4284
@@ -2875,17 +2925,26 @@ def run_trio_at_val(student, predictor, probe_clips, probe_labels, mask_gen,
             "probe_top1":    trio["top1"],
             "motion_cos":    trio["motion_cos"],
             "future_l1":     trio["future_l1"],
+            # iter18 (2026-06-05): causal + maskratio now probed in-training via
+            # the exact m12e implementations (utils.pt_causal / utils.pt_maskratio)
+            # — 4 of 4 surgery-strong heatmap metrics visible at selection time.
+            "causal_l1":     trio["causal_l1"],
+            "maskratio":     trio["maskratio"],
             "n_probe_clips": trio["n_clips"],
         })
         log_metrics(wb_run, {
             "val/probe_top1": trio["top1"],
             "val/motion_cos": trio["motion_cos"],
             "val/future_l1":  trio["future_l1"],
+            "val/causal_l1":  trio["causal_l1"],
+            "val/maskratio":  trio["maskratio"],
         }, step=step)
         print(f"  [probe-trio] step={step} "
               f"top1={trio['top1']:.4f}  "
               f"motion_cos={trio['motion_cos']:.4f}  "
               f"future_l1={trio['future_l1']:.4f}  "
+              f"causal_l1={trio['causal_l1']:.4f}  "
+              f"maskratio={trio['maskratio']:.4f}  "
               f"(N={trio['n_clips']})", flush=True)
         return trio
     except Exception as e:
@@ -3078,9 +3137,9 @@ def update_best_state_on_score(best_state: dict, current_score: float,
     `best_state[score_key]` in the configured direction.
 
     Used by:
-      - m09a: best.pt selected by val_loss (higher_is_better=False)
-      - m09c: best.pt selected by trio_score=top1 (higher_is_better=True)
-              [iter13 cutover from prec_at_k per plan_code_dev.md §5]
+      - m09a + m09c-family: best.pt selected by yaml `probe.best_ckpt_metric`
+        (iter18: future_l1, lower_is_better — direction from
+        BEST_METRIC_DIRECTION; was trio top1 from iter13 to iter17)
 
     `save_callback` is invoked on improvement (typical: save_training_checkpoint
     of the best-ckpt path). Caller is responsible for any extra side effects

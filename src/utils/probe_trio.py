@@ -28,15 +28,27 @@ USAGE:
         cfg=cfg, device=device,
         dist_layers=cfg["model"]["n_output_distillation"],
     )
-    # → {"top1": 0.83, "motion_cos": 0.05, "future_l1": 0.55, "n_clips": 925, "n_classes": 3}
+    # → {"top1": 0.83, "motion_cos": 0.05, "future_l1": 0.55,
+    #    "causal_l1": 0.52, "maskratio": 0.11, "n_clips": 925, "n_classes": 3}
+
+iter18 (2026-06-05): + causal_l1 + maskratio per probe, computed by the EXACT
+m12e eval implementations (utils.pt_causal / utils.pt_maskratio via
+predictor_eval.safe_metric). Adds ~10 encoder + 5 predictor forwards per batch
+on top of the trio's 2+1 — all 4 surgery-strong heatmap metrics (motion_cos,
+future_l1/mse, causal, maskratio) are now visible at best-ckpt selection time.
 """
 from __future__ import annotations
 
 import numpy as np
 import torch
 
+# iter18 (2026-06-05): causal + maskratio probed in-training with the EXACT
+# m12e §2.2-eval implementations — single source (utils.pt_causal /
+# utils.pt_maskratio / predictor_eval.safe_metric), no drift possible.
+from utils import pt_causal, pt_maskratio
 from utils.config import get_pipeline_config
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
+from utils.predictor_eval import safe_metric
 from utils.vjepa2_imports import get_apply_masks
 
 
@@ -212,6 +224,10 @@ def compute_metric_trio(
                 f"encoder_frozen=False to disable caching.")
         pooled_no_ma_cpu = encoder_cache["pooled_no_ma"]   # (N, D=1664) cpu fp32
         per_clip_l1_cpu = encoder_cache["per_clip_l1"]     # (N,) cpu fp32
+        # iter18: causal/maskratio are encoder+predictor-only (frozen for head
+        # cells) → cached scalars are exact, same contract as per_clip_l1.
+        causal_l1 = encoder_cache["causal_l1"]
+        maskratio_slope = encoder_cache["maskratio"]
         # Recompute MA augment on cached pooled features (only the head is training).
         if motion_aux_head is not None:
             from utils.motion_aux_loss import forward_motion_aux_concat
@@ -232,6 +248,8 @@ def compute_metric_trio(
             "top1":       round(top1, 6),
             "motion_cos": round(motion_cos, 6),
             "future_l1":  round(future_l1, 6),
+            "causal_l1":  round(causal_l1, 6),
+            "maskratio":  round(maskratio_slope, 6),
             "n_clips":    len(pooled_np),
             "n_classes":  n_classes,
         }
@@ -271,6 +289,8 @@ def compute_metric_trio(
     pooled_chunks_no_ma: list = []
     pooled_chunks_full: list = []
     l1_chunks: list = []
+    causal_chunks: list = []     # iter18: per-clip causal-future L1 (pt_causal)
+    maskratio_chunks: list = []  # iter18: per-clip L1-vs-mask-ratio slope (pt_maskratio)
     n = len(keyed)
     i = 0
     print(f"  [probe-trio] encoding {n} clips...", flush=True)
@@ -284,7 +304,11 @@ def compute_metric_trio(
             # Without this, F.conv3d raises "expected input to have 3 channels,
             # but got 16 channels instead" (because the 16-frame T axis lands
             # where C should be).
-            batch_tensors = torch.stack([t for (_, t) in keyed[i:end]]).to(
+            # iter18: keep the CPU (B,T,C,H,W) stack alive — it is exactly the
+            # input contract of pt_causal/pt_maskratio.compute (they do their
+            # own to_pixel → bf16-cuda permute, identical to the m12e path).
+            batch_cpu = torch.stack([t for (_, t) in keyed[i:end]])
+            batch_tensors = batch_cpu.to(
                 device, dtype=model_dtype, non_blocking=True)
             batch_tensors = batch_tensors.permute(0, 2, 1, 3, 4).contiguous()
             B = batch_tensors.shape[0]
@@ -361,6 +385,27 @@ def compute_metric_trio(
             per_clip_l1 = (out.float() - h_target.float()).abs().mean(dim=(1, 2))
             l1_chunks.append(per_clip_l1.cpu())
 
+            # 4d. iter18: causal + maskratio via the exact m12e metric fns.
+            #     safe_metric halves the batch on OOM (same backoff as m12e).
+            #     num_frames = this batch's T so token_grid matches the clips.
+            #     autocast(bf16) REQUIRED here: to_pixel() emits bf16 input
+            #     (matches §2.2 eval where load_encoder_only casts weights to
+            #     bf16), but the in-training student/predictor keep fp32 master
+            #     weights (bf16 only via autocast) → without it conv3d FATALs
+            #     "Input type (c10::BFloat16) and bias type (float)". Autocast
+            #     runs the forward in bf16 — the SAME effective precision as the
+            #     m12e eval path — and is a no-op when weights are already bf16.
+            #     (Standard PyTorch mixed-precision idiom; caught at SANITY
+            #     2026-06-05, logs/sanity_pretrain_20260605_063746.log.)
+            T_frames = int(batch_cpu.shape[1])
+            with torch.autocast("cuda", dtype=torch.bfloat16):
+                causal_chunks.append(
+                    safe_metric(pt_causal.compute, student, predictor,
+                                batch_cpu, T_frames))
+                maskratio_chunks.append(
+                    safe_metric(pt_maskratio.compute, student, predictor,
+                                batch_cpu, T_frames))
+
             i = end
             sizer.after_batch_success()
     finally:
@@ -381,6 +426,11 @@ def compute_metric_trio(
     else:
         per_clip_l1_cpu = None
         future_l1 = float("nan")   # all batches OOM'd or shape-skipped — flag clearly
+    # iter18: same NaN-on-empty contract as future_l1 (NaN never wins best-ckpt).
+    causal_l1 = (float(np.concatenate(causal_chunks).mean())
+                 if causal_chunks else float("nan"))
+    maskratio_slope = (float(np.concatenate(maskratio_chunks).mean())
+                       if maskratio_chunks else float("nan"))
 
     # iter15 D15 (2026-05-16): populate cache if caller wants it + asserted frozen.
     # FAIL LOUD if l1_chunks empty — every-batch OOM in a freshly-extracted run is
@@ -394,6 +444,8 @@ def compute_metric_trio(
                 "NaN future_l1. Fix the underlying VRAM/shape issue, then re-run.")
         encoder_cache["pooled_no_ma"] = torch.cat(pooled_chunks_no_ma, dim=0)
         encoder_cache["per_clip_l1"] = per_clip_l1_cpu
+        encoder_cache["causal_l1"] = causal_l1      # iter18: frozen enc+pred → exact
+        encoder_cache["maskratio"] = maskratio_slope
         encoder_cache["enc_sig"] = _encoder_signature(student)
         print(f"  [probe-trio][D15 cache POPULATED] stored "
               f"pooled_no_ma={tuple(encoder_cache['pooled_no_ma'].shape)} + "
@@ -411,6 +463,8 @@ def compute_metric_trio(
         "top1":       round(top1, 6),
         "motion_cos": round(motion_cos, 6),
         "future_l1":  round(future_l1, 6) if not np.isnan(future_l1) else float("nan"),
+        "causal_l1":  round(causal_l1, 6) if not np.isnan(causal_l1) else float("nan"),
+        "maskratio":  round(maskratio_slope, 6) if not np.isnan(maskratio_slope) else float("nan"),
         "n_clips":    len(pooled_np),
         "n_classes":  n_classes,
     }

@@ -916,11 +916,15 @@ def train(cfg: dict, args):
         # load_action_labels with --probe-action-labels CLI override + derived
         # fallback) factored to utils.m09_common.setup_probe_pipeline. Replaces
         # ~20 LoC of inline boilerplate. m09c-specific: feed held-out val_keys
-        # via subset_keys_override to eliminate train/test overlap (m09a uses
-        # external val_1k → no override needed).
+        # via subset_keys_override to eliminate train/test overlap. iter18
+        # (2026-06-06): m09a1/a2/c2 now use the SAME val-split override — the old
+        # "m09a uses external val_1k" note here was stale (val_1k deleted; its
+        # replacement pool overlapped the train set = the probe-leak incident).
+        # train_pool_keys arms the [probe-leak guard] in build_probe_clips.
         probe_clips, probe_labels = setup_probe_pipeline(
             cfg, args, output_dir,
             subset_keys_override=set(val_keys) if val_keys else None,
+            train_pool_keys=_pool_set,
         )
         probe_jsonl_file = open(probe_jsonl_path, "w")
     else:
@@ -958,6 +962,7 @@ def train(cfg: dict, args):
     # removed from yaml because they don't correlate with downstream motion-flow
     # probe top@1 (the paper-grade gate metric).
     best_ckpt_enabled = probe_cfg["best_ckpt_enabled"]
+    best_ckpt_metric = probe_cfg["best_ckpt_metric"]   # iter18: future_l1 (was probe_top1) — direction via BEST_METRIC_DIRECTION
     prec_plateau_enabled = probe_cfg["prec_plateau_enabled"]
     prec_plateau_min_delta = probe_cfg["prec_plateau_min_delta"]
     prec_plateau_patience = probe_cfg["prec_plateau_patience"]
@@ -1061,8 +1066,8 @@ def train(cfg: dict, args):
 
             # BWT = probe_top1[current] − probe_top1[first_probe].
             # Persisted to jsonl + plotted so users can see drift in real time.
-            cur_top1 = pr.get("probe_top1", 0.0)
-            first_top1 = (probe_history[0].get("probe_top1", cur_top1)
+            cur_top1 = pr["probe_top1"]   # FAIL LOUD: run_trio_at_val populates or raises
+            first_top1 = (probe_history[0]["probe_top1"]
                           if probe_history else cur_top1)
             pr["bwt"] = cur_top1 - first_top1
             probe_history.append(pr)
@@ -1090,23 +1095,24 @@ def train(cfg: dict, args):
                 title_prefix=f"m09c {stage_name_} step={global_step_} · ",
                 file_prefix="m09c")
 
-            # Best-ckpt tracker — iter13 v13 (2026-05-07): trio_score = top-1
-            # from compute_metric_trio. Aligns best.pt selection with paper-final
-            # probe-trio panel. Legacy retrieval prec_at_k removed entirely.
-            current_top1 = pr.get("probe_top1")
-            if best_ckpt_enabled and current_top1 is not None:
+            # Best-ckpt tracker — iter18 (2026-06-05): trio_score = yaml
+            # `probe.best_ckpt_metric` (future_l1, the paper's temporal headline;
+            # was top-1 from iter13 — the one heatmap metric where surgery TIES).
+            current_score = pr[best_ckpt_metric]   # FAIL LOUD: trio populates every probe cycle
+            if best_ckpt_enabled:
                 def _save_best():
                     best_state.update({
-                        "trio_score": current_top1,
-                        "top1":       current_top1,
-                        "motion_cos": pr.get("motion_cos", 0.0),
-                        "future_l1":  pr.get("future_l1", float("inf")),
+                        "trio_score": current_score,
+                        "best_metric": best_ckpt_metric,
+                        "top1":       pr["probe_top1"],
+                        "motion_cos": pr["motion_cos"],
+                        "future_l1":  pr["future_l1"],
                         "global_step": global_step_,
                         "stage_name":  stage_name_,
                         "probe_record": pr,
                     })
                     export_student_for_eval(student, best_ckpt_path, explora_enabled=False)
-                    print(f"  [best] new max trio_top1={current_top1:.4f} "
+                    print(f"  [best] new best {best_ckpt_metric}={current_score:.4f} "
                           f"(step {global_step_}) → saved student_best.pt")
             # iter13 v13 R3 (2026-05-07): best-ckpt update + 4 early-stop triggers
             # (forgetting / val-loss-plateau / top1-plateau / negative-BWT) +
@@ -1114,14 +1120,15 @@ def train(cfg: dict, args):
             # Replaces ~95 LoC of inline state-coupled bookkeeping. Helper mutates
             # best_state / kill_state / plateau_state / top1_plateau_state /
             # bwt_state in place. _save_best closure (defined above) is the
-            # save-callback fired when probe_top1 sets a new max.
+            # save-callback fired when the yaml-selected best_ckpt_metric improves.
             apply_val_cycle_triggers(
                 pr,
                 probe_history=probe_history,
                 best_state=best_state, kill_state=kill_state,
                 top1_plateau_state=top1_plateau_state,
                 best_ckpt_enabled=best_ckpt_enabled,
-                save_best_callback=(_save_best if (best_ckpt_enabled and current_top1 is not None) else None),
+                best_metric_key=best_ckpt_metric,
+                save_best_callback=(_save_best if best_ckpt_enabled else None),
                 prec_plateau_enabled=prec_plateau_enabled,
                 prec_plateau_min_delta=prec_plateau_min_delta,
                 prec_plateau_patience=prec_plateau_patience,
@@ -1624,7 +1631,7 @@ def train(cfg: dict, args):
                     icon = {"catastrophic_forgetting": "⚠️", "val_loss_plateau": "🟰",
                             "top1_plateau": "📊", "negative_bwt": "📉"}[reason]
                     print(f"\n{icon}  EARLY-STOP [{reason}] — aborting training at step {global_step}")
-                    print(f"     Best top1={best_state.get('top1', 0.0):.4f} saved at "
+                    print(f"     Best top1={best_state['top1']:.4f} saved at "
                           f"step {best_state['global_step']} (stage {best_state['stage_name']})")
                     break
 
@@ -1634,7 +1641,7 @@ def train(cfg: dict, args):
                 # scheduler + scaler restore correctly.
                 save_training_checkpoint(output_dir / f"{CHECKPOINT_PREFIX}_stage{stage_idx}.pt",
                                          student, teacher, predictor, optimizer, scheduler,
-                                         scaler, global_step, best_state.get("top1", 0.0), full=True,
+                                         scaler, global_step, best_state["top1"], full=True,
                                          uw=uw_module)
                 cleanup_stage_checkpoints(output_dir, CHECKPOINT_PREFIX, keep_n=1, cache_policy=args.cache_policy)
                 _run_probe_at_step(stage_idx, stage_name, global_step)
@@ -1684,9 +1691,9 @@ def train(cfg: dict, args):
     # promote it to student_encoder.pt. Otherwise export current weights.
     if best_ckpt_enabled and best_ckpt_path.exists():
         shutil.move(str(best_ckpt_path), str(student_path))
-        print(f"  [best] Promoted student_best.pt (top1={best_state.get('top1', 0.0):.4f} "
-              f"at step {best_state['global_step']}, stage {best_state['stage_name']}) "
-              f"→ student_encoder.pt")
+        print(f"  [best] Promoted student_best.pt ({best_state['best_metric']}="
+              f"{best_state['trio_score']:.4f} at step {best_state['global_step']}, "
+              f"stage {best_state['stage_name']}) → student_encoder.pt")
     else:
         export_student_for_eval(student, student_path, explora_enabled=False)
 
@@ -1717,7 +1724,7 @@ def train(cfg: dict, args):
     save_training_checkpoint(
         output_dir / f"{CHECKPOINT_PREFIX}_best.pt",
         student, teacher, predictor, optimizer, scheduler, scaler,
-        global_step, best_state.get("top1", 0.0),
+        global_step, best_state["top1"],
         full=True, uw=uw_module, include_optimizer=False, include_teacher=False)
     print(f"Exported predictor-bearing best ckpt: "
           f"{output_dir / f'{CHECKPOINT_PREFIX}_best.pt'}")
@@ -1774,9 +1781,9 @@ def train(cfg: dict, args):
             "source": split_source,
         },
         "best_ckpt": {
-            "top1": best_state.get("top1", 0.0),
-            "motion_cos": best_state.get("motion_cos", 0.0),
-            "future_l1": best_state.get("future_l1", float("inf")),
+            "top1": best_state["top1"],
+            "motion_cos": best_state["motion_cos"],
+            "future_l1": best_state["future_l1"],
             "global_step": best_state["global_step"],
             "stage_name": best_state["stage_name"],
             "probe_record": best_state["probe_record"],

@@ -33,6 +33,7 @@ from utils.frozen_features import (
     resolve_encoder_state_dict,
     resolve_predictor_state_dict,
 )
+from utils.gpu_batch import cuda_cleanup
 from utils.vjepa2_imports import (
     get_apply_masks,
     get_mask_generator,
@@ -182,6 +183,26 @@ def temporal_token_idx(num_frames, t_slots) -> torch.Tensor:
 def to_pixel(batch: torch.Tensor) -> torch.Tensor:
     """(B,T,3,H,W) cpu → (B,3,T,H,W) bf16 cuda (matches probe_future_mse)."""
     return batch.to("cuda", dtype=torch.bfloat16).permute(0, 2, 1, 3, 4).contiguous()
+
+
+# ── Shared OOM-backoff runner for pt_* metric fns ───────────────────────
+# iter18 (2026-06-05): moved here from m12e_predictor_temporal._safe_metric so
+# the in-training probe (utils/probe_trio.py) and the §2.2 eval (m12e) run the
+# SAME implementation — single source, no drift.
+def safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1):
+    """Run a metric on `batch`, sub-batching with OOM backoff (mirrors AdaptiveBatchSizer
+    intent). Returns concatenated per-clip array."""
+    try:
+        return fn(encoder, predictor, batch, num_frames)
+    except torch.cuda.OutOfMemoryError:
+        cuda_cleanup()
+        b = batch.shape[0]
+        if b <= min_bs:
+            raise
+        mid = b // 2
+        lo = safe_metric(fn, encoder, predictor, batch[:mid], num_frames, min_bs)
+        hi = safe_metric(fn, encoder, predictor, batch[mid:], num_frames, min_bs)
+        return np.concatenate([lo, hi], axis=0)
 
 
 # ── The shared masked-predict L1 core (from probe_future_mse._forward_one_batch) ──

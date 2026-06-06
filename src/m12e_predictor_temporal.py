@@ -50,8 +50,11 @@ from utils.checkpoint import save_array_checkpoint, save_json_checkpoint
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config
 from utils.data_download import ensure_local_data, iter_clips_parallel
 from utils.frozen_features import ENCODERS, decode_to_tensor
-from utils.gpu_batch import cleanup_temp, cuda_cleanup
-from utils.predictor_eval import CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_predictor
+from utils.gpu_batch import cleanup_temp
+from utils.predictor_eval import (
+    CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_predictor,
+    safe_metric as _safe_metric,  # iter18: moved to predictor_eval — shared with utils/probe_trio in-training probes
+)
 from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 
@@ -70,22 +73,6 @@ METRICS = {
 
 # V-JEPA-only (predictor required) — runtime-discovered from the encoder registry.
 KNOWN_VARIANTS = tuple(n for n, s in ENCODERS.items() if s.get("kind") == "vjepa")
-
-
-def _safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1):
-    """Run a metric on `batch`, sub-batching with OOM backoff (mirrors AdaptiveBatchSizer
-    intent). Returns concatenated per-clip array."""
-    try:
-        return fn(encoder, predictor, batch, num_frames)
-    except torch.cuda.OutOfMemoryError:
-        cuda_cleanup()
-        b = batch.shape[0]
-        if b <= min_bs:
-            raise
-        mid = b // 2
-        lo = _safe_metric(fn, encoder, predictor, batch[:mid], num_frames, min_bs)
-        hi = _safe_metric(fn, encoder, predictor, batch[mid:], num_frames, min_bs)
-        return np.concatenate([lo, hi], axis=0)
 
 
 def run_forward_stage(args, wb) -> None:

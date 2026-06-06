@@ -312,7 +312,7 @@ case "$SUBCMD" in
             --cache-policy "$P_M09" \
             --lambda-reg "$LAMBDA_REG" \
             $EPOCHS_OVERRIDE_FLAG \
-            --probe-subset "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-subset "$VAL_SPLIT" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "${LOCAL_DATA}/tags.json" \
             --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
@@ -477,7 +477,7 @@ case "$SUBCMD" in
             --val-subset "$VAL_SPLIT" --val-local-data "$LOCAL_DATA" \
             --output-dir "$OUT_DIR" \
             --cache-policy "$P_M09" \
-            --probe-subset "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-subset "$VAL_SPLIT" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "${LOCAL_DATA}/tags.json" \
             --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
@@ -526,7 +526,7 @@ case "$SUBCMD" in
             --output-dir "$OUT_DIR" \
             --cache-policy "$P_M09" \
             --init-from-ckpt "$SURGERY_INIT" \
-            --probe-subset "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-subset "$VAL_SPLIT" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "$VAL_TAGS" \
             --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \

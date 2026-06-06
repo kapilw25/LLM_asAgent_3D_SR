@@ -20,7 +20,7 @@ data.local_data_dir; <M> = sanity|poc|full; swap --FULL→--SANITY/--POC for oth
         --val-local-data       <LD> \
         --output-dir           outputs/<M>/m09a_pretrain_head \
         --cache-policy         <1=keep|2=recompute> \
-        --probe-subset         outputs/<M>/probe_action/action_labels.json \
+        --probe-subset         <LD>/val_split.json \
         --probe-local-data     <LD> \
         --probe-tags           <LD>/tags.json \
         --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
@@ -299,14 +299,21 @@ def train(cfg: dict, args) -> None:
             print(f"❌ FATAL [probe]: action_labels.json not found at {action_labels_path}", file=sys.stderr)
             sys.exit(3)
         probe_labels = load_action_labels(Path(action_labels_path))
-        print(f"  [probe] decoding clips from {_probe_block['subset']} ...", flush=True)
+        # iter18 (2026-06-06) probe-leak fix: probe the HELD-OUT val split (same
+        # pool as the m09c-family), not _probe_block["subset"] — the old path
+        # probed action_labels.json which overlaps the train pool. train_pool_keys
+        # arms the shared [probe-leak guard].
+        print(f"  [probe] decoding {len(val_keys)} held-out val clips "
+              f"({args.val_subset}) ...", flush=True)
         probe_clips = build_probe_clips(
             probe_subset_path=_probe_block["subset"],
             probe_local_data=_probe_block["local_data"],
             probe_tags_path=_probe_block["tags_path"],
             num_frames=cfg["data"]["num_frames"],
             crop_size=cfg["model"]["crop_size"],
+            subset_keys_override=set(val_keys),
             max_clips=cfg["monitoring"]["knn_probe_clips"],
+            train_pool_keys=set(train_keys),
         )
         print(f"  [probe] decoded {len(probe_clips)} clips ({len(probe_labels)} have action labels)", flush=True)
 

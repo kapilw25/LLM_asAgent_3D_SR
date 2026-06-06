@@ -1,0 +1,8 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+═══ 06:32:28 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 6854 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 451 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 1825 clips (split=test)
+═══ 06:32:28 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [POC]) ═══
+  [clip_splits] universe=broad_manifest: 10000 − val(451) − test(1825) = 7724 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 7724 train-pool keys → data/eval_10k_local/train_pool.json

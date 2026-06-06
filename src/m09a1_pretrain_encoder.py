@@ -18,7 +18,7 @@ Eyeball this block to confirm nothing is silently cfg-defaulted. Swap --FULL→-
         --output-dir           outputs/<M>/m09a_pretrain_encoder \
         --cache-policy         <1=keep|2=recompute> \
         --lambda-reg           <yaml drift_control.lambda_reg> \
-        --probe-subset         outputs/<M>/probe_action/action_labels.json \
+        --probe-subset         <LD>/val_split.json \
         --probe-local-data     <LD> \
         --probe-tags           <LD>/tags.json \
         --probe-action-labels  outputs/<M>/probe_action/action_labels.json \
@@ -113,6 +113,7 @@ from utils.training import (
     build_probe_clips,
     cleanup_old_checkpoints,
     run_trio_at_val, track_block_drift_at_val, update_best_state_on_score,
+    BEST_METRIC_DIRECTION,
     export_student_for_eval, finalize_training,
 )
 from utils.action_labels import load_action_labels
@@ -530,17 +531,19 @@ def train(cfg: dict, args):
 
     # Resume from checkpoint
     start_step = 0
-    # iter13 v11 (2026-05-05): track best by probe_top1 (higher=better), not val_loss.
-    # v10 demonstrated val_loss keeps dropping while encoder reverts to init under L2
-    # anchor pullback — picking the lowest-val_loss ckpt picks a degraded encoder.
-    # probe_top1 reflects actual representation quality at every val cycle.
-    best_probe_top1 = -1.0
+    # iter18 (2026-06-05): best-ckpt selection by yaml `probe.best_ckpt_metric`
+    # (future_l1, lower=better — the paper's temporal headline; was probe_top1
+    # from iter13 v11, the one heatmap metric where surgery always ties vanilla).
+    # Direction-aware init so the first non-NaN probe always wins.
+    best_ckpt_metric = cfg["probe"]["best_ckpt_metric"]
+    best_metric_higher = BEST_METRIC_DIRECTION[best_ckpt_metric]
+    best_sel_score = -float("inf") if best_metric_higher else float("inf")
     ckpt_path = output_dir / f"{CHECKPOINT_PREFIX}_latest.pt"
     if ckpt_path.exists():
-        # `best_metric` slot in the ckpt now stores best_probe_top1 (was best_val_loss in v10).
-        start_step, best_probe_top1 = load_training_checkpoint(
+        # `best_metric` slot in the ckpt stores best_sel_score (probe.best_ckpt_metric).
+        start_step, best_sel_score = load_training_checkpoint(
             ckpt_path, student, teacher, predictor, optimizer, scheduler, scaler)
-        print(f"Resumed from step {start_step}, best probe_top1: {best_probe_top1:.4f}")
+        print(f"Resumed from step {start_step}, best {best_ckpt_metric}: {best_sel_score:.4f}")
 
     # ── Collect val clips into memory (from --val-subset, once before training) ──
     val_batches = []
@@ -683,14 +686,23 @@ def train(cfg: dict, args):
             sys.exit(3)
         probe_labels = load_action_labels(Path(action_labels_path))
         try:
-            print(f"  [probe] decoding clips from {probe_cfg['subset']} ...", flush=True)
+            # iter18 (2026-06-06) probe-leak fix: probe the HELD-OUT val split
+            # (same pool as the m09c-family), NOT probe_cfg["subset"]. The old
+            # path probed a 1000-subsample of action_labels.json — ~77% of which
+            # were m09a's OWN train clips — and the probe is the best-ckpt
+            # selection metric (future_l1). subset_keys_override skips the JSON
+            # load; train_pool_keys arms the [probe-leak guard].
+            print(f"  [probe] decoding {len(val_key_set)} held-out val clips "
+                  f"({args.val_subset}) ...", flush=True)
             probe_clips = build_probe_clips(
                 probe_subset_path=probe_cfg["subset"],
                 probe_local_data=probe_cfg["local_data"],
                 probe_tags_path=probe_cfg["tags_path"],
                 num_frames=cfg["data"]["num_frames"],
                 crop_size=cfg["model"]["crop_size"],
+                subset_keys_override=val_key_set,
                 max_clips=cfg["monitoring"]["knn_probe_clips"],   # cap N to avoid /dev/shm overflow
+                train_pool_keys=train_keys,
             )
             print(f"  [probe] decoded {len(probe_clips)} clips ({len(probe_labels)} have action labels)", flush=True)
         except Exception as _probe_build_err:
@@ -1037,10 +1049,10 @@ def train(cfg: dict, args):
                 save_training_checkpoint(
                     output_dir / f"{CHECKPOINT_PREFIX}_step{step+1}.pt",
                     student, teacher, predictor, optimizer, scheduler, scaler,
-                    step + 1, best_probe_top1, full=False)
+                    step + 1, best_sel_score, full=False)
                 save_training_checkpoint(
                     ckpt_path, student, teacher, predictor, optimizer, scheduler,
-                    scaler, step + 1, best_probe_top1, full=True)
+                    scaler, step + 1, best_sel_score, full=True)
                 cleanup_old_checkpoints(output_dir, prefix=CHECKPOINT_PREFIX,
                                         keep_n=keep_last_n)
 
@@ -1175,18 +1187,18 @@ def train(cfg: dict, args):
 
                 # iter13 Task #25: use shared update_best_state_on_score helper
                 # so m09a + m09c share identical best-ckpt selection plumbing.
-                # m09a tracks val_loss (lower=better); the actual best.pt save
-                # is gated separately at line ~1170 (different code path —
-                # save_callback=None here).
-                # iter13 v11 (2026-05-05): track best_state by probe_top1 (downstream
-                # metric), NOT val_loss. v10 showed val_loss keeps dropping while
-                # encoder reverts to init under L2 anchor pullback — picking
-                # lowest-val_loss ckpt picks a degraded encoder. probe_top1 reflects
-                # actual representation quality at every val cycle.
-                probe_top1_for_best = probe_record.get("probe_top1", -1.0)
-                update_best_state_on_score(
-                    best_state, probe_top1_for_best, score_key="probe_top1",
-                    higher_is_better=True, step=step)
+                # iter18 (2026-06-05): selection by yaml `probe.best_ckpt_metric`
+                # (future_l1 — paper temporal headline; was probe_top1 from iter13
+                # v11, the one heatmap metric where surgery always ties vanilla).
+                # FAIL LOUD: probe_record[...] — run_trio_at_val populates or raises.
+                probe_top1_for_best = probe_record["probe_top1"]
+                improved_state = update_best_state_on_score(
+                    best_state, probe_record[best_ckpt_metric],
+                    score_key=best_ckpt_metric,
+                    higher_is_better=best_metric_higher, step=step)
+                if improved_state:
+                    # plots.py annotates top1-at-best-step (schema bridge w/ m09c).
+                    best_state["probe_top1"] = probe_top1_for_best
                 # Mirror val_loss onto best_state for the plot helper (line 161-163)
                 # which annotates the "val_loss AT best-top1 step" for context.
                 best_state["val_loss_at_best"] = val_loss
@@ -1225,12 +1237,16 @@ def train(cfg: dict, args):
                 # FATAL on KeyError 'predictor' (run_src_probe_sanity_v2.log:778).
                 # File grows ~7GB → ~15GB; acceptable on 200GB workspace and
                 # symmetric with surgery_base.yaml convention.
-                # iter13 v11 (2026-05-05): best.pt save gate uses probe_top1 (higher=better),
-                # not val_loss. v10 demonstrated val_loss keeps dropping while encoder
-                # reverts to init — picking lowest-val_loss ckpt picks a degraded encoder.
-                probe_top1_now = probe_record.get("probe_top1", -1.0)
-                if probe_top1_now > best_probe_top1:
-                    best_probe_top1 = probe_top1_now
+                # iter18 (2026-06-05): best.pt save gate uses yaml
+                # `probe.best_ckpt_metric` (future_l1, lower=better; was probe_top1).
+                # NaN guard mirrors update_best_state_on_score — NaN never wins.
+                score_now = probe_record[best_ckpt_metric]
+                _is_nan = isinstance(score_now, float) and score_now != score_now
+                improved_now = (not _is_nan and
+                                ((score_now > best_sel_score) if best_metric_higher
+                                 else (score_now < best_sel_score)))
+                if improved_now:
+                    best_sel_score = score_now
                     # iter13 disk-budget fix (2026-05-04, after v6 ENOSPC at step 744):
                     # include_optimizer=False → best.pt drops 16 GB optimizer state.
                     # Downstream (m05 re-embed, Stage 8 future_mse) needs only
@@ -1239,9 +1255,9 @@ def train(cfg: dict, args):
                     save_training_checkpoint(
                         output_dir / f"{CHECKPOINT_PREFIX}_best.pt",
                         student, teacher, predictor, optimizer, scheduler,
-                        scaler, step + 1, best_probe_top1,
+                        scaler, step + 1, best_sel_score,
                         full=True, include_optimizer=False, include_teacher=False)
-                    print(f"  🎯 New best probe_top1: {best_probe_top1:.4f} "
+                    print(f"  🎯 New best {best_ckpt_metric}: {best_sel_score:.4f} "
                           f"(val_jepa at this step: {val_loss:.4f})")
 
             # End-of-epoch logging
@@ -1258,7 +1274,7 @@ def train(cfg: dict, args):
         gc.enable()
         save_training_checkpoint(
             ckpt_path, student, teacher, predictor, optimizer, scheduler,
-            scaler, step + 1, best_probe_top1, full=True)
+            scaler, step + 1, best_sel_score, full=True)
         print(f"  Checkpoint saved at step {step + 1}/{total_steps}. Resume with same command.")
         sys.exit(0)  # user-initiated, not an error
     finally:
@@ -1315,21 +1331,21 @@ def train(cfg: dict, args):
             f"OOM-retry exhausted sub-batch shrink budget in SANITY's total_steps=1 run."
         )
 
-    # iter15 (2026-05-15): post-loop guarantee for m09a_ckpt_best.pt. The in-loop
-    # gate at L1246 requires `probe_top1_now > best_probe_top1 (= -1.0 init)`. In
-    # SANITY, configs/train/base_optimization.yaml:346 sets probe.enabled=false
-    # (n=21 too small for stable BCa CI) → probe_top1 stays -1.0 → in-loop save
-    # never fires → run_eval.sh Stage 8 (probe_future_mse) FATALs on missing best.pt.
-    # POC/FULL: probe IS enabled → in-loop best wins → this branch is a no-op.
+    # iter15 (2026-05-15): post-loop guarantee for m09a_ckpt_best.pt. If no probe
+    # cycle improved best_sel_score (e.g. every probe NaN'd on best_ckpt_metric),
+    # the in-loop save never fires → run_eval.sh Stage 8 (probe_future_mse)
+    # FATALs on missing best.pt. SANITY/POC/FULL all run probes (probe.enabled
+    # is universal-true; the old "SANITY disables probes" note was stale) →
+    # this branch is normally a no-op, kept as the fail-safe for Stage 8.
     best_ckpt_path = output_dir / f"{CHECKPOINT_PREFIX}_best.pt"
     if not best_ckpt_path.exists():
         print(f"  [iter15] {CHECKPOINT_PREFIX}_best.pt absent at end-of-train "
-              f"(best_probe_top1={best_probe_top1:.4f} — probe likely disabled this mode). "
+              f"(best_sel_score={best_sel_score:.4f} — probe likely disabled this mode). "
               f"Saving FINAL trained state as best.pt to satisfy Stage 8 contract.", flush=True)
         save_training_checkpoint(
             best_ckpt_path,
             student, teacher, predictor, optimizer, scheduler,
-            scaler, step + 1, best_probe_top1,
+            scaler, step + 1, best_sel_score,
             full=True, include_optimizer=False, include_teacher=False)
         print(f"  [iter15] Wrote fallback best.pt → {best_ckpt_path}", flush=True)
 
@@ -1373,11 +1389,12 @@ def train(cfg: dict, args):
         "final_jepa_loss": jepa_val,
         "final_drift_loss": drift_val,
         "final_total_loss": total_val,
-        # iter13 v11: best_state now tracked by probe_top1; keep "best_val_loss"
+        # iter18: best tracked by yaml probe.best_ckpt_metric; keep "best_val_loss"
         # field name in training_summary.json for backward compat with downstream
         # consumers (lambda-ablation winner picker), but value is now NaN-equivalent
-        # (-1.0) when probe_top1 path is active.
-        "best_probe_top1": best_probe_top1,
+        # (-1.0) when the probe-metric path is active.
+        "best_ckpt_metric": best_ckpt_metric,
+        "best_sel_score": best_sel_score,
         "best_val_loss": -1.0,    # legacy field — see above
         "final_lr": lr_val,
         "final_grad_norm": gn_val,

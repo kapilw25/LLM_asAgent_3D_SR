@@ -191,7 +191,7 @@ This is a **`{stage}`** checkpoint from the FactorJEPA pipeline, a sequential SS
 | Batch size | {summary.get('batch_size', 'N/A')} |
 | Final LR | {summary.get('final_lr', 'N/A')} |
 | Final val JEPA loss | {summary.get('final_jepa_loss', 'N/A')} |
-| Best probe top-1 | {summary.get('best_probe_top1', 'N/A')} |
+| Best {summary.get('best_ckpt_metric', 'probe top-1')} | {summary.get('best_sel_score', summary.get('best_probe_top1', 'N/A'))} |
 | Drift control λ | {summary.get('lambda_reg', 0)} |
 | Final encoder drift `‖Δ‖/‖init‖` | reported in training log (e.g., 2.46 % for the iter13 5-epoch run) |
 

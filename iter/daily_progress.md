@@ -4,6 +4,16 @@
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
 
+## Fri, June 5, 2026
+- Switched checkpoint selection to future-frame error — the metric our method actually claims.
+- Found the reference model's selection quiz overlapped its training clips (75%); fixed, guarded.
+- Next: rerun all thirteen arms on a 4-GPU node; full comparison Saturday.
+
+## Thurs, June 4, 2026
+- First seven of thirteen arms trained on 10k clips; zero crashes, full trajectories recorded.
+- Surgery leads future-frame error; Auto-RGN baseline leads motion/action; raw-data control surprisingly close.
+- Next: switched model-selection to future-frame error (was action top-1); rerunning all arms.
+
 ## Wed, June 3, 2026
 - Built and did SANITY testing on all eight finetuning baselines (surgical_autorgn, surgery_raw, full_ft, lpft, peft_lora, peft_dora, CaSSLe, EWC); every arm trains and evaluates cleanly.
 - All  PREVIOUS four surgery variants join the same run — identical data, identical starting weights, fair duel.

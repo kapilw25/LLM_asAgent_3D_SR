@@ -219,7 +219,8 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────
 
 def setup_probe_pipeline(cfg: dict, args, output_dir, *,
-                         subset_keys_override=None):
+                         subset_keys_override=None,
+                         train_pool_keys):
     """Build probe_clips + load_action_labels.
 
     Returns: (probe_clips, probe_labels). Either may be None when probe is
@@ -231,7 +232,11 @@ def setup_probe_pipeline(cfg: dict, args, output_dir, *,
 
     Args:
       subset_keys_override: optional set[str] of clip_keys overriding probe.subset
-        (used by m09c to feed in-stage held-out val_keys instead of external val_1k).
+        (the m09c-family passes its held-out val_keys; iter18 2026-06-06: m09a1/
+        m09a2/m09c2 now do the same — the old "m09a uses external val_1k" pool
+        was deleted long ago and its replacement overlapped the train pool).
+      train_pool_keys: REQUIRED set[str] — the caller's SSL-train pool, forwarded
+        to build_probe_clips' [probe-leak guard] which RAISES on probe∩train ≠ ∅.
     """
     # Lazy imports — utils.training has heavy deps (torch, faiss); only pay
     # them when the caller actually needs the probe pipeline.
@@ -279,6 +284,7 @@ def setup_probe_pipeline(cfg: dict, args, output_dir, *,
         num_frames=num_frames, crop_size=crop_size,
         subset_keys_override=subset_keys_override,
         max_clips=max_clips,
+        train_pool_keys=train_pool_keys,
     )
 
     # Action labels path: CLI > derived default.

@@ -278,7 +278,9 @@
       "Bash(echo \"exit=$?\")",
       "Bash(ps -eo pid,cmd)",
       "Bash(grep -nE '^## |^flowchart|^```mermaid|subgraph|style ' plan_baselines_roadmap.md)",
-      "Bash(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader)"
+      "Bash(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader)",
+      "Bash(grep -av \"^$\")",
+      "Bash(awk '{print $11, $12, $13, $14}')"
     ]
   }
 }
