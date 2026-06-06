@@ -46,13 +46,20 @@ _torch_mp.set_sharing_strategy("file_system")
 # matching m09_pretrain.py:53 pattern).
 from utils.config import get_pipeline_config
 from utils.data_download import iter_clips_parallel
-from utils.data_paths import find_video_shards
+from utils.data_paths import artifact, find_video_shards
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup  # noqa: F401 (AdaptiveBatchSizer re-exported)
 from utils.video_io import get_clip_key, create_stream, decode_video_bytes
 from utils.vjepa2_imports import (
     get_vit_by_arch, get_vit_predictor, get_vit_predictor_2_1,  # noqa: F401 (re-exported for builders)
     get_mask_generator, get_apply_masks,
 )
+
+# iter18 W7 (PLR2004): semantic named constants — definitions/guards, not config.
+_MIN_MP4_BYTES = 1000        # below = corrupt/empty stream payload, drop clip
+_PRED_TUPLE_LEN = 2          # predictor returns (z_pred, z_context) when predict_all
+_MIN_PROBE_POOL_WARN = 100   # bootstrap-CI width warning floor
+_MIN_LOOCV_N = 10            # kNN-centroid LOOCV stability floor (matches probe_trio)
+_MIN_TREND_POINTS = 2        # can't compute BWT/trend from fewer probes
 
 # ─────────────────────────────────────────────────────────────────────────
 # Module constants (extracted from m09_pretrain.py:78-89)
@@ -172,7 +179,7 @@ def compute_val_motion_aux_loss(student, ma_head, ma_cfg, ma_lookup,
             mp4_bytes = mp4["bytes"] if isinstance(mp4, dict) else mp4
             if isinstance(mp4_bytes, str):
                 mp4_bytes = mp4_bytes.encode()
-            if not mp4_bytes or len(mp4_bytes) < 1000:
+            if not mp4_bytes or len(mp4_bytes) < _MIN_MP4_BYTES:
                 continue
             clip = decode_video_bytes(mp4_bytes, _val_tmp, k, num_frames)
             if clip is None:
@@ -245,12 +252,12 @@ def finalize_outputs(*, student, output_dir: Path, ckpt_prefix: str,
     """student_encoder.pt export + <prefix>_best.pt combined ckpt + training_summary.json
     (iter17 DRY #34, shared by m09a2/c2 head trainers). ckpt_payload / summary carry the
     per-module divergent fields — caller builds them. Preserves the two 'Saved:' log lines."""
-    student_export = output_dir / "student_encoder.pt"
+    student_export = output_dir / artifact("student_encoder")
     export_student_for_eval(student, student_export, explora_enabled=explora_enabled)
-    combined_ckpt = output_dir / f"{ckpt_prefix}_best.pt"
+    combined_ckpt = output_dir / f"{ckpt_prefix}{artifact('ckpt_best_suffix')}"
     torch.save(ckpt_payload, combined_ckpt)
     print(f"Saved: {combined_ckpt}")
-    summary_path = output_dir / "training_summary.json"
+    summary_path = output_dir / artifact("training_summary")
     summary_path.write_text(json.dumps(summary, indent=2))
     print(f"Saved: {summary_path}")
 
@@ -263,7 +270,7 @@ class TrainLogWriter:
     the header only when the file is new (checkpoint-resume safe)."""
     def __init__(self, output_dir: Path, columns: list):
         self.jsonl = (output_dir / "loss_log.jsonl").open("a", buffering=1)
-        self.csv_path = output_dir / "loss_log.csv"
+        self.csv_path = output_dir / artifact("loss_log_csv")
         new = not self.csv_path.exists()
         self._cf = open(self.csv_path, "a", newline="")
         self._cw = csv.writer(self._cf)
@@ -436,7 +443,7 @@ def compute_jepa_loss(pred_features: list, pred_context: list,
                       teacher_output: torch.Tensor,
                       masks_pred: list, masks_enc: list,
                       loss_exp: float, predict_all: bool,
-                      lambda_context: float = 0.5,
+                      lambda_context: float,  # iter18 H6: caller passes
                       saliency_weighting: bool = False) -> tuple:
     """V-JEPA 2.1 dense loss: masked tokens + context tokens.
 
@@ -748,7 +755,7 @@ def _train_step_grad_accum(student, teacher, predictor, batch_clips,
                     z = student(bc, masks=[me], **({"training": True} if n_levels > 1 else {}))
                     # iter17: mod=/mask_index= are 2.1-predictor kwargs; 2.0 base predictor lacks them
                     out = predictor(z, [me], [mp], **({"mod": "video", "mask_index": k} if n_levels > 1 else {}))
-                    if isinstance(out, tuple) and len(out) == 2:
+                    if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
                         pf.append(out[0]); pc.append(out[1])
                     else:
                         pf.append(out)
@@ -1107,7 +1114,7 @@ def run_validation(student, teacher, predictor, mask_generators,
                 for i, (m_enc, m_pred) in enumerate(zip(all_masks_enc, all_masks_pred)):
                     z = student(batch_clips, masks=[m_enc], **({"training": True} if n_levels_val > 1 else {}))
                     outputs = predictor(z, [m_enc], [m_pred], **({"mod": "video", "mask_index": i} if n_levels_val > 1 else {}))
-                    if isinstance(outputs, tuple) and len(outputs) == 2:
+                    if isinstance(outputs, tuple) and len(outputs) == _PRED_TUPLE_LEN:
                         pred_features.append(outputs[0])
                         pred_context_val.append(outputs[1])
                     else:
@@ -1296,7 +1303,7 @@ def save_training_checkpoint(path: Path, student, teacher, predictor,
         ) from e
 
 
-def cleanup_old_checkpoints(output_dir: Path, prefix: str, keep_n: int = 2,
+def cleanup_old_checkpoints(output_dir: Path, prefix: str, keep_n: int,  # iter18 H6: caller passes (yaml keep_last_n)
                              cache_policy: str = "1"):
     """Delete oldest {prefix}_step*.pt files, keeping only the last keep_n.
 
@@ -1315,7 +1322,7 @@ def cleanup_old_checkpoints(output_dir: Path, prefix: str, keep_n: int = 2,
     and m09c (writes "m09c_ckpt_*"), which piled up ckpts until disk-full.
     """
     del cache_policy  # iter11 v3: deliberately ignored — see docstring
-    pattern = str(output_dir / f"{prefix}_step*.pt")
+    pattern = str(output_dir / f"{prefix}{artifact('ckpt_step_glob')}")
     step_files = sorted(glob.glob(pattern),
                         key=lambda f: os.path.getmtime(f))
     if len(step_files) > keep_n:
@@ -1341,7 +1348,7 @@ def cleanup_stage_checkpoints(output_dir: Path, prefix: str, keep_n: int = 1,
     stage ordering (important if a resume re-writes stage2 with a newer timestamp
     than stage0/1 — we keep the "newest save", not the "highest stage index").
     """
-    pattern = str(output_dir / f"{prefix}_stage*.pt")
+    pattern = str(output_dir / f"{prefix}{artifact('ckpt_stage_glob')}")
     stage_files = sorted(glob.glob(pattern),
                          key=lambda f: os.path.getmtime(f))
     if len(stage_files) > keep_n:
@@ -1418,7 +1425,7 @@ def assert_encoder_diverged_from_init(
     *,
     init_keys: tuple = ("target_encoder", "encoder"),
     init_prefix: str = "module.backbone.",
-    min_rel_l2: float = 1e-7,
+    min_rel_l2: float = None,  # iter18 H6: None → pipeline.yaml train_guards.min_encoder_rel_l2
     label: str = "encoder",
 ) -> float:
     """Fail-hard if `student` weights are bit-identical to the initial Meta ckpt.
@@ -1450,7 +1457,11 @@ def assert_encoder_diverged_from_init(
     Used by m09a1_pretrain_encoder.py + m09c1_surgery_encoder.py post-training, mirrors the
     fail-hard spirit of "M09A FAILED: 0 successful training steps" (Bug B):
     refuse to silently export Meta-frozen weights as a "trained" encoder.
+
+    iter18 H6: min_rel_l2=None → pipeline.yaml train_guards.min_encoder_rel_l2.
     """
+    if min_rel_l2 is None:
+        min_rel_l2 = get_pipeline_config()["train_guards"]["min_encoder_rel_l2"]
     init_full = torch.load(init_ckpt_path, map_location="cpu", weights_only=False)
     init_sd = None
     for key in init_keys:
@@ -1646,8 +1657,8 @@ def finalize_training(*, student, mt_head, mt_dims_spec, ma_head,
         print(f"  ✓ encoder training-effect verified: ||Δ||/||init|| = {rel:.3e}")
 
     export_multi_task_head(mt_head, mt_dims_spec, embed_dim,
-                           output_dir / "multi_task_head.pt")
-    export_motion_aux_head(ma_head, output_dir / "motion_aux_head.pt")
+                           output_dir / artifact("multi_task_head"))
+    export_motion_aux_head(ma_head, output_dir / artifact("motion_aux_head"))
     return rel
 
 
@@ -1750,31 +1761,10 @@ def select_blocks_auto_rgn(student, teacher, predictor, score_clips, mask_genera
     return sorted(keep)
 
 
-def create_train_val_split(clip_keys, split_ratio: float, seed: int,
-                           max_val_clips: int = 1000):
-    """Deterministic train/val split via seeded shuffle. Reproducible across runs
-    with same (keys, split_ratio, seed, max_val_clips). Used by m09c to carve a
-    held-out val-set from the factor manifest so the same set powers mid-training
-    probe + downstream Step F decision gate — eliminates the 2026-04-19 test-leakage flaw.
-
-    val_size = min(max_val_clips, int(n * (1 - split_ratio))). Cap prevents FULL
-    (115K clips × 10% = 11500) from burning GPU on an over-sized val-set when 1000
-    clips already give tight BCa CIs. POC (1000 × 10% = 100) is below cap → 100 val.
-
-    split_ratio=1.0 returns (all_keys, []) — SANITY uses this (N=20 too small to split).
-    """
-    if split_ratio >= 1.0:
-        return list(clip_keys), []
-    rng = random.Random(seed)
-    shuffled = list(clip_keys)
-    rng.shuffle(shuffled)
-    n_total = len(shuffled)
-    # Avoid `n_total * (1 - split_ratio)` — IEEE 754 rounds 1-0.9 = 0.0999... → off-by-one.
-    # Compute n_train first (exact for round multiples), derive n_val from it, then cap.
-    n_train = int(n_total * split_ratio)
-    n_val = min(max_val_clips, n_total - n_train)
-    n_train = n_total - n_val   # re-derive so cap actually increases n_train on FULL
-    return shuffled[:n_train], shuffled[n_train:]
+# iter18 H6 (2026-06-06): create_train_val_split DELETED — zero callers since
+# iter17 moved splitting to utils/clip_splits.py (run_train.sh shared derivation).
+# Restore from git history if a per-module split is ever legitimately needed
+# (it shouldn't be — per-module splits are the iter15 leakage class).
 
 
 def build_factor_index(manifest: dict, dl_dir: Path, da_dir: Path, di_dir: Path) -> dict:
@@ -1791,8 +1781,9 @@ def build_factor_index(manifest: dict, dl_dir: Path, da_dir: Path, di_dir: Path)
             p = da_dir / f"{safe_key}.npy"
             if p.exists():
                 entry["D_A"] = p
-        if info.get("has_D_I") and info.get("n_interaction_tubes", 0) > 0:
-            tubes = sorted(di_dir.glob(f"{safe_key}_tube*.npy"))
+        # iter18 H3: strict — m11 build_factor_entry writes both keys on every entry.
+        if info["has_D_I"] and info["n_interaction_tubes"] > 0:
+            tubes = sorted(di_dir.glob(f"{safe_key}{artifact('tube_glob')}"))
             if tubes:
                 entry["D_I"] = tubes
         if entry:
@@ -1991,7 +1982,7 @@ class StreamingFactorDataset(torch.utils.data.IterableDataset):
         num_frames: int,
         crop_size: int,
         di_legacy_index: dict = None,
-        base_seed: int = 42,
+        base_seed: int = None,  # iter18 H6: None → pipeline.yaml streaming.factor_stream_base_seed
         steps_per_epoch: int = None,
         interaction_cfg: dict = None,
         raw_replay_pct: float = 0.0,
@@ -2017,6 +2008,9 @@ class StreamingFactorDataset(torch.utils.data.IterableDataset):
         self.crop_size = crop_size
         self.di_legacy_index = di_legacy_index or {}
         self.interaction_cfg = interaction_cfg
+        # iter18 H6: None → pipeline.yaml streaming.factor_stream_base_seed.
+        if base_seed is None:
+            base_seed = get_pipeline_config()["streaming"]["factor_stream_base_seed"]
         self.base_seed = base_seed
         self.steps_per_epoch = steps_per_epoch
         # Raw-replay state (default zero → no-op).
@@ -2427,7 +2421,7 @@ def build_probe_clips(probe_subset_path: str, probe_local_data: str,
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     print(f"  [probe] decoded {len(clips)} clips ({n_no_tag} skipped — no tag match)")
-    if len(clips) < 100:
+    if len(clips) < _MIN_PROBE_POOL_WARN:
         print(f"  WARNING: probe has only {len(clips)} clips — bootstrap CI will be wide (N<100)")
     return clips
 
@@ -2470,7 +2464,7 @@ def run_probe_acc_eval(student, probe_clips: list, probe_labels: dict,
     from utils.bootstrap import bootstrap_ci
 
     n = len(probe_clips)
-    if n < 10:
+    if n < _MIN_LOOCV_N:
         raise ValueError(
             f"probe N={n} too small for stable 95% BCa CI (needs N>=10). "
             f"Check probe.subset JSON clip_keys + action_labels coverage."
@@ -2530,7 +2524,7 @@ def run_probe_acc_eval(student, probe_clips: list, probe_labels: dict,
         if k in probe_labels:
             y_list.append(int(probe_labels[k]["class_id"]))
             keep_idx.append(idx)
-    if len(y_list) < 10:
+    if len(y_list) < _MIN_LOOCV_N:
         raise ValueError(
             f"probe-acc: only {len(y_list)}/{n} probe clips have action labels — "
             f"check that --probe-subset clip_keys overlap with action_labels.json"
@@ -2610,7 +2604,7 @@ def run_probe_val_loss(student, teacher, predictor, probe_clips: list,
     if hasattr(student, "get_base_model"):
         student = student.get_base_model()
     n = len(probe_clips)
-    if n < 10:
+    if n < _MIN_LOOCV_N:
         raise ValueError(f"probe val-loss N={n} too small for stable mean")
 
     was_training = student.training
@@ -2679,7 +2673,7 @@ def run_probe_val_loss(student, teacher, predictor, probe_clips: list,
                     for k, (me, mp) in enumerate(zip(all_menc, all_mpred)):
                         z = student(batch, masks=[me])
                         out = predictor(z, [me], [mp], **({"mask_index": k} if n_levels > 1 else {}))
-                        if isinstance(out, tuple) and len(out) == 2:
+                        if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
                             pf.append(out[0]); pc.append(out[1])
                         else:
                             pf.append(out)
@@ -2792,11 +2786,11 @@ def compute_trajectory_stats(probe_history: list) -> dict:
     Returns empty trajectory when <2 probe entries OR no entry has probe_top1
     (caller handles both gracefully — surgery may have probe disabled).
     """
-    if len(probe_history) < 2:
+    if len(probe_history) < _MIN_TREND_POINTS:
         return {"bwt_top1": None, "monotonic": None, "trajectory": []}
 
     traj = [r.get("probe_top1") for r in probe_history if r.get("probe_top1") is not None]
-    if len(traj) < 2:
+    if len(traj) < _MIN_TREND_POINTS:
         return {"bwt_top1": None, "monotonic": None, "trajectory": []}
 
     deltas = [traj[i] - traj[i - 1] for i in range(1, len(traj))]
@@ -2999,7 +2993,7 @@ def track_block_drift_at_val(student, init_params: dict, freeze_below: int,
         # File grows by ~48 floats × 16 bytes per checkpoint = ~1 KB/probe ≈ 10-20 KB total.
         # Atomic via tmp + os.replace so crash mid-write doesn't corrupt the existing file.
         try:
-            json_path = Path(output_dir) / f"{file_prefix}_block_drift_history.json"
+            json_path = Path(output_dir) / f"{file_prefix}{artifact('block_drift_history_suffix')}"
             tmp_path = json_path.with_suffix(".tmp.json")
             with open(tmp_path, "w") as _f:
                 json.dump(block_drift_history, _f, indent=2)
@@ -3109,7 +3103,7 @@ def track_head_drift_at_val(ma_head, head_init_params: dict,
         head_drift_history.append(drift_record)
         # Atomic JSON write (mirrors track_block_drift_at_val:2657).
         try:
-            json_path = Path(output_dir) / f"{file_prefix}_block_drift_history.json"
+            json_path = Path(output_dir) / f"{file_prefix}{artifact('block_drift_history_suffix')}"
             tmp_path = json_path.with_suffix(".tmp.json")
             with open(tmp_path, "w") as _f:
                 json.dump(head_drift_history, _f, indent=2)

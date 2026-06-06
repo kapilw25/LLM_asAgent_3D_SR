@@ -72,6 +72,12 @@ apply_masks = sys.modules["src.masks.utils"].apply_masks
 # Import shared plot utilities (after vjepa2 sys.path hack is cleaned up)
 sys.path.insert(0, str(REPO_ROOT / "src"))
 from utils.plots import init_style, save_fig, COLORS
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): contracts + report-tier thresholds.
+_VIDEO_RANK = 5            # (B, T, C, H, W) — channel axis sanity at dim 2
+_BS_HEALTHY_CKPT = 8       # profiled max-bs verdict tiers (report text only)
+_BS_HEALTHY_NO_CKPT = 4
 
 # Number of repeats per batch size for reliable throughput measurement
 N_REPEATS = 3
@@ -184,7 +190,7 @@ def profile_batch(student, teacher, pred, mask_generators, batch_size, device,
     if real_batch is not None and real_batch.shape[0] >= batch_size:
         clip = real_batch[:batch_size].to(device=device, dtype=DTYPE)
         # Ensure (B, C, T, H, W) format
-        if clip.ndim == 5 and clip.shape[2] in (1, 3):
+        if clip.ndim == _VIDEO_RANK and clip.shape[2] in (1, 3):
             clip = clip.permute(0, 2, 1, 3, 4)
     else:
         clip = torch.randn(batch_size, 3, NUM_FRAMES, CROP_SIZE, CROP_SIZE,
@@ -531,10 +537,10 @@ def main(local_data: str, config_path: str):
           f"({results_ckpt[max_bs_ckpt]['peak_gb']:.1f}G peak)" if max_bs_ckpt else "")
     print()
     print("Recommended for m09_pretrain.py:")
-    if max_bs_ckpt >= 8:
+    if max_bs_ckpt >= _BS_HEALTHY_CKPT:
         rec = min(max_bs_ckpt, 16)
         print(f"  batch_size: {rec}  (with gradient checkpointing)")
-    elif max_bs_no_ckpt >= 4:
+    elif max_bs_no_ckpt >= _BS_HEALTHY_NO_CKPT:
         rec = min(max_bs_no_ckpt, 8)
         print(f"  batch_size: {rec}  (without gradient checkpointing)")
     else:
@@ -579,7 +585,7 @@ def main(local_data: str, config_path: str):
                                 "waterfall": v["waterfall"]}
                       for k, v in results_ckpt.items()},
     }
-    with open(out_dir / "profile_data.json", "w") as f:
+    with open(out_dir / artifact("profile_data"), "w") as f:
         json.dump(raw, f, indent=2)
 
     generate_plots(results_no_ckpt, results_ckpt, gpu_name, gpu_total_gb, n_student, out_dir)
@@ -714,7 +720,7 @@ def profile_inference(local_data: str, config_path: str):
     warmup_bs = min(max_bs, real_batch.shape[0])
     print(f"Warming up torch.compile with real data (BS={warmup_bs}, first batch = compilation)...")
     warmup_batch = real_batch[:warmup_bs].to(device=device, dtype=torch.float16)
-    if warmup_batch.ndim == 5 and warmup_batch.shape[2] in (1, 3):
+    if warmup_batch.ndim == _VIDEO_RANK and warmup_batch.shape[2] in (1, 3):
         warmup_batch = warmup_batch.permute(0, 2, 1, 3, 4)
     try:
         with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.float16):
@@ -726,7 +732,7 @@ def profile_inference(local_data: str, config_path: str):
         warmup_bs = warmup_bs // 2
         print(f"  OOM at BS={max_bs}, retrying warmup at BS={warmup_bs}")
         warmup_batch = real_batch[:warmup_bs].to(device=device, dtype=torch.float16)
-        if warmup_batch.ndim == 5 and warmup_batch.shape[2] in (1, 3):
+        if warmup_batch.ndim == _VIDEO_RANK and warmup_batch.shape[2] in (1, 3):
             warmup_batch = warmup_batch.permute(0, 2, 1, 3, 4)
         with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.float16):
             _ = compiled(warmup_batch)
@@ -751,7 +757,7 @@ def profile_inference(local_data: str, config_path: str):
         gc.collect()
 
         clip = real_batch[:bs].to(device=device, dtype=torch.float16)
-        if clip.ndim == 5 and clip.shape[2] in (1, 3):
+        if clip.ndim == _VIDEO_RANK and clip.shape[2] in (1, 3):
             clip = clip.permute(0, 2, 1, 3, 4)
         try:
             # Run N_REPEATS times, take median throughput (eliminates warmup noise)
@@ -797,7 +803,7 @@ def profile_inference(local_data: str, config_path: str):
     # Save to own directory
     out_dir = REPO_ROOT / "outputs" / "profile" / "inference" / "vjepa2"
     out_dir.mkdir(parents=True, exist_ok=True)
-    profile_path = out_dir / "profile_data.json"
+    profile_path = out_dir / artifact("profile_data")
 
     data = {
         "gpu": gpu_name, "gpu_total_gb": gpu_total_gb,
@@ -970,7 +976,7 @@ def profile_dinov2(local_data: str, config_path: str):
     # Save to own directory
     out_dir = REPO_ROOT / "outputs" / "profile" / "inference" / "dinov2"
     out_dir.mkdir(parents=True, exist_ok=True)
-    profile_path = out_dir / "profile_data.json"
+    profile_path = out_dir / artifact("profile_data")
     data = {
         "gpu": gpu_name, "gpu_total_gb": gpu_total_gb,
         "optimal_bs": optimal, "optimal_throughput": peak_tput,

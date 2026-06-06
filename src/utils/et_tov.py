@@ -27,13 +27,17 @@ import torch.nn as nn
 
 from utils.per_frame_features import forward_per_frame, permute_frames
 
+# iter18 W7 (PLR2004): contracts.
+_FEATS_RANK = 2
+_MIN_PERMS = 2
+
 
 @torch.no_grad()
 def compute_features(encoder, batch, num_frames, tubelet_size, permutations):
     """Forward through encoder once per permutation in `permutations` (list of (T,) LongTensor;
     permutations[0] MUST be identity = torch.arange(T) — orchestrator enforces). Returns
     LongTensor stack (n_perm, B, D) — mean-pooled features per permutation variant."""
-    if len(permutations) < 2:
+    if len(permutations) < _MIN_PERMS:
         raise RuntimeError(
             f"compute_features: need >=2 permutations (identity + >=1 shuffled); got {len(permutations)}")
     T = batch.shape[1]
@@ -52,7 +56,7 @@ def compute_features(encoder, batch, num_frames, tubelet_size, permutations):
 def train_head(train_feats, train_labels, *, embed_dim, n_classes, lr, epochs, weight_decay,
                batch_size, device, seed):
     """Train a linear head (D → n_classes) for permutation-id classification."""
-    if train_feats.ndim != 2 or train_feats.shape[1] != embed_dim:
+    if train_feats.ndim != _FEATS_RANK or train_feats.shape[1] != embed_dim:
         raise RuntimeError(
             f"train_feats shape {tuple(train_feats.shape)} mismatches embed_dim={embed_dim}")
     if train_labels.ndim != 1 or train_labels.numel() != train_feats.shape[0]:

@@ -94,6 +94,7 @@ from utils.config import (
     get_pipeline_config, get_sanity_clip_limit, get_total_clips,
 )
 from utils.data_download import ensure_local_data, iter_clips_parallel
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 from utils.wandb_utils import (
     add_wandb_args, init_wandb, log_metrics, finish_wandb,
 )
@@ -130,6 +131,11 @@ CHECKPOINT_INTERVAL = _pcfg["eval"]["motion_checkpoint_every"]
 # pipeline.yaml. Mirror of AdaptiveBatchSizer's VRAM-keyed pattern but for
 # CPU RAM. Eliminates the per-box manual yaml-edit-before-each-run pattern.
 from utils.config import get_motion_decode_config
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_FRAMES_FOR_FLOW = 2     # optical flow needs a frame pair
+_MIN_MP4_BYTES = 1000        # below = corrupt/empty stream payload (matches utils.training)
+_UNLIMITED_CLIPS = 999_999_999   # sentinel: no clip limit
 _motion_cfg = get_motion_decode_config()
 PRODUCER_QUEUE_SIZE = _motion_cfg["producer_queue"]
 DECODE_WORKERS      = _motion_cfg["decode_workers"]
@@ -181,7 +187,7 @@ def decode_video_frames(video_bytes: bytes, n_pairs: int = N_FRAME_PAIRS):
     if total_frames == 0 and stream.duration and stream.time_base:
         total_frames = int(float(stream.duration * stream.time_base)
                           * float(stream.average_rate or 30))
-    if total_frames < 2:
+    if total_frames < _MIN_FRAMES_FOR_FLOW:
         container.close()
         return []
 
@@ -415,7 +421,7 @@ def _producer_thread(q: queue.Queue, stop_event: threading.Event,
                 if item is None:
                     break
                 clip_key, mp4_bytes = item
-                if not mp4_bytes or len(mp4_bytes) < 1000:
+                if not mp4_bytes or len(mp4_bytes) < _MIN_MP4_BYTES:
                     errors += 1
                     continue
                 batch_bytes.append((mp4_bytes, clip_key))
@@ -439,7 +445,7 @@ def _producer_thread(q: queue.Queue, stop_event: threading.Event,
                 mp4_bytes = mp4_data["bytes"] if isinstance(mp4_data, dict) else mp4_data
                 if isinstance(mp4_bytes, str):
                     mp4_bytes = mp4_bytes.encode()
-                if not mp4_bytes or len(mp4_bytes) < 1000:
+                if not mp4_bytes or len(mp4_bytes) < _MIN_MP4_BYTES:
                     errors += 1
                     continue
                 batch_bytes.append((mp4_bytes, clip_key))
@@ -563,9 +569,10 @@ def main():
         sys.exit("FATAL: --output-dir not supplied and --local-data missing — "
                  "cannot resolve m04d output location.")
     output_dir.mkdir(parents=True, exist_ok=True)
-    features_file   = output_dir / "motion_features.npy"
-    paths_file      = output_dir / "motion_features.paths.npy"
-    meta_file       = output_dir / "motion_features.meta.json"
+    features_file   = output_dir / artifact("motion_features")
+    # iter18 H1: sidecars DERIVED from the canonical stem (no second literal).
+    paths_file      = output_dir / artifact("motion_features").replace(".npy", ".paths.npy")
+    meta_file       = output_dir / artifact("motion_features").replace(".npy", ".meta.json")
     checkpoint_file = output_dir / ".m04d_checkpoint.npz"
     print(f"Motion-features output: {features_file}")
     print(f"Paths output:           {paths_file}")
@@ -618,7 +625,7 @@ def main():
         if clip_limit is None:
             clip_limit = len(subset_keys)
     if clip_limit is None:
-        clip_limit = get_total_clips(local_data=getattr(args, 'local_data', None))
+        clip_limit = get_total_clips(local_data=args.local_data)
         if clip_limit == 0:
             print("FATAL: Cannot determine clip count. Use --subset or --local-data with manifest.json")
             sys.exit(1)
@@ -658,12 +665,12 @@ def main():
         target=_producer_thread,
         args=(q, stop_event, transforms, args.n_pairs,
               clip_limit, subset_keys, processed_keys,
-              getattr(args, 'local_data', None)),
+              args.local_data),
         daemon=True)
     producer.start()
 
     # ── GPU consumer loop ──
-    total = clip_limit if clip_limit < 999_999_999 else 0
+    total = clip_limit if clip_limit < _UNLIMITED_CLIPS else 0
     # iter16 (2026-05-21): smoothing=0 → tqdm uses total/elapsed for the
     # displayed `clip/s` rate + ETA. Default smoothing (0.3) was an EWMA
     # over the last few clips, which on bursty decode-bound workloads

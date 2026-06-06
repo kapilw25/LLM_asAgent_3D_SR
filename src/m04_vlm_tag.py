@@ -36,18 +36,24 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 # Add src to path for utils import
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import (
-    TAGS_FILE, TAG_TAXONOMY_JSON, HF_DATASET_REPO, OUTPUTS_DIR,
-    VLM_MODELS, BAKEOFF_CLIP_COUNT, BAKEOFF_DIR, OUTPUTS_POC_DIR, OUTPUTS_SANITY_DIR,
-    check_gpu, check_output_exists, load_subset, add_subset_arg, add_local_data_arg,
+    TAG_TAXONOMY_JSON, HF_DATASET_REPO, OUTPUTS_DIR,
+    VLM_MODELS, BAKEOFF_CLIP_COUNT, BAKEOFF_DIR, check_gpu, check_output_exists, load_subset, add_subset_arg, add_local_data_arg,
     get_pipeline_config, get_sanity_clip_limit, get_total_clips,
     get_module_output_dir,
 )
 from utils.data_download import ensure_local_data, iter_clips_parallel
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 from utils.gpu_batch import compute_batch_sizes, add_gpu_mem_arg, AdaptiveBatchSizer, cleanup_temp
 from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog
 from utils.wandb_utils import (
     add_wandb_args, init_wandb, log_metrics, log_artifact, finish_wandb,
 )
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_FILE_BYTES = 1024     # smaller = corrupt/empty mp4
+_CAT_DEPTH = 2             # parts[2] = source_file segment
+_MAX_DUMMY_PCT = 5         # FATAL gate on VLM parse-failure rate
+_RATE_WINDOW_S = get_pipeline_config()["plots"]["rate_print_window_s"]
 
 # ── HF datasets (streaming) ──────────────────────────────────────────────
 try:
@@ -153,7 +159,7 @@ def get_dummy_tag() -> dict:
 def validate_mp4(path: str) -> bool:
     """Pre-validate MP4 before passing to VLM."""
     try:
-        if os.path.getsize(path) < 1024:
+        if os.path.getsize(path) < _MIN_FILE_BYTES:
             return False
         try:
             import cv2
@@ -307,7 +313,7 @@ class QwenBackend(VLMBackend):
             attn_implementation="flash_attention_2",
         )
         self.model.eval()
-        print(f"Qwen loaded via transformers (FA2)")
+        print("Qwen loaded via transformers (FA2)")
 
     def preprocess_one(self, example: dict, tmp_dir: str) -> dict | None:
         """Write mp4 → decode video (decord, fps=1) → template text. Runs in ThreadPoolExecutor."""
@@ -491,7 +497,7 @@ class VideoLLaMA3Backend(VLMBackend):
             attn_implementation="flash_attention_2",
         )
         self.model.eval()
-        print(f"VideoLLaMA3 loaded via transformers (FA2)")
+        print("VideoLLaMA3 loaded via transformers (FA2)")
 
     def preprocess_one(self, example: dict, tmp_dir: str) -> dict | None:
         """Write mp4 + validate. Processor call stays in GPU thread (not thread-safe)."""
@@ -602,7 +608,7 @@ class LLaVANextBackend(VLMBackend):
             attn_implementation="flash_attention_2",
         )
         self.model.eval()
-        print(f"LLaVA-NeXT-Video loaded via transformers (FA2)")
+        print("LLaVA-NeXT-Video loaded via transformers (FA2)")
 
     def preprocess_one(self, example: dict, tmp_dir: str) -> dict | None:
         """PyAV frame decode (CPU-heavy). Runs in ThreadPoolExecutor. No temp files."""
@@ -796,7 +802,7 @@ def get_tags_file(model_name: str, is_bakeoff: bool, subset_path: str = None,
                                 sanity=is_sanity, poc=bool(subset_path))
     if is_sanity:
         return out / f"tags_sanity_{model_name}.json"
-    return out / "tags.json"
+    return out / artifact("tags")
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -903,7 +909,7 @@ def _clip_key_to_example(clip_key: str, mp4_bytes: bytes) -> dict:
     parts = clip_key.split("/", 2)
     meta = {"section": parts[0] if len(parts) > 0 else "",
             "video_id": parts[1] if len(parts) > 1 else "",
-            "source_file": parts[2] if len(parts) > 2 else ""}
+            "source_file": parts[2] if len(parts) > _CAT_DEPTH else ""}
     return {"mp4": mp4_bytes, "json": meta, "__key__": clip_key}
 
 
@@ -1027,7 +1033,7 @@ def stream_and_tag(backend: VLMBackend, args,
         target=_producer_thread,
         args=(backend, start_from, batch_size, tmp_dir,
               q, stop_event, clip_limit, subset_keys,
-              already_tagged_keys, getattr(args, 'local_data', None)),
+              already_tagged_keys, args.local_data),
         daemon=True,
     )
     producer.start()
@@ -1081,7 +1087,7 @@ def stream_and_tag(backend: VLMBackend, args,
                 "eta_min": eta_min,
             })
             # Reset window every 30s
-            if window_elapsed >= 30:
+            if window_elapsed >= _RATE_WINDOW_S:
                 last_window_time = now
                 last_window_count = clips_this_run
 
@@ -1130,7 +1136,7 @@ def orchestrator_main(args):
         subset_keys = load_subset(args.subset)
         total_clips = len(subset_keys)
     else:
-        total_clips = get_total_clips(local_data=getattr(args, 'local_data', None))
+        total_clips = get_total_clips(local_data=args.local_data)
         if total_clips == 0:
             print("FATAL: Cannot determine clip count. Use --subset or --local-data with manifest.json")
             sys.exit(1)
@@ -1175,7 +1181,7 @@ def orchestrator_main(args):
             cmd.append("--no-wandb")
         if args.gpu_mem is not None:
             cmd.extend(["--gpu-mem", str(args.gpu_mem)])
-        if getattr(args, 'local_data', None):
+        if args.local_data:
             cmd.extend(["--local-data", args.local_data])
         # Pass parent's resolved cache-policy so worker doesn't re-prompt.
         cmd.extend(["--cache-policy", args.cache_policy])
@@ -1205,7 +1211,7 @@ def orchestrator_main(args):
     print(f"Saved: {tags_file}")
     print(f"Total clips tagged: {len(all_tags):,}")
     print(f"Dummy tags (VLM parse failures): {n_dummy:,} ({dummy_pct:.1f}%)")
-    if dummy_pct > 5:
+    if dummy_pct > _MAX_DUMMY_PCT:
         print(f"FATAL: {dummy_pct:.1f}% dummy tags exceeds 5% threshold.")
         print("  VLM is producing too much malformed JSON. Check model + prompt.")
         sys.exit(1)
@@ -1505,7 +1511,7 @@ def main():
 
     # Check existing
     if tags_file.exists() and not args.dummy:
-        total = get_sanity_clip_limit("vlm_tag") if args.SANITY else (BAKEOFF_CLIP_COUNT if args.BAKEOFF else get_total_clips(local_data=getattr(args, 'local_data', None)))
+        total = get_sanity_clip_limit("vlm_tag") if args.SANITY else (BAKEOFF_CLIP_COUNT if args.BAKEOFF else get_total_clips(local_data=args.local_data))
         all_tags, count = load_checkpoint(tags_file)
         if count >= total:
             if not check_output_exists([tags_file], "tags"):

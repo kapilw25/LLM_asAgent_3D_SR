@@ -51,6 +51,14 @@ from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
 from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 from utils.bootstrap import N_BOOTSTRAP
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_AXIS_DECIMAL_MIN = 0.01   # tick-format band edges (display only)
+_AXIS_INT_MIN = 10
+_FONT_MIN_PT = 28          # hero-figure auto-shrink floor
+_K_FMT_MIN = 1000          # render bootstrap count as 'N K' above this
+_MIN_COMPARABLE = 2
 
 
 # ── Display helpers (no hardcoded encoder list — derived per-call) ───
@@ -298,7 +306,7 @@ def _fmt_fine(x: float) -> str:
     ax = abs(x)
     if ax >= 1:
         return f"{x:+.2f}"
-    if ax >= 0.01:
+    if ax >= _AXIS_DECIMAL_MIN:
         return f"{x:+.3f}"
     if ax > 0:
         return f"{x:+.4f}"
@@ -312,11 +320,11 @@ def _fmt_val(x: float) -> str:
     if isinstance(x, float) and np.isnan(x):
         return "nan"
     ax = abs(x)
-    if ax >= 10:
+    if ax >= _AXIS_INT_MIN:
         return f"{x:.1f}"
     if ax >= 1:
         return f"{x:.2f}"
-    if ax >= 0.01:
+    if ax >= _AXIS_DECIMAL_MIN:
         return f"{x:.3f}"
     return f"{x:.4f}"
 
@@ -557,7 +565,7 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_hero_table"))
     import csv
-    with open(str(output_dir / "m13_hero_table.csv"), "w", newline="") as f:
+    with open(str(output_dir / artifact("m13_hero_table")), "w", newline="") as f:
         csv.writer(f).writerows(csv_rows)
     print(f"  [hero-table] m13_hero_table.{{png,pdf,csv}} — {len(scorable)} metric rows drawn "
           f"(+signed 'order' in CSV only) × {len(col_labels)} cols (transposed) · WINNER col = champion duel (ties shown)")
@@ -687,7 +695,7 @@ def plot_frozen_scorecard(metrics: dict, frozen_encoders: list, output_dir: Path
     cat = _hero_catalog(metrics)
     cols = [c for c in cat if c[3] in ("higher", "lower")
             and all(metrics[c[0]]["by_encoder"].get(e) is not None for e in frozen_encoders)]
-    if not cols or len(frozen_encoders) < 2:
+    if not cols or len(frozen_encoders) < _MIN_COMPARABLE:
         print(f"  [frozen-scorecard] skip — need ≥2 frozen encoders + ≥1 shared metric "
               f"(got {len(frozen_encoders)} enc, {len(cols)} shared metrics)")
         return
@@ -735,7 +743,7 @@ def plot_frozen_scorecard(metrics: dict, frozen_encoders: list, output_dir: Path
     fig.tight_layout()
     save_fig(fig, str(output_dir / "m13_frozen_scorecard"))
     import csv
-    with open(str(output_dir / "m13_frozen_scorecard.csv"), "w", newline="") as f:
+    with open(str(output_dir / artifact("m13_frozen_scorecard")), "w", newline="") as f:
         csv.writer(f).writerows(csv_rows)
     print(f"  [frozen-scorecard] m13_frozen_scorecard.{{png,pdf,csv}} — {len(ordered)} frozen × {len(cols)} metrics")
 
@@ -938,7 +946,10 @@ def plot_grouped_winner(metrics, encoders, frozen, output_dir):
         Mn[:, j] = 0.5 if hi == lo else (col - lo) / (hi - lo)
     score = np.nanmean(Mn, axis=1)
     _ns, _np, _nt, per, _aw = _family_verdict(metrics, encoders, frozen)
-    winner = [{"surgery": "S", "pretrain": "V", "tie": "="}.get(per.get(k, "tie"), "·") for k in keys]
+    # iter18 H3: strict — _family_verdict emits a verdict for every key; an
+    # unknown verdict value must KeyError (a 4th category should crash, not
+    # silently render '·').
+    winner = [{"surgery": "S", "pretrain": "V", "tie": "="}[per[k]] for k in keys]
     nrow, ncol = len(arms) + 1, len(keys) + 1
     rgba = np.ones((nrow, ncol, 4)); cmap = plt.cm.RdYlGn
     for j in range(len(keys)):
@@ -1217,7 +1228,7 @@ def _vstack_panels(output_dir, backbones, src_name, out_name):
     longest = max((_BB_LABEL.get(bb, bb) for bb, _ in panels), key=len)
     fsize = 110
     font = ImageFont.truetype(fpath, fsize)
-    while fsize > 28 and font.getlength(longest) > w * 0.94:       # auto-shrink to fit the panel width
+    while fsize > _FONT_MIN_PT and font.getlength(longest) > w * 0.94:       # auto-shrink to fit the panel width
         fsize -= 4
         font = ImageFont.truetype(fpath, fsize)
     band_h = int(fsize * 1.8)
@@ -1285,19 +1296,19 @@ def main():
     if missing:
         sys.exit(f"ERROR: m13 requires: {', '.join(missing)}")
 
-    boot_str = f"{N_BOOTSTRAP // 1000} K bootstrap" if N_BOOTSTRAP >= 1000 else f"{N_BOOTSTRAP} bootstrap"
+    boot_str = f"{N_BOOTSTRAP // 1000} K bootstrap" if N_BOOTSTRAP >= _K_FMT_MIN else f"{N_BOOTSTRAP} bootstrap"
 
     wb = init_wandb("m13_eval_plot", mode, config=vars(args), enabled=not args.no_wandb)
     try:
         init_style()
         srcs = {
-            "action":   _load_json(args.action_probe_root / "probe_paired_delta.json", "Stage 4"),
-            "motion":   _load_json(args.motion_cos_root / "probe_motion_cos_paired.json", "Stage 7"),
-            "future":   _load_json(args.future_mse_root / "probe_future_mse_per_variant.json", "Stage 9"),
-            "taxonomy": _opt_json(args.taxonomy_root / "per_dim_acc.json") if args.taxonomy_root else None,
-            "pred":     _opt_json(args.predictor_temporal_root / "predictor_temporal_per_variant.json")
+            "action":   _load_json(args.action_probe_root / artifact("probe_paired_delta"), "Stage 4"),
+            "motion":   _load_json(args.motion_cos_root / artifact("probe_motion_cos_paired"), "Stage 7"),
+            "future":   _load_json(args.future_mse_root / artifact("probe_future_mse_per_variant"), "Stage 9"),
+            "taxonomy": _opt_json(args.taxonomy_root / artifact("per_dim_acc")) if args.taxonomy_root else None,
+            "pred":     _opt_json(args.predictor_temporal_root / artifact("predictor_temporal_per_variant"))
                         if args.predictor_temporal_root else None,
-            "enc":      _opt_json(args.encoder_temporal_root / "encoder_temporal_per_variant.json")
+            "enc":      _opt_json(args.encoder_temporal_root / artifact("encoder_temporal_per_variant"))
                         if args.encoder_temporal_root else None,
         }
         # Encoder union across all present sources (no hardcoded list).
@@ -1334,7 +1345,7 @@ def main():
                 sys.exit(f"ERROR: --reference-hero must be BACKBONE=PNG, got {s!r}")
             bb, png = s.split("=", 1)
             ref_heroes[bb] = png
-        if frozen and len(core) >= 2:
+        if frozen and len(core) >= _MIN_COMPARABLE:
             # PER-BACKBONE views ONLY — each backbone's arms vs its OWN frozen → eval/<backbone>/.
             # We deliberately do NOT build a cross-backbone combined grid: the backbones have DIFFERENT
             # frozen baselines, so averaging / mixing their Δs is meaningless. The combined overview is a
@@ -1344,7 +1355,7 @@ def main():
                 bb_enc = [e for e in encoders if _backbone_of(e) == bb]
                 bb_frozen = _pick_frozen_ref(bb_enc)
                 bb_core = [e for e in bb_enc if _arm_family(e) in ("surgery", "pretrain") or e == bb_frozen]
-                if bb_frozen and len(bb_core) >= 2:
+                if bb_frozen and len(bb_core) >= _MIN_COMPARABLE:
                     print(f"  [per-backbone] {bb} → {args.output_dir.name}/{bb}/  "
                           f"({len(bb_core)} arms vs {_short_label(bb_frozen)})")
                     _emit_hero_suite(metrics, bb_core, bb_frozen, args.output_dir / bb, boot_str)
@@ -1376,7 +1387,7 @@ def main():
         else:
             print(f"  [hero] skipped — needs a 'frozen' baseline + ≥2 core encoders (got {core})")
         # FROZEN-only absolute scorecard (image/video baselines + the V-JEPA frozen reference).
-        if len(frozen_only) >= 2:
+        if len(frozen_only) >= _MIN_COMPARABLE:
             plot_frozen_scorecard(metrics, frozen_only, args.output_dir, boot_str)
 
         # wandb metric upload — generic prefix + encoder name (NO hardcoded keys).

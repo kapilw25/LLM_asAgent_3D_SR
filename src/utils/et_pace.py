@@ -30,16 +30,21 @@ import torch.nn as nn
 
 from utils.per_frame_features import forward_per_frame, stride_indices
 
+# iter18 W7 (PLR2004): contracts.
+_VIDEO_RANK = 5
+_FEATS_RANK = 2
+_MIN_STRIDES = 2
+
 
 @torch.no_grad()
 def compute_features(encoder, source_batch, num_frames, tubelet_size, strides):
     """source_batch shape (B, T_src, C, H, W) where T_src = num_frames × max(strides) ideally
     (orchestrator decodes oversample). Returns stack (n_strides, B, D) — mean-pooled features
     per stride. strides MUST be a sorted positive int list/tensor (orchestrator enforces)."""
-    if source_batch.ndim != 5:
+    if source_batch.ndim != _VIDEO_RANK:
         raise RuntimeError(
             f"source_batch shape must be 5-D (B,T_src,C,H,W); got {tuple(source_batch.shape)}")
-    if len(strides) < 2:
+    if len(strides) < _MIN_STRIDES:
         raise RuntimeError(f"strides must have >=2 distinct rates; got {list(strides)}")
     T_src = source_batch.shape[1]
     feats = []
@@ -54,7 +59,7 @@ def compute_features(encoder, source_batch, num_frames, tubelet_size, strides):
 def train_head(train_feats, train_labels, *, embed_dim, n_classes, lr, epochs, weight_decay,
                batch_size, device, seed):
     """Linear head (D → n_strides) for playback-rate classification."""
-    if train_feats.ndim != 2 or train_feats.shape[1] != embed_dim:
+    if train_feats.ndim != _FEATS_RANK or train_feats.shape[1] != embed_dim:
         raise RuntimeError(
             f"train_feats shape {tuple(train_feats.shape)} mismatches embed_dim={embed_dim}")
     if train_labels.numel() != train_feats.shape[0]:

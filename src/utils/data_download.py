@@ -17,7 +17,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from utils.data_paths import find_video_shards
+from utils.data_paths import artifact, find_video_shards
 
 
 def _derive_local_dir(subset_path: str) -> Path:
@@ -39,10 +39,14 @@ def ensure_local_data(args) -> str:
     Returns:
         str: Path to local data directory (guaranteed to exist after call).
     """
-    local_data = getattr(args, "local_data", None)
+    # iter18 (2026-06-06) H4 purge: the docstring contract REQUIRES
+    # .local_data/.subset/.SANITY on args — direct access so a caller missing
+    # one AttributeErrors immediately (errors_N_fixes #79) instead of silently
+    # flowing into the derived-path branches.
+    local_data = args.local_data
 
     # Derive local_data path from --subset if not explicitly provided
-    if not local_data and getattr(args, "subset", None):
+    if not local_data and args.subset:
         local_data = str(_derive_local_dir(args.subset))
         args.local_data = local_data
 
@@ -50,17 +54,17 @@ def ensure_local_data(args) -> str:
     # pipeline.yaml data.local_data_dir — flips eval_10k_local↔full_local). iter17
     # (2026-05-27): was hardcoded "data/full_local", which on the eval_10k_local
     # config silently pointed a --FULL/no-subset call at the WRONG corpus.
-    if not local_data and not getattr(args, "subset", None):
+    if not local_data and not args.subset:
         from utils.config import get_pipeline_config
         local_data = get_pipeline_config()["data"]["local_data_dir"]
         args.local_data = local_data
 
     # SANITY mode can stream (small clip count) — no download needed
-    if getattr(args, "SANITY", False):
+    if args.SANITY:
         return local_data
 
     local_path = Path(local_data)
-    manifest = local_path / "manifest.json"
+    manifest = local_path / artifact("manifest")
 
     # Already downloaded — no-op
     if local_path.exists() and manifest.exists():
@@ -78,7 +82,7 @@ def ensure_local_data(args) -> str:
     m00d_args = argparse.Namespace(
         SANITY=False,
         FULL=True,
-        subset=getattr(args, "subset", None),
+        subset=args.subset,
         no_wandb=True,
     )
 
@@ -181,7 +185,7 @@ def _read_one_tar(tar_path: Path, out_q: queue.Queue,
 def iter_clips_parallel(local_data: str, subset_keys: set = None,
                         processed_keys: set = None,
                         num_readers: int = TAR_READER_THREADS,
-                        max_queue: int = 256) -> "queue.Queue":
+                        max_queue: int = None) -> "queue.Queue":  # iter18 H6: None → streaming.tar_reader_queue
     """Start parallel TAR readers, return queue of (clip_key, mp4_bytes) pairs.
 
     Reads num_readers TARs concurrently (I/O-bound, GIL released during read).
@@ -196,6 +200,9 @@ def iter_clips_parallel(local_data: str, subset_keys: set = None,
     """
     # iter17 (2026-05-27): subset-*.tar now live in <local_data>/m00d_download_subset/
     # (single-sourced via data_paths.find_video_shards, with root-layout fallback).
+    if max_queue is None:   # iter18 H6: yaml single source
+        from utils.config import get_pipeline_config
+        max_queue = get_pipeline_config()["streaming"]["tar_reader_queue"]
     tar_files = find_video_shards(local_data)
     clip_q = queue.Queue(maxsize=max_queue)
     stop_event = threading.Event()

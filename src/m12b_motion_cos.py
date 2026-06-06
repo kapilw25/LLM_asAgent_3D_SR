@@ -64,6 +64,12 @@ from utils.frozen_features import (
 )
 from utils.gpu_batch import cleanup_temp
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_TOKENS_RANK = 3    # (B, tokens, D)
+_POOLED_RANK = 2    # (N, D)
+_MIN_COMPARABLE = 2
 
 
 # ── Stage 1 — features ────────────────────────────────────────────────
@@ -76,18 +82,18 @@ def _meanpool_action_probe_features(action_probe_root: Path, encoder: str,
     Returns (success: bool, log_message: str).
     """
     src_dir = action_probe_root / encoder
-    src_features = src_dir / "features_test.npy"
-    src_keys     = src_dir / "clip_keys_test.npy"
+    src_features = src_dir / artifact("features_test")
+    src_keys     = src_dir / artifact("clip_keys_test")
     if not (src_features.exists() and src_keys.exists()):
         return False, f"  [share-features] action_probe cache not found at {src_dir} -- falling back to fresh extract"
 
     feats = np.load(src_features)           # (N, T_tokens, D)
     keys  = np.load(src_keys, allow_pickle=True)
-    if feats.ndim != 3:
+    if feats.ndim != _TOKENS_RANK:
         return False, f"  [share-features] expected (N, T, D), got shape {feats.shape} -- falling back"
     pooled = feats.mean(axis=1).astype(np.float32)        # (N, D)
-    save_array_checkpoint(pooled, enc_dir / "pooled_features_test.npy")
-    np.save(enc_dir / "clip_keys_test.npy", keys)
+    save_array_checkpoint(pooled, enc_dir / artifact("pooled_features_test"))
+    np.save(enc_dir / artifact("clip_keys_test"), keys)
     return True, f"  [share-features] mean-pooled {feats.shape} -> {pooled.shape}; reused {len(keys)} clip keys"
 
 
@@ -109,7 +115,7 @@ def _fresh_extract_pooled(args, enc_dir):
     cleanup_temp()
     ensure_local_data(args)
 
-    labels = load_action_labels(args.action_probe_root / "action_labels.json")
+    labels = load_action_labels(args.action_probe_root / artifact("action_labels"))
     test_keys = [k for k, info in labels.items() if info["split"] == "test"]
     print(f"  Fresh-extract: {len(test_keys)} test clips for encoder={args.encoder}")
 
@@ -139,8 +145,8 @@ def _fresh_extract_pooled(args, enc_dir):
         ma_concat = apply_motion_aux_head_to_features(pooled, ma_head, batch_size=256)
         pooled = np.concatenate([pooled, ma_concat.astype(np.float32)], axis=-1)
         print(f"  [motion_aux] augmented pooled dim: {pooled.shape[-1]}")
-    save_array_checkpoint(pooled, enc_dir / "pooled_features_test.npy")
-    np.save(enc_dir / "clip_keys_test.npy", np.array(ordered_keys, dtype=object))
+    save_array_checkpoint(pooled, enc_dir / artifact("pooled_features_test"))
+    np.save(enc_dir / artifact("clip_keys_test"), np.array(ordered_keys, dtype=object))
     print(f"  Fresh-extract: mean-pooled {feats.shape} -> {pooled.shape}")
 
 
@@ -158,8 +164,8 @@ def run_features_stage(args, wb) -> None:
 
     enc_dir = args.output_root / args.encoder
     enc_dir.mkdir(parents=True, exist_ok=True)
-    out_pooled = enc_dir / "pooled_features_test.npy"
-    out_keys   = enc_dir / "clip_keys_test.npy"
+    out_pooled = enc_dir / artifact("pooled_features_test")
+    out_keys   = enc_dir / artifact("clip_keys_test")
 
     if out_pooled.exists() and out_keys.exists() and args.cache_policy == "1":
         print(f"  [keep] {out_pooled} present -- skipping (--cache-policy 2 to redo)")
@@ -195,7 +201,7 @@ def _per_clip_motion_score(emb: np.ndarray, labels: np.ndarray) -> tuple:
     Returns (motion_score (N,), pos_mean (N,), neg_mean (N,)).
     No Python loop — `S = emb_n @ emb_n.T` then class-mask reductions.
     """
-    if emb.ndim != 2:
+    if emb.ndim != _POOLED_RANK:
         raise ValueError(f"emb must be (N, D); got {emb.shape}")
     if len(emb) != len(labels):
         raise ValueError(f"emb N={len(emb)} != labels N={len(labels)}")
@@ -227,20 +233,20 @@ def run_cosine_stage(args, wb) -> None:
         sys.exit("FATAL: --stage cosine requires --action-probe-root (for action_labels.json)")
 
     enc_dir = args.output_root / args.encoder
-    pooled_path = enc_dir / "pooled_features_test.npy"
-    keys_path   = enc_dir / "clip_keys_test.npy"
+    pooled_path = enc_dir / artifact("pooled_features_test")
+    keys_path   = enc_dir / artifact("clip_keys_test")
     if not (pooled_path.exists() and keys_path.exists()):
         sys.exit(f"FATAL: pooled features missing at {enc_dir} -- run --stage features first")
 
-    out_per_clip = enc_dir / "per_clip_motion_cos.npy"
-    out_ratio    = enc_dir / "intra_inter_ratio.json"
+    out_per_clip = enc_dir / artifact("per_clip_motion_cos")
+    out_ratio    = enc_dir / artifact("intra_inter_ratio")
     if out_per_clip.exists() and out_ratio.exists() and args.cache_policy == "1":
         print(f"  [keep] cosine cache present at {enc_dir} -- skipping")
         return
     guarded_delete(out_per_clip, args.cache_policy, "per_clip_motion_cos")
     guarded_delete(out_ratio, args.cache_policy, "intra_inter_ratio")
 
-    labels = load_action_labels(args.action_probe_root / "action_labels.json")
+    labels = load_action_labels(args.action_probe_root / artifact("action_labels"))
     emb = np.load(pooled_path).astype(np.float32)
     keys = np.load(keys_path, allow_pickle=True)
     y = np.array([labels[str(k)]["class_id"] for k in keys], dtype=np.int64)
@@ -297,13 +303,13 @@ def run_paired_delta_stage(args, wb) -> None:
         if not enc_dir.is_dir():
             continue
         if all((enc_dir / f).exists() for f in
-               ("per_clip_motion_cos.npy", "clip_keys_test.npy")):
+               (artifact("per_clip_motion_cos"), artifact("clip_keys_test"))):
             enc_data[enc_dir.name] = {
-                "score": np.load(enc_dir / "per_clip_motion_cos.npy").astype(np.float64),
-                "keys":  [str(k) for k in np.load(enc_dir / "clip_keys_test.npy", allow_pickle=True)],
+                "score": np.load(enc_dir / artifact("per_clip_motion_cos")).astype(np.float64),
+                "keys":  [str(k) for k in np.load(enc_dir / artifact("clip_keys_test"), allow_pickle=True)],
             }
     available = sorted(enc_data.keys())
-    if len(available) < 2:
+    if len(available) < _MIN_COMPARABLE:
         sys.exit(f"FATAL: need >=2 encoders with motion_cos outputs, found: {available} "
                  f"(run --stage cosine per-encoder first)")
     print(f"Encoders found: {available}")
@@ -348,7 +354,7 @@ def run_paired_delta_stage(args, wb) -> None:
     out = {"metric": "intra_minus_inter_cosine",
            "by_encoder": by_encoder,
            "pairwise_deltas": pairwise_deltas}
-    save_json_checkpoint(out, args.output_root / "probe_motion_cos_paired.json")
+    save_json_checkpoint(out, args.output_root / artifact("probe_motion_cos_paired"))
     log_metrics(wb, {"n_encoders_compared": len(available),
                      "n_pairwise_deltas":   len(pairwise_deltas)})
     print(json.dumps(out, indent=2))
@@ -388,8 +394,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--num-frames", type=int, default=_PROBE_CFG["num_frames"],
                    help="Frames per clip (must match action_probe when --share-features). "
                         "yaml probe.num_frames (was 16 literal).")
-    p.add_argument("--share-features", action="store_true", default=True,
-                   help="Default ON: mean-pool probe_action features. Falls back to fresh extract if cache absent.")
+    # iter18 H2: tri-state — not passed → pipeline.yaml eval.motion_cos_share_features.
+    p.add_argument("--share-features", dest="share_features", action="store_true",
+                   default=None,
+                   help="Mean-pool probe_action features (default: pipeline.yaml "
+                        "eval.motion_cos_share_features). Falls back to fresh extract if cache absent.")
     p.add_argument("--no-share-features", dest="share_features", action="store_false",
                    help="Force fresh GPU re-extract (independent of probe_action cache)")
     add_cache_policy_arg(p)
@@ -399,6 +408,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.share_features is None:   # iter18 H2: yaml default (single source)
+        args.share_features = get_pipeline_config()["eval"]["motion_cos_share_features"]
     if not (args.SANITY or args.POC or args.FULL):
         sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
     args.cache_policy = resolve_cache_policy_interactive(args.cache_policy)

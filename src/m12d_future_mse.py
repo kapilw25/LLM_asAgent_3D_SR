@@ -74,6 +74,12 @@ _PCFG = get_pipeline_config()
 # constants that ONLY those builders used now live there too — removed here to keep
 # one source of truth. Constants still used by THIS module's forward loop stay below.
 from utils.config import get_model_config as _get_mcfg
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_PENDING_FLUSH_N = 8         # GPU->CPU transfer batching (matches utils.frozen_features)
+_MIN_COMPARABLE = 2
+_MAX_KEY_DISAGREE_FRAC = 0.05   # FATAL if encoder key sets diverge beyond this
 _MODEL_CFG     = _get_mcfg(None)["model"]              # None → default vjepa2_1.yaml
 NUM_FRAMES_DEFAULT = _PCFG["probe"]["num_frames"]
 CROP           = _MODEL_CFG["crop_size"]                # used by decode_to_tensor (V-JEPA 2.1 384)
@@ -224,9 +230,9 @@ def run_forward_stage(args, wb) -> None:
 
     out_dir = args.output_root / args.variant
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_mse = out_dir / "per_clip_mse.npy"
-    out_keys = out_dir / "clip_keys.npy"
-    out_agg = out_dir / "aggregate_mse.json"
+    out_mse = out_dir / artifact("per_clip_mse")
+    out_keys = out_dir / artifact("clip_keys")
+    out_agg = out_dir / artifact("aggregate_mse")
     if out_mse.exists() and out_keys.exists() and args.cache_policy == "1":
         print(f"  [keep] {out_mse} present -- skipping (--cache-policy 2 to redo)")
         return
@@ -234,7 +240,7 @@ def run_forward_stage(args, wb) -> None:
     guarded_delete(out_keys, args.cache_policy, "clip_keys")
     guarded_delete(out_agg, args.cache_policy, "aggregate_mse")
 
-    labels = load_action_labels(args.action_probe_root / "action_labels.json")
+    labels = load_action_labels(args.action_probe_root / artifact("action_labels"))
     test_keys = [k for k, info in labels.items() if info["split"] == "test"]
     print(f"Forward on {len(test_keys)} test clips, variant={args.variant}")
 
@@ -321,7 +327,7 @@ def run_forward_stage(args, wb) -> None:
                 pending_tensors.append(t)
                 pending_keys.append(clip_key)
 
-                if len(pending_tensors) >= 8:
+                if len(pending_tensors) >= _PENDING_FLUSH_N:
                     _flush_batch_forward(pending_tensors, pending_keys,
                                          encoder, predictor, mask_gen,
                                          sizer, mse_acc, keys_acc, pbar,
@@ -367,7 +373,7 @@ def run_forward_stage(args, wb) -> None:
         if len(ma_acc) != len(mse_acc):
             sys.exit(f"FATAL: ma_acc length {len(ma_acc)} != mse_acc length {len(mse_acc)} at final save")
         ma_arr = np.asarray(ma_acc, dtype=np.float32)
-        out_ma = out_dir / "per_clip_motion_aux_l1.npy"
+        out_ma = out_dir / artifact("per_clip_motion_aux_l1")
         save_array_checkpoint(ma_arr, out_ma)
         ma_ci = bootstrap_ci(ma_arr.astype(np.float64))
         save_json_checkpoint({
@@ -379,7 +385,7 @@ def run_forward_stage(args, wb) -> None:
             "predictor_loaded_from": str(args.encoder_ckpt),
             "motion_aux_head_loaded_from": str(args.motion_aux_head),
             "augment_space_dim": int(ma_head.n_motion_classes + ma_head.n_motion_dims),
-        }, out_dir / "aggregate_motion_aux_l1.json")
+        }, out_dir / artifact("aggregate_motion_aux_l1"))
         print(f"  per_clip_motion_aux_l1: mean={ma_arr.mean():.4f}  std={ma_arr.std():.4f}  N={len(ma_arr)}")
         log_metrics(wb, {f"{args.variant}_ma_l1_mean": float(ma_arr.mean()),
                          f"{args.variant}_ma_l1_std":  float(ma_arr.std())})
@@ -397,9 +403,9 @@ def run_paired_per_variant_stage(args, wb) -> None:
     by_variant = {}
     for v in KNOWN_VARIANTS:
         var_dir = args.output_root / v
-        mse_path = var_dir / "per_clip_mse.npy"
-        keys_path = var_dir / "clip_keys.npy"
-        agg_path = var_dir / "aggregate_mse.json"
+        mse_path = var_dir / artifact("per_clip_mse")
+        keys_path = var_dir / artifact("clip_keys")
+        agg_path = var_dir / artifact("aggregate_mse")
         if not (mse_path.exists() and keys_path.exists() and agg_path.exists()):
             by_variant[v] = None
             continue
@@ -416,7 +422,7 @@ def run_paired_per_variant_stage(args, wb) -> None:
     available = [v for v, e in by_variant.items() if e is not None]
     print(f"Variants found: {available}")
     pairwise_deltas = {}
-    if len(available) >= 2:
+    if len(available) >= _MIN_COMPARABLE:
         for a, b in [(available[i], available[j])
                      for i in range(len(available))
                      for j in range(i + 1, len(available))]:
@@ -432,7 +438,7 @@ def run_paired_per_variant_stage(args, wb) -> None:
                 drop_pct_a = 1.0 - (len(shared) / max(len(ka), 1))
                 drop_pct_b = 1.0 - (len(shared) / max(len(kb), 1))
                 max_drop = max(drop_pct_a, drop_pct_b)
-                if max_drop > 0.05:
+                if max_drop > _MAX_KEY_DISAGREE_FRAC:
                     print(f"❌ FATAL [m12d_future_mse]: {a} vs {b} keys disagree by "
                           f"{max_drop:.1%} (>5% threshold).", file=sys.stderr)
                     print(f"   {a}: {len(ka)} keys  |  {b}: {len(kb)} keys  |  "
@@ -482,7 +488,7 @@ def run_paired_per_variant_stage(args, wb) -> None:
         "by_variant": serial_by_variant,
         "pairwise_deltas": pairwise_deltas,
     }
-    save_json_checkpoint(out, args.output_root / "probe_future_mse_per_variant.json")
+    save_json_checkpoint(out, args.output_root / artifact("probe_future_mse_per_variant"))
     log_metrics(wb, {"n_variants_with_data": len(available)})
     print(json.dumps(out, indent=2))
 

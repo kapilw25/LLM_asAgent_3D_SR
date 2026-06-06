@@ -11,7 +11,7 @@ import numpy as np
 # ── paths (same pattern as m08_plot.py) ──────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.progress import make_pbar
-from utils.config import OUTPUTS_DIR, OUTPUTS_SANITY_DIR, TAG_TAXONOMY_JSON, get_module_output_dir
+from utils.config import OUTPUTS_SANITY_DIR, TAG_TAXONOMY_JSON, get_module_output_dir
 
 MODELS = ["qwen", "videollama", "llava"]
 MODEL_LABELS = {"qwen": "Qwen3-VL", "videollama": "VideoLLaMA3", "llava": "LLaVA-NeXT"}

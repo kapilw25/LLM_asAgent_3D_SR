@@ -15,6 +15,7 @@ import sys
 import time
 from datetime import datetime
 from email.mime.text import MIMEText
+from pathlib import Path
 
 
 def get_gpu_utilization():
@@ -71,19 +72,35 @@ def send_alert(to_email, subject, body, gmail_password, from_email):
 
 def main():
     parser = argparse.ArgumentParser(description="GPU utilization watchdog with email alerts")
-    parser.add_argument("--threshold", type=int, default=50,
-                        help="Alert if GPU util < threshold%% for --window minutes (default: 50)")
-    parser.add_argument("--window", type=int, default=5,
-                        help="Minutes of sustained low util before alert (default: 5)")
-    parser.add_argument("--interval", type=int, default=30,
-                        help="Seconds between GPU checks (default: 30)")
-    parser.add_argument("--cooldown", type=int, default=30,
-                        help="Minutes between repeat alerts (default: 30)")
+    # iter18 H2: defaults live in pipeline.yaml gpu.watchdog.* (None → yaml).
+    parser.add_argument("--threshold", type=int, default=None,
+                        help="Alert if GPU util < threshold%% for --window minutes "
+                             "(default: pipeline.yaml gpu.watchdog.threshold_pct)")
+    parser.add_argument("--window", type=int, default=None,
+                        help="Minutes of sustained low util before alert "
+                             "(default: pipeline.yaml gpu.watchdog.window_min)")
+    parser.add_argument("--interval", type=int, default=None,
+                        help="Seconds between GPU checks (default: pipeline.yaml gpu.watchdog.interval_s)")
+    parser.add_argument("--cooldown", type=int, default=None,
+                        help="Minutes between repeat alerts (default: pipeline.yaml gpu.watchdog.cooldown_min)")
     parser.add_argument("--email", type=str, required=True,
                         help="Recipient address for GPU-low alerts (no default per CLAUDE.md).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print alerts instead of emailing")
     args = parser.parse_args()
+
+    # iter18 H2: None → pipeline.yaml gpu.watchdog.* (single source).
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from utils.config import get_pipeline_config
+    _wd = get_pipeline_config()["gpu"]["watchdog"]
+    if args.threshold is None:
+        args.threshold = _wd["threshold_pct"]
+    if args.window is None:
+        args.window = _wd["window_min"]
+    if args.interval is None:
+        args.interval = _wd["interval_s"]
+    if args.cooldown is None:
+        args.cooldown = _wd["cooldown_min"]
 
     # Load Gmail credentials from .env (sender email + app password live there
     # alongside other secrets — NEVER hardcoded in src/*.py per CLAUDE.md).

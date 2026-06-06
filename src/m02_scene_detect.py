@@ -55,7 +55,7 @@ def detect_all_boundaries(video_path: Path) -> list:
 
 
 def greedy_split_plan(video_duration: float, boundaries: list,
-                      min_dur: float = 4.0, max_dur: float = 10.0) -> list:
+                      min_dur: float, max_dur: float) -> list:  # iter18 H6: caller passes
     """
     Greedy algorithm: walk through video, pick best scene boundary in [4s, 10s] window.
     Returns list of (start, end) tuples. Pure logic, no I/O.
@@ -167,7 +167,7 @@ def process_video(video: Path, clips_dir: Path, section_map: dict = None,
 
     video_duration = get_video_duration(video)
     if video_duration <= 0:
-        print(f"  ERROR: Cannot get duration")
+        print("  ERROR: Cannot get duration")
         return 0
     print(f"  Duration: {video_duration:.1f}s")
 
@@ -298,7 +298,7 @@ def main():
         print(f"  Selected: {vid.stem} (unprocessed)")
         clip_count = process_video(vid, CLIPS_DIR, section_map, keyframes=args.keyframes)
         mark_video_processed(vid.stem, clip_count)
-        print(f"\nSANITY COMPLETE")
+        print("\nSANITY COMPLETE")
 
     elif args.POC or args.FULL:
         mode = "POC" if args.POC else "FULL"

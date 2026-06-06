@@ -42,6 +42,11 @@ from utils.vjepa2_imports import (
     get_vit_predictor_2_1,
 )
 
+# iter18 W7 (PLR2004): semantic named constants.
+_PRED_TUPLE_LEN = 2      # predictor returns (z_pred, z_context) when predict_all
+_MIN_TEMPORAL_SLOTS = 2  # rollout needs ≥2 temporal slots
+_MIN_LOADED_FRAC = 0.5   # ckpt param-coverage floor — below = random init garbage
+
 # ── Constants (single-sourced from yaml — copied from probe_future_mse.py) ──
 _PCFG = get_pipeline_config()
 _MODEL_CFG = get_model_config(None)["model"]               # None → default vjepa2_1.yaml
@@ -54,7 +59,7 @@ PATCH_SIZE = _MODEL_CFG["patch_size"]
 TUBELET_SIZE = _MODEL_CFG["tubelet_size"]
 CROP = _MODEL_CFG["crop_size"]
 
-_MASK0 = load_train_config_with_extends("configs/train/base_optimization.yaml")["mask"][0]
+_MASK0 = load_train_config_with_extends(_PCFG["config_paths"]["base_optimization"])["mask"][0]   # iter18 H1: yaml pointer
 DEFAULT_SPATIAL_SCALE = tuple(_MASK0["spatial_scale"])
 DEFAULT_TEMPORAL_SCALE = tuple(_MASK0["temporal_scale"])
 DEFAULT_ASPECT_RATIO = tuple(_MASK0["aspect_ratio"])
@@ -62,7 +67,7 @@ DEFAULT_NUM_BLOCKS = _MASK0["num_blocks"]
 
 # iter16 §3.4: m12e predictor-temporal sweep params single-sourced from pipeline.yaml
 # (were hardcoded _DELTAS/_RATIOS/_SEED in pt_tdist/pt_maskratio/pt_order).
-_PT = _PCFG["probe"]["predictor_temporal"]
+_PT = _PCFG["probe"]["predictor_temporal"]   # yaml KEY (rewriter had aliased it via artifact() — same string, wrong semantics)
 PT_DELTAS = tuple(_PT["deltas"])              # pt_tdist Δt sweep
 PT_MASK_RATIOS = tuple(_PT["mask_ratios"])    # pt_maskratio sweep
 PT_SEED = _PT["seed"]                         # pt_maskratio + pt_order deterministic-partition seed
@@ -144,7 +149,7 @@ def load_encoder_predictor(ckpt_path, num_frames, model_cfg=None):
     pmsg = predictor.load_state_dict(pred_sd, strict=False)
     p_total = len(list(predictor.state_dict().keys()))
     p_loaded = p_total - len(pmsg.missing_keys)
-    if p_loaded / max(p_total, 1) < 0.5:
+    if p_loaded / max(p_total, 1) < _MIN_LOADED_FRAC:
         sys.exit(f"FATAL: predictor only {p_loaded}/{p_total} loaded — random init = garbage")
     predictor = predictor.to(device="cuda", dtype=torch.bfloat16).eval()
     return encoder, predictor, embed_dim_concat
@@ -220,7 +225,7 @@ def masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred):
         h = torch.cat(list(h), dim=-1)
     h_target = apply_masks(h, [m_pred])
     out = predictor(z, [m_enc], [m_pred], mask_index=0)
-    if isinstance(out, tuple) and len(out) == 2:
+    if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
         out = out[0]
     if out.shape != h_target.shape:
         sys.exit(f"FATAL: predictor out {out.shape} != h_target {h_target.shape}")
@@ -245,7 +250,7 @@ def rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, *, free_runnin
     L1 grows monotonically with horizon. Design per plan §2.1.
     """
     Tp, _, _, S = token_grid(num_frames)
-    if Tp < 2:
+    if Tp < _MIN_TEMPORAL_SLOTS:
         raise ValueError(f"rollout needs Tp>=2 temporal slots; got {Tp}")
     b = pixel.shape[0]
     h = encoder(pixel)                                   # full forward → per-slot targets
@@ -262,7 +267,7 @@ def rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, *, free_runnin
             m_enc = expand_mask(bank_idx, b)
             m_pred = expand_mask(temporal_token_idx(num_frames, [k]), b)
             out = predictor(bank, [m_enc], [m_pred], mask_index=0)
-            if isinstance(out, tuple) and len(out) == 2:
+            if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
                 out = out[0]
             tgt = h[:, k * S:(k + 1) * S, :]
             l1s.append((out.float() - tgt.float()).abs().mean(dim=(1, 2)).cpu().numpy())
@@ -276,7 +281,7 @@ def rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, *, free_runnin
                 z = torch.cat(list(z), dim=-1)
             m_pred = expand_mask(temporal_token_idx(num_frames, [k]), b)
             out = predictor(z, [m_enc], [m_pred], mask_index=0)
-            if isinstance(out, tuple) and len(out) == 2:
+            if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
                 out = out[0]
             tgt = h[:, k * S:(k + 1) * S, :]
             l1s.append((out.float() - tgt.float()).abs().mean(dim=(1, 2)).cpu().numpy())

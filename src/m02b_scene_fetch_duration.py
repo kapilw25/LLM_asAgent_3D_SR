@@ -24,8 +24,12 @@ from utils.config import (
     CLIPS_DIR, CLIP_MIN_DURATION, CLIP_MAX_DURATION, get_video_duration,
     OUTPUTS_DATA_PREP_DIR, PROJECT_ROOT,
 )
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 
-OUTPUT_JSON = OUTPUTS_DATA_PREP_DIR / "clip_durations.json"
+# iter18 W7 (PLR2004): semantic named constants.
+_LIST_PREVIEW_N = 20
+
+OUTPUT_JSON = OUTPUTS_DATA_PREP_DIR / artifact("clip_durations")
 
 
 def extract_video_id(clip_stem: str) -> str:
@@ -191,7 +195,7 @@ def main():
     print(f"\nGenerated {meta_count} metadata.jsonl files in {CLIPS_DIR}")
 
     elapsed = time.time() - start
-    print(f"\n=== Clip Duration Summary ===")
+    print("\n=== Clip Duration Summary ===")
     print(f"Total clips:      {n}")
     print(f"In range [4-10s]: {total_ok} ({total_ok / n * 100:.1f}%)")
     print(f"Too long  (>10s): {total_long} ({total_long / n * 100:.1f}%)")
@@ -203,7 +207,7 @@ def main():
 
     # Print top 20 worst violations
     if total_long > 0:
-        print(f"\n=== Top violations (>10s) ===")
+        print("\n=== Top violations (>10s) ===")
         violations = []
         for sec in sections_out:
             for vid, clips in sections_out[sec]["videos"].items():
@@ -213,7 +217,7 @@ def main():
         violations.sort(key=lambda x: -x[2])
         for sec, fname, dur in violations[:20]:
             print(f"  {sec}/{fname} → {dur}s")
-        if len(violations) > 20:
+        if len(violations) > _LIST_PREVIEW_N:
             print(f"  ... and {len(violations) - 20} more")
 
 
@@ -248,16 +252,18 @@ def print_clips_per_city():
                     "chandigarh", "indore", "bhopal", "coimbatore", "nagpur",
                     "visakhapatnam", "surat", "thiruvananthapuram", "mysuru"]
 
-    total_clips = summary.get("total_clips", 0)
-    total_hrs = summary.get("total_duration_hours", 0)
-    total_gb = summary.get("total_size_gb", 0)
+    # iter18 H3: strict — the summary dict is written by this module's earlier
+    # stage with all three keys; absence = schema drift, must KeyError.
+    total_clips = summary["total_clips"]
+    total_hrs = summary["total_duration_hours"]
+    total_gb = summary["total_size_gb"]
 
     print(f"\n{'=' * 90}")
     print(f"CLIPS PER CITY ({total_clips:,} total clips | {total_hrs:.1f} hours | {total_gb:.1f} GB)")
     print(f"{'=' * 90}")
 
     # ===== TIER 1 =====
-    print(f"\n--- Tier 1 Cities (6 metros) ---")
+    print("\n--- Tier 1 Cities (6 metros) ---")
     print(f"{'City':<20} {'Drive':>8} {'Walk':>8} {'Drone':>8} {'Total':>8} {'Hrs':>7} {'GB':>7}")
     print("-" * 75)
 
@@ -282,7 +288,7 @@ def print_clips_per_city():
     print(f"\n{'Goa':<20} {'':>8} {goa_w:>8,} {'':>8} {goa_w:>8,} {goa_hrs:>7.1f} {goa_gb:>7.1f}")
 
     # ===== TIER 2 =====
-    print(f"\n--- Tier 2 Cities (15 cities) ---")
+    print("\n--- Tier 2 Cities (15 cities) ---")
     print(f"{'City':<20} {'Drive':>8} {'Walk':>8} {'Drone':>8} {'Rain':>8} {'Total':>8} {'Hrs':>7} {'GB':>7}")
     print("-" * 85)
 
@@ -307,7 +313,7 @@ def print_clips_per_city():
     mon_hrs, mon_gb = get_dur_gb("monuments")
     mon_sections = {k: v for k, v in sections.items() if k.startswith("monuments")}
     if mon_sections:
-        print(f"\n--- Monuments ---")
+        print("\n--- Monuments ---")
         print(f"{'Monument':<40} {'Clips':>8} {'Hrs':>7} {'GB':>7}")
         print("-" * 65)
         for k in sorted(mon_sections.keys()):
@@ -384,7 +390,7 @@ def print_clips_per_city():
         h, g = get_dur_gb(k)
         stats["monuments"]["sites"].append({"name": name, "clips": c, "hours": round(h, 1), "gb": round(g, 1)})
 
-    stats_path = PROJECT_ROOT / "docs" / "static" / "stats.json"
+    stats_path = PROJECT_ROOT / "docs" / "static" / artifact("stats")
     stats_path.parent.mkdir(parents=True, exist_ok=True)
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)

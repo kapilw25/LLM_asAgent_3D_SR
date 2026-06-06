@@ -37,6 +37,8 @@ import json
 import sys
 from pathlib import Path
 
+_TIERED_KEY_MIN_PARTS = 2   # iter18 W7: tierN/<city>/... needs a city segment
+
 # Make sibling modules under src/utils/ importable when this file is invoked as a
 # script (`python -u src/utils/eval_subset.py ...`). Without this, sys.path[0]
 # would be src/utils/ and `from utils.action_labels import ...` (used inside
@@ -67,7 +69,7 @@ def _path_class(clip_key: str):
         return None
     if p[0] == "monuments":
         return None
-    if p[0] in ("tier1", "tier2") and len(p) > 2:
+    if p[0] in ("tier1", "tier2") and len(p) > _TIERED_KEY_MIN_PARTS:
         return PATH_TO_CLS.get(p[2])
     if p[0] == "goa" and len(p) > 1:
         return PATH_TO_CLS.get(p[1])

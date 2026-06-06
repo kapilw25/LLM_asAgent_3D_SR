@@ -185,13 +185,10 @@ python -u src/utils/clip_splits.py \
 # get_model_config(None) default); other backbones use configs/model/<backbone>.yaml.
 # Per-backbone output namespace below: outputs/<mode>/<backbone>/<arm>/.
 BACKBONE="${BACKBONE:-vjepa_2_1_vitG}"
-case "$BACKBONE" in
-    vjepa_2_1_vitG) _MCFG="configs/model/vjepa2_1.yaml" ;;       # 2B ViT-G (canonical)
-    vjepa_2_1_vitg) _MCFG="configs/model/vjepa2_1_vitg.yaml" ;;  # 1B ViT-g scale axis
-    vjepa_2_1_vitL) _MCFG="configs/model/vjepa2_1_vitL.yaml" ;;  # 300M ViT-L scale axis
-    vjepa_2_0_vitg) _MCFG="configs/model/vjepa2_0.yaml" ;;       # 2.0 ViT-g version axis
-    *)              _MCFG="configs/model/${BACKBONE}.yaml" ;;
-esac
+# iter18 H7: backbone→model-yaml map lives in pipeline.yaml backbone_model_configs
+# (was an inline case of literals); unregistered backbones derive the conventional path.
+_MCFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "backbone_model_configs.${BACKBONE}" 2>/dev/null) || _MCFG=""
+[ -n "$_MCFG" ] || _MCFG="configs/model/${BACKBONE}.yaml"
 MODEL_CFG="${MODEL_CFG:-$_MCFG}"
 [ -f "$MODEL_CFG" ] || { echo "FATAL: model config $MODEL_CFG missing for BACKBONE=$BACKBONE"; exit 3; }
 P_M09="${CACHE_POLICY_ALL:-1}"
@@ -229,7 +226,7 @@ SURGERY_INIT="${SURGERY_INIT:-outputs/${mode_dir}/${BACKBONE}/${PRETRAIN_NS}/${P
 # tag_taxonomy.json) are already on disk for any working repo. If sources
 # are missing, we fall back to silent-disable + a fix-it hint.
 TAXONOMY_LABELS="outputs/${mode_dir}/probe_taxonomy/taxonomy_labels.json"
-TAG_TAXONOMY="configs/tag_taxonomy.json"
+TAG_TAXONOMY=$(scripts/lib/yaml_extract.py configs/pipeline.yaml config_paths.tag_taxonomy)   # iter18 H7: yaml pointer
 # iter16 M9 (2026-05-21): master manifest for all modes; M1 Option X
 # subsamples in-process. No more per-mode pre-made JSONs.
 EVAL_SUBSET_TX="$MASTER_MANIFEST"
@@ -273,7 +270,7 @@ case "$SUBCMD" in
         # by run_eval.sh preflight ("pretrain_2X_encoder ... not found"). Both POC + FULL
         # now compute 2X from yaml's max_epochs (single source of truth — no hardcoded
         # 4/10). SANITY left at single-epoch since it's a code-path validator.
-        TRAIN_CFG="configs/train/pretrain_encoder.yaml"
+        TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.pretrain_encoder)
         if [ "$SUBCMD" = "pretrain_2X_encoder" ]; then
             OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_2X_encoder"
             EPOCHS_OVERRIDE_FLAG=""
@@ -328,57 +325,57 @@ case "$SUBCMD" in
         RUNNER="src/m09c1_surgery_encoder.py"; MODULE_PREFIX="m09c_surgery"
         case "$SUBCMD" in
             surgery_3stage_DI_encoder)
-                TRAIN_CFG="configs/train/surgery_3stage_DI_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_encoder)
                 VARIANT_TAG="3stage_DI_encoder"
                 ;;
             surgery_noDI_encoder)
-                TRAIN_CFG="configs/train/surgery_2stage_noDI_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_noDI_encoder)
                 VARIANT_TAG="noDI_encoder"
                 ;;
             surgical_autorgn_encoder)
                 # iter18 B2 baseline: Auto-RGN — OWN script (separated from the m09c1 surgery novelty).
-                TRAIN_CFG="configs/train/surgical_autorgn_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgical_autorgn_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09e_autorgn_encoder.py"; MODULE_PREFIX="m09e_autorgn"
                 ;;
             full_ft_encoder)
                 # iter18 B4(a) baseline: Full-FT (Full Fine-Tuning) — OWN script m09f (cp m09c1).
-                TRAIN_CFG="configs/train/full_ft_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.full_ft_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09f_naiveft_encoder.py"; MODULE_PREFIX="m09f_full_ft"
                 ;;
             lpft_encoder)
                 # iter18 B4(b) baseline: LP-FT (Linear-Probing then Fine-Tuning) — OWN script m09f (cp m09c1).
-                TRAIN_CFG="configs/train/lpft_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.lpft_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09f_naiveft_encoder.py"; MODULE_PREFIX="m09f_lpft"
                 ;;
             surgery_raw_encoder)
                 # iter18 RAW control: surgery method on RAW clips (causal control) — IS surgery → m09c1 (default RUNNER).
-                TRAIN_CFG="configs/train/surgery_raw_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_raw_encoder)
                 VARIANT_TAG="raw_encoder"
                 ;;
             peft_lora_encoder)
                 # iter18 B1 baseline: PEFT LoRA — OWN script m09b (cp m09c1 + HuggingFace peft).
-                TRAIN_CFG="configs/train/peft_lora_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.peft_lora_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09b_peft_encoder.py"; MODULE_PREFIX="m09b_peft_lora"
                 ;;
             peft_dora_encoder)
                 # iter18 B1 baseline: PEFT DoRA — OWN script m09b (cp m09c1 + HuggingFace peft).
-                TRAIN_CFG="configs/train/peft_dora_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.peft_dora_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09b_peft_encoder.py"; MODULE_PREFIX="m09b_peft_dora"
                 ;;
             cassle_encoder)
                 # iter18 B3 baseline: CaSSLe distillation — OWN script m09d (cp m09c1 + utils.contssl).
-                TRAIN_CFG="configs/train/cassle_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.cassle_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09d_contssl_encoder.py"; MODULE_PREFIX="m09d_cassle"
                 ;;
             ewc_encoder)
                 # iter18 B3 baseline: EWC Fisher anchor — OWN script m09d (cp m09c1 + utils.contssl).
-                TRAIN_CFG="configs/train/ewc_encoder.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.ewc_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09d_contssl_encoder.py"; MODULE_PREFIX="m09d_ewc"
                 ;;
@@ -461,7 +458,7 @@ case "$SUBCMD" in
         # iter15 Phase 4 (2026-05-14): head-only m09a2. Frozen encoder + frozen
         # predictor; only the ~432K motion_aux head trains. 24 GB sufficient.
         OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_head"
-        TRAIN_CFG="configs/train/pretrain_head.yaml"
+        TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.pretrain_head)
         echo "═══ $(date '+%H:%M:%S') · m09a2 HEAD-ONLY continual SSL (${MODE}) ═══"
         echo "  config:    $TRAIN_CFG"
         echo "  subset:    $TRAIN_POOL  (leakage-safe: universe − val − test)"
@@ -492,11 +489,11 @@ case "$SUBCMD" in
         # head-only stage (no progressive unfreeze).
         case "$SUBCMD" in
             surgery_3stage_DI_head)
-                TRAIN_CFG="configs/train/surgery_3stage_DI_head.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_head)
                 VARIANT_TAG="3stage_DI_head"
                 ;;
             surgery_noDI_head)
-                TRAIN_CFG="configs/train/surgery_2stage_noDI_head.yaml"
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_noDI_head)
                 VARIANT_TAG="noDI_head"
                 ;;
         esac

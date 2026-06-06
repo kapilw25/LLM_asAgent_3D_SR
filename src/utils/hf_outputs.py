@@ -28,6 +28,7 @@ USAGE:
 
 """
 import os
+import re
 import sys
 import threading
 import time
@@ -56,6 +57,7 @@ from utils.hf_upload_mode import resolve_upload_mode_interactive, delete_repo_fo
 # iter16 (2026-05-20): moved to configs/pipeline.yaml > hf_repos.outputs per
 # CLAUDE.md "No hardcoded values in Python". To fork for a new org, change yaml.
 from utils.config import get_pipeline_config as _get_pcfg
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 HF_OUTPUTS_REPO = _get_pcfg()["hf_repos"]["outputs"]   # was "anonymousML123/factorjepa-outputs" literal
 
 # Upload policy (single source for preview + mirror-cleanup + upload_folder):
@@ -84,6 +86,14 @@ _UPLOAD_SKIP_PATTERNS = [
 ]
 
 _CHECKPOINT_AGE_THRESHOLD = 120  # seconds — skip checkpoints modified within this window
+
+# iter18 W7 (PLR2004): semantic named constants — definitions, not configuration.
+_GB, _MB, _KB = 1e9, 1e6, 1e3            # byte-unit boundaries for _fmt_size
+_PROC_NET_TX_COL = 10                     # /proc/net/dev: ≥10 fields → col 9 = tx bytes
+_RATE_ACTIVE = 1e6                        # B/s — heartbeat "actively moving" floor
+_LIST_PREVIEW_N = 10                      # files shown before "... and N more"
+_SAMPLE_EDGE_N = 3                        # head/tail items in long-list samples
+_MIN_CLI_ARGS = 3                         # `hf_outputs.py <cmd> <dir>`
 
 
 def _get_token():
@@ -117,12 +127,12 @@ def _ensure_repo(token):
 
 def _fmt_size(nbytes: int) -> str:
     """Format bytes as human-readable string."""
-    if nbytes >= 1e9:
-        return f"{nbytes / 1e9:.1f} GB"
-    if nbytes >= 1e6:
-        return f"{nbytes / 1e6:.1f} MB"
-    if nbytes >= 1e3:
-        return f"{nbytes / 1e3:.0f} KB"
+    if nbytes >= _GB:
+        return f"{nbytes / _GB:.1f} GB"
+    if nbytes >= _MB:
+        return f"{nbytes / _MB:.1f} MB"
+    if nbytes >= _KB:
+        return f"{nbytes / _KB:.0f} KB"
     return f"{nbytes} B"
 
 
@@ -134,7 +144,7 @@ def _host_tx_bytes() -> int:
         with open("/proc/self/net/dev") as fh:
             for line in fh.readlines()[2:]:          # skip 2 header rows
                 parts = line.split()
-                if len(parts) >= 10:
+                if len(parts) >= _PROC_NET_TX_COL:
                     total += int(parts[9])           # column 9 = tx bytes
         return total
     except Exception:
@@ -166,7 +176,10 @@ class _UploadHeartbeat:
     the phase, so neither phase looks frozen. Daemon thread; stops on context exit.
     TX is host-namespace level (movement proxy); read is this-process-exact."""
 
-    def __init__(self, label: str, interval: float = 30.0):
+    def __init__(self, label: str, interval: float = None):
+        # iter18 H6: None → pipeline.yaml streaming.heartbeat_interval_s.
+        if interval is None:
+            interval = _get_pcfg()["streaming"]["heartbeat_interval_s"]
         self.label, self.interval = label, interval
         self._stop = threading.Event()
         self._t = None
@@ -186,8 +199,8 @@ class _UploadHeartbeat:
             dt = max(now - self._t_last, 1e-9)
             tx_rate = (tx - self._tx_last) / dt
             rd_rate = (rd - self._rd_last) / dt
-            phase = ("SENDING" if tx_rate > 1e6 and tx_rate >= rd_rate
-                     else "HASHING" if rd_rate > 1e6
+            phase = ("SENDING" if tx_rate > _RATE_ACTIVE and tx_rate >= rd_rate
+                     else "HASHING" if rd_rate > _RATE_ACTIVE
                      else "waiting")           # neither moving → HF commit/verify or net stall
             print(f"  [{self.label}] {phase} · {now - self._t0:.0f}s elapsed · "
                   f"read +{_fmt_size(int(rd_rate))}/s · sent +{_fmt_size(int(tx_rate))}/s · "
@@ -344,7 +357,7 @@ def _mirror_cleanup(api, local_path: Path, subfolder: str):
                 )
                 dt = time.time() - t_chunk
                 # Sample first 3 + last 3 paths per batch (full list would be 11K lines)
-                sample = (chunk[:3] + ["..."] + chunk[-3:]) if len(chunk) > 6 else chunk
+                sample = (chunk[:_SAMPLE_EDGE_N] + ["..."] + chunk[-_SAMPLE_EDGE_N:]) if len(chunk) > 2 * _SAMPLE_EDGE_N else chunk
                 print(f"    batch {batch_idx}/{n_chunks}: DEL {len(chunk)} files in {dt:.1f}s")
                 for p in sample:
                     print(f"      {p}")
@@ -519,13 +532,13 @@ def download_outputs(output_dir: str, subfolder: str = None):
     if new_files:
         for f in sorted(new_files)[:10]:
             print(f"  NEW  {f} ({_fmt_size(after[f])})")
-        if len(new_files) > 10:
-            print(f"  ... and {len(new_files) - 10} more new files")
+        if len(new_files) > _LIST_PREVIEW_N:
+            print(f"  ... and {len(new_files) - _LIST_PREVIEW_N} more new files")
     if updated_files:
-        for f in sorted(updated_files)[:10]:
+        for f in sorted(updated_files)[:_LIST_PREVIEW_N]:
             print(f"  UPD  {f} ({_fmt_size(after[f])})")
-        if len(updated_files) > 10:
-            print(f"  ... and {len(updated_files) - 10} more updated files")
+        if len(updated_files) > _LIST_PREVIEW_N:
+            print(f"  ... and {len(updated_files) - _LIST_PREVIEW_N} more updated files")
 
     # iter18 (2026-06-04): auto-unpack any full-fidelity `_full-*.tar` shards (upload-full) back
     # into their directories. No-op when none were downloaded.
@@ -543,8 +556,10 @@ def download_outputs(output_dir: str, subfolder: str = None):
 # uploads ONLY the shards into the SAME outputs/<mode> prefix. `download` / `download-full` pulls
 # them and auto-unpacks (then deletes the tars). Local shards are deleted after upload; the
 # original files stay on disk. The light mirror_cleanup PROTECTS remote `_full-*.tar`.
-_FULL_SHARD_TEMPLATE = "_full-{shard:05d}.tar"
-_FULL_SHARD_GLOB = "_full-*.tar"
+# iter18 H5: template lives in configs/pipeline.yaml (data.full_shard_template);
+# the glob is DERIVED from it (single source — no second literal).
+_FULL_SHARD_TEMPLATE = _get_pcfg()["data"]["full_shard_template"]
+_FULL_SHARD_GLOB = re.sub(r"\{shard:[^}]*\}", "*", _FULL_SHARD_TEMPLATE)
 
 
 def _pack_outputs_full(output_path: Path, max_shard_gb: float) -> list:
@@ -721,10 +736,10 @@ def _pre_upload_pack_outputs(data_root: Path) -> None:
     # (raw_subdir, shard_template_relative_to_parent) — packed in this order so
     # that m10's masks/ goes first (m11 already finished, doesn't need them).
     pack_specs = [
-        ("m10_sam_segment", "masks", "masks-{shard:05d}.tar"),
-        ("m11_factor_datasets", "D_L", "D_L-{shard:05d}.tar"),
-        ("m11_factor_datasets", "D_A", "D_A-{shard:05d}.tar"),
-        ("m11_factor_datasets", "D_I", "D_I-{shard:05d}.tar"),
+        ("m10_sam_segment", "masks", artifact("masks_shard_template")),
+        ("m11_factor_datasets", "D_L", artifact("dl_shard_template")),
+        ("m11_factor_datasets", "D_A", artifact("da_shard_template")),
+        ("m11_factor_datasets", "D_I", artifact("di_shard_template")),
     ]
 
     def _pack_one_subset(d: Path) -> None:
@@ -866,9 +881,9 @@ def upload_data(data_root: Path = None):
                     # (no "eval_10k_" prefix — derived from probe Stage 1).
                     # eval_10k_poc.json + eval_10k_sanity.json retired to
                     # data/eval_10k_local/legacy/ in the same pass.
-                    "train_split.json", "**/train_split.json",
-                    "val_split.json", "**/val_split.json",
-                    "test_split.json", "**/test_split.json",
+                    artifact("train_split"), f"**/{artifact('train_split')}",
+                    artifact("val_split"), f"**/{artifact('val_split')}",
+                    artifact("test_split"), f"**/{artifact('test_split')}",
                 ],
             )
         pbar.update(1)
@@ -926,16 +941,16 @@ def _post_download_unpack_masks(data_root: Path) -> None:
         """
         # m10 masks
         seg_dir = d / "m10_sam_segment"
-        masks_shards = list(seg_dir.glob("masks-*.tar")) if seg_dir.is_dir() else []
+        masks_shards = list(seg_dir.glob(artifact("masks_shard_glob"))) if seg_dir.is_dir() else []
         if masks_shards:
             masks_dir = seg_dir / "masks"
             print(f"\n  [hf_outputs] post-download unpack: {seg_dir}/masks-*.tar → {masks_dir}/")
             unpack_shards_to_dir(
-                shards_glob=str(seg_dir / "masks-*.tar"),
+                shards_glob=str(seg_dir / artifact("masks_shard_glob")),
                 output_dir=masks_dir,
                 skip_existing=True,
             )
-            _delete_shards_after_unpack(masks_shards, "masks-*.tar")
+            _delete_shards_after_unpack(masks_shards, artifact("masks_shard_glob"))
         # m11 factor shards (D_L / D_A / D_I)
         m11_dir = d / "m11_factor_datasets"
         if m11_dir.is_dir():
@@ -1096,7 +1111,7 @@ def download_data(data_root: Path = None):
 # ── CLI ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < _MIN_CLI_ARGS - 1:
         print("Usage:")
         print("  python -u src/utils/hf_outputs.py upload <output_dir>")
         print("  python -u src/utils/hf_outputs.py download <output_dir>")
@@ -1108,20 +1123,20 @@ if __name__ == "__main__":
 
     cmd = sys.argv[1]
 
-    if cmd == "upload" and len(sys.argv) >= 3:
+    if cmd == "upload" and len(sys.argv) >= _MIN_CLI_ARGS:
         upload_outputs(sys.argv[2])
-    elif cmd == "download" and len(sys.argv) >= 3:
+    elif cmd == "download" and len(sys.argv) >= _MIN_CLI_ARGS:
         download_outputs(sys.argv[2])
-    elif cmd == "upload-full" and len(sys.argv) >= 3:
+    elif cmd == "upload-full" and len(sys.argv) >= _MIN_CLI_ARGS:
         upload_outputs_full(sys.argv[2])
-    elif cmd == "download-full" and len(sys.argv) >= 3:
+    elif cmd == "download-full" and len(sys.argv) >= _MIN_CLI_ARGS:
         download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
     elif cmd == "upload-data":
         # iter13 v12+ (2026-05-06): optional positional <data_dir> override.
         # Default = "data" (project convention). No more hardcoded subfolder list.
-        upload_data(Path(sys.argv[2]) if len(sys.argv) >= 3 else None)
+        upload_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
     elif cmd == "download-data":
-        download_data(Path(sys.argv[2]) if len(sys.argv) >= 3 else None)
+        download_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
     else:
         print(f"Unknown command: {cmd}")
         sys.exit(1)

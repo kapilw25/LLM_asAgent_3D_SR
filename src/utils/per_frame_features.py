@@ -30,6 +30,10 @@ import torch
 
 from utils.predictor_eval import to_pixel
 
+# iter18 W7 (PLR2004): tensor-rank contracts.
+_VIDEO_RANK = 5   # (B, T, C, H, W)
+_FEATS_RANK = 3   # (B, tokens, D)
+
 
 @torch.no_grad()
 def forward_per_frame(encoder, batch, num_frames, tubelet_size):
@@ -45,14 +49,14 @@ def forward_per_frame(encoder, batch, num_frames, tubelet_size):
     FAIL LOUD if the token count doesn't factor into (T_eff × n_spatial) — that indicates an
     encoder/tubelet config mismatch.
     """
-    if batch.ndim != 5:
+    if batch.ndim != _VIDEO_RANK:
         raise RuntimeError(f"forward_per_frame expects (B,T,C,H,W); got {tuple(batch.shape)}")
     if num_frames % tubelet_size != 0:
         raise RuntimeError(
             f"num_frames={num_frames} not divisible by tubelet_size={tubelet_size}")
     pixel = to_pixel(batch)                 # (B,C,T,H,W) bf16 on CUDA
     out = encoder(pixel).float()
-    if not torch.is_tensor(out) or out.ndim != 3:
+    if not torch.is_tensor(out) or out.ndim != _FEATS_RANK:
         raise RuntimeError(
             f"encoder forward must return 3-D (B,N_tok,D); got {type(out).__name__} "
             f"shape={getattr(out, 'shape', None)}")
@@ -68,7 +72,7 @@ def forward_per_frame(encoder, batch, num_frames, tubelet_size):
 
 def reverse_frames(batch):
     """(B, T, C, H, W) → time-reversed copy. For Arrow-of-Time (Wei CVPR18)."""
-    if batch.ndim != 5:
+    if batch.ndim != _VIDEO_RANK:
         raise RuntimeError(f"reverse_frames expects 5-D (B,T,C,H,W); got {tuple(batch.shape)}")
     return batch.flip(dims=[1]).contiguous()
 
@@ -77,7 +81,7 @@ def permute_frames(batch, perm_idx):
     """(B, T, C, H, W) → frame-permuted along T using an explicit (T,) LongTensor.
     Caller supplies the permutation (m12f orchestrator generates one per permutation-id for
     TOV/VCOP). Same permutation applied to every clip in the batch."""
-    if batch.ndim != 5:
+    if batch.ndim != _VIDEO_RANK:
         raise RuntimeError(f"permute_frames expects 5-D (B,T,C,H,W); got {tuple(batch.shape)}")
     if not torch.is_tensor(perm_idx) or perm_idx.ndim != 1:
         raise RuntimeError(f"perm_idx must be 1-D LongTensor; got {perm_idx!r}")

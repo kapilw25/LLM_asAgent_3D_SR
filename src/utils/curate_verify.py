@@ -20,6 +20,9 @@ import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+_TIERED_KEY_PARTS = 3   # iter18 W7: tier-prefixed keys have >3 path segments
 
 
 # iter16 (2026-05-20): sweet-spot thresholds + top_n + pre_select_n moved to
@@ -80,7 +83,7 @@ def parse_clip_key(clip_key: str) -> dict:
             "video_id": video_id,
             "stem": stem,
         }
-    tier = parts[0] if len(parts) > 3 else ""
+    tier = parts[0] if len(parts) > _TIERED_KEY_PARTS else ""
     # Handle both tier-prefixed ("tier1/city/activity/video/clip.mp4")
     # and tier-less ("goa/walking/video/clip.mp4") layouts
     if tier.startswith("tier"):
@@ -289,7 +292,7 @@ def copy_pngs(selected: list, src_dir: Path, dst_dir: Path, exts=(".png", ".pdf"
     return n_copied
 
 
-def select_verify_clips(clip_keys, n_target: int = PRE_SELECT_N, seed: int = 42) -> set:
+def select_verify_clips(clip_keys, n_target: int = PRE_SELECT_N, seed: int = None) -> set:  # iter18 H6: None → streaming.factor_stream_base_seed
     """Metadata-only pre-selection of ~100 clip_keys for m10/m11 verify plots.
     Runs BEFORE m10 writes any PNG (no factor_manifest.json needed).
 
@@ -310,6 +313,9 @@ def select_verify_clips(clip_keys, n_target: int = PRE_SELECT_N, seed: int = 42)
     Returns:
         set of selected clip_keys.
     """
+    # iter18 H6: None → pipeline.yaml streaming.factor_stream_base_seed.
+    if seed is None:
+        seed = get_pipeline_config()["streaming"]["factor_stream_base_seed"]
     rng = random.Random(seed)
     # Bucket by (city, activity); dedupe by video_id within each
     buckets = defaultdict(list)          # (city, activity) -> [(video_id, clip_key)]
@@ -363,7 +369,9 @@ def curate_and_prune(outputs_dir, delete_originals: bool = False) -> dict:
         dict with `n_selected`, `coverage`, `freed_gb`, `selection_json_path` for logging.
     """
     out = Path(outputs_dir)
-    manifest_path = out / "m11_factor_datasets" / "factor_manifest.json"
+    # iter18 H1: single-sourced via data_paths (factor_subdir + manifest name from yaml).
+    from utils.data_paths import factor_manifest_path
+    manifest_path = factor_manifest_path(out)
     if not manifest_path.exists():
         print(f"[curate_verify] SKIP: {manifest_path} not found — run m11 first")
         return {"n_selected": 0, "skipped": True}
@@ -422,7 +430,7 @@ def curate_and_prune(outputs_dir, delete_originals: bool = False) -> dict:
     copy_pngs(selected, m10_src, m10_dst)
     copy_pngs(selected, m11_src, m11_dst)
 
-    selection_json = out / "verify_top20_manifest.json"
+    selection_json = out / artifact("verify_top20_manifest")
     with open(selection_json, "w") as f:
         json.dump({
             "n_selected": len(selected),
@@ -445,7 +453,7 @@ def curate_and_prune(outputs_dir, delete_originals: bool = False) -> dict:
                 print(f"[curate_verify] DELETED: {d}")
         print(f"[curate_verify] Freed ~{freed_gb:.1f} GB disk")
     else:
-        print(f"[curate_verify] Originals KEPT. Pass delete_originals=True to free disk.")
+        print("[curate_verify] Originals KEPT. Pass delete_originals=True to free disk.")
 
     return {
         "n_selected": len(selected),

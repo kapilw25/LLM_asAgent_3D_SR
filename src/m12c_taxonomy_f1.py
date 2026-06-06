@@ -59,6 +59,14 @@ from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
 from utils.progress import make_pbar
 from utils.vjepa2_imports import get_attentive_classifier
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_TOKENS_RANK = 3     # (B, tokens, D)
+_MIN_TRAIN_N = 5     # per-split viability floors for taxonomy probe
+_MIN_VAL_N = 2
+_MIN_TEST_N = 5
+_MIN_COMPARABLE = 2
 
 
 # iter16 (2026-05-20): probe hyperparams moved to configs/pipeline.yaml > probe:
@@ -82,7 +90,7 @@ def _cleanup_probe_heads(out_dir, keep: bool) -> None:
     if keep:
         return
     from pathlib import Path as _P
-    heads = sorted(_P(out_dir).glob("probe_*.pt"))
+    heads = sorted(_P(out_dir).glob(artifact("probe_head_glob")))
     if not heads:
         return
     freed = sum(h.stat().st_size for h in heads)
@@ -102,7 +110,7 @@ def _cleanup_probe_heads(out_dir, keep: bool) -> None:
 
 # ── Probe head ────────────────────────────────────────────────────────
 
-def _make_probe(d_in: int, n_classes: int, depth: int = 4):
+def _make_probe(d_in: int, n_classes: int, depth: int):  # iter18 H6: caller passes
     AC = get_attentive_classifier()
     return AC(embed_dim=d_in, num_classes=n_classes, depth=depth, num_heads=16,
               mlp_ratio=4.0, complete_block=True, use_activation_checkpointing=False)
@@ -222,7 +230,7 @@ def run_train_stage(args, wb) -> None:
     # probe_action.py. Skip happens BEFORE check_gpu(). Escape hatch:
     # --cache-policy 2.
     out_dir_pre = args.output_root / args.encoder
-    test_metrics_pre = out_dir_pre / "test_metrics.json"
+    test_metrics_pre = out_dir_pre / artifact("test_metrics")
     if args.cache_policy == "1" and test_metrics_pre.exists():
         print(f"  [keep] Stage 3.5 cached for {args.encoder}: {test_metrics_pre.name} "
               f"present in {out_dir_pre} — skipping (--cache-policy 2 to redo)")
@@ -231,7 +239,7 @@ def run_train_stage(args, wb) -> None:
     check_gpu()
     cleanup_temp()
 
-    labels_path = args.output_root / "taxonomy_labels.json"
+    labels_path = args.output_root / artifact("taxonomy_labels")
     if not labels_path.exists():
         sys.exit(f"FATAL: {labels_path} not found — run --stage labels first")
     tx = json.loads(labels_path.read_text())
@@ -274,7 +282,7 @@ def run_train_stage(args, wb) -> None:
 
     # Group clip_keys by split (deterministic order from action_labels.json,
     # which is the source-of-truth for the 70/15/15 split per iter13 plan).
-    action_labels_path = args.features_root / "action_labels.json"
+    action_labels_path = args.features_root / artifact("action_labels")
     action_labels = load_action_labels(action_labels_path)
     by_split = {"train": [], "val": [], "test": []}
     for k, info in action_labels.items():
@@ -298,7 +306,7 @@ def run_train_stage(args, wb) -> None:
             from utils.frozen_features import apply_motion_aux_head_to_features
             ma_head = load_motion_aux_head(args.motion_aux_head, device="cuda")
             ma_concat = apply_motion_aux_head_to_features(feats, ma_head, batch_size=256)
-            n_tokens = feats.shape[1] if feats.ndim == 3 else 1
+            n_tokens = feats.shape[1] if feats.ndim == _TOKENS_RANK else 1
             ma_tiled = np.broadcast_to(
                 ma_concat[:, None, :], (feats.shape[0], n_tokens, ma_concat.shape[1])
             ).astype(np.float16)
@@ -331,7 +339,7 @@ def run_train_stage(args, wb) -> None:
         def _idx(keys):
             return [i for i, k in enumerate(keys) if k in labels_by_clip and dim_name in labels_by_clip[k]]
         ti = _idx(keys_train); vi = _idx(keys_val); te = _idx(keys_test)
-        if len(ti) < 5 or len(vi) < 2 or len(te) < 5:
+        if len(ti) < _MIN_TRAIN_N or len(vi) < _MIN_VAL_N or len(te) < _MIN_TEST_N:
             print(f"  [skip] dim={dim_name}: too few labeled clips (train={len(ti)}, val={len(vi)}, test={len(te)})")
             summary["dims"][dim_name] = {"skipped": True, "reason": "too_few_clips"}
             pbar.update(1)
@@ -372,8 +380,8 @@ def run_train_stage(args, wb) -> None:
         log_metrics(wb, {f"{args.encoder}/{dim_name}/{metric_name}": mean_v})
         pbar.update(1)
     pbar.close()
-    save_json_checkpoint(summary, out_dir / "test_metrics.json")
-    print(f"Wrote: {out_dir / 'test_metrics.json'} ({len(summary['dims'])} dim records)")
+    save_json_checkpoint(summary, out_dir / artifact("test_metrics"))
+    print(f"Wrote: {out_dir / artifact("test_metrics")} ({len(summary['dims'])} dim records)")
     # iter18: free the ~5.6 GB of probe_<dim>.pt heads now that the durable metrics are on disk
     # (bounds probe_taxonomy/ so a tight 350 GB 2× GPU node doesn't OOM mid-run).
     _cleanup_probe_heads(out_dir, args.keep_probe_heads)
@@ -389,14 +397,14 @@ def run_paired_delta_stage(args, wb) -> None:
                          }, ...}}
     """
     enc_dirs = sorted([p for p in args.output_root.iterdir()
-                       if p.is_dir() and (p / "test_metrics.json").exists()])
-    if len(enc_dirs) < 2:
+                       if p.is_dir() and (p / artifact("test_metrics")).exists()])
+    if len(enc_dirs) < _MIN_COMPARABLE:
         sys.exit(f"FATAL: need >=2 encoders with test_metrics.json, found: {[p.name for p in enc_dirs]}")
     print(f"Encoders found: {[p.name for p in enc_dirs]}")
 
     enc_data = {}
     for ed in enc_dirs:
-        enc_data[ed.name] = json.loads((ed / "test_metrics.json").read_text())["dims"]
+        enc_data[ed.name] = json.loads((ed / artifact("test_metrics")).read_text())["dims"]
 
     # Union of dim names across encoders. Any dim missing in any encoder → skipped.
     common_dims = set.intersection(*[set(d.keys()) for d in enc_data.values()])
@@ -455,7 +463,7 @@ def run_paired_delta_stage(args, wb) -> None:
             "pairwise_deltas":  pairwise,
         }
 
-    out_path = args.output_root / "per_dim_acc.json"
+    out_path = args.output_root / artifact("per_dim_acc")
     save_json_checkpoint(out, out_path)
     log_metrics(wb, {"n_encoders": len(enc_data), "n_dims_compared": len(out["dims"])})
     print(f"Wrote: {out_path}  ({len(out['dims'])} dims compared)")
@@ -464,7 +472,7 @@ def run_paired_delta_stage(args, wb) -> None:
 # ── Stage: plot ───────────────────────────────────────────────────────
 
 def run_plot_stage(args, wb) -> None:
-    src = args.output_root / "per_dim_acc.json"
+    src = args.output_root / artifact("per_dim_acc")
     if not src.exists():
         sys.exit(f"FATAL: {src} not found — run --stage paired_delta first")
     data = json.loads(src.read_text())

@@ -23,8 +23,12 @@ from utils.config import (
 )
 from utils.config import get_pipeline_config
 from utils.hf_utils import _setup_hf_env, _get_token, generate_readme, upload_readme
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 
-CLIP_DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / "clip_durations.json"
+# iter18 W7 (PLR2004): semantic named constants.
+_CAT_DEPTH = 2   # parts[2] = tour_type segment
+
+CLIP_DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / artifact("clip_durations")
 CLIPS_PER_SHARD = get_pipeline_config()["data"]["clips_per_shard"]
 
 
@@ -45,7 +49,7 @@ def build_manifest() -> list:
         parts = section.split("/")
         if parts[0] in ("tier1", "tier2"):
             tier, city = parts[0], parts[1]
-            tour_type = parts[2] if len(parts) > 2 else "unknown"
+            tour_type = parts[2] if len(parts) > _CAT_DEPTH else "unknown"
         elif parts[0] == "goa":
             tier, city, tour_type = "goa", "goa", parts[1] if len(parts) > 1 else "walking"
         elif parts[0] == "monuments":
@@ -181,7 +185,7 @@ def main():
         try:
             api.upload_file(
                 path_or_fileobj=str(shard_path),
-                path_in_repo=f"data/{shard_name}",
+                path_in_repo=f"{get_pipeline_config()['hf_repos']['remote_data_prefix']}/{shard_name}",   # iter18 H1
                 repo_id=repo_id,
                 repo_type="dataset",
                 token=token,
@@ -207,13 +211,13 @@ def main():
         except Exception as e:
             print(f"  [{shard_idx + 1}/{total_shards}] ERROR uploading {shard_name}: {e}")
             print(f"  Shard kept at: {shard_path}")
-            print(f"  Re-run to retry (already-uploaded shards will be overwritten)")
+            print("  Re-run to retry (already-uploaded shards will be overwritten)")
         pbar.update(1)
 
     pbar.close()
 
     # Step 4: Upload README
-    print(f"\nStep 4: Uploading README.md...")
+    print("\nStep 4: Uploading README.md...")
     num_videos = len(set(m["video_id"] for _, m in manifest))
     total_gb = sum(m["size_mb"] for _, m in manifest) / 1024
     readme = generate_readme(total_clips, num_videos, total_gb, num_shards=total_shards)
@@ -222,7 +226,7 @@ def main():
     # Summary
     elapsed = time.time() - start
     print(f"\n{'=' * 50}")
-    print(f"=== UPLOAD COMPLETE ===")
+    print("=== UPLOAD COMPLETE ===")
     print(f"Shards uploaded: {total_shards}")
     print(f"Clips: {total_clips_uploaded:,}")
     print(f"Size: {total_size_uploaded / 1024:.1f} GB")

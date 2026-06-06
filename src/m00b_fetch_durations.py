@@ -25,9 +25,14 @@ from utils.config import get_sanity_clip_limit, get_pipeline_config
 
 # Paths
 from utils.config import OUTPUTS_DATA_PREP_DIR
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_CAT_DEPTH = 2          # parts[2] = category segment
+_LIST_PREVIEW_N = 20
 INPUT_JSON = YT_VIDEOS_JSON
 OUTPUT_DIR = OUTPUTS_DATA_PREP_DIR
-OUTPUT_JSON = OUTPUT_DIR / "video_durations.json"
+OUTPUT_JSON = OUTPUT_DIR / artifact("video_durations")
 
 # Defaults
 DEFAULT_WORKERS = get_pipeline_config()["data"]["data_prep_workers"]
@@ -140,14 +145,16 @@ def fetch_duration_ytdlp(video: dict, resolution: int = 0) -> dict:
         }
 
 
-def fetch_all_durations(videos: list, workers: int = 10, resolution: int = 0) -> list:
-    """Fetch durations for all videos using parallel yt-dlp calls."""
+def fetch_all_durations(videos: list, workers: int, resolution: int = None) -> list:
+    """Fetch durations for all videos using parallel yt-dlp calls.
+    resolution=None → best quality (iter18 H2/H6: dropped the 0-sentinel + the
+    magic workers=10 signature default — workers comes from the CLI)."""
     results = []
     total = len(videos)
     ok_count = 0
     fail_count = 0
 
-    res_label = f"{resolution}p" if resolution > 0 else "best"
+    res_label = f"{resolution}p" if resolution else "best"
     print(f"Fetching metadata for {total} videos ({workers} parallel workers, format={res_label})...")
     start = time.time()
     pbar = make_pbar(total=total, desc="m00b_fetch", unit="video")
@@ -222,9 +229,9 @@ def print_summary(results: list) -> dict:
         parts = r["section"].split("/")
         cat = parts[0]
         if cat == "tier1":
-            cat_key = f"tier1/{parts[2]}" if len(parts) > 2 else "tier1"
+            cat_key = f"tier1/{parts[2]}" if len(parts) > _CAT_DEPTH else "tier1"
         elif cat == "tier2":
-            cat_key = f"tier2/{parts[2]}" if len(parts) > 2 else "tier2"
+            cat_key = f"tier2/{parts[2]}" if len(parts) > _CAT_DEPTH else "tier2"
         else:
             cat_key = cat
 
@@ -271,7 +278,7 @@ def print_summary(results: list) -> dict:
             res_counts[label] = {"count": 0, "total_mb": 0}
         res_counts[label]["count"] += 1
         res_counts[label]["total_mb"] += r["filesize_approx_mb"]
-    print(f"\n  By resolution:")
+    print("\n  By resolution:")
     for label in sorted(res_counts.keys(), key=lambda x: res_counts[x]["count"], reverse=True):
         rc = res_counts[label]
         print(f"    {label:<10} {rc['count']:>4} videos  {rc['total_mb']/1024:>8.1f} GB")
@@ -292,7 +299,7 @@ def print_summary(results: list) -> dict:
     filesizes_mb = [r["filesize_approx_mb"] for r in ok_results if r["filesize_approx_mb"] > 0]
     max_vid_mb = max(filesizes_mb) if filesizes_mb else 0
     max_vid_entry = next((r for r in ok_results if r["filesize_approx_mb"] == max_vid_mb), None)
-    print(f"\n  Stream-split-upload strategy:")
+    print("\n  Stream-split-upload strategy:")
     print(f"    Largest video: {max_vid_mb/1024:.1f} GB", end="")
     if max_vid_entry:
         print(f" ({max_vid_entry['title'][:40]}...)")
@@ -308,7 +315,7 @@ def print_summary(results: list) -> dict:
         print("=" * 70)
         for r in failed[:20]:
             print(f"  [{r['id']}] {r['title'][:50]}  → {r['status']}")
-        if len(failed) > 20:
+        if len(failed) > _LIST_PREVIEW_N:
             print(f"  ... and {len(failed) - 20} more")
 
     # Build summary dict
@@ -339,7 +346,8 @@ def main():
     parser.add_argument("--POC", action="store_true", help="10K subset")
     parser.add_argument("--FULL", action="store_true", help="Full 115K corpus")
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS, help=f"Parallel workers (default: {DEFAULT_WORKERS})")
-    parser.add_argument("--resolution", type=int, default=0, help="Target resolution height (e.g. 480 for 480p). Default: best quality")
+    parser.add_argument("--resolution", type=int, default=None,
+                        help="Target resolution height (e.g. 480 for 480p). Omit for best quality.")
     args = parser.parse_args()
 
     if not (args.SANITY or args.POC or args.FULL):

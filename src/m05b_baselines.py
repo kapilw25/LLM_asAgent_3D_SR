@@ -428,7 +428,7 @@ def generate_dinov2(output_dir: Path, args, clip_limit: int, subset_keys: set):
         target=_producer_image_baseline,
         args=(processor, batch_size, tmp_dir, q, stop_event, clip_limit,
               subset_keys, processed_keys, VJEPA_FRAMES_PER_CLIP,
-              getattr(args, 'local_data', None)),
+              args.local_data),
         daemon=True,
     )
     producer.start()
@@ -581,7 +581,7 @@ def generate_clip(output_dir: Path, args, clip_limit: int, subset_keys: set):
         target=_producer_image_baseline,
         args=(processor, batch_size, tmp_dir, q, stop_event, clip_limit,
               subset_keys, processed_keys, VJEPA_FRAMES_PER_CLIP,
-              getattr(args, 'local_data', None)),
+              args.local_data),
         daemon=True,
     )
     producer.start()
@@ -865,7 +865,7 @@ def generate_shuffled_vjepa(output_dir: Path, args, clip_limit: int, subset_keys
         target=_producer_shuffled_vjepa,
         args=(processor, batch_size, tmp_dir, q, stop_event,
               clip_limit, subset_keys, processed_keys, VJEPA_FRAMES_PER_CLIP,
-              getattr(args, 'local_data', None)),
+              args.local_data),
         daemon=True,
     )
     producer.start()
@@ -1057,7 +1057,7 @@ def _run_single_encoder(encoder: str, args):
     elif subset_keys:
         clip_limit = len(subset_keys)
     else:
-        clip_limit = get_total_clips(local_data=getattr(args, 'local_data', None))
+        clip_limit = get_total_clips(local_data=args.local_data)
         if clip_limit == 0:
             print("FATAL: Cannot determine clip count. Use --subset or --local-data with manifest.json")
             sys.exit(1)

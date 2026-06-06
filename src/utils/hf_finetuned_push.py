@@ -1,4 +1,4 @@
-"""Push trained V-JEPA / surgery checkpoints to Hugging Face Hub as MODEL repos.
+r"""Push trained V-JEPA / surgery checkpoints to Hugging Face Hub as MODEL repos.
 
 Each training run = its own model repo (e.g., anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep).
 Auto-generates README.md (model card) from training_summary.json + probe_history.jsonl,
@@ -41,6 +41,11 @@ except ImportError:
     load_dotenv = None
 
 from huggingface_hub import HfApi, repo_exists
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants — definitions, not configuration.
+_GB, _MB, _KB = 1e9, 1e6, 1e3   # byte-unit boundaries
+_DIV_EPS = 1e-9                 # zero-division guard for %-delta
 
 
 # Files that are NEVER needed by downstream consumers (surgery training or
@@ -51,8 +56,8 @@ _DEFAULT_IGNORE = [
     "*.tmp",
     "tmp_*",
     ".m09*_checkpoint*",        # hidden in-progress anchor (mid-run only)
-    "m09*_ckpt_latest.pt",      # training-resume anchor (no downstream use)
-    "m09*_ckpt_step*.pt",       # rotation-buffer step ckpts (no downstream use)
+    artifact("ckpt_latest_upload_skip"),      # training-resume anchor (no downstream use)
+    artifact("ckpt_step_upload_skip"),       # rotation-buffer step ckpts (no downstream use)
     "README.md.bak",
 ]
 
@@ -65,16 +70,16 @@ def _get_token():
 
 
 def _fmt_size(nbytes: int) -> str:
-    if nbytes >= 1e9: return f"{nbytes/1e9:.1f} GB"
-    if nbytes >= 1e6: return f"{nbytes/1e6:.1f} MB"
-    if nbytes >= 1e3: return f"{nbytes/1e3:.0f} KB"
+    if nbytes >= _GB: return f"{nbytes/_GB:.1f} GB"
+    if nbytes >= _MB: return f"{nbytes/_MB:.1f} MB"
+    if nbytes >= _KB: return f"{nbytes/_KB:.0f} KB"
     return f"{nbytes} B"
 
 
 def _load_training_metrics(source_dir: Path) -> dict:
     """Read training_summary.json + probe_history.jsonl tail; return flat dict."""
     metrics = {"history_steps": 0}
-    summary_path = source_dir / "training_summary.json"
+    summary_path = source_dir / artifact("training_summary")
     if summary_path.exists():
         with open(summary_path) as f:
             metrics["summary"] = json.load(f)
@@ -94,7 +99,7 @@ def _format_lift_row(key: str, label: str, fmt: str, initial: dict, final: dict)
     if key not in initial or key not in final:
         return ""
     i, f = initial[key], final[key]
-    base = abs(i) if abs(i) > 1e-9 else 1e-9
+    base = abs(i) if abs(i) > _DIV_EPS else _DIV_EPS
     delta_pct = (f - i) / base * 100
     arrow = "📈" if delta_pct > 0 else ("📉" if delta_pct < 0 else "➡️")
     return f"| `{key}` | {label} | {i:{fmt}} | {f:{fmt}} | {delta_pct:+.1f}% {arrow} |"
@@ -148,7 +153,10 @@ def _generate_model_card(repo_id: str, base_model: str, stage: str,
 → This checkpoint **statistically beats the frozen V-JEPA 2.1 baseline** on future-frame prediction over 1,398 held-out clips.
 """
 
-    n_clips = summary.get("clips_seen", "N/A")
+    # iter18 H3: strict — training_summary.json is written by THIS pipeline's
+    # m09 trainers with all card fields; a missing key = schema drift = crash
+    # the push (never publish a model card with silent 'N/A' science fields).
+    n_clips = summary["clips_seen"]
     n_clips_str = f"{n_clips:,}" if isinstance(n_clips, int) else str(n_clips)
 
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -185,14 +193,14 @@ This is a **`{stage}`** checkpoint from the FactorJEPA pipeline, a sequential SS
 | Stage | `{stage}` |
 | Architecture | V-JEPA 2.1 ViT-G (1664-dim, 48 layers, dense predictive L1 loss) |
 | Training data | 9,297 Indian-context clips (`data/eval_10k_local`) |
-| Epochs | {summary.get('epochs', 'N/A')} |
-| Steps | {summary.get('steps', 'N/A')} |
+| Epochs | {summary['epochs']} |
+| Steps | {summary['steps']} |
 | Clips seen | {n_clips_str} |
-| Batch size | {summary.get('batch_size', 'N/A')} |
-| Final LR | {summary.get('final_lr', 'N/A')} |
-| Final val JEPA loss | {summary.get('final_jepa_loss', 'N/A')} |
-| Best {summary.get('best_ckpt_metric', 'probe top-1')} | {summary.get('best_sel_score', summary.get('best_probe_top1', 'N/A'))} |
-| Drift control λ | {summary.get('lambda_reg', 0)} |
+| Batch size | {summary['batch_size']} |
+| Final LR | {summary['final_lr']} |
+| Final val JEPA loss | {summary['final_jepa_loss']} |
+| Best {summary['best_ckpt_metric']} | {summary['best_sel_score']} |
+| Drift control λ | {summary['lambda_reg']} |
 | Final encoder drift `‖Δ‖/‖init‖` | reported in training log (e.g., 2.46 % for the iter13 5-epoch run) |
 
 ## 📈 Training trajectory (initial → final, from `probe_history.jsonl`)
@@ -367,9 +375,12 @@ def main():
                    help="Local training-output dir (e.g., outputs/full/m09a1_pretrain_encoder)")
     p.add_argument("--repo-id", required=True,
                    help="HF model repo (e.g., anonymousML123/factorjepa-pretrain-vjepa21-vitg-5ep)")
-    p.add_argument("--base-model", default="facebook/v-jepa-2-vitg",
-                   help="HF id of the base model this was fine-tuned from")
-    p.add_argument("--stage", default="pretrain",
+    # iter18 H2: model id + stage are research-identifying values — no silent
+    # defaults (feedback_no_hardcoded_python_defaults); caller must declare.
+    p.add_argument("--base-model", required=True,
+                   help="HF id of the base model this was fine-tuned from "
+                        "(e.g., facebook/v-jepa-2-vitg)")
+    p.add_argument("--stage", required=True,
                    choices=["pretrain", "pretrain_2X",
                             "surgery_3stage_DI", "surgery_noDI"],
                    help="Training stage label (drives model-card framing + tags)")

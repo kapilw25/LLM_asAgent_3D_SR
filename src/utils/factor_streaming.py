@@ -139,7 +139,7 @@ def stream_interaction_tubes(
     mp4_bytes: bytes,
     mask_npz_path: Path,
     interaction_cfg: dict,
-    num_frames: int = 16,
+    num_frames: int,  # iter18 H6: caller passes (cfg data.num_frames)
     tmp_dir: str = None,
     clip_key: str = "",
 ) -> List[np.ndarray]:
@@ -169,7 +169,10 @@ def stream_interaction_tubes(
     globals, no RNG. Called per-step from StreamingFactorDataset; the caller
     picks a random tube via its seeded RNG.
     """
-    if not interaction_cfg.get("enabled", False):
+    # iter18 H3: strict — "interaction_cfg must contain enabled" is the declared
+    # contract (docstring above); a missing yaml key silently disabling D_I
+    # mining is exactly the masked-failure class CLAUDE.md bans.
+    if not interaction_cfg["enabled"]:
         return []
 
     data = np.load(mask_npz_path, allow_pickle=False)

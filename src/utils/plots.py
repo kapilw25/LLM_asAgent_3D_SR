@@ -19,6 +19,12 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import numpy as np
 from pathlib import Path
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_K = 1000                # axis tick K-unit
+_LOSS_CSV_MIN_COLS = 8   # m09 loss_log.csv legacy column floor (col 8 = val_loss)
+_MIN_TREND_POINTS = 2    # can't draw a trajectory from fewer points
 
 
 # ── Publication color palette (high contrast, colorblind-safe) ────────
@@ -149,15 +155,20 @@ def init_style():
     })
 
 
-def save_fig(fig, path_stem: str, dpi: int = 300):
+def save_fig(fig, path_stem: str, dpi: int = None):
     """Save figure as both .png and .pdf.
+
+    iter18 H6: dpi=None → pipeline.yaml plots.dpi (single source).
 
     Args:
         fig: matplotlib Figure.
         path_stem: Path without extension (e.g., "outputs/full/m09_ablation").
                    Saves path_stem.png and path_stem.pdf.
-        dpi: Resolution for PNG (default 150).
+        dpi: PNG resolution; None → pipeline.yaml plots.dpi.
     """
+    if dpi is None:
+        from utils.config import get_pipeline_config
+        dpi = get_pipeline_config()["plots"]["dpi"]
     path = Path(path_stem)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(path) + ".png", dpi=dpi, bbox_inches="tight", facecolor="white")
@@ -167,7 +178,7 @@ def save_fig(fig, path_stem: str, dpi: int = 300):
 
 
 def plot_val_loss_curves(ablation_dir, lambdas: list, winner: str,
-                         output_path: str = None, batch_size: int = 32):
+                         batch_size: int, output_path: str = None):  # iter18 H6: caller passes batch_size
     """Plot val_loss curves from loss_log.csv for all lambda ablation runs.
 
     X-axis shows number of CLIPS (step × batch_size), not steps.
@@ -193,7 +204,7 @@ def plot_val_loss_curves(ablation_dir, lambdas: list, winner: str,
     # Auto-detect batch_size from first lambda's training_summary
     for lam in lambdas:
         lam_dir = "lambda" + lam.replace(".", "_")
-        summary = ablation_dir / f"m09_{lam_dir}" / "training_summary.json"
+        summary = ablation_dir / f"m09_{lam_dir}" / artifact("training_summary")
         if summary.exists():
             s = json.load(open(summary))
             if s.get("batch_size"):
@@ -204,7 +215,7 @@ def plot_val_loss_curves(ablation_dir, lambdas: list, winner: str,
 
     for lam in lambdas:
         lam_dir = "lambda" + lam.replace(".", "_")
-        csv_path = ablation_dir / f"m09_{lam_dir}" / "loss_log.csv"
+        csv_path = ablation_dir / f"m09_{lam_dir}" / artifact("loss_log_csv")
 
         steps, val_losses = [], []
 
@@ -227,7 +238,7 @@ def plot_val_loss_curves(ablation_dir, lambdas: list, winner: str,
                                 continue
 
         if not val_losses:
-            summary = ablation_dir / f"m09_{lam_dir}" / "training_summary.json"
+            summary = ablation_dir / f"m09_{lam_dir}" / artifact("training_summary")
             if summary.exists():
                 s = json.load(open(summary))
                 if s.get("best_val_loss") and s["best_val_loss"] != float("inf"):
@@ -265,7 +276,7 @@ def plot_val_loss_curves(ablation_dir, lambdas: list, winner: str,
 
     # Format x-axis as "K clips"
     ax.xaxis.set_major_formatter(plt.FuncFormatter(
-        lambda x, _: f"{x/1000:.0f}K" if x >= 1000 else f"{x:.0f}"))
+        lambda x, _: f"{x/_K:.0f}K" if x >= _K else f"{x:.0f}"))
     ax.set_xlabel("Training Clips")
     ax.set_ylabel("Validation JEPA Loss")
     ax.set_title("Lambda Ablation: Validation Loss Curves")
@@ -305,11 +316,14 @@ def _read_loss_log(csv_path: str) -> dict:
                     val_loss.append(record["val_loss"])
                 elif "loss_jepa" in record:
                     steps_train.append(step)
+                    # iter18 H3: strict — every m09 writer emits all 5 keys
+                    # (m09a1 gained "stage" for schema parity); a missing key
+                    # is writer drift and must KeyError, not plot zeros.
                     jepa_loss.append(record["loss_jepa"])
-                    drift_loss.append(record.get("loss_drift", 0.0))
-                    total_loss.append(record.get("loss_total", 0.0))
-                    stages_train.append(record.get("stage", ""))
-                    lr_train.append(record.get("lr", 0.0))
+                    drift_loss.append(record["loss_drift"])
+                    total_loss.append(record["loss_total"])
+                    stages_train.append(record["stage"])
+                    lr_train.append(record["lr"])
         return {
             "steps_train": steps_train, "jepa_loss": jepa_loss,
             "drift_loss": drift_loss, "total_loss": total_loss,
@@ -322,10 +336,10 @@ def _read_loss_log(csv_path: str) -> dict:
         reader = csv.reader(f)
         next(reader)  # skip header
         for row in reader:
-            if len(row) < 8:
+            if len(row) < _LOSS_CSV_MIN_COLS:
                 continue
             step = int(row[0])
-            if row[2].strip() == "" and len(row) > 8 and row[8].strip():
+            if row[2].strip() == "" and len(row) > _LOSS_CSV_MIN_COLS and row[8].strip():
                 try:
                     steps_val.append(step)
                     val_loss.append(float(row[8]))
@@ -398,7 +412,7 @@ def plot_training_curves(runs: list, output_dir: str, title_prefix: str = "",
         if x_axis_mode == "clip_visits":
             # Read batch_size: training_summary.json → caller-provided → FATAL
             batch_size = run.get("batch_size")
-            summary_path = Path(run["csv_path"]).parent / "training_summary.json"
+            summary_path = Path(run["csv_path"]).parent / artifact("training_summary")
             if summary_path.exists():
                 s = json.load(open(summary_path))
                 batch_size = s["batch_size"]
@@ -417,7 +431,7 @@ def plot_training_curves(runs: list, output_dir: str, title_prefix: str = "",
         parsed_runs.append(data)
 
     def _fmt_x(x, _):
-        return f"{x/1000:.1f}K" if x >= 1000 else f"{x:.0f}"
+        return f"{x/_K:.1f}K" if x >= _K else f"{x:.0f}"
 
     x_label = "Training Clip-Visits (step × BS)" if x_axis_mode == "clip_visits" else "Optimizer Steps"
 
@@ -522,7 +536,7 @@ def plot_training_curves(runs: list, output_dir: str, title_prefix: str = "",
     if x_axis_mode == "steps":
         try:
             first_run = runs[0]
-            summary_path = Path(first_run["csv_path"]).parent / "training_summary.json"
+            summary_path = Path(first_run["csv_path"]).parent / artifact("training_summary")
             if summary_path.exists():
                 s = json.load(open(summary_path))
                 # iter17: support BOTH summary schemas — encoder cells (finalize_training)
@@ -614,7 +628,7 @@ def plot_combined_losses(jsonl_path, output_dir, title_prefix: str = "",
                 continue   # val rows have `val_loss` only
             rows.append(r)
 
-    if len(rows) < 2:
+    if len(rows) < _MIN_TREND_POINTS:
         print(f"  SKIP plot_combined_losses: only {len(rows)} train rows in {jsonl_path}")
         return
 
@@ -755,9 +769,8 @@ def plot_block_drift_heatmap(drift_history: list, output_dir, title_prefix: str 
     steps = np.array([r["step"] for r in drift_history])
     drift = np.array([r["rel_l2_per_block"] for r in drift_history])  # (T, n_blocks)
     n_blocks = drift.shape[1]
-    # Read freeze_below from the LAST record (it's a constant per-run, but
-    # tolerate it being missing — diagnostic should still render).
-    freeze_below = drift_history[-1].get("freeze_below", 0)
+    # iter18 H3: strict — track_block_drift_at_val ALWAYS writes freeze_below.
+    freeze_below = drift_history[-1]["freeze_below"]
 
     fig, (ax_h, ax_t) = plt.subplots(2, 1, figsize=(12, 10),
                                       gridspec_kw={"height_ratios": [1, 1]})
@@ -858,11 +871,13 @@ def plot_val_loss_with_kill_switch_overlay(probe_history: list, output_dir,
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(steps, val_losses, "o-", color=COLORS["blue"], linewidth=2.5,
             markersize=6, label="val_jepa")
-    best_step = best_state.get("step", best_state.get("global_step", -1))
+    # iter18 H3: unified best_state schema — update_best_state_on_score writes
+    # "step" in BOTH trainer families; m09a1 + the m09c _save_best closures write
+    # "top1" and "val_loss_at_best". Strict reads once a best exists.
+    best_step = best_state.get("step", -1)   # audit-ok: -1 = "no probe improved yet" sentinel (update_best init contract)
     if best_step >= 0:
-        # Best is tracked by probe_top1; horizontal line marks val_loss AT best step.
-        best_top1 = best_state.get("probe_top1", best_state.get("top1", -1.0))
-        best_at_step_val = best_state.get("val_loss_at_best", best_state.get("val_loss", 0.0))
+        best_top1 = best_state["top1"]
+        best_at_step_val = best_state["val_loss_at_best"]
         ax.axhline(best_at_step_val, color=COLORS["green"], linestyle=":",
                    linewidth=1.5, alpha=0.7,
                    label=f"best top1={best_top1:.4f} @ step {best_step}")

@@ -48,6 +48,11 @@ INDIAN_SPECIFIC_OBJECTS = {
 # iter16 (2026-05-20): moved to configs/pipeline.yaml > data_prep.confidence_floor
 # per CLAUDE.md "No hardcoded values in Python".
 from utils.config import get_pipeline_config as _get_pcfg
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_INDIAN_OBJS = 3   # >=3 India-specific objects = hard signal
+_MAX_EASY_OBJS = 2     # easy clips have at most 2 notable objects
 CONFIDENCE_FLOOR = _get_pcfg()["data_prep"]["confidence_floor"]   # was 0.7 literal
 
 
@@ -70,7 +75,7 @@ def hard_conditions(tag: dict) -> list[str]:
         hits.append("encroachment_heavy")
     objs = tag.get("notable_objects") or []
     n_indian = sum(1 for o in objs if o in INDIAN_SPECIFIC_OBJECTS)
-    if n_indian >= 3:
+    if n_indian >= _MIN_INDIAN_OBJS:
         hits.append(f"indian_objects_{n_indian}")
     return hits
 
@@ -86,7 +91,7 @@ def easy_conditions(tag: dict) -> bool:
     if not (tag.get("road_encroachment") == "clear" and is_high_conf(tag, "road_encroachment")):
         return False
     objs = tag.get("notable_objects") or []
-    if len(objs) > 2:
+    if len(objs) > _MAX_EASY_OBJS:
         return False
     return True
 
@@ -201,7 +206,10 @@ def main():
         "source_tags": str(tags_path),
         "exclusions": args.exclude,
         "n_excluded": n_excluded,
-        "schema": "matches data/subset_10k_local/subset_10k.json (clip_keys list of '<section>/<video_id>/<source_file>')",
+        # iter18 H7: schema-doc reference composed from the canonical subset
+        # name template (pipeline.yaml artifacts.subset_fmt) — no inline path.
+        "schema": (f"matches the canonical {artifact('subset_fmt').format(10)} subset schema "
+                   "(clip_keys list of '<section>/<video_id>/<source_file>')"),
         "indian_specific_objects": sorted(INDIAN_SPECIFIC_OBJECTS),
         "confidence_floor": CONFIDENCE_FLOOR,
     }
@@ -233,7 +241,7 @@ def main():
         print(f"  ✅ wrote {out_path} ({len(bucket)} clip_keys)")
 
     # 6) Stats summary
-    stats_path = output_dir / "difficulty_stats.json"
+    stats_path = output_dir / artifact("difficulty_stats")
     stats = {
         "n_total_clips": len(tags),
         "n_excluded_overlap": n_excluded,

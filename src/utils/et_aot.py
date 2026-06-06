@@ -22,6 +22,10 @@ import torch.nn as nn
 
 from utils.per_frame_features import forward_per_frame, reverse_frames
 
+# iter18 W7 (PLR2004): contracts.
+_FEATS_RANK = 2
+_MIN_CLASSES = 2
+
 
 @torch.no_grad()
 def compute_features(encoder, batch, num_frames, tubelet_size):
@@ -35,7 +39,7 @@ def compute_features(encoder, batch, num_frames, tubelet_size):
 def train_head(train_feats, train_labels, *, embed_dim, lr, epochs, weight_decay, batch_size,
                device, seed):
     """Train a linear head (D → 2). FAIL LOUD on empty/degenerate input. Deterministic seed."""
-    if train_feats.ndim != 2 or train_feats.shape[1] != embed_dim:
+    if train_feats.ndim != _FEATS_RANK or train_feats.shape[1] != embed_dim:
         raise RuntimeError(
             f"train_feats shape {tuple(train_feats.shape)} mismatches embed_dim={embed_dim}")
     if train_labels.ndim != 1 or train_labels.numel() != train_feats.shape[0]:
@@ -44,7 +48,7 @@ def train_head(train_feats, train_labels, *, embed_dim, lr, epochs, weight_decay
     if train_feats.shape[0] == 0:
         raise RuntimeError("train_head: 0 training examples — pipeline failure")
     unique = torch.unique(train_labels)
-    if unique.numel() < 2:
+    if unique.numel() < _MIN_CLASSES:
         raise RuntimeError(f"train_head: only 1 class in labels ({unique.tolist()}) — need both 0 and 1")
     g = torch.Generator(device="cpu").manual_seed(seed)
     head = nn.Linear(embed_dim, 2).to(device)

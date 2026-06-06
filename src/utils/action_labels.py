@@ -33,6 +33,10 @@ from sklearn.model_selection import StratifiedGroupKFold
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.checkpoint import save_json_checkpoint, load_json_checkpoint
 from utils.config import get_pipeline_config   # iter17: single-source the split-threshold defaults
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_KEY_PARTS = 3       # clip_key = <section>/<video_id>/<file> minimum depth
 
 
 # ── Constants ────────────────────────────────────────────────────────
@@ -78,7 +82,7 @@ def compute_magnitude_quartiles(flow_features_array: np.ndarray) -> list:
     so motion-class boundaries reflect AGENT motion, not camera-induced
     translation. Requires 23-D m04d output.
     """
-    if flow_features_array.shape[1] < 23:
+    if flow_features_array.shape[1] < get_pipeline_config()["motion"]["feature_dim"]:
         sys.exit(
             f"FATAL: compute_magnitude_quartiles requires 23-D motion features "
             f"(Phase 0 m04d 13→23-D); got {flow_features_array.shape[1]}-D. "
@@ -265,7 +269,7 @@ def _extract_video_id(clip_key: str) -> str:
     — no plausible upstream manifest produces such a shape).
     """
     parts = clip_key.split("/")
-    if len(parts) < 3:
+    if len(parts) < _MIN_KEY_PARTS:
         raise ValueError(
             f"clip_key '{clip_key}' has only {len(parts)} parts; need ≥3 "
             f"(<section>/.../<video_id>/<file>.mp4). "
@@ -335,10 +339,13 @@ def subsample_manifest_for_mode(mode: str, clip_keys: list,
     return out["clip_keys"]
 
 
-def stratified_split(records, train_pct=0.70, val_pct=0.15, seed=99,
+def stratified_split(records, train_pct=None, val_pct=None, seed=None,
                      *, min_per_split=MIN_PER_SPLIT_DEFAULT,
                      mode="full"):
     """Class-stratified train/val/test split.
+
+    iter18 H6: None → pipeline.yaml eval.action_split_* (single source; the
+    0.70/0.15/99 literals defined THE paper splits from a signature default).
 
     Returns ``{clip_key: "train"|"val"|"test"}``.
 
@@ -370,6 +377,10 @@ def stratified_split(records, train_pct=0.70, val_pct=0.15, seed=99,
     min_per_split clips in any split, ValueError with per-class diagnostic.
     POC↔FULL parity rule applies to POC↔FULL, NOT to SANITY.
     """
+    _e = get_pipeline_config()["eval"]
+    train_pct = _e["action_split_train_pct"] if train_pct is None else train_pct
+    val_pct = _e["action_split_val_pct"] if val_pct is None else val_pct
+    seed = _e["action_split_seed"] if seed is None else seed
     # SANITY fast path — clip-level stratified shuffle (no video-disjoint).
     if mode == "sanity":
         from sklearn.model_selection import StratifiedShuffleSplit
@@ -414,7 +425,7 @@ def stratified_split(records, train_pct=0.70, val_pct=0.15, seed=99,
     # 2 — Outer SGKF: carve out TEST.
     test_pct = 1.0 - train_pct - val_pct
     k_test   = int(round(1.0 / test_pct))           # 0.20 → 5 ; 0.15 → 7
-    if abs(1.0 / k_test - test_pct) > 0.03:
+    if abs(1.0 / k_test - test_pct) > get_pipeline_config()["eval"]["action_split_k_tolerance"]:
         raise ValueError(
             f"test_pct={test_pct:.3f} maps to k={k_test} (~{1/k_test:.3f}); "
             f"choose train_pct/val_pct such that (1 - train - val) = 1/k "
@@ -498,7 +509,7 @@ def write_action_labels_json(records, splits, output_path):
     counts = defaultdict(lambda: {"train": 0, "val": 0, "test": 0})
     for k, info in out.items():
         counts[info["class"]][info["split"]] += 1
-    save_json_checkpoint(dict(counts), output_path.parent / "class_counts.json")
+    save_json_checkpoint(dict(counts), output_path.parent / artifact("class_counts"))
     return out
 
 

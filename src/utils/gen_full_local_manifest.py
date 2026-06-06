@@ -41,10 +41,15 @@ def main() -> int:
                         help="Path to input tags.json (list of per-clip dicts).")
     parser.add_argument("--output", required=True, type=Path,
                         help="Path to output master manifest JSON.")
-    parser.add_argument("--seed", type=int, default=99,
-                        help="Seed stamp written to manifest (cosmetic; "
-                             "clip_keys are sorted deterministically).")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Seed stamp written to manifest (cosmetic; clip_keys are "
+                             "sorted deterministically). Default: pipeline.yaml data.manifest_seed.")
     args = parser.parse_args()
+    # iter18 H2: None → pipeline.yaml data.manifest_seed (single source).
+    if args.seed is None:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        from utils.config import get_pipeline_config
+        args.seed = get_pipeline_config()["data"]["manifest_seed"]
 
     if not args.tags_json.is_file():
         print(f"FATAL: --tags-json not found: {args.tags_json}", file=sys.stderr)

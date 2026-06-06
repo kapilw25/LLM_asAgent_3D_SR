@@ -38,7 +38,7 @@ from scipy.ndimage import gaussian_filter
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import (
     add_subset_arg, add_local_data_arg,
-    load_subset,
+    load_subset, get_pipeline_config,
     load_train_config_with_extends,
 )
 from utils.checkpoint import save_json_checkpoint, load_json_checkpoint
@@ -54,6 +54,13 @@ from utils.cache_policy import (
 # iter13 v13 FIX-18 (2026-05-07): factor-quality observability — see plan_code_dev.md
 # Layer D. Propagates m10 quality block + adds D_L/D_A specific metrics.
 from utils.mask_metrics import aggregate_percentiles
+from utils.data_paths import artifact, factor_manifest_in  # iter18 W4: canonical names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_F = get_pipeline_config()["m11_factors"]   # D_A tube-extraction recipe (yaml)
+_MIN_BBOX_PX = _F["min_bbox_px"]
+_MIN_TUBE_FRAMES = _F["min_tube_frames"]
+_BG_EPS = 1e-6   # degenerate background floor
 
 
 
@@ -63,9 +70,9 @@ from utils.mask_metrics import aggregate_percentiles
 # hf_outputs upload ships the entire bundle without extra orchestration.
 def _resolve_output_dir(args) -> Path:
     """m11 output dir: --output-dir > <--local-data>/m11_factor_datasets/ > FATAL."""
-    if getattr(args, "output_dir", None):
+    if args.output_dir:
         return Path(args.output_dir)
-    if getattr(args, "local_data", None):
+    if args.local_data:
         return Path(args.local_data) / "m11_factor_datasets"
     print("FATAL: m11_factor_datasets requires either --output-dir or --local-data")
     sys.exit(2)
@@ -73,9 +80,9 @@ def _resolve_output_dir(args) -> Path:
 
 def _resolve_input_dir(args) -> Path:
     """m11 input (m10 output) dir: --input-dir > <--local-data>/m10_sam_segment/ > FATAL."""
-    if getattr(args, "input_dir", None):
+    if args.input_dir:
         return Path(args.input_dir)
-    if getattr(args, "local_data", None):
+    if args.local_data:
         return Path(args.local_data) / "m10_sam_segment"
     print("FATAL: m11_factor_datasets requires either --input-dir or --local-data "
           "(to locate m10's masks). Run m10_sam_segment.py first.")
@@ -86,7 +93,7 @@ def _resolve_input_dir(args) -> Path:
 
 def make_layout_only(frames: np.ndarray, agent_mask: np.ndarray,
                      method: str, blur_sigma: float,
-                     feather_sigma: float = 3.0) -> np.ndarray:
+                     feather_sigma: float) -> np.ndarray:  # iter18 H6: caller passes (worker_cfg)
     """D_L: suppress agents, preserve layout. Feathered mask edges. Returns (T, H, W, C) uint8."""
     # Feather mask: soft blend instead of hard binary (prevents shortcut learning)
     alpha = gaussian_filter(agent_mask.astype(np.float32),
@@ -110,7 +117,7 @@ def make_layout_only(frames: np.ndarray, agent_mask: np.ndarray,
 
 def make_agent_only(frames: np.ndarray, layout_mask: np.ndarray,
                     method: str, matte_factor: float,
-                    feather_sigma: float = 3.0) -> np.ndarray:
+                    feather_sigma: float) -> np.ndarray:  # iter18 H6: caller passes (worker_cfg)
     """D_A: suppress background, preserve agents. Feathered mask edges. Returns (T, H, W, C) uint8."""
     # Feather mask: soft edges prevent shortcut learning at mask boundaries
     alpha = gaussian_filter(layout_mask.astype(np.float32),
@@ -170,10 +177,10 @@ def make_interaction_tubes_from_centroids(frames: np.ndarray, interactions: list
             x1 = max(0, cx - half)
             x2 = min(W, cx + half)
 
-            if y2 - y1 > 10 and x2 - x1 > 10:
+            if y2 - y1 > _MIN_BBOX_PX and x2 - x1 > _MIN_BBOX_PX:
                 tube_frames.append(frames[t, y1:y2, x1:x2, :])
 
-        if len(tube_frames) >= 4:
+        if len(tube_frames) >= _MIN_TUBE_FRAMES:
             target_h = int(np.median([f.shape[0] for f in tube_frames]))
             target_w = int(np.median([f.shape[1] for f in tube_frames]))
             resized = []
@@ -236,10 +243,10 @@ def make_interaction_tubes_from_bboxes(frames: np.ndarray, interactions: list,
             x1 = max(0, x1 - w_margin)
             x2 = min(W, x2 + w_margin)
 
-            if y2 - y1 > 10 and x2 - x1 > 10 and t < frames.shape[0]:
+            if y2 - y1 > _MIN_BBOX_PX and x2 - x1 > _MIN_BBOX_PX and t < frames.shape[0]:
                 tube_frames.append(frames[t, y1:y2, x1:x2, :])
 
-        if len(tube_frames) >= 4:
+        if len(tube_frames) >= _MIN_TUBE_FRAMES:
             target_h = int(np.median([f.shape[0] for f in tube_frames]))
             target_w = int(np.median([f.shape[1] for f in tube_frames]))
             resized = []
@@ -254,11 +261,13 @@ def make_interaction_tubes_from_bboxes(frames: np.ndarray, interactions: list,
 # ── Paper Visualizations ─────────────────────────────────────────────
 
 def plot_factor_samples(dl_dir: Path, da_dir: Path, output_dir: Path,
-                        n_samples: int = 6):
+                        n_samples: int = None):  # iter18 H6: None → pipeline.yaml plots.factor_samples_n
     """Paper-quality grid: D_L (agents blurred) | D_A (background suppressed) for n_samples clips.
 
     Shows middle frame of each patched clip. Saved as m11_factor_samples.png/.pdf.
     """
+    if n_samples is None:
+        n_samples = get_pipeline_config()["plots"]["factor_samples_n"]
     init_style()
 
     dl_files = sorted(dl_dir.glob("*.npy"))[:n_samples]
@@ -290,12 +299,14 @@ def plot_factor_samples(dl_dir: Path, da_dir: Path, output_dir: Path,
 
 
 def plot_interaction_samples(di_dir: Path, manifest: dict, output_dir: Path,
-                            n_samples: int = 8):
+                            n_samples: int = None):  # iter18 H6: None → pipeline.yaml plots.interaction_samples_n
     """Paper-quality grid of D_I interaction tubes. 2 columns: frame 0 | middle frame.
 
     Shows spatial crop around interacting agent pairs across time.
     Saved as m11_interaction_samples.png/.pdf.
     """
+    if n_samples is None:
+        n_samples = get_pipeline_config()["plots"]["interaction_samples_n"]
     init_style()
 
     tube_files = sorted(di_dir.glob("*.npy"))[:n_samples]
@@ -398,7 +409,7 @@ def plot_factor_per_clip(dl_dir: Path, da_dir: Path, di_dir: Path,
 
         # D_I — find first tube for this clip
         di_frame = None
-        di_tubes = sorted(di_dir.glob(f"{safe_key}_tube*.npy"))
+        di_tubes = sorted(di_dir.glob(f"{safe_key}{artifact('tube_glob')}"))
         if di_tubes:
             tube = np.load(di_tubes[0])
             di_frame = tube[tube.shape[0] // 2]
@@ -445,7 +456,7 @@ def plot_factor_per_clip(dl_dir: Path, da_dir: Path, di_dir: Path,
 
 def plot_factor_per_videoclip(manifest: dict, dl_dir: Path, da_dir: Path,
                               di_dir: Path, output_dir: Path,
-                              local_data: str, top_n: int = 20):
+                              local_data: str, top_n: int):  # iter18 H6: caller passes
     """2x2 video grid (Original | D_L | D_A | D_I) per clip — for top N best clips.
 
     Output: H.264-encoded MP4s (web-browser compatible) at
@@ -530,7 +541,7 @@ def plot_factor_per_videoclip(manifest: dict, dl_dir: Path, da_dir: Path,
             # Load factor arrays — D_L always exists; D_A/D_I may be missing.
             dl = np.load(dl_dir / f"{safe_key}.npy")
             da = np.load(da_dir / f"{safe_key}.npy") if (da_dir / f"{safe_key}.npy").exists() else None
-            di_files = sorted(di_dir.glob(f"{safe_key}_tube*.npy"))
+            di_files = sorted(di_dir.glob(f"{safe_key}{artifact('tube_glob')}"))
             di = np.load(di_files[0]) if di_files else None
 
             _write_grid_video(
@@ -561,8 +572,9 @@ def _write_grid_video(out_path: Path, orig: np.ndarray, dl: np.ndarray,
                      T: int, panel_h: int, panel_w: int,
                      grid_h: int, grid_w: int, fps: int):
     """Encode 2x2 grid MP4 (H.264, yuv420p) for one clip. Browser-compatible."""
-    n_tubes = info.get("n_interaction_tubes", 0)
-    pct = info.get("agent_pct", 0.0) * 100
+    # iter18 H3: strict — build_factor_entry sets both keys on every entry.
+    n_tubes = info["n_interaction_tubes"]
+    pct = info["agent_pct"] * 100
 
     def _label(panel: np.ndarray, text: str):
         # White text with black outline for legibility
@@ -642,7 +654,7 @@ def plot_factor_stats(manifest: dict, output_dir: Path):
 
 # ── Parallel worker ──────────────────────────────────────────────────
 
-def _get_cpu_workers(cap: int = 32) -> int:
+def _get_cpu_workers(cap: int) -> int:  # iter18 H6: caller passes
     """Cgroup/container-aware usable CPU count. Linux: sched_getaffinity(0)."""
     try:
         n = len(os.sched_getaffinity(0))
@@ -712,7 +724,7 @@ def _compute_da_signal_to_bg_ratio(da_frames: np.ndarray,
     if fg.size == 0 or bg.size == 0:
         return 0.0
     bg_mean = float(bg.mean())
-    if bg_mean < 1e-6:
+    if bg_mean < _BG_EPS:
         return 0.0
     return float(fg.mean() / bg_mean)
 
@@ -738,7 +750,7 @@ def _process_one_clip(args: tuple) -> tuple:
     dl_file = dl_dir / f"{safe_key}.npy"
     da_file = da_dir / f"{safe_key}.npy"
     if dl_file.exists() and da_file.exists():
-        n_tubes = len(sorted(di_dir.glob(f"{safe_key}_tube*.npy")))
+        n_tubes = len(sorted(di_dir.glob(f"{safe_key}{artifact('tube_glob')}")))
         return (clip_key, {
             "has_D_L": True, "has_D_A": True,
             "has_D_I": n_tubes > 0,
@@ -756,7 +768,8 @@ def _process_one_clip(args: tuple) -> tuple:
     # --regen-D_I: rebuild D_I tubes only, leave D_L/D_A .npy untouched.
     # Reads cached mask.npz (centroids + interactions_json populated by
     # m10 --interactions-only), decodes MP4 for tube crop, writes tubes to di_dir.
-    if cfg.get("regen_di_only", False):
+    # iter18 H3: strict — worker_cfg (m11:~1158) sets every key explicitly.
+    if cfg["regen_di_only"]:
         data = np.load(mask_file, allow_pickle=True)
         interactions = json.loads(str(data["interactions_json"])) if "interactions_json" in data else []
         centroids = json.loads(str(data["centroids_json"])) if "centroids_json" in data else {}
@@ -816,8 +829,8 @@ def _process_one_clip(args: tuple) -> tuple:
     # iter10 2026-04-22: has_D_I / n_interaction_tubes now populate from
     # seg_entry["n_interactions"] (mined by m10 or m10 --interactions-only)
     # so StreamingFactorDataset knows which clips have D_I without disk scan.
-    streaming_skip = (cfg.get("streaming", False)
-                      and cfg.get("verify_100_set") is not None
+    streaming_skip = (cfg["streaming"]
+                      and cfg["verify_100_set"] is not None
                       and clip_key not in cfg["verify_100_set"])
     if streaming_skip:
         agent_pct = seg_entry["agent_pixel_ratio"]
@@ -825,7 +838,7 @@ def _process_one_clip(args: tuple) -> tuple:
         return (clip_key, {
             "has_D_L": agent_pct <= cfg["max_agent_pct"],
             "has_D_A": agent_pct >= cfg["min_agent_pct"],
-            "has_D_I": n_ints > 0 and cfg.get("interaction_mining_enabled", False),
+            "has_D_I": n_ints > 0 and cfg["interaction_mining_enabled"],
             "n_interaction_tubes": n_ints,
             "agent_pct": agent_pct,
             "tube_category_pairs": [],
@@ -1012,7 +1025,7 @@ def main():
         output_dir = _resolve_output_dir(args)
         masks_dir = _resolve_input_dir(args) / "masks"
         dl_dir, da_dir, di_dir = output_dir / "D_L", output_dir / "D_A", output_dir / "D_I"
-        manifest_file = output_dir / "factor_manifest.json"
+        manifest_file = factor_manifest_in(output_dir)   # iter18 H1: single-sourced name
         if not manifest_file.exists():
             print(f"FATAL: {manifest_file} not found. Run without --plot first.")
             sys.exit(1)
@@ -1023,7 +1036,7 @@ def main():
         plot_factor_per_clip(dl_dir, da_dir, di_dir, masks_dir, output_dir)
         plot_factor_stats(manifest, output_dir)
         # Top-20 video grid (re-decodes original MP4s — needs --local-data)
-        local_data_for_video = getattr(args, "local_data", None)
+        local_data_for_video = args.local_data
         if local_data_for_video:
             plot_factor_per_videoclip(manifest, dl_dir, da_dir, di_dir,
                                       output_dir, local_data_for_video, top_n=20)
@@ -1052,13 +1065,13 @@ def main():
     da_dir.mkdir(parents=True, exist_ok=True)
     di_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest_file = output_dir / "factor_manifest.json"
+    manifest_file = factor_manifest_in(output_dir)   # iter18 H1: single-sourced name
     if args.regen_di:
         print(f"\n[--regen-D_I] Will rebuild D_I tubes only "
               f"(D_L/D_A .npy preserved on disk). Existing manifest: {manifest_file.exists()}")
 
     # Load segments metadata from m10 (MANDATORY)
-    segments_file = input_dir / "segments.json"
+    segments_file = input_dir / artifact("segments")
     if not segments_file.exists():
         print(f"FATAL: {segments_file} not found. Run m10_sam_segment.py first.")
         sys.exit(1)
@@ -1082,7 +1095,7 @@ def main():
     interaction_mining_enabled = interaction_cfg["enabled"]
     interaction_category_blacklist = interaction_cfg["category_pair_blacklist"]   # #77
 
-    local_data = getattr(args, "local_data", None)
+    local_data = args.local_data
     subset_keys = load_subset(args.subset) if args.subset else None
 
     # iter13 v13 FIX-12 (2026-05-07): SANITY must align m11's clip set with the
@@ -1276,8 +1289,8 @@ def main():
         "m10_temporal_iou_m5":     aggregate_percentiles(m10q_tiou),   # propagated M5
     }
     save_json_checkpoint(factor_manifest_quality,
-                         output_dir / "factor_manifest_quality.json")
-    print(f"  Quality: {output_dir / 'factor_manifest_quality.json'} "
+                         output_dir / artifact("factor_manifest_quality"))
+    print(f"  Quality: {output_dir / artifact("factor_manifest_quality")} "
           f"(blur n={len(blur_vals)}, sig/bg n={len(sbg_vals)}, m10 n={len(m10q_stab)})")
 
     # Paper visualizations (D_L vs D_A, D_I tubes, stats, per-clip 2x2 grids)

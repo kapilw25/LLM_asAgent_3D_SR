@@ -80,7 +80,7 @@ def export_metadata_jsonl(tags: list, clips_dir: Path) -> dict:
 
 def print_summary(stats: dict, clips_dir: Path):
     """Print export summary."""
-    print(f"\n=== METADATA EXPORT SUMMARY ===")
+    print("\n=== METADATA EXPORT SUMMARY ===")
     print(f"Directories with metadata.jsonl: {stats['total_dirs']}")
     print(f"Clips mapped:                    {stats['total_clips']}")
     print(f"Fields per clip:                 {stats['fields_per_clip']}")

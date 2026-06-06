@@ -57,6 +57,7 @@ from utils.predictor_eval import (
 )
 from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 
 _PCFG = get_pipeline_config()
 CHECKPOINT_EVERY = _PCFG["streaming"]["checkpoint_every"]
@@ -106,7 +107,7 @@ def run_forward_stage(args, wb) -> None:
         print("  all requested metrics cached — nothing to do")
         return
 
-    labels = load_action_labels(args.action_probe_root / "action_labels.json")
+    labels = load_action_labels(args.action_probe_root / artifact("action_labels"))
     test_keys = [k for k, info in labels.items() if info["split"] == "test"]
     if not test_keys:
         sys.exit("FATAL: 0 test clips in action_labels.json — re-run the labels stage")
@@ -248,7 +249,7 @@ def run_paired_per_variant_stage(args, wb) -> None:
             "pairwise_deltas": deltas,
             "lower_is_better": METRICS[m][1],
         }
-    save_json_checkpoint(out, args.output_root / "predictor_temporal_per_variant.json")
+    save_json_checkpoint(out, args.output_root / artifact("predictor_temporal_per_variant"))
     log_metrics(wb, {"n_metrics": len(out["metrics"])})
     print(json.dumps(out, indent=2))
 
@@ -272,8 +273,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="probe_action output dir (action_labels.json test split)")
     p.add_argument("--output-root", type=Path, required=True)
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT)
-    p.add_argument("--batch-size", type=int, default=4,
-                   help="clips per forward (predictor fwd is heavy; OOM-subbatched downward)")
+    p.add_argument("--batch-size", type=int,
+                   default=_PCFG["gpu"]["inference_predictor_temporal_bs"],
+                   help="clips per forward (predictor fwd is heavy; OOM-subbatched "
+                        "downward). Default: pipeline.yaml gpu.inference_predictor_temporal_bs.")
     p.add_argument("--seed", type=int, default=_PCFG["probe"]["seed"])
     add_cache_policy_arg(p)
     add_wandb_args(p)

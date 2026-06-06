@@ -16,6 +16,15 @@ def _data_cfg() -> dict:
     return get_pipeline_config()["data"]
 
 
+def artifact(key: str) -> str:
+    """Canonical artifact basename/glob/suffix from pipeline.yaml `artifacts:`.
+
+    iter18 W4 (2026-06-06): single source for every filename one module writes
+    and another reads. Strict lookup — unknown key = KeyError = fail loud.
+    Usage: out_dir / artifact("test_metrics")."""
+    return get_pipeline_config()["artifacts"][key]
+
+
 def corpus_manifest_path(local_data) -> Path:
     """The master/corpus manifest (all clips). Filename from pipeline.yaml
     data.master_manifest_name — same source run_train.sh uses for MASTER_MANIFEST."""
@@ -40,8 +49,8 @@ def factor_manifest_in(factor_dir_path) -> Path:
 
 
 def masks_dir(local_data) -> Path:
-    """m10 SAM mask dir: <local_data>/<masks_subdir>/masks."""
-    return Path(local_data) / _data_cfg()["masks_subdir"] / "masks"
+    """m10 SAM mask dir: <local_data>/<masks_subdir>/masks (inner name from yaml)."""
+    return Path(local_data) / _data_cfg()["masks_subdir"] / _data_cfg()["masks_inner_dirname"]
 
 
 def shards_dir(local_data) -> Path:
@@ -62,8 +71,9 @@ def find_video_shards(local_data) -> list:
     Name-anchored to `subset-*.tar` so it NEVER grabs masks-*.tar / D_*-*.tar
     (those live in sibling m10/m11 subdirs). May return [] (callers preserve
     the prior empty-glob behaviour: downstream FATALs on 0 clips)."""
-    sub = sorted(shards_dir(local_data).glob("subset-*.tar"))
-    return sub if sub else sorted(Path(local_data).glob("subset-*.tar"))
+    g = artifact("video_shard_glob")
+    sub = sorted(shards_dir(local_data).glob(g))
+    return sub if sub else sorted(Path(local_data).glob(g))
 
 
 def video_shard_glob(local_data) -> str:
@@ -71,11 +81,12 @@ def video_shard_glob(local_data) -> str:
     find_video_shards' subdir-then-root resolution. FAIL LOUD if neither
     layout has shards (load_dataset would otherwise yield a silent empty
     stream / cryptic error)."""
+    g = artifact("video_shard_glob")
     sub = shards_dir(local_data)
-    if any(sub.glob("subset-*.tar")):
-        return str(sub / "subset-*.tar")
-    if any(Path(local_data).glob("subset-*.tar")):
-        return str(Path(local_data) / "subset-*.tar")
+    if any(sub.glob(g)):
+        return str(sub / g)
+    if any(Path(local_data).glob(g)):
+        return str(Path(local_data) / g)
     raise FileNotFoundError(
-        f"no subset-*.tar under {sub}/ or {local_data}/ — run "
+        f"no {g} under {sub}/ or {local_data}/ — run "
         f"src/m00d_download_subset.py or hf_outputs.py download-data first")

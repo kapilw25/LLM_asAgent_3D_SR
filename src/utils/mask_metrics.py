@@ -28,6 +28,10 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_FRAMES_FOR_IOU = 2   # temporal IoU needs a frame pair
+_GEOM_EPS = 1e-6          # degenerate-contour floor (perimeter/area)
+
 
 def stability_score(mask: np.ndarray, dilation_offsets: tuple = (1, 2)) -> float:
     """SAM-style mask stability under threshold-cutoff perturbation.
@@ -79,7 +83,7 @@ def temporal_iou_per_object(per_object: dict) -> float:
     object_means = []
     for _obj_id, by_frame in per_object.items():
         frames = sorted(by_frame.keys())
-        if len(frames) < 2:
+        if len(frames) < _MIN_FRAMES_FOR_IOU:
             continue
         pair_ious = []
         for i in range(len(frames) - 1):
@@ -115,7 +119,7 @@ def compactness(mask: np.ndarray) -> float:
         return 0.0
     area = float(sum(cv2.contourArea(c) for c in contours))
     perim = float(sum(cv2.arcLength(c, True) for c in contours))
-    if perim < 1e-6 or area < 1e-6:
+    if perim < _GEOM_EPS or area < _GEOM_EPS:
         return 0.0
     return float(min(1.0, 4 * np.pi * area / (perim ** 2)))
 

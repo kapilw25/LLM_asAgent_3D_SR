@@ -39,6 +39,7 @@ from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.progress import make_pbar
 from utils.vjepa2_imports import get_attentive_classifier
 from utils.wandb_utils import log_metrics
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 
 
 def _make_probe(d_in: int, n_classes: int, depth: int):
@@ -205,7 +206,7 @@ def stream_train_attentive_probe(args, model, encoder_kind: str, crop: int, embe
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    jsonl_path = output_dir / "train_log.jsonl"
+    jsonl_path = output_dir / artifact("train_log_jsonl")
     log_f = open(jsonl_path, "w")
     tmp_dir_root = output_dir / "tmp_decode_stream"
 

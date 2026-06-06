@@ -44,6 +44,14 @@ data:
   # local_data_dir:      "data/full_local"         # iter16 FULL (when m04/m10/m11 ready)
   master_manifest_name:  "eval_10k.json"           # iter15 / iter16 SANITY+POC master
   # master_manifest_name: "full_local.json"        # iter16 FULL (after M3 generates it)
+  manifest_seed: 99      # gen_full_local_manifest stamp (cosmetic; iter18 H2: was argparse default=99)
+  raw_clips_allow_glob: "clips/**/*.mp4"   # iter18 H1: HF raw-clip download allow_pattern (was config.py literal)
+  # hf_outputs upload-full/download-full per-dir shard naming contract — pack, purge,
+  # mirror-protect and unpack all key on this ONE template (glob derived in code).
+  # iter18 H5: was a module-level literal in hf_outputs.py.
+  full_shard_template: "_full-{shard:05d}.tar"
+  # utils/config.setup_ram_cache tmpfs root (iter18 H5: was Path literal in config.py)
+  ram_cache_dir: "/dev/shm/video_clips_cache"
 
   # iter17 (2026-05-26): canonical m10/m11 OUTPUT subdir conventions — SINGLE SOURCE
   # consumed by src/utils/data_paths.py + run_train.sh. Previously duplicated as
@@ -52,6 +60,7 @@ data:
   # → divergence risk, same class as the train-pool leakage). Now one place.
   factor_subdir:         "m11_factor_datasets"     # m11_factor_datasets.py output dir
   masks_subdir:          "m10_sam_segment"         # m10_sam_segment.py output dir (masks/ inside)
+  masks_inner_dirname:   "masks"                   # the inner dir m10 writes .npz masks into (iter18 H1)
   shard_subdir:          "m00d_download_subset"    # m00d_download_subset.py output dir (subset-*.tar inside)
   factor_manifest_name:  "factor_manifest.json"    # m11 manifest filename
 
@@ -73,10 +82,113 @@ data:
   # well under HF's per-file limit.
   max_tar_shard_gb_full: 20.0
 
+# ── Canonical artifact filenames (iter18 W4 H1-purge) ─────────────────────────
+# SINGLE SOURCE for every file NAME one module writes and another reads (or a
+# module writes and re-reads on resume). src/*.py NEVER spell these literals —
+# they read utils.data_paths.artifact("<key>"). Directory roots stay CLI-passed;
+# this block owns only the basenames/globs/suffixes.
+artifacts:
+  # labels + tags
+  action_labels: "action_labels.json"
+  taxonomy_labels: "taxonomy_labels.json"
+  tags: "tags.json"
+  manifest: "manifest.json"
+  class_counts: "class_counts.json"
+  # training outputs (m09*)
+  training_summary: "training_summary.json"
+  loss_log_csv: "loss_log.csv"
+  student_encoder: "student_encoder.pt"
+  student_best: "student_best.pt"
+  motion_aux_head: "motion_aux_head.pt"
+  ckpt_best_suffix: "_best.pt"            # f"{CHECKPOINT_PREFIX}{suffix}"
+  block_drift_history_suffix: "_block_drift_history.json"
+  # probe_action / m12a
+  probe_head: "probe.pt"
+  probe_ckpt_suffix: "_ckpt.npz"          # per-encoder resume file (atomic .tmp derived)
+  test_metrics: "test_metrics.json"
+  train_log_jsonl: "train_log.jsonl"
+  test_predictions: "test_predictions.npy"
+  test_clip_keys: "test_clip_keys.npy"
+  features_test: "features_test.npy"
+  clip_keys_test: "clip_keys_test.npy"
+  probe_paired_delta: "probe_paired_delta.json"
+  per_dim_acc: "per_dim_acc.json"
+  # m12b motion-cos
+  pooled_features_test: "pooled_features_test.npy"
+  per_clip_motion_cos: "per_clip_motion_cos.npy"
+  intra_inter_ratio: "intra_inter_ratio.json"
+  probe_motion_cos_paired: "probe_motion_cos_paired.json"
+  # m12d future-mse
+  per_clip_mse: "per_clip_mse.npy"
+  clip_keys: "clip_keys.npy"
+  aggregate_mse: "aggregate_mse.json"
+  probe_future_mse_per_variant: "probe_future_mse_per_variant.json"
+  # m12e predictor-temporal
+  predictor_temporal_per_variant: "predictor_temporal_per_variant.json"
+  # m10 / m11
+  segments: "segments.json"
+  masks_shard_glob: "masks-*.tar"
+  tube_glob: "_tube*.npy"
+  # m04d motion features (sidecars .paths.npy/.meta.json derived from this stem)
+  motion_features: "motion_features.npy"
+  # misc cross-module
+  video_shard_glob: "subset-*.tar"
+  profile_data: "profile_data.json"
+  summary: "summary.json"
+  ablation_winner: "ablation_winner.json"
+  # batch-2 (iter18 H1 tail)
+  train_split: "train_split.json"
+  val_split: "val_split.json"
+  test_split: "test_split.json"
+  factor_manifest_quality: "factor_manifest_quality.json"
+  verify_top20_manifest: "verify_top20_manifest.json"
+  overlap_aug_a: "overlap_augA.npy"
+  overlap_aug_b: "overlap_augB.npy"
+  overlap_keys: "overlap_keys.npy"
+  per_clip_motion_aux_l1: "per_clip_motion_aux_l1.npy"
+  aggregate_motion_aux_l1: "aggregate_motion_aux_l1.json"
+  m13_hero_table: "m13_hero_table.csv"
+  m13_frozen_scorecard: "m13_frozen_scorecard.csv"
+  encoder_temporal_per_variant: "encoder_temporal_per_variant.json"
+  multi_task_head: "multi_task_head.pt"
+  stats: "stats.json"
+  tags_fmt: "tags_{}.json"            # m04b per-model tag files
+  tags_sanity_fmt: "tags_sanity_{}.json"
+  subset_fmt: "subset_{}k.json"       # m00c derived subset name
+  # checkpoint suffix/glob family (composed onto CHECKPOINT_PREFIX)
+  ckpt_latest_suffix: "_latest.pt"
+  ckpt_step_glob: "_step*.pt"
+  ckpt_stage_glob: "_stage*.pt"
+  ckpt_any_glob: "_*.pt"
+  probe_head_glob: "probe_*.pt"
+  ckpt_latest_upload_skip: "m09*_ckpt_latest.pt"   # hf_finetuned_push exclude
+  ckpt_step_upload_skip: "m09*_ckpt_step*.pt"
+  # m10/m11 tar-shard templates (hf_outputs pack/unpack)
+  masks_shard_template: "masks-{shard:05d}.tar"
+  dl_shard_template: "D_L-{shard:05d}.tar"
+  da_shard_template: "D_A-{shard:05d}.tar"
+  di_shard_template: "D_I-{shard:05d}.tar"
+  # eval-stage output dir names (graft_aggregates composition)
+  probe_action_dir: "probe_action"
+  probe_motion_cos_dir: "probe_motion_cos"
+  probe_future_mse_dir: "probe_future_mse"
+  probe_taxonomy_dir: "probe_taxonomy"
+  predictor_temporal_dir: "predictor_temporal"
+  # m00 prep tools (single-writer but resume/reader pairs)
+  clip_durations: "clip_durations.json"
+  video_durations: "video_durations.json"
+  difficulty_stats: "difficulty_stats.json"
+  word_frequency: "word_frequency.json"
+  city_matrix: "city_matrix.json"
+  m04b_vlm_comparison: "m04b_vlm_comparison.json"
+
 # -- Streaming & checkpointing --
 streaming:
   max_retries: 5              # HF stream reconnect attempts
   checkpoint_every: 500       # clips between checkpoint saves (m04/m05)
+  tar_reader_queue: 256       # iter18 H6: iter_clips_parallel max_queue (was signature default)
+  heartbeat_interval_s: 30.0  # iter18 H6: hf_outputs _UploadHeartbeat pulse (was signature default)
+  factor_stream_base_seed: 42 # iter18 H6: StreamingFactorDataset determinism base (was signature default)
   # iter13 (2026-05-05): probe extraction (utils/frozen_features.py) gets a
   # COARSER flush cadence. Probe Stage 2 train-split = ~6964 clips / ~30 min;
   # at the m04/m05 default of 500 that's 13 mid-flushes, each writing the
@@ -213,6 +325,13 @@ gpu:
   #    24 fits without thrashing on RTX Pro 6000 / V-JEPA 2.1 ViT-G (1.85 B params, bf16).
   inference_adapted_probe_bs: 44
   training_adapted_probe_bs: 24
+  inference_predictor_temporal_bs: 4   # m12e: clips per predictor forward (heavy; OOM-subbatched downward). iter18 H2: was argparse default=4
+  # utils/gpu_watchdog.py ops tool (iter18 H2: were argparse defaults 50/5/30/30)
+  watchdog:
+    threshold_pct: 50      # alert if GPU util < this for window_min
+    window_min: 5          # minutes of sustained low util before alert
+    interval_s: 30         # seconds between checks
+    cooldown_min: 30       # minutes between repeat alerts
 
 # -- Evaluation --
 eval:
@@ -222,6 +341,48 @@ eval:
   motion_checkpoint_every: 200   # m04d: checkpoint interval
   llava_num_frames: 16           # m04: LLaVA-NeXT frame count (8-32 range)
   overlap_subsample: 30000       # m05c: random subsample for True Overlap@K (stat. sufficient for bootstrap CI)
+  # m07 UMAP hyperparams (iter18 H2: were argparse defaults 15 / 0.1)
+  umap_n_neighbors: 15
+  umap_min_dist: 0.1
+  # m12b feature sharing with probe_action's cache (iter18 H2: was argparse default=True)
+  motion_cos_share_features: true
+  motion_aux_align_to: 16        # iter18 H6: apply_motion_aux_head_to_features frame alignment (was signature default)
+  # m04e/probe-label stratified split (iter18 H6: were stratified_split signature defaults)
+  action_split_train_pct: 0.7
+  action_split_val_pct: 0.15
+  action_split_seed: 99
+  action_split_k_tolerance: 0.03   # iter18 W7: |1/k_test − test_pct| sanity tolerance (was literal)
+  bca_max_n: 50000                 # iter18 W7: bootstrap switches BCa→percentile above this N (was literal ×2)
+
+# -- Plot rendering (iter18 H6: were signature defaults) --
+plots:
+  dpi: 300                       # save_fig raster resolution
+  factor_samples_n: 6            # m11 plot_factor_samples
+  interaction_samples_n: 8       # m11 plot_interaction_samples
+  progress_recent_window_sec: 60.0
+  rate_print_window_s: 30.0     # iter18 W7: windowed-throughput print cadence (was `>= 30` ×8 GPU loops)  # make_pbar/_RecentRateBar windowed-rate horizon
+
+# -- m11 D_A tube-extraction recipe (iter18 W7: were inline literals ×2 code paths) --
+m11_factors:
+  min_bbox_px: 10        # reject agent boxes smaller than this (degenerate SAM masks)
+  min_tube_frames: 4     # min frames for a valid agent tube
+
+# -- m10 mask-quality gates (iter18 W7: were duplicated literals in m10_sam_segment
+#    AND utils/m10_merge — classic divergence risk; ONE source now) --
+m10_quality:
+  pixel_ratio_min: 0.002        # mean agent-pixel ratio floor (below = ghost masks)
+  pixel_ratio_max: 0.50         # ceiling (above = layout invisible)
+  mask_confidence_min: 0.4      # mean SAM confidence floor
+  clips_with_agents_min: 0.5    # fraction of clips with ≥1 agent
+
+# -- Training guards (iter18 H6) --
+train_guards:
+  min_encoder_rel_l2: 1.0e-07    # assert_encoder_diverged_from_init threshold (was signature default)
+  oom_watchdog:                  # utils/cgroup_monitor.start_oom_watchdog (were signature defaults)
+    threshold_warn: 0.8
+    threshold_crit: 0.9
+    threshold_imminent: 0.97
+    interval_sec: 10
 
 # -- Probe-head training (Stage 3 of run_eval.sh, src/probe_action.py) --
 # This is the ATTENTIVE PROBE CLASSIFIER — ~140K params trained on FROZEN
@@ -549,8 +710,54 @@ data_prep:
 hf_repos:
   dataset: anonymousML123/walkindia-200k         # single public repo (was 3-repo split: part1+part2+single)
   outputs: anonymousML123/factorjepa-outputs     # m04-m11 + m09 training outputs
+  remote_data_prefix: "data"                     # iter18 H1: m03 path_in_repo dir on the HF dataset side
+
+# ── Pointers to sibling config files (iter18 H1: were src literals). pipeline.yaml
+#    itself is the one unavoidable bootstrap literal (chicken-and-egg) — pragma'd. ──
+config_paths:
+  yt_videos_raw: "configs/YT_videos_raw.json"
+  tag_taxonomy: "configs/tag_taxonomy.json"
+  paired_deltas: "configs/eval/paired_deltas.yaml"
+  default_model: "configs/model/vjepa2_1.yaml"
+  probe_encoders_registry: "configs/eval/probe_encoders.yaml"
+  base_optimization: "configs/train/base_optimization.yaml"
+
+# ── Shell dispatch maps (iter18 H7: were case-statement literals in run_train.sh /
+#    run_eval.sh; shells resolve via scripts/lib/yaml_extract.py) ──
+backbone_model_configs:
+  vjepa_2_1_vitG: "configs/model/vjepa2_1.yaml"        # 2B ViT-G (canonical)
+  vjepa_2_1_vitg: "configs/model/vjepa2_1_vitg.yaml"   # 1B ViT-g scale axis
+  vjepa_2_1_vitL: "configs/model/vjepa2_1_vitL.yaml"   # 300M ViT-L scale axis
+  vjepa_2_0_vitg: "configs/model/vjepa2_0.yaml"        # 2.0 ViT-g version axis
+backbone_checkpoints:
+  vjepa_2_1_vitg: "checkpoints/vjepa2_1_vitg_384.pt"
+  vjepa_2_1_vitL: "checkpoints/vjepa2_1_vitl_dist_vitG_384.pt"
+  vjepa_2_0_vitg: "checkpoints/vjepa2_0_vitg_384.pt"
+  vjepa_2_vitL_256: "checkpoints/vjepa2_0_vitl_256.pt"
+  vjepa_1_vitL: "checkpoints/vjepa1_vitL_16.pt"
+  vjepa_1_vitH: "checkpoints/vjepa1_vitH_16.pt"
+arm_train_configs:
+  pretrain_encoder: "configs/train/pretrain_encoder.yaml"
+  pretrain_head: "configs/train/pretrain_head.yaml"
+  surgery_3stage_DI_encoder: "configs/train/surgery_3stage_DI_encoder.yaml"
+  surgery_noDI_encoder: "configs/train/surgery_2stage_noDI_encoder.yaml"
+  surgery_3stage_DI_head: "configs/train/surgery_3stage_DI_head.yaml"
+  surgery_noDI_head: "configs/train/surgery_2stage_noDI_head.yaml"
+  surgical_autorgn_encoder: "configs/train/surgical_autorgn_encoder.yaml"
+  surgery_raw_encoder: "configs/train/surgery_raw_encoder.yaml"
+  full_ft_encoder: "configs/train/full_ft_encoder.yaml"
+  lpft_encoder: "configs/train/lpft_encoder.yaml"
+  peft_lora_encoder: "configs/train/peft_lora_encoder.yaml"
+  peft_dora_encoder: "configs/train/peft_dora_encoder.yaml"
+  cassle_encoder: "configs/train/cassle_encoder.yaml"
+  ewc_encoder: "configs/train/ewc_encoder.yaml"
+output_roots:
+  sanity: "outputs/sanity"
+  poc: "outputs/poc"
+  full: "outputs/full"
 
 # -- Motion features (m04d_motion_features.py) --
 motion:
   feature_dim:         23            # was FEATURE_DIM: 13 global + 10 fg-camera-subtracted (Phase 0, iter15)
   n_frame_pairs:       16            # was N_FRAME_PAIRS: frame pairs per clip for RAFT inference
+  max_target_drop_pct: 0.05          # iter18 W7: FATAL if >5% of labeled clips lack motion targets

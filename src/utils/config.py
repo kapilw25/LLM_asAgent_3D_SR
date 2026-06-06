@@ -10,6 +10,12 @@ from pathlib import Path
 
 import yaml
 
+# iter18 W7 (PLR2004): semantic named constants.
+_KV_PARTS = 2          # `key=value` split arity
+_LIST_PREVIEW_N = 5    # entries shown before truncation
+_GET_YAML_ARGC = 4     # config.py get-yaml <path> <key>
+_MIN_CLI_ARGC = 2      # config.py <cmd>
+
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -26,10 +32,10 @@ OUTPUTS_DIR = OUTPUTS_ROOT / "full"
 OUTPUTS_DATA_PREP_DIR = OUTPUTS_ROOT / "data_prep"
 OUTPUTS_PROFILE_DIR = OUTPUTS_ROOT / "profile"
 
-# Input data (moved from src/utils/ to configs/)
+# Input data (moved from src/utils/ to configs/). iter18 H1: filenames now come
+# from pipeline.yaml config_paths.* — bound in the "Module-level constants from
+# YAML" section below (get_pipeline_config isn't defined yet at this line).
 CONFIGS_DIR = PROJECT_ROOT / "configs"
-YT_VIDEOS_JSON = CONFIGS_DIR / "YT_videos_raw.json"
-TAG_TAXONOMY_JSON = CONFIGS_DIR / "tag_taxonomy.json"
 
 # Ensure directories exist
 for d in [VIDEOS_DIR, CLIPS_DIR, SHARDS_DIR, OUTPUTS_DIR, OUTPUTS_DATA_PREP_DIR,
@@ -66,7 +72,7 @@ def ensure_clips_exist() -> bool:
             repo_id=HF_DATASET_REPO,
             repo_type="dataset",
             local_dir=DATA_DIR / "hf_download",
-            allow_patterns=["clips/**/*.mp4"],
+            allow_patterns=[get_pipeline_config()["data"]["raw_clips_allow_glob"]],   # iter18 H1
         )
 
         # Mirror entire clips tree (hierarchical structure)
@@ -91,7 +97,7 @@ def ensure_clips_exist() -> bool:
 # See "Module-level constants from YAML" section.
 
 # ── Pipeline config (clip limits from YAML, not hardcoded) ───────────
-PIPELINE_CONFIG_PATH = PROJECT_ROOT / "configs" / "pipeline.yaml"
+PIPELINE_CONFIG_PATH = PROJECT_ROOT / "configs" / "pipeline.yaml"   # audit-ok: config-bootstrap — the one literal that makes yaml reachable (chicken-and-egg)
 _pipeline_cfg = None
 
 def get_pipeline_config() -> dict:
@@ -251,7 +257,7 @@ HF_DATASET_REPO = _hf_cfg["dataset"]                          # was "anonymousML
 # probe_action.run_paired_delta_stage. Moved to YAML per src/CLAUDE.md
 # "No hardcoded values in Python — YAML or runtime discovery only".
 # Single source of truth: configs/eval/paired_deltas.yaml.
-PAIRED_DELTAS_PATH = PROJECT_ROOT / "configs" / "eval" / "paired_deltas.yaml"
+PAIRED_DELTAS_PATH = PROJECT_ROOT / get_pipeline_config()["config_paths"]["paired_deltas"]   # iter18 H1: yaml pointer
 _paired_deltas_cfg = None
 
 def get_paired_deltas() -> list:
@@ -432,9 +438,10 @@ def load_merged_config(model_config: str, train_config: str) -> dict:
     # an empty dict — guard explicitly.
     if merged.get("probe") is None:
         merged["probe"] = {}
-    merged["probe"]["subset"]     = f"{_local_data_dir}/val_split.json"
+    _arts = get_pipeline_config()["artifacts"]   # iter18 H1: canonical names
+    merged["probe"]["subset"]     = f"{_local_data_dir}/{_arts['val_split']}"
     merged["probe"]["local_data"] = _local_data_dir
-    merged["probe"]["tags_path"]  = f"{_local_data_dir}/tags.json"
+    merged["probe"]["tags_path"]  = f"{_local_data_dir}/{_arts['tags']}"
 
     return merged
 
@@ -442,7 +449,8 @@ def load_merged_config(model_config: str, train_config: str) -> dict:
 def get_model_config(model_config: str = None) -> dict:
     """Load a model config YAML (standalone, no merge). Useful for m05 frozen eval."""
     if model_config is None:
-        model_config = str(CONFIGS_DIR / "model" / "vjepa2_1.yaml")
+        # iter18 H1: default-model pointer from pipeline.yaml config_paths.
+        model_config = str(PROJECT_ROOT / get_pipeline_config()["config_paths"]["default_model"])
     path = Path(model_config)
     if not path.is_absolute():
         path = PROJECT_ROOT / path
@@ -505,7 +513,7 @@ def get_total_clips(local_data: str = None, subset_file: str = None) -> int:
         keys = load_subset(subset_file)
         return len(keys)
     if local_data:
-        manifest = Path(local_data) / "manifest.json"
+        manifest = Path(local_data) / get_pipeline_config()["artifacts"]["manifest"]
         if manifest.exists():
             data = json.load(open(manifest))
             # iter15 audit (2026-05-15): FAIL LOUD on malformed manifest (CLAUDE.md
@@ -553,17 +561,18 @@ QWEN_MODEL_ID = _pcfg["vlm"]["qwen"]
 BAKEOFF_CLIP_COUNT = _pcfg["bakeoff"]["clips"]
 
 # POC / output dirs
-SUBSET_FILE = PROJECT_ROOT / "data" / "subset_10k.json"
 OUTPUTS_SANITY_DIR = OUTPUTS_ROOT / "sanity"
 OUTPUTS_POC_DIR = OUTPUTS_ROOT / "poc"
 BAKEOFF_DIR = DATA_DIR / "bakeoff"
 
-# Output files (legacy shortcuts — prefer get_encoder_files() for encoder-specific paths)
-EMBEDDINGS_FILE = OUTPUTS_DIR / "embeddings.npy"
-TAGS_FILE = OUTPUTS_DIR / "tags.json"
-UMAP_PLOT_PNG = OUTPUTS_DIR / "m08_umap.png"
-UMAP_PLOT_PDF = OUTPUTS_DIR / "m08_umap.pdf"
-METRICS_FILE = OUTPUTS_DIR / "m06_metrics.json"
+# iter18 H1: deleted dead legacy shortcuts (SUBSET_FILE / EMBEDDINGS_FILE /
+# TAGS_FILE / UMAP_PLOT_* / METRICS_FILE) — zero consumers outside legacy/;
+# get_encoder_files() is the encoder-specific path API.
+
+# iter18 H1: config-file pointers bound from pipeline.yaml config_paths.*
+_cfg_paths = get_pipeline_config()["config_paths"]
+YT_VIDEOS_JSON = PROJECT_ROOT / _cfg_paths["yt_videos_raw"]
+TAG_TAXONOMY_JSON = PROJECT_ROOT / _cfg_paths["tag_taxonomy"]
 
 
 # ── Encoder registry — loaded from configs/pipeline.yaml → encoders section ──
@@ -609,7 +618,9 @@ def add_encoder_arg(parser):
 
     Accepts registered encoders + any custom name (for Ch10 adapted variants).
     """
-    parser.add_argument("--encoder", default="vjepa",
+    # iter18 H2: was default="vjepa" — a silent encoder selection (the exact
+    # class feedback_no_hardcoded_python_defaults bans). Callers must declare.
+    parser.add_argument("--encoder", required=True,
                         help=f"Encoder name (registered: {', '.join(ENCODER_REGISTRY.keys())}; "
                              "or any custom name for adapted variants)")
 
@@ -682,11 +693,11 @@ def verify_npy_matches_subset(arr_or_path, subset_path: str, label: str = "embed
               f"{expected_n} ({subset_path}).")
         if isinstance(arr_or_path, (str, Path)):
             print(f"  Cache file: {arr_or_path}")
-            print(f"  This .npy was produced by a prior run on a DIFFERENT subset.")
+            print("  This .npy was produced by a prior run on a DIFFERENT subset.")
         else:
-            print(f"  Likely cause: partial worker run or stale checkpoint.")
-        print(f"  Fix: re-run upstream with --cache-policy 2 (or set "
-              f"CACHE_POLICY_ALL=2 for the eval chain).")
+            print("  Likely cause: partial worker run or stale checkpoint.")
+        print("  Fix: re-run upstream with --cache-policy 2 (or set "
+              "CACHE_POLICY_ALL=2 for the eval chain).")
         sys.exit(1)
 
 
@@ -897,40 +908,9 @@ def mark_video_processed(video_id: str, clip_count: int):
         json.dump(processed, f)
 
 
-def load_embeddings_and_tags() -> tuple:
-    """
-    Load embeddings and tags, verify alignment.
-    Returns (embeddings, tags) or exits on error.
-    """
-    import numpy as np
-
-    # Load embeddings
-    if not EMBEDDINGS_FILE.exists():
-        print(f"ERROR: Embeddings not found: {EMBEDDINGS_FILE}")
-        print("Run m05_vjepa_embed.py first")
-        sys.exit(1)
-
-    embeddings = np.load(EMBEDDINGS_FILE).astype(np.float32)
-    print(f"Loaded embeddings: {embeddings.shape}")
-
-    # Load tags
-    if not TAGS_FILE.exists():
-        print(f"ERROR: Tags not found: {TAGS_FILE}")
-        print("Run m04_vlm_tag.py first")
-        sys.exit(1)
-
-    with open(TAGS_FILE, 'r') as f:
-        tags = json.load(f)
-    print(f"Loaded tags: {len(tags)} clips")
-
-    # Verify alignment
-    if len(tags) != embeddings.shape[0]:
-        print(f"WARNING: Mismatch - {embeddings.shape[0]} embeddings vs {len(tags)} tags")
-        min_len = min(len(tags), embeddings.shape[0])
-        embeddings = embeddings[:min_len]
-        tags = tags[:min_len]
-
-    return embeddings, tags
+# iter18 H1: load_embeddings_and_tags DELETED — zero callers (m06-era legacy);
+# consumed the also-deleted EMBEDDINGS_FILE/TAGS_FILE module constants.
+# Restore from git history if ever needed.
 
 
 # =============================================================================
@@ -938,7 +918,8 @@ def load_embeddings_and_tags() -> tuple:
 # =============================================================================
 DEFAULT_BATCH_SIZE = get_pipeline_config()["gpu"]["default_batch_size"]
 DEFAULT_NUM_WORKERS = get_pipeline_config()["gpu"]["default_num_workers"]
-RAM_CACHE_DIR = Path("/dev/shm/video_clips_cache")
+# iter18 H5: yaml-sourced (was Path("/dev/shm/video_clips_cache") literal).
+RAM_CACHE_DIR = Path(get_pipeline_config()["data"]["ram_cache_dir"])
 
 
 def setup_ram_cache(clip_paths: list, use_cache: bool = True, cache_subdir: str = "clips") -> tuple:
@@ -1014,26 +995,9 @@ def cleanup_ram_cache(cache_subdir: str = "clips"):
         print("RAM cache cleaned up")
 
 
-def get_deduplicated_clips() -> list:
-    """
-    Get clip paths from m04's deduplicated output (embeddings.paths.npy).
-    Falls back to all clips if embeddings not available.
-
-    Returns:
-        List of Path objects for clips
-    """
-    import numpy as np
-
-    paths_file = EMBEDDINGS_FILE.with_suffix('.paths.npy')
-
-    if paths_file.exists():
-        clip_paths = np.load(paths_file, allow_pickle=True).tolist()
-        print(f"Loaded {len(clip_paths)} deduplicated clips from {paths_file.name}")
-        return [Path(p) for p in clip_paths]
-    else:
-        print(f"WARNING: {paths_file.name} not found. Run m05_vjepa_embed.py first.")
-        print("Falling back to all clips (may cause misalignment with embeddings)")
-        return get_all_clips()
+# iter18 H1: get_deduplicated_clips DELETED — zero callers (m04/m05-era legacy
+# with a silent fall-back-to-all-clips branch, the exact masked-failure class
+# CLAUDE.md bans). Restore from git history if ever needed.
 
 
 def restore_original_path(cache_path: Path, clips_dir: Path = None) -> str:
@@ -1048,7 +1012,7 @@ def restore_original_path(cache_path: Path, clips_dir: Path = None) -> str:
         return str(restored)
     # Fallback: old-style single __ split
     parts = cache_name.split("__", 1)
-    if len(parts) == 2:
+    if len(parts) == _KV_PARTS:
         return str(clips_dir / parts[0] / parts[1])
     return str(cache_path)
 
@@ -1088,7 +1052,7 @@ def check_output_exists(output_paths: list, description: str = "output") -> bool
             print(f"  {p}/ ({count} files)")
         else:
             print(f"  {p}")
-    if len(existing) > 5:
+    if len(existing) > _LIST_PREVIEW_N:
         print(f"  ... and {len(existing) - 5} more")
     print(f"{'='*50}")
 
@@ -1121,14 +1085,14 @@ Examples:
   python -u src/utils/config.py get-json outputs/full/m09_lambda0_001/training_summary.json epochs
 """
 
-    if len(sys.argv) < 2:
+    if len(sys.argv) < _MIN_CLI_ARGC:
         print(usage)
         sys.exit(1)
 
     cmd = sys.argv[1]
 
     if cmd == "get-yaml":
-        if len(sys.argv) != 4:
+        if len(sys.argv) != _GET_YAML_ARGC:
             print("Usage: get-yaml <yaml_path> <key_path>")
             sys.exit(1)
         import yaml
@@ -1137,7 +1101,7 @@ Examples:
         print(_get_nested(cfg, sys.argv[3]))
 
     elif cmd == "get-json":
-        if len(sys.argv) != 4:
+        if len(sys.argv) != _GET_YAML_ARGC:
             print("Usage: get-json <json_path> <key>")
             sys.exit(1)
         with open(sys.argv[2]) as f:

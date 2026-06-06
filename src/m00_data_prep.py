@@ -22,12 +22,16 @@ import argparse
 import json
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 # Add src to path for utils import
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.progress import make_pbar
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_TIER2_ID = 2
 
 
 def extract_youtube_id(url: str) -> str:
@@ -496,7 +500,7 @@ def create_city_matrix(data: dict) -> dict:
 
     # Summary
     tier1_total = sum(m["total"] for c, m in matrix.items() if m.get("tier") == 1)
-    tier2_total = sum(m["total"] for c, m in matrix.items() if m.get("tier") == 2)
+    tier2_total = sum(m["total"] for c, m in matrix.items() if m.get("tier") == _TIER2_ID)
     other_total = sum(m["total"] for c, m in matrix.items() if m.get("tier") == "other")
 
     return {
@@ -693,7 +697,7 @@ def main():
     print(f"Tier2 cities:    {meta['tier2_cities_filled']} filled, {meta['tier2_cities_empty']} empty")
     print(f"Monument videos: {meta['total_monument_videos']}")
     print(f"Monuments:       {meta['total_monuments']}")
-    print(f"---")
+    print("---")
     print(f"GRAND TOTAL:     {meta['grand_total']} videos")
 
     # Task 3: Duplicate ID check
@@ -731,13 +735,13 @@ def main():
 
         # Save word frequency
         output_dir.mkdir(parents=True, exist_ok=True)
-        freq_file = output_dir / "word_frequency.json"
+        freq_file = output_dir / artifact("word_frequency")
         with open(freq_file, 'w', encoding='utf-8') as f:
             json.dump(freq_data, f, indent=2, ensure_ascii=False)
         print(f"Saved: {freq_file}")
 
         # Save matrix
-        matrix_file = output_dir / "city_matrix.json"
+        matrix_file = output_dir / artifact("city_matrix")
         with open(matrix_file, 'w', encoding='utf-8') as f:
             json.dump(matrix_data, f, indent=2, ensure_ascii=False)
         print(f"Saved: {matrix_file}")
@@ -747,7 +751,7 @@ def main():
         print_summary_tables(data, matrix_data)
         print_word_frequency(freq_data)
 
-        print(f"\nFULL COMPLETED")
+        print("\nFULL COMPLETED")
 
 
 if __name__ == "__main__":

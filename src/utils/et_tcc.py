@@ -32,6 +32,10 @@ from scipy.stats import kendalltau
 
 from utils.per_frame_features import forward_per_frame
 
+# iter18 W7 (PLR2004): contracts.
+_FEATS_RANK = 2
+_MIN_UNIQUE = 2
+
 
 @torch.no_grad()
 def compute_per_frame(encoder, batch, num_frames, tubelet_size):
@@ -43,7 +47,7 @@ def _soft_nn_indices(feats_a, feats_b, *, temperature):
     """For each frame i in A, return the soft-NN frame index in B.
     soft_idx_i = Σ_j softmax_j(<a_i, b_j> / τ) · j   (Dwibedi eq. 1).
     feats_a, feats_b: (T_eff, D). Returns (T_eff,) soft indices."""
-    if feats_a.ndim != 2 or feats_b.ndim != 2:
+    if feats_a.ndim != _FEATS_RANK or feats_b.ndim != _FEATS_RANK:
         raise RuntimeError(
             f"_soft_nn_indices expects 2-D per-clip; got A {feats_a.shape}, B {feats_b.shape}")
     if temperature <= 0:
@@ -78,7 +82,7 @@ def kendalls_tau_alignment(feats_a, feats_b):
     excludes NaN-τ pairs via nanmean and REPORTS the degenerate count so it stays visible."""
     sim = feats_a @ feats_b.T                                # (T_a, T_b)
     hard_b_idx = sim.argmax(dim=1).cpu().numpy()
-    if np.unique(hard_b_idx).size < 2:
+    if np.unique(hard_b_idx).size < _MIN_UNIQUE:
         return float("nan")                                  # τ undefined for a constant ranking
     tau, _p = kendalltau(np.arange(hard_b_idx.size), hard_b_idx)
     return float(tau)

@@ -155,13 +155,18 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
       - surgery.stages (m09c-specific)
     """
     # 1) data overrides
-    if getattr(args, "subset", None):
+    # iter18 (2026-06-06) H4 purge: every flag below is registered by
+    # add_m09_common_args / the shared subset+local-data adders in ALL 8
+    # trainers → direct attribute access; a missing flag is a wiring bug and
+    # must AttributeError (errors_N_fixes #79 — getattr defaults let None
+    # propagate into multi-hour GPU runs).
+    if args.subset:
         cfg["data"]["subset"] = args.subset
-    if getattr(args, "local_data", None):
+    if args.local_data:
         cfg["data"]["local_data"] = args.local_data
-    if getattr(args, "val_subset", None):
+    if args.val_subset:
         cfg["data"]["val_subset"] = args.val_subset
-    if getattr(args, "val_local_data", None):
+    if args.val_local_data:
         cfg["data"]["val_local_data"] = args.val_local_data
 
     # 2) optimization overrides
@@ -169,9 +174,9 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
     me = cfg["optimization"]["max_epochs"]
     if isinstance(me, dict):
         cfg["optimization"]["max_epochs"] = me[mode_key]
-    if getattr(args, "batch_size", None) is not None:
+    if args.batch_size is not None:
         cfg["optimization"]["batch_size"] = args.batch_size
-    if getattr(args, "max_epochs", None) is not None:
+    if args.max_epochs is not None:
         cfg["optimization"]["max_epochs"] = args.max_epochs
     # Defensive flatten of memory-saver flags (D4-fix: handle scalar overrides).
     for k in ("use_8bit_optim", "gradient_checkpointing", "paged_optim"):
@@ -186,7 +191,7 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
         cfg["checkpoint"]["saves_per_epoch"] = spe[mode_key]
 
     # 3) drift_control: --lambda-reg CLI + auto-disable on λ=0
-    if getattr(args, "lambda_reg", None) is not None:
+    if args.lambda_reg is not None:
         cfg["drift_control"]["lambda_reg"] = args.lambda_reg
         if args.lambda_reg == 0:
             cfg["drift_control"]["enabled"] = False
@@ -194,11 +199,11 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
     # 4) probe block — per-mode flatten + CLI path overrides
     if "probe" in cfg:
         probe_cfg = cfg["probe"]
-        if getattr(args, "probe_subset", None):
+        if args.probe_subset:
             probe_cfg["subset"] = args.probe_subset
-        if getattr(args, "probe_local_data", None):
+        if args.probe_local_data:
             probe_cfg["local_data"] = args.probe_local_data
-        if getattr(args, "probe_tags", None):
+        if args.probe_tags:
             probe_cfg["tags_path"] = args.probe_tags
         # Per-mode flatten of all gate-style booleans.
         for k in ("enabled", "best_ckpt_enabled", "kill_switch_enabled",
@@ -206,7 +211,7 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
                   "bwt_trigger_enabled", "use_permanent_val"):
             if k in probe_cfg and isinstance(probe_cfg[k], dict):
                 probe_cfg[k] = probe_cfg[k][mode_key]
-        if getattr(args, "no_probe", False):
+        if args.no_probe:
             probe_cfg["enabled"] = False
 
     # 5) Delegate to multi_task + motion_aux per-mode flatten + CLI overrides
@@ -243,10 +248,10 @@ def setup_probe_pipeline(cfg: dict, args, output_dir, *,
     from utils.training import build_probe_clips
     from utils.action_labels import load_action_labels
 
-    # Mode token for default action_labels path.
-    if getattr(args, "SANITY", False):
+    # Mode flags are registered by add_m09_common_args in all trainers (H4 purge).
+    if args.SANITY:
         mode_subdir = "sanity"
-    elif getattr(args, "POC", False):
+    elif args.POC:
         mode_subdir = "poc"
     else:
         mode_subdir = "full"
@@ -265,12 +270,14 @@ def setup_probe_pipeline(cfg: dict, args, output_dir, *,
     if not probe_cfg["enabled"]:
         return None, None
 
-    # Resolve probe data paths (CLI > yaml).
-    subset_path = getattr(args, "probe_subset", None) or probe_cfg.get("subset")
-    local_data_path = getattr(args, "probe_local_data", None) or probe_cfg.get("local_data")
-    tags_path = getattr(args, "probe_tags", None) or probe_cfg.get("tags_path")
-    if not subset_path or not local_data_path:
-        return None, None
+    # iter18 (2026-06-06) H3/H4 purge: merge_m09_common_config has ALREADY merged
+    # the CLI overrides into probe_cfg (lines 197-202) before any trainer calls
+    # this — re-resolving "CLI or yaml" here was per-module re-derivation with a
+    # silent-disable fallback (the 2026-05-03 "probe silently disabled all FULL
+    # run" incident class). Strict reads: missing key = KeyError = fail loud.
+    subset_path = probe_cfg["subset"]
+    local_data_path = probe_cfg["local_data"]
+    tags_path = probe_cfg["tags_path"]
 
     # FAIL LOUD on missing keys (CLAUDE.md): cfg["data"][...] not cfg.get(...).
     num_frames = cfg["data"]["num_frames"]
@@ -287,14 +294,14 @@ def setup_probe_pipeline(cfg: dict, args, output_dir, *,
         train_pool_keys=train_pool_keys,
     )
 
-    # Action labels path: CLI > derived default.
-    if getattr(args, "probe_action_labels", None):
-        action_labels_path = Path(args.probe_action_labels)
-    else:
-        action_labels_path = (Path(__file__).resolve().parent.parent.parent /
-                              f"outputs/{mode_subdir}/probe_action/action_labels.json")
-
-    probe_labels = (load_action_labels(action_labels_path)
-                    if action_labels_path.exists() else None)
+    # --probe-action-labels is required=True in add_m09_common_args → always
+    # present; the old derived-default else-branch was dead code (H4 purge).
+    action_labels_path = Path(args.probe_action_labels)
+    if not action_labels_path.exists():
+        print(f"❌ FATAL [probe]: action_labels.json not found at {action_labels_path} "
+              f"(mode={mode_subdir}). Run probe_action.py --stage labels first.",
+              file=sys.stderr)
+        sys.exit(3)
+    probe_labels = load_action_labels(action_labels_path)
 
     return probe_clips, probe_labels

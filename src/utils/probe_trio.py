@@ -51,6 +51,11 @@ from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.predictor_eval import safe_metric
 from utils.vjepa2_imports import get_apply_masks
 
+# iter18 W7 (PLR2004): contracts/guards.
+_POOLED_RANK = 2     # (N, D) pooled embeddings
+_MIN_LOOCV_N = 10    # kNN-centroid LOOCV stability floor (matches utils.training)
+_PRED_TUPLE_LEN = 2  # predictor returns (z_pred, z_context)
+
 
 # ─── Math helpers (vectorised) ────────────────────────────────────────────
 
@@ -60,7 +65,7 @@ def _per_clip_motion_score(emb: np.ndarray, labels: np.ndarray) -> tuple:
     Returns (motion_score (N,), pos_mean (N,), neg_mean (N,)).
     No Python loop — `S = emb_n @ emb_n.T` then class-mask reductions.
     """
-    if emb.ndim != 2:
+    if emb.ndim != _POOLED_RANK:
         raise ValueError(f"emb must be (N, D); got {emb.shape}")
     norms = np.linalg.norm(emb, axis=1, keepdims=True).clip(min=1e-12)
     emb_n = emb / norms
@@ -149,7 +154,7 @@ def compute_metric_trio(
     mask_gen,
     cfg: dict,
     device: torch.device,
-    dist_layers: int = 4,
+    dist_layers: int,  # iter18 H6: caller passes (cfg model.n_output_distillation)
     motion_aux_head=None,                # iter15 Phase 6 C1 (2026-05-16)
     encoder_cache=None,                  # iter15 D15 (2026-05-16): persistent dict, caller-owned
     encoder_frozen: bool = False,         # iter15 D15: caller asserts encoder is not changing across calls
@@ -187,7 +192,7 @@ def compute_metric_trio(
 
     # 1. Filter to labeled clips. probe_clips items are (key, tags, tensor).
     keyed = [(c[0], c[2]) for c in probe_clips if c[0] in probe_labels]
-    if len(keyed) < 10:
+    if len(keyed) < _MIN_LOOCV_N:
         raise ValueError(
             f"compute_metric_trio: too few labeled probe clips ({len(keyed)}) — "
             f"need >= 10 for stable LOOCV top-1.")
@@ -372,7 +377,7 @@ def compute_metric_trio(
             # at the m_pred positions.
             h_target = apply_masks(h_concat, [m_pred])
             out = predictor(z_concat, [m_enc], [m_pred], **({"mod": "video", "mask_index": 0} if cfg["model"]["n_output_distillation"] > 1 else {}))
-            if isinstance(out, tuple) and len(out) == 2:
+            if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
                 out = out[0]   # (z_pred, z_context) → keep z_pred only
             if out.shape != h_target.shape:
                 # Defensive: skip the L1 batch but keep pooled (top1+motion still valid)

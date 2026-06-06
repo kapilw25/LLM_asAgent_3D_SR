@@ -94,6 +94,11 @@ from utils.probe_labels import ensure_probe_labels_for_mode
 # schema + plot calls so outputs/{poc,full}/m09c_surgery_*_head/ matches the
 # encoder-cell layout.
 from utils.plots import render_val_plots   # iter17 DRY #33: shared 4-plot per-val render
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_CKPT_NAME_MIN_PARTS = 3   # ckpt filename: <stem>_<step>_<tag>
+_PCT_EPS = 1e-6   # float tolerance for max_epochs_pct == 1.0
 
 CHECKPOINT_PREFIX = "m09c_ckpt"  # output filename preserved for downstream eval compat
 _pcfg = get_pipeline_config()
@@ -199,7 +204,7 @@ def build_model(cfg: dict, device: torch.device) -> dict:
         load_dotenv(project_root / ".env")
         uri = init_from[len("hf://"):]
         parts = uri.split("/", 2)
-        if len(parts) < 3:
+        if len(parts) < _CKPT_NAME_MIN_PARTS:
             print(f"FATAL: bad --init-from-ckpt URI: {init_from}")
             print("  Expected: hf://<owner>/<repo>/<filename>")
             sys.exit(1)
@@ -478,7 +483,7 @@ def train(cfg: dict, args) -> None:
     _probe_block = cfg["probe"]
     if _probe_block["enabled"]:
         action_labels_path = (args.probe_action_labels or
-                              str(Path(_probe_block["subset"]).parent / "action_labels.json"))
+                              str(Path(_probe_block["subset"]).parent / artifact("action_labels")))
         if not Path(action_labels_path).exists():
             print(f"❌ FATAL [probe]: action_labels.json not found at {action_labels_path}", file=sys.stderr)
             sys.exit(3)
@@ -507,7 +512,7 @@ def train(cfg: dict, args) -> None:
     stage_name = stage_cfg["name"]
     mode_mixture = stage_cfg["mode_mixture"]
     max_epochs_pct = stage_cfg["max_epochs_pct"]
-    if abs(max_epochs_pct - 1.0) > 1e-6:
+    if abs(max_epochs_pct - 1.0) > _PCT_EPS:
         print(f"FATAL [m09c2]: head-only mode requires max_epochs_pct=1.0 in the single stage; "
               f"got {max_epochs_pct}.")
         sys.exit(1)
@@ -565,7 +570,7 @@ def train(cfg: dict, args) -> None:
     # training_log.jsonl → loss_log.jsonl + added loss_log.csv (m09c1 schema).
     # Frozen-encoder fields (loss_jepa/loss_drift/loss_multi_task) emit NaN/0.
     jsonl_path = output_dir / "loss_log.jsonl"   # kept: render_val_plots reads this path
-    csv_path = output_dir / "loss_log.csv"        # kept: render_val_plots reads this path
+    csv_path = output_dir / artifact("loss_log_csv")        # kept: render_val_plots reads this path
     logw = TrainLogWriter(output_dir, columns=[   # iter17 DRY #32 (+ "stage" col, c2-only)
         "step", "epoch", "loss_jepa", "loss_drift", "loss_total",
         "loss_multi_task", "loss_motion_aux",
@@ -706,7 +711,7 @@ def train(cfg: dict, args) -> None:
                     if val_loss < best_val_loss:
                         best_val_loss = val_loss
                         best_epoch = epoch
-                        export_motion_aux_head(ma_head, output_dir / "motion_aux_head.pt")
+                        export_motion_aux_head(ma_head, output_dir / artifact("motion_aux_head"))
                         print(f"  ✅ new best val_loss={best_val_loss:.4f} (step {step}, epoch {epoch})")
 
                     # iter15 D17 (2026-05-16): symmetric per-val plot rendering with

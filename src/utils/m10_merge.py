@@ -28,6 +28,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.mask_metrics import aggregate_percentiles
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parent.parent))
+from utils.config import get_pipeline_config as _gpc   # iter18 W7
+_Q = _gpc()["m10_quality"]   # mask-quality gates — yaml single source (shared w/ m10)
 
 
 def _load_json(p: Path, default):
@@ -60,7 +67,7 @@ def main():
     canonical = Path(args.canonical_dir)
     canonical_masks = canonical / "masks"
     canonical_masks.mkdir(parents=True, exist_ok=True)
-    canonical_segments_path = canonical / "segments.json"
+    canonical_segments_path = canonical / artifact("segments")
 
     merged = _load_json(canonical_segments_path, default={})
     print(f"Canonical existing: {len(merged)} clips")
@@ -73,7 +80,7 @@ def main():
             print(f"  WARN: worker dir missing: {wd}")
             continue
 
-        wseg_path = wd / "segments.json"
+        wseg_path = wd / artifact("segments")
         ws = _load_json(wseg_path, default={})
         n_overlap = len(set(ws.keys()) & set(merged.keys()))
         for k, v in ws.items():
@@ -139,10 +146,10 @@ def main():
     }
 
     gate_checks = {
-        "pixel_ratio_min":   mean_pixel_ratio >= 0.002,
-        "pixel_ratio_max":   mean_pixel_ratio <= 0.50,
-        "mask_confidence":   mean_mask_confidence >= 0.4,
-        "clips_with_agents": clips_with_agents_pct >= 0.5,
+        "pixel_ratio_min":   mean_pixel_ratio >= _Q["pixel_ratio_min"],
+        "pixel_ratio_max":   mean_pixel_ratio <= _Q["pixel_ratio_max"],
+        "mask_confidence":   mean_mask_confidence >= _Q["mask_confidence_min"],
+        "clips_with_agents": clips_with_agents_pct >= _Q["clips_with_agents_min"],
     }
     quality_gate = all(gate_checks.values())
 
@@ -161,7 +168,7 @@ def main():
         "merged_from_workers": [str(p) for p in args.worker_dirs],
         "merge_method": "union segments + move masks; recomputed via m10_merge.py",
     }
-    _atomic_write_json(summary, canonical / "summary.json")
+    _atomic_write_json(summary, canonical / artifact("summary"))
     print(f"Wrote {canonical}/summary.json")
     print(f"  quality_gate: {summary['quality_gate']}")
     for k, v in gate_checks.items():

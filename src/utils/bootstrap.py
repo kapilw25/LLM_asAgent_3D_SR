@@ -14,6 +14,9 @@ from scipy.stats import bootstrap as scipy_bootstrap
 
 from utils.config import get_pipeline_config
 
+from utils.config import get_pipeline_config as _gpc   # iter18 W7
+_BCA_MAX_N = _gpc()["eval"]["bca_max_n"]   # BCa→percentile switch (yaml single source)
+
 _pcfg = get_pipeline_config()
 N_BOOTSTRAP = _pcfg["bootstrap"]["n_iterations"]   # yaml-resolved (was 10_000 literal)
 CI_LEVEL    = _pcfg["bootstrap"]["ci_level"]       # yaml-resolved (was 0.95 literal)
@@ -45,7 +48,7 @@ def paired_bca(deltas: np.ndarray, n_boot: int = N_BOOTSTRAP,
                 "p_value_vs_zero": 1.0, "n": 0}
 
     mean = float(np.mean(d))
-    method = "BCa" if n <= 50_000 else "percentile"
+    method = "BCa" if n <= _BCA_MAX_N else "percentile"
 
     result = scipy_bootstrap(
         (d,),
@@ -93,7 +96,7 @@ def bootstrap_ci(per_query_scores: np.ndarray, n_boot: int = N_BOOTSTRAP,
     # array is 115K × 115K × 8 bytes ≈ 100GB → OOM on 120GB cgroup.
     # For N > 50K, use "percentile" method (jackknife-free, ~identical CI bounds
     # at this sample size — BCa correction is negligible when N >> 1000).
-    method = "BCa" if n <= 50_000 else "percentile"
+    method = "BCa" if n <= _BCA_MAX_N else "percentile"
 
     result = scipy_bootstrap(
         (scores,),

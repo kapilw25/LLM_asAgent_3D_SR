@@ -105,7 +105,7 @@ esac
 # ad-hoc sweeps). Mode key is lower-case ('sanity'/'poc'/'full') matching the
 # yaml structure. Single-element lr_sweep arrays render as "5.0e-4" → space-
 # joined into a normal LR_SWEEP string for the for-loop below.
-PIPELINE_YAML="configs/pipeline.yaml"
+PIPELINE_YAML="configs/pipeline.yaml"   # audit-ok: bootstrap — the one literal that makes yaml reachable
 EX="scripts/lib/yaml_extract.py"
 mode_key=$(echo "$MODE" | tr '[:upper:]' '[:lower:]')
 DEFAULT_EPOCHS=$(python "$EX" "$PIPELINE_YAML" "probe_head_train.${mode_key}.epochs")
@@ -124,13 +124,8 @@ LR_SWEEP="${LR_SWEEP:-$DEFAULT_LR_SWEEP}"
 LOCAL_DATA_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)
 MASTER_MANIFEST_NAME_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.master_manifest_name)
 DEFAULT_EVAL_SUBSET="${LOCAL_DATA_M9}/${MASTER_MANIFEST_NAME_M9}"
-if [ "$MODE" = "SANITY" ]; then
-    DEFAULT_OUTPUT_PREFIX="outputs/sanity"
-elif [ "$MODE" = "POC" ]; then
-    DEFAULT_OUTPUT_PREFIX="outputs/poc"
-else                                   # FULL
-    DEFAULT_OUTPUT_PREFIX="outputs/full"
-fi
+# iter18 H7: mode→root from pipeline.yaml output_roots (was 3 inline literals).
+DEFAULT_OUTPUT_PREFIX=$(python "$EX" "$PIPELINE_YAML" "output_roots.${mode_key}")
 
 # ── Configurables (env-overridable; mode-gated defaults) ────────────────
 EVAL_SUBSET="${EVAL_SUBSET:-$DEFAULT_EVAL_SUBSET}"
@@ -219,7 +214,7 @@ MIN_PER_SPLIT="${MIN_PER_SPLIT:-$DEFAULT_MIN_PER_SPLIT}"
 # adding a backbone is config+registry only (no per-variant case growth). The legacy 8
 # vitG encoders are renamed vjepa_2_1_vitG_<arm> (see ENCODERS default). frozen arm →
 # external ckpt (frozen_ckpt_for); "" for HF-loaded kinds (ijepa/dinov2/2.0-HF).
-PROBE_REG="configs/eval/probe_encoders.yaml"    # encoder registry (kind/arch/crop/embed_dim) — SSOT, also read by m12a
+PROBE_REG=$(python "$EX" "$PIPELINE_YAML" config_paths.probe_encoders_registry)   # encoder registry SSOT (iter18 H7: yaml pointer)
 _enc_kind() {                                   # encoder name → registry `kind` (vjepa|hf_vjepa2|ijepa|dinov2).
     # iter17 ssv2 fix: gate ckpt/predictor stages on KIND, not the `vjepa*` name prefix.
     # hf_vjepa2 (e.g. vjepa_2_0_vitg_ssv2) is NAMED vjepa_* but loads from the HF model_id
@@ -236,12 +231,11 @@ _model_cfg_for() {                              # encoder name → model config 
     # n_output_distillation/predict_all) so non-G backbones don't crash a ViT-G build.
     # Backbone derived from the encoder name (mirror run_train.sh BACKBONE→MODEL_CFG case).
     local bb arm; read -r bb arm <<<"$(_split_enc "$1")"
-    case "$bb" in
-        vjepa_2_1_vitG) echo "configs/model/vjepa2_1.yaml" ;;
-        vjepa_2_1_vitg) echo "configs/model/vjepa2_1_vitg.yaml" ;;
-        vjepa_2_0_vitg) echo "configs/model/vjepa2_0.yaml" ;;
-        *)              echo "configs/model/${bb}.yaml" ;;
-    esac
+    # iter18 H7: map lives in pipeline.yaml backbone_model_configs (was inline
+    # case literals); unregistered backbones derive the conventional path.
+    local _m
+    _m=$(python "$EX" "$PIPELINE_YAML" "backbone_model_configs.${bb}" 2>/dev/null) || _m=""
+    if [ -n "$_m" ]; then echo "$_m"; else echo "configs/model/${bb}.yaml"; fi
 }
 _arm_dir() {                                    # arm suffix → m09 output dir name
     case "$1" in
@@ -281,14 +275,11 @@ _split_enc() {                                  # "<bb>_<arm>" → echoes "BACKB
 }
 frozen_ckpt_for() {                             # external frozen ckpt; "" → HF model_id (registry)
     case "$1" in
-        vjepa_2_1_vitG)       echo "$ENCODER_CKPT" ;;                        # checkpoints/vjepa2_1_vitG_384.pt
-        vjepa_2_1_vitg)       echo "checkpoints/vjepa2_1_vitg_384.pt" ;;     # 2.1 ViT-g 1B (fbai vjepa2_1_vitg_384.pt)
-        vjepa_2_1_vitL)       echo "checkpoints/vjepa2_1_vitl_dist_vitG_384.pt" ;;  # 2.1 ViT-L distilled-from-G
-        vjepa_2_0_vitg)       echo "checkpoints/vjepa2_0_vitg_384.pt" ;;     # fbai vitg-384.pt (verified 40blk/1408)
-        vjepa_2_vitL_256)     echo "checkpoints/vjepa2_0_vitl_256.pt" ;;     # fbai vitl.pt (2.0 ViT-L 256)
-        vjepa_1_vitL)         echo "checkpoints/vjepa1_vitL_16.pt" ;;
-        vjepa_1_vitH)         echo "checkpoints/vjepa1_vitH_16.pt" ;;
-        *) echo "" ;;          # vjepa_2_vitL_256 / ijepa_* / lejepa_* / dinov2 → HF model_id in registry
+        vjepa_2_1_vitG)       echo "$ENCODER_CKPT" ;;   # canonical 2B ckpt (yaml-sourced upstream)
+        # iter18 H7: other native backbones from pipeline.yaml backbone_checkpoints
+        # (were 6 inline literals); not in the map → "" → HF model_id in registry
+        # (ijepa_* / lejepa_* / dinov2 / hf_vjepa2 kinds).
+        *) python "$EX" "$PIPELINE_YAML" "backbone_checkpoints.$1" 2>/dev/null || echo "" ;;
     esac
 }
 encoder_ckpt_for() {                            # encoder-only — Stages 2/3

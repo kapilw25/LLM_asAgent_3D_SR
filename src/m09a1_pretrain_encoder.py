@@ -129,6 +129,14 @@ from utils.motion_aux_loss import (
     attach_motion_aux_to_optimizer, run_motion_aux_step,
 )
 from utils.probe_labels import ensure_probe_labels_for_mode
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_VAL_CLIPS = 5           # val_jepa viability floor (POC/FULL)
+_DATA_EXHAUST_WARN_PCT = 95  # warn if stream ends before this % of planned steps
+_SELECT_WINNER_ARGC = 5      # --select-winner <sweep_dir> <out_dir> <cfg>
+_MIN_CLI_ARGC = 2
+_RATE_WINDOW_S = get_pipeline_config()["plots"]["rate_print_window_s"]
 
 # Constants — paths come from CLI args only (CLAUDE.md no-default rule)
 CHECKPOINT_PREFIX = "m09a_ckpt"
@@ -400,7 +408,7 @@ def train(cfg: dict, args):
     )
 
     output_dir = Path(cfg["checkpoint"]["output_dir"])
-    student_path = output_dir / "student_encoder.pt"
+    student_path = output_dir / artifact("student_encoder")
     # iter11 v3 (2026-04-26): cache-policy=2 nukes the WHOLE output_dir at startup
     # so load_checkpoint() finds nothing → fresh step-0 run.
     wipe_output_dir(output_dir, args.cache_policy, label=f"output_dir ({output_dir.name})")
@@ -538,7 +546,7 @@ def train(cfg: dict, args):
     best_ckpt_metric = cfg["probe"]["best_ckpt_metric"]
     best_metric_higher = BEST_METRIC_DIRECTION[best_ckpt_metric]
     best_sel_score = -float("inf") if best_metric_higher else float("inf")
-    ckpt_path = output_dir / f"{CHECKPOINT_PREFIX}_latest.pt"
+    ckpt_path = output_dir / f"{CHECKPOINT_PREFIX}{artifact('ckpt_latest_suffix')}"
     if ckpt_path.exists():
         # `best_metric` slot in the ckpt stores best_sel_score (probe.best_ckpt_metric).
         start_step, best_sel_score = load_training_checkpoint(
@@ -589,7 +597,7 @@ def train(cfg: dict, args):
             # doesn't have) and proceed with whatever val clips were collected.
             if args.SANITY:
                 print(f"  [SANITY] Only {len(val_collected_keys)}/{len(val_key_set)} val clips ({pct:.0f}%) — proceeding (SANITY = code-path validation, not metric quality)")
-            elif len(val_collected_keys) >= 5:
+            elif len(val_collected_keys) >= _MIN_VAL_CLIPS:
                 print(f"  WARN: Only {len(val_collected_keys)}/{len(val_key_set)} val clips ({pct:.0f}%) — proceeding with partial coverage (>=5 clips ok for val_jepa)")
             else:
                 print(f"WARNING: Only {len(val_collected_keys)}/{len(val_key_set)} val clips ({pct:.0f}%). Auto-downloading...")
@@ -673,7 +681,7 @@ def train(cfg: dict, args):
     if _probe_block is not None and _probe_block["enabled"]:
         probe_cfg = cfg["probe"]
         action_labels_path = (args.probe_action_labels or
-                              str(Path(probe_cfg["subset"]).parent / "action_labels.json"))
+                              str(Path(probe_cfg["subset"]).parent / artifact("action_labels")))
         if not Path(action_labels_path).exists():
             # iter14 recipe-v2 (2026-05-09): FAIL LOUD per CLAUDE.md. Probe
             # top-1 is the paper-grade metric — silent val_jepa-only fallback
@@ -753,7 +761,7 @@ def train(cfg: dict, args):
         os.fsync(jsonl_file.fileno())
 
     # Also keep CSV for backward compat (plots, wandb upload)
-    csv_path = output_dir / "loss_log.csv"
+    csv_path = output_dir / artifact("loss_log_csv")
     csv_exists = csv_path.exists()
     csv_file = open(csv_path, "a", newline="")
     csv_writer = csv.writer(csv_file)
@@ -826,7 +834,7 @@ def train(cfg: dict, args):
                 sys.exit(1)
             if msg_type == "done":
                 pct_done = (step + 1) / total_steps * 100
-                if pct_done < 95:
+                if pct_done < _DATA_EXHAUST_WARN_PCT:
                     print(f"\n  Data exhausted at step {step}/{total_steps} ({pct_done:.0f}%). "
                           f"Training {100-pct_done:.0f}% incomplete — finishing with available data.")
                 else:
@@ -981,6 +989,7 @@ def train(cfg: dict, args):
                                 if drift_per_block else 0.0)
             step_record = {
                 "step": step, "epoch": epoch,
+                "stage": "single",   # iter18 H3: schema parity with m09c (plots read strict)
                 "loss_jepa": round(jepa_val, 6),
                 "loss_masked": round(masked_val, 6),
                 "loss_context": round(context_val, 6),
@@ -1029,7 +1038,7 @@ def train(cfg: dict, args):
                 wb_metrics["loss/motion_aux/mse"] = ma_per_branch["mse"]
             log_metrics(wb_run, wb_metrics, step=step)
 
-            if window_elapsed >= 30:
+            if window_elapsed >= _RATE_WINDOW_S:
                 pbar.set_postfix_str(
                     f"E{epoch} loss={running_loss/window_steps:.4f} "
                     f"drift={drift_val:.4f} "
@@ -1197,8 +1206,9 @@ def train(cfg: dict, args):
                     score_key=best_ckpt_metric,
                     higher_is_better=best_metric_higher, step=step)
                 if improved_state:
-                    # plots.py annotates top1-at-best-step (schema bridge w/ m09c).
-                    best_state["probe_top1"] = probe_top1_for_best
+                    # iter18 H3: unified key "top1" (matches m09c _save_best +
+                    # plots.py strict read) — was "probe_top1" bridge.
+                    best_state["top1"] = probe_top1_for_best
                 # Mirror val_loss onto best_state for the plot helper (line 161-163)
                 # which annotates the "val_loss AT best-top1 step" for context.
                 best_state["val_loss_at_best"] = val_loss
@@ -1253,7 +1263,7 @@ def train(cfg: dict, args):
                     # student+predictor; teacher + optimizer are dead weight here (EMA-rebuilt on resume).
                     # latest.pt still saves include_optimizer=True + teacher for resume.
                     save_training_checkpoint(
-                        output_dir / f"{CHECKPOINT_PREFIX}_best.pt",
+                        output_dir / f"{CHECKPOINT_PREFIX}{artifact('ckpt_best_suffix')}",
                         student, teacher, predictor, optimizer, scheduler,
                         scaler, step + 1, best_sel_score,
                         full=True, include_optimizer=False, include_teacher=False)
@@ -1337,7 +1347,7 @@ def train(cfg: dict, args):
     # FATALs on missing best.pt. SANITY/POC/FULL all run probes (probe.enabled
     # is universal-true; the old "SANITY disables probes" note was stale) →
     # this branch is normally a no-op, kept as the fail-safe for Stage 8.
-    best_ckpt_path = output_dir / f"{CHECKPOINT_PREFIX}_best.pt"
+    best_ckpt_path = output_dir / f"{CHECKPOINT_PREFIX}{artifact('ckpt_best_suffix')}"
     if not best_ckpt_path.exists():
         print(f"  [iter15] {CHECKPOINT_PREFIX}_best.pt absent at end-of-train "
               f"(best_sel_score={best_sel_score:.4f} — probe likely disabled this mode). "
@@ -1373,8 +1383,8 @@ def train(cfg: dict, args):
     # so it carries the predictor; this glob would still wipe the file. Stage 8
     # future_mse requires it as input; without this skip, downstream FATAL.
     # Mirrors m09c R8 pattern (cleanup glob `_stage*.pt` excludes `_best.pt`).
-    BEST_NAME = f"{CHECKPOINT_PREFIX}_best.pt"
-    for ckpt_file in output_dir.glob(f"{CHECKPOINT_PREFIX}_*.pt"):
+    BEST_NAME = f"{CHECKPOINT_PREFIX}{artifact('ckpt_best_suffix')}"
+    for ckpt_file in output_dir.glob(f"{CHECKPOINT_PREFIX}{artifact('ckpt_any_glob')}"):
         if ckpt_file.name == BEST_NAME:
             continue
         guarded_delete(ckpt_file, args.cache_policy,
@@ -1401,7 +1411,7 @@ def train(cfg: dict, args):
         "lambda_reg": drift_cfg["lambda_reg"],
         "batch_size": batch_size,
     }
-    summary_path = output_dir / "training_summary.json"
+    summary_path = output_dir / artifact("training_summary")
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)
 
@@ -1458,7 +1468,7 @@ def main():
     if args.lambda_reg is None:
         out_dir = Path(cfg["checkpoint"]["output_dir"]).parent
         ablation_dir = out_dir / "ablation"
-        winner_json = ablation_dir / "ablation_winner.json"
+        winner_json = ablation_dir / artifact("ablation_winner")
 
         if winner_json.exists():
             w = json.load(open(winner_json))
@@ -1484,7 +1494,7 @@ def main():
                 lam_out = ablation_dir / f"lambda{lam_str}"
 
                 # Skip if already trained with valid val_loss
-                summary_path = lam_out / "training_summary.json"
+                summary_path = lam_out / artifact("training_summary")
                 if summary_path.exists():
                     s = json.load(open(summary_path))
                     if s.get("best_val_loss") is not None and s["best_val_loss"] != float("inf"):
@@ -1555,7 +1565,7 @@ def select_ablation_winner(output_dir: str, lambdas: list):
 
     for lam in lambdas:
         lam_dir = "lambda" + lam.replace(".", "_")
-        summary_path = out / lam_dir / "training_summary.json"
+        summary_path = out / lam_dir / artifact("training_summary")
         if not summary_path.exists():
             print(f"  lambda={lam}: MISSING ({summary_path})")
             continue
@@ -1566,6 +1576,7 @@ def select_ablation_winner(output_dir: str, lambdas: list):
             continue
         results[lam] = {"val_loss": val_loss, "dir": lam_dir,
                         "jepa_loss": s.get("final_jepa_loss"),
+                        "batch_size": s["batch_size"],   # iter18 H6: for plot x-axis (clips seen)
                         "epochs": s.get("epochs"), "steps": s.get("steps")}
         print(f"  lambda={lam}: best_val_loss={val_loss:.4f} "
               f"(jepa_loss={s.get('final_jepa_loss', '?'):.4f}, "
@@ -1584,7 +1595,7 @@ def select_ablation_winner(output_dir: str, lambdas: list):
         "all_results": {k: v["val_loss"] for k, v in results.items()},
     }
 
-    winner_path = out / "ablation_winner.json"
+    winner_path = out / artifact("ablation_winner")
     with open(winner_path, "w") as f:
         json.dump(winner_info, f, indent=2)
 
@@ -1594,7 +1605,9 @@ def select_ablation_winner(output_dir: str, lambdas: list):
 
     # Plot val_loss curves for all lambdas (publication quality)
     try:
-        plot_val_loss_curves(out, lambdas, winner)
+        # iter18 H6: pass the winner run's actual batch size (was a silent =32 default).
+        plot_val_loss_curves(out, lambdas, winner,
+                             results[winner]["batch_size"])
     except Exception as e:
         # iter13 (2026-05-05): per CLAUDE.md FAIL HARD.
         print(f"  FATAL: ablation plot failed: {e}", flush=True)
@@ -1607,8 +1620,8 @@ if __name__ == "__main__":
         # --select-winner subcommand: positional args = output_dir, model_config, train_config.
         # All required — derive lambdas from cfg["drift_control"]["ablation_lambdas"]
         # (NO DEFAULT, per CLAUDE.md "no hardcoded paths" rule).
-        if len(sys.argv) >= 2 and sys.argv[1] == "--select-winner":
-            if len(sys.argv) != 5:
+        if len(sys.argv) >= _MIN_CLI_ARGC and sys.argv[1] == "--select-winner":
+            if len(sys.argv) != _SELECT_WINNER_ARGC:
                 print("FATAL: --select-winner requires 3 positional args:")
                 print("  python -u src/m09a1_pretrain_encoder.py --select-winner "
                       "<output_dir> <model_config.yaml> <train_config.yaml>")

@@ -24,7 +24,7 @@ from tqdm import tqdm
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import (
     VJEPA_FRAMES_PER_CLIP, check_gpu, check_output_exists,
-    load_subset, add_subset_arg, add_local_data_arg, get_output_dir, get_module_output_dir,
+    load_subset, add_subset_arg, add_local_data_arg, get_module_output_dir,
     get_sanity_clip_limit, get_total_clips, get_pipeline_config,
     verify_npy_matches_subset,
 )
@@ -47,6 +47,11 @@ _create_stream = create_stream
 import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_FLIP_P = 0.5      # horizontal-flip probability (overlap-aug recipe)
+_HUE_EPS = 0.01    # |hue| below this = identity jitter, skip
 
 
 # ── Augmentation Transforms (BYOL/DINO protocol) ─────────────────────
@@ -65,7 +70,7 @@ def _augment_clip_consistent(video_tensor: torch.Tensor, view: str,
         # Large crop (0.4-1.0 of area)
         i, j, h, w = T.RandomResizedCrop.get_params(
             video_tensor[0], scale=(0.4, 1.0), ratio=(0.75, 1.33))
-        do_flip = torch.rand(1, generator=rng).item() < 0.5
+        do_flip = torch.rand(1, generator=rng).item() < _FLIP_P
         # Color jitter params (fixed for all frames)
         brightness = 1.0 + (torch.rand(1, generator=rng).item() - 0.5) * 0.8
         contrast = 1.0 + (torch.rand(1, generator=rng).item() - 0.5) * 0.8
@@ -75,7 +80,7 @@ def _augment_clip_consistent(video_tensor: torch.Tensor, view: str,
         # Small crop (0.2-0.6 of area)
         i, j, h, w = T.RandomResizedCrop.get_params(
             video_tensor[0], scale=(0.2, 0.6), ratio=(0.75, 1.33))
-        do_flip = torch.rand(1, generator=rng).item() < 0.5
+        do_flip = torch.rand(1, generator=rng).item() < _FLIP_P
 
     # ── Vectorized: crop + resize all T frames in one shot ──
     video = video_tensor.float() / 255.0          # (T, C, H, W)
@@ -91,7 +96,7 @@ def _augment_clip_consistent(video_tensor: torch.Tensor, view: str,
         video = TF.adjust_brightness(video, brightness)
         video = TF.adjust_contrast(video, contrast)
         video = TF.adjust_saturation(video, saturation)
-        if abs(hue) > 0.01:
+        if abs(hue) > _HUE_EPS:
             video = TF.adjust_hue(video, hue)
     else:
         # gaussian_blur supports (*, C, H, W) via conv2d with groups=C
@@ -292,9 +297,9 @@ def main():
     device = "cuda"
 
     output_dir = get_module_output_dir("m05c_true_overlap", args.subset, sanity=args.SANITY, poc=args.POC)
-    aug_a_file = output_dir / "overlap_augA.npy"
-    aug_b_file = output_dir / "overlap_augB.npy"
-    keys_file = output_dir / "overlap_keys.npy"
+    aug_a_file = output_dir / artifact("overlap_aug_a")
+    aug_b_file = output_dir / artifact("overlap_aug_b")
+    keys_file = output_dir / artifact("overlap_keys")
     checkpoint_file = output_dir / ".m05c_checkpoint.npz"
 
     if aug_a_file.exists() and aug_b_file.exists():
@@ -312,7 +317,7 @@ def main():
     elif subset_keys:
         clip_limit = len(subset_keys)
     else:
-        clip_limit = get_total_clips(local_data=getattr(args, 'local_data', None))
+        clip_limit = get_total_clips(local_data=args.local_data)
         if clip_limit == 0:
             print("FATAL: Cannot determine clip count. Use --subset or --local-data with manifest.json")
             sys.exit(1)
@@ -386,7 +391,7 @@ def main():
         target=_producer_overlap,
         args=(processor, batch_size, tmp_dir, q, stop_event,
               clip_limit, subset_keys, processed_keys, VJEPA_FRAMES_PER_CLIP,
-              getattr(args, 'local_data', None)),
+              args.local_data),
         daemon=True,
     )
     producer.start()

@@ -13,13 +13,15 @@ from utils.predictor_eval import (
     PT_DELTAS, expand_mask, masked_predict_l1, perclip_slope, temporal_token_idx, to_pixel, token_grid,
 )
 
+_MIN_SWEEP_POINTS = 2   # iter18 W7: slope needs ≥2 Δt points
+
 
 def compute(encoder, predictor, batch, num_frames) -> np.ndarray:
     """batch (B,T,3,H,W) cpu → per-clip slope of L1 vs Δt (B,). Higher slope = faster decay."""
     Tp, _, _, _ = token_grid(num_frames)
     ctx = 0
     deltas = [d for d in PT_DELTAS if ctx + d < Tp]
-    if len(deltas) < 2:
+    if len(deltas) < _MIN_SWEEP_POINTS:
         raise ValueError(f"tdist needs ≥2 valid Δt for a slope; Tp={Tp} gave {deltas}")
     pixel = to_pixel(batch)
     b = pixel.shape[0]

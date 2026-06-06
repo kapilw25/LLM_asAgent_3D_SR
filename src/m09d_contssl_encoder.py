@@ -155,6 +155,11 @@ from utils.contssl import (
 )
 from utils.probe_labels import ensure_probe_labels_for_mode
 from torch.utils.data import DataLoader
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_CKPT_NAME_MIN_PARTS = 3   # ckpt filename: <stem>_<step>_<tag>
+_RATE_WINDOW_S = get_pipeline_config()["plots"]["rate_print_window_s"]
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -326,7 +331,7 @@ def build_model(cfg: dict, device: torch.device) -> dict:
         load_dotenv(project_root / ".env")
         uri = init_from[len("hf://"):]
         parts = uri.split("/", 2)            # owner / repo / filename
-        if len(parts) < 3:
+        if len(parts) < _CKPT_NAME_MIN_PARTS:
             print(f"FATAL: bad --init-from-ckpt URI: {init_from}")
             print("  Expected: hf://<owner>/<repo>/<filename>")
             sys.exit(1)
@@ -515,7 +520,7 @@ def train(cfg: dict, args):
     # so load_checkpoint() finds nothing → fresh step-0 run.
     wipe_output_dir(output_dir, args.cache_policy, label=f"output_dir ({output_dir.name})")
     output_dir.mkdir(parents=True, exist_ok=True)
-    student_path = output_dir / "student_encoder.pt"
+    student_path = output_dir / artifact("student_encoder")
 
     mode_key = "sanity" if args.SANITY else ("poc" if args.POC else "full")
     mp_cfg = cfg["mixed_precision"]
@@ -608,7 +613,7 @@ def train(cfg: dict, args):
         sys.exit(1)
 
     # Quality gate: check m10 summary before training (Rule 33: logic in Python)
-    summary_file = factor_dir / "summary.json"
+    summary_file = factor_dir / artifact("summary")
     if summary_file.exists():
         m10_summary = json.load(open(summary_file))
         if m10_summary["quality_gate"] == "FAIL":
@@ -857,7 +862,7 @@ def train(cfg: dict, args):
     nan_strikes = 0  # noqa: F841 — wired into future dense NaN guard for surgery loop
 
     global_step = 0
-    csv_path = output_dir / "loss_log.csv"
+    csv_path = output_dir / artifact("loss_log_csv")
     jsonl_path = output_dir / "loss_log.jsonl"
     csv_file = open(csv_path, "w", newline="")
     csv_writer = csv.writer(csv_file)
@@ -966,7 +971,7 @@ def train(cfg: dict, args):
     prec_plateau_enabled = probe_cfg["prec_plateau_enabled"]
     prec_plateau_min_delta = probe_cfg["prec_plateau_min_delta"]
     prec_plateau_patience = probe_cfg["prec_plateau_patience"]
-    best_ckpt_path = output_dir / "student_best.pt"
+    best_ckpt_path = output_dir / artifact("student_best")
 
     def _render_live_plots(verbose: bool = False):
         """iter14 (2026-05-08): renders cross-encoder-identical plot set by
@@ -1107,6 +1112,7 @@ def train(cfg: dict, args):
                         "top1":       pr["probe_top1"],
                         "motion_cos": pr["motion_cos"],
                         "future_l1":  pr["future_l1"],
+                        "val_loss_at_best": pr["val_jepa_loss"],   # iter18 H3: plots strict read
                         "global_step": global_step_,
                         "stage_name":  stage_name_,
                         "probe_record": pr,
@@ -1598,7 +1604,7 @@ def train(cfg: dict, args):
                 now = time.time()
                 window_elapsed = now - window_start
                 throughput = window_steps / window_elapsed if window_elapsed > 0 else 0.0
-                if window_elapsed >= 30:
+                if window_elapsed >= _RATE_WINDOW_S:
                     pbar.set_postfix_str(
                         f"S{stage_idx + 1} loss={running_loss / window_steps:.4f} "
                         f"lr={lr_val:.2e} "
@@ -1722,12 +1728,12 @@ def train(cfg: dict, args):
     # is dead weight. uw_module dropped along with optimizer (Kendall UW is part
     # of the optimization state). run_eval.sh:158 expects this exact filename.
     save_training_checkpoint(
-        output_dir / f"{CHECKPOINT_PREFIX}_best.pt",
+        output_dir / f"{CHECKPOINT_PREFIX}{artifact('ckpt_best_suffix')}",
         student, teacher, predictor, optimizer, scheduler, scaler,
         global_step, best_state["top1"],
         full=True, uw=uw_module, include_optimizer=False, include_teacher=False)
     print(f"Exported predictor-bearing best ckpt: "
-          f"{output_dir / f'{CHECKPOINT_PREFIX}_best.pt'}")
+          f"{output_dir / f'{CHECKPOINT_PREFIX}{artifact('ckpt_best_suffix')}'}")
 
     # Final checkpoint cleanup: `student_encoder.pt` + m09c_ckpt_best.pt are
     # the downstream artifacts (consumed by m05 surgical re-embed + m06 Prec@K
@@ -1802,7 +1808,7 @@ def train(cfg: dict, args):
             },
         },
     }
-    with open(output_dir / "training_summary.json", "w") as f:
+    with open(output_dir / artifact("training_summary"), "w") as f:
         json.dump(summary, f, indent=2)
 
     # Training curves (reuse utils/plots.py). Pass x_axis_mode="steps" because

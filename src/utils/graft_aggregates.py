@@ -21,17 +21,22 @@ USAGE:
 import argparse
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
 # (relative path, structure kind, per-encoder container key). 'flat' = top-level container; 'dims' /
 # 'metrics' = one container per taxonomy-dim / predictor-metric.
+# iter18 H1: dir + file names composed from pipeline.yaml artifacts.* — no literals.
 _FILES = [
-    ("probe_action/probe_paired_delta.json", "flat", "by_encoder"),
-    ("probe_motion_cos/probe_motion_cos_paired.json", "flat", "by_encoder"),
-    ("probe_future_mse/probe_future_mse_per_variant.json", "flat", "by_variant"),
-    ("probe_taxonomy/per_dim_acc.json", "dims", "by_encoder"),
-    ("predictor_temporal/predictor_temporal_per_variant.json", "metrics", "by_variant"),
+    (f"{artifact('probe_action_dir')}/{artifact('probe_paired_delta')}", "flat", "by_encoder"),
+    (f"{artifact('probe_motion_cos_dir')}/{artifact('probe_motion_cos_paired')}", "flat", "by_encoder"),
+    (f"{artifact('probe_future_mse_dir')}/{artifact('probe_future_mse_per_variant')}", "flat", "by_variant"),
+    (f"{artifact('probe_taxonomy_dir')}/{artifact('per_dim_acc')}", "dims", "by_encoder"),
+    (f"{artifact('predictor_temporal_dir')}/{artifact('predictor_temporal_per_variant')}", "metrics", "by_variant"),
 ]
 
 

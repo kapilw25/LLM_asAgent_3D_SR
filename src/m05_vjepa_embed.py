@@ -40,17 +40,20 @@ from tqdm import tqdm
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import (
     VJEPA_MODEL_ID, HF_DATASET_REPO, VJEPA_FRAMES_PER_CLIP,
-    check_gpu, load_subset, add_subset_arg, add_local_data_arg, get_output_dir,
-    get_module_output_dir,
+    check_gpu, load_subset, add_subset_arg, add_local_data_arg, get_module_output_dir,
     get_pipeline_config, get_sanity_clip_limit, get_total_clips,
     add_model_config_arg, get_model_config,
     verify_npy_matches_subset,
 )
 from utils.data_download import ensure_local_data, iter_clips_parallel
-from utils.gpu_batch import compute_batch_sizes, add_gpu_mem_arg, cleanup_temp, AdaptiveBatchSizer
+from utils.gpu_batch import add_gpu_mem_arg, cleanup_temp, AdaptiveBatchSizer
 from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog
 from utils.video_io import get_clip_key, create_stream, decode_video_bytes, _USE_TORCHCODEC
 from utils.wandb_utils import add_wandb_args, init_wandb, log_metrics, log_artifact, finish_wandb
+
+# iter18 W7 (PLR2004): semantic named constants.
+_VIDEO_RANK = 5   # (B, T, C, H, W) — channel axis sanity at dim 2
+_RATE_WINDOW_S = get_pipeline_config()["plots"]["rate_print_window_s"]
 
 try:
     import torch
@@ -265,7 +268,7 @@ def get_batch_embeddings(model, batched_pixels: torch.Tensor, device: str,
     with torch.no_grad():
         if is_adapted:
             # Native vjepa2 VisionTransformer: forward(x) → (B, N, D) tensor
-            if pixel_values.ndim == 5 and pixel_values.shape[2] in (1, 3):
+            if pixel_values.ndim == _VIDEO_RANK and pixel_values.shape[2] in (1, 3):
                 pixel_values = pixel_values.permute(0, 2, 1, 3, 4)
             outputs = model(pixel_values)
             embeddings = outputs.mean(dim=1).float().cpu().numpy()
@@ -309,7 +312,7 @@ def orchestrator_main(args):
     # In that case we're loading a frozen native checkpoint (from YAML checkpoint_path in the
     # worker's native-frozen branch, NOT the adapted-student branch). See `_resolve_model`.
     model_path, is_adapted = _resolve_model(args.model)
-    encoder_name = getattr(args, 'encoder', None) or ("vjepa_adapted" if is_adapted else "vjepa")
+    encoder_name = args.encoder or ("vjepa_adapted" if is_adapted else "vjepa")
     from utils.config import get_encoder_info
     embed_suffix = get_encoder_info(encoder_name)["suffix"]
     ckpt_fp = _checkpoint_fingerprint(model_path, is_adapted)
@@ -327,7 +330,7 @@ def orchestrator_main(args):
     elif subset_keys:
         total_clips = len(subset_keys)
     else:
-        total_clips = get_total_clips(local_data=getattr(args, 'local_data', None))
+        total_clips = get_total_clips(local_data=args.local_data)
         if total_clips == 0:
             print("FATAL: Cannot determine clip count. Use --subset or --local-data with manifest.json")
             sys.exit(1)
@@ -374,16 +377,16 @@ def orchestrator_main(args):
                 cmd.extend(["--gpu-mem", str(args.gpu_mem)])
             if args.model != VJEPA_MODEL_ID:
                 cmd.extend(["--model", args.model])
-            if getattr(args, 'local_data', None):
+            if args.local_data:
                 cmd.extend(["--local-data", args.local_data])
-            if getattr(args, 'encoder', None):
+            if args.encoder:
                 cmd.extend(["--encoder", args.encoder])
-            if getattr(args, 'model_config', None):
+            if args.model_config:
                 cmd.extend(["--model-config", args.model_config])
             # Propagate cache policy to worker (iter11 delete-protection gate).
-            if getattr(args, 'cache_policy', None):
+            if args.cache_policy:
                 cmd.extend(["--cache-policy", args.cache_policy])
-            if getattr(args, 'shuffle', False):
+            if args.shuffle:
                 cmd.append("--shuffle")
 
             result = subprocess.run(cmd)
@@ -524,7 +527,7 @@ def worker_main(args):
     # native forward path + 64-frame inference as adapted students → same VRAM profile,
     # so apply the adapted BS cap here too (#46). Without this, args.batch_size stays at
     # the 96GB-profiler value (e.g. 176) and OOMs on 24GB at BS=100 on 2B bf16.
-    _mcfg_early = get_model_config(getattr(args, "model_config", None))["model"]
+    _mcfg_early = get_model_config(args.model_config)["model"]
     uses_native_fwd = is_adapted_pre or (args.model is None and _mcfg_early["hf_model_id"] is None)
     _gpu_cfg = get_pipeline_config()["gpu"]
     sizer = None  # Only used on native-fwd path (HF AutoModel handles its own mem via autocast)
@@ -553,7 +556,7 @@ def worker_main(args):
     output_dir = get_module_output_dir("m05_vjepa_embed", args.subset, sanity=args.SANITY, poc=args.POC)
     # Match orchestrator's encoder-aware checkpoint path
     model_path, is_adapted = _resolve_model(args.model)
-    encoder_name = getattr(args, 'encoder', None) or ("vjepa_adapted" if is_adapted else "vjepa")
+    encoder_name = args.encoder or ("vjepa_adapted" if is_adapted else "vjepa")
     from utils.config import get_encoder_info
     embed_suffix = get_encoder_info(encoder_name)["suffix"]
     ckpt_fp = _checkpoint_fingerprint(model_path, is_adapted)
@@ -589,7 +592,7 @@ def worker_main(args):
         model_path, is_adapted = _resolve_model(args.model)
 
         # Load model config to determine architecture
-        mcfg = get_model_config(getattr(args, "model_config", None))["model"]
+        mcfg = get_model_config(args.model_config)["model"]
         arch = mcfg["arch"]
         hf_model_id = mcfg["hf_model_id"]
         crop_size = mcfg["crop_size"]
@@ -734,8 +737,8 @@ def worker_main(args):
         target=_producer_thread,
         args=(processor, args.batch_size, tmp_dir, q, stop_event,
               clip_limit, subset_keys, VJEPA_FRAMES_PER_CLIP, processed_keys,
-              getattr(args, 'local_data', None),
-              getattr(args, 'shuffle', False)),
+              args.local_data,
+              args.shuffle),
         daemon=True,
     )
     producer.start()
@@ -813,7 +816,7 @@ def worker_main(args):
                 "failed": failed_count,
             })
             # Reset window every 30s
-            if window_elapsed >= 30:
+            if window_elapsed >= _RATE_WINDOW_S:
                 last_window_time = now
                 last_window_count = clips_this_run
 

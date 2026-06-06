@@ -53,6 +53,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from utils.config import get_pipeline_config
+
+# iter18 W7 (PLR2004): guards.
+_MIN_CLASSES = 2   # CE head needs ≥2 classes
+
 
 # ── Architecture ─────────────────────────────────────────────────────
 
@@ -72,7 +77,7 @@ class MotionAuxHead(nn.Module):
     """
 
     def __init__(self, d_encoder: int, n_motion_classes: int, n_motion_dims: int,
-                 hidden_dim: int = 256, dropout: float = 0.1,
+                 hidden_dim: int, dropout: float,  # iter18 H6: callers pass (ma_cfg["head"] / loader blob)
                  vec_mean: torch.Tensor = None, vec_std: torch.Tensor = None):
         super().__init__()
         self.d_encoder = d_encoder
@@ -146,7 +151,7 @@ def load_motion_targets_for_training(motion_features_path: Path,
     action_labels = json.loads(action_labels_path.read_text())
     n_motion_classes = max((info["class_id"] for info in action_labels.values()),
                            default=-1) + 1
-    if n_motion_classes < 2:
+    if n_motion_classes < _MIN_CLASSES:
         raise ValueError(
             f"action_labels.json has {n_motion_classes} class(es); need >= 2")
 
@@ -165,7 +170,7 @@ def load_motion_targets_for_training(motion_features_path: Path,
         # >5% indicates schema mismatch (e.g., m04d ran on a different subset than
         # action_labels.json was generated from).
         drop_pct = n_no_motion / len(action_labels)
-        if drop_pct > 0.05:
+        if drop_pct > get_pipeline_config()["motion"]["max_target_drop_pct"]:
             print(f"❌ FATAL [motion_aux]: {n_no_motion}/{len(action_labels)} "
                   f"({drop_pct:.1%}) action_labels clips have NO motion_features record — "
                   f"exceeds 5% threshold (likely schema mismatch).", file=sys.stderr)
@@ -288,7 +293,8 @@ def merge_motion_aux_config(cfg: dict, args, mode_key: str) -> None:
         ma_cfg["enabled"] = ma_cfg["enabled"][mode_key]
     ma_cfg["motion_features_path"] = str(args.motion_features_path)
     ma_cfg["action_labels_path"] = str(args.probe_action_labels)
-    if getattr(args, "no_motion_aux", False):
+    # H4 purge: flag registered by add_m09_common_args in all 8 trainers.
+    if args.no_motion_aux:
         ma_cfg["enabled"] = False
 
 
@@ -330,7 +336,7 @@ def build_motion_aux_head_from_cfg(cfg: dict, device) -> tuple:
     # resize via flow_features.mean(axis=0) in load_motion_targets_for_training
     # (already shape-agnostic). 23-D MSE head adds 23×256 = 5.9 K extra params.
     n_motion_dims = int(vec_mean.numel())
-    if n_motion_dims < 23:
+    if n_motion_dims < get_pipeline_config()["motion"]["feature_dim"]:
         sys.exit(
             f"FATAL [motion_aux]: motion_features at {motion_features_path} is "
             f"{n_motion_dims}-D; Phase 0 requires 23-D (adds FG fg_mean_mag at "

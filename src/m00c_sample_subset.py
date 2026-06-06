@@ -17,9 +17,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.progress import make_pbar
 from utils.config import PROJECT_ROOT, OUTPUTS_DATA_PREP_DIR
 from utils.config import get_pipeline_config
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_TIERED_PARTS = 2   # tierX/<tour_type>
 
 # Paths
-CLIP_DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / "clip_durations.json"
+CLIP_DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / artifact("clip_durations")
 OUTPUT_DIR = PROJECT_ROOT / "data"
 DEFAULT_N = get_pipeline_config()["poc"]["default_n"]
 # iter16 (2026-05-20): moved to configs/pipeline.yaml > data_prep.default_seed
@@ -157,11 +161,11 @@ def print_summary(sampled: list, by_video: dict):
         tier_counts[tier] = tier_counts.get(tier, 0) + 1
 
         # Tour type (last part of section path)
-        tour_type = parts[-1] if len(parts) >= 2 else "unknown"
+        tour_type = parts[-1] if len(parts) >= _MIN_TIERED_PARTS else "unknown"
         type_counts[tour_type] = type_counts.get(tour_type, 0) + 1
 
         # City (second part for tier1/tier2)
-        if len(parts) >= 2 and parts[0] in ("tier1", "tier2"):
+        if len(parts) >= _MIN_TIERED_PARTS and parts[0] in ("tier1", "tier2"):
             city = parts[1]
         elif parts[0] == "goa":
             city = "goa"
@@ -185,15 +189,15 @@ def print_summary(sampled: list, by_video: dict):
     counts = sorted(per_video.values())
     print(f"Clips per video: min={counts[0]}, median={counts[len(counts)//2]}, max={counts[-1]}")
 
-    print(f"\nBy Tier:")
+    print("\nBy Tier:")
     for tier in sorted(tier_counts.keys()):
         print(f"  {tier:15s}  {tier_counts[tier]:5d} clips")
 
-    print(f"\nBy Tour Type:")
+    print("\nBy Tour Type:")
     for tt in sorted(type_counts.keys()):
         print(f"  {tt:15s}  {type_counts[tt]:5d} clips")
 
-    print(f"\nBy City:")
+    print("\nBy City:")
     for city in sorted(city_counts.keys()):
         print(f"  {city:20s}  {city_counts[city]:5d} clips")
 
@@ -225,7 +229,7 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = OUTPUT_DIR / f"subset_{args.n // 1000}k.json"
+        output_path = OUTPUT_DIR / artifact("subset_fmt").format(args.n // 1000)   # iter18 H1
 
     print(f"Input:  {CLIP_DURATIONS_JSON}")
     print(f"Output: {output_path}")

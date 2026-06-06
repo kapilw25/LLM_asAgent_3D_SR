@@ -13,16 +13,18 @@ import time
 from pathlib import Path
 
 import numpy as np
-from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.progress import make_pbar
 from utils.config import (
-    EMBEDDINGS_FILE, check_gpu,
+    check_gpu, get_pipeline_config,
     add_subset_arg, get_output_dir, get_module_output_dir,
     add_encoder_arg, get_encoder_files,
 )
 from utils.wandb_utils import add_wandb_args, init_wandb, log_artifact, finish_wandb
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_NEIGHBORS = 2   # UMAP needs >=2 neighbors
 
 try:
     from cuml.manifold import UMAP as cuUMAP
@@ -37,12 +39,21 @@ def main():
     parser.add_argument("--SANITY", action="store_true", help="First 200 clips only")
     parser.add_argument("--POC", action="store_true", help="POC subset (~10K clips)")
     parser.add_argument("--FULL", action="store_true", help="All clips")
-    parser.add_argument("--n-neighbors", type=int, default=15, help="UMAP n_neighbors")
-    parser.add_argument("--min-dist", type=float, default=0.1, help="UMAP min_dist")
+    # iter18 H2: defaults live in pipeline.yaml eval.umap_* (None → yaml).
+    parser.add_argument("--n-neighbors", type=int, default=None,
+                        help="UMAP n_neighbors (default: pipeline.yaml eval.umap_n_neighbors)")
+    parser.add_argument("--min-dist", type=float, default=None,
+                        help="UMAP min_dist (default: pipeline.yaml eval.umap_min_dist)")
     add_encoder_arg(parser)
     add_subset_arg(parser)
     add_wandb_args(parser)
     args = parser.parse_args()
+    # iter18 H2: None → pipeline.yaml eval.umap_* (single source).
+    _ecfg = get_pipeline_config()["eval"]
+    if args.n_neighbors is None:
+        args.n_neighbors = _ecfg["umap_n_neighbors"]
+    if args.min_dist is None:
+        args.min_dist = _ecfg["umap_min_dist"]
 
     if not (args.SANITY or args.POC or args.FULL):
         parser.print_help()
@@ -77,7 +88,7 @@ def main():
     print(f"Loaded: {embeddings.shape[0]:,} clips, dim={embeddings.shape[1]}")
 
     n_neighbors = min(args.n_neighbors, embeddings.shape[0] - 1)
-    if n_neighbors < 2:
+    if n_neighbors < _MIN_NEIGHBORS:
         print("ERROR: Need at least 3 clips for UMAP")
         sys.exit(1)
 

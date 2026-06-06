@@ -48,6 +48,8 @@ Gap                                  │ Status                                 
 import time
 from tqdm import tqdm
 
+_MIN_RATE_POINTS = 2   # iter18 W7: windowed rate needs a pair
+
 # iter16 (2026-05-23): freeze the process-spawn baseline at module import. Per
 # src/CLAUDE.md "All imports at TOP", `from utils.progress import make_pbar`
 # runs at process spawn → _PROC_START ≈ true process spawn time (within ~ms).
@@ -86,8 +88,12 @@ class _RecentRateBar(tqdm):
       cutoff so size is bounded by clips/min × 60.
     """
 
-    def __init__(self, *args, recent_window_sec: float = 60.0, **kwargs):
+    def __init__(self, *args, recent_window_sec: float = None, **kwargs):
         super().__init__(*args, **kwargs)
+        # iter18 H6: None → pipeline.yaml plots.progress_recent_window_sec.
+        if recent_window_sec is None:
+            from utils.config import get_pipeline_config
+            recent_window_sec = get_pipeline_config()["plots"]["progress_recent_window_sec"]
         self._rwin_sec = recent_window_sec
         self._rwin = []  # list of (n, time) tuples; oldest first
 
@@ -100,7 +106,7 @@ class _RecentRateBar(tqdm):
         while self._rwin and self._rwin[0][1] < cutoff:
             self._rwin.pop(0)
         # Need ≥2 samples spanning some wall time to compute rate.
-        if len(self._rwin) >= 2:
+        if len(self._rwin) >= _MIN_RATE_POINTS:
             n0, t0 = self._rwin[0]
             n1, t1 = self._rwin[-1]
             dt = t1 - t0
@@ -120,7 +126,7 @@ class _RecentRateBar(tqdm):
 
 def make_pbar(total: int, desc: str, unit: str = "item",
               initial: int = 0,
-              recent_window_sec: float = 60.0) -> tqdm:
+              recent_window_sec: float = None) -> tqdm:  # iter18 H6: None → plots.progress_recent_window_sec
     """Create a standardized tqdm progress bar with truthful ETA.
 
     Args:

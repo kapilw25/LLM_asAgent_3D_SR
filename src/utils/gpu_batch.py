@@ -5,6 +5,8 @@ import json
 import shutil
 import sys
 
+_MIN_CLI_ARGS = 2   # iter18 W7: `gpu_batch.py <cmd>`
+
 # ═════════════════════════════════════════════════════════════════════════
 # VRAM COST MODEL — empirical from Qwen3-VL-8B on RTX PRO 6000 (96 GB)
 # Measured: 9 clips = 23 GB total → model ~16 GB fixed + ~0.78 GB/clip
@@ -114,10 +116,15 @@ class AdaptiveBatchSizer:
     OOM_COOLDOWN = 50  # consecutive successes needed to reset _oom_count
 
     def __init__(self, initial_size: int, min_size: int = 1,
-                 max_size: int | None = None, memory_cap: float = 0.85):
+                 max_size: int | None = None, memory_cap: float = None):
         self.current_size = initial_size
         self.min_size = min_size
         self.max_size = max_size or initial_size
+        # iter18 H6 + GPU checklist #11: memory_cap ALWAYS sources
+        # pipeline.yaml gpu_memory_target when not explicitly passed.
+        if memory_cap is None:
+            from utils.config import get_pipeline_config
+            memory_cap = get_pipeline_config()["gpu"]["gpu_memory_target"]
         self.memory_cap = memory_cap
         self._oom_count = 0
         self._consecutive_ok = 0
@@ -236,7 +243,7 @@ def get_optimal_batch_size(profile_json: str, vram_pct: float) -> int:
 # ═════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < _MIN_CLI_ARGS:
         print("Usage:")
         print("  python -u src/utils/gpu_batch.py optimal-bs --profile-json <path> --vram-pct <0-1>")
         sys.exit(1)

@@ -207,7 +207,7 @@ def compute_multi_task_probe_loss(pooled_feats: torch.Tensor,
 # ── Optimizer-param helper (heads need their own param group) ────────
 
 def get_probe_head_param_groups(head: MultiTaskProbeHead, base_lr: float,
-                                 lr_multiplier: float = 10.0,
+                                 lr_multiplier: float,  # iter18 H6: caller passes
                                  weight_decay: float = 0.0) -> list:
     """Return AdamW param groups for the multi-task head.
 
@@ -253,9 +253,10 @@ def merge_multi_task_config(cfg: dict, args, mode_key: str) -> None:
     mt_cfg = cfg["multi_task_probe"]
     if isinstance(mt_cfg.get("enabled"), dict):
         mt_cfg["enabled"] = mt_cfg["enabled"][mode_key]
-    if getattr(args, "taxonomy_labels_json", None):
+    # H4 purge: both flags registered by add_m09_common_args in all 8 trainers.
+    if args.taxonomy_labels_json:
         mt_cfg["labels_path"] = args.taxonomy_labels_json
-    if getattr(args, "no_multi_task", False):
+    if args.no_multi_task:
         mt_cfg["enabled"] = False
 
 

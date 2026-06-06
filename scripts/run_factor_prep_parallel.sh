@@ -50,7 +50,8 @@ set -euo pipefail
 
 if [ $# -lt 1 ]; then
     echo "USAGE: $0 <factor-yaml> [n-workers]" >&2
-    echo "  Example: $0 configs/train/surgery_3stage_DI_encoder.yaml 4" >&2
+    # iter18 H7: example path composed from pipeline.yaml (no inline literal).
+    echo "  Example: $0 $(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_encoder) 4" >&2
     exit 2
 fi
 

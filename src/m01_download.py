@@ -22,10 +22,14 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.progress import make_pbar
 from utils.config import VIDEOS_DIR, YT_VIDEOS_JSON, OUTPUTS_DATA_PREP_DIR
 from utils.config import get_sanity_clip_limit, get_pipeline_config
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_STALE_DOWNLOAD_DAYS = 90
 
 # Paths
 INPUT_JSON = YT_VIDEOS_JSON
-DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / "video_durations.json"
+DURATIONS_JSON = OUTPUTS_DATA_PREP_DIR / artifact("video_durations")
 
 # Defaults
 # 480p for prototyping: fits on M1 Mac (70 GB) + HF Private (100 GB limit)
@@ -44,7 +48,7 @@ def check_ytdlp_version():
             try:
                 version_date = datetime.strptime(version_str, "%Y.%m.%d")
                 age_days = (datetime.now() - version_date).days
-                if age_days > 90:
+                if age_days > _STALE_DOWNLOAD_DAYS:
                     print(f"WARNING: yt-dlp version {version_str} is {age_days} days old")
                     print("         Update with: pip install -U yt-dlp")
                 else:
@@ -96,7 +100,7 @@ def extract_all_videos(data: dict) -> list:
     return videos
 
 
-def download_video(url: str, output_path: Path, max_resolution: int = 480,
+def download_video(url: str, output_path: Path, max_resolution: int,  # iter18 H6: caller passes (no silent 480)
                    max_duration: int = None, use_aria2c: bool = True,
                    force: bool = False) -> bool:
     """Download a video at specified max resolution."""
@@ -159,9 +163,9 @@ def estimate_disk_usage(videos: list, max_resolution: int) -> float:
     total_mb = 0
     for v in videos:
         info = id_to_info.get(v["id"])
-        if info and info.get("filesize_approx_mb", 0) > 0:
+        if info and info.get("filesize_approx_mb", 0) > 0:   # audit-ok: yt-dlp external schema — field optional upstream
             total_mb += info["filesize_approx_mb"] * ratio
-        elif info and info.get("duration_sec", 0) > 0:
+        elif info and info.get("duration_sec", 0) > 0:   # audit-ok: yt-dlp external schema — field optional upstream
             # Fallback: estimate from duration
             total_mb += info["duration_sec"] * 2.3 * ratio
     return total_mb / 1024
@@ -275,7 +279,7 @@ def main():
     print(f"Disk usage: {total_size / (1024**3):.1f} GB in {VIDEOS_DIR}")
 
     if fail_count > 0:
-        print(f"\nFailed videos (re-run with same command to retry):")
+        print("\nFailed videos (re-run with same command to retry):")
         for v in videos:
             if not (VIDEOS_DIR / f"{v['id']}.mp4").exists():
                 print(f"  [{v['id']}] {v['title'][:50]}")

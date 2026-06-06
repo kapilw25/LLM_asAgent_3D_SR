@@ -38,7 +38,7 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import HF_DATASET_REPO, load_subset, add_subset_arg, PROJECT_ROOT
 from utils.config import get_sanity_clip_limit, get_pipeline_config
-from utils.data_paths import shards_dir
+from utils.data_paths import artifact, shards_dir
 from utils.wandb_utils import add_wandb_args, init_wandb, log_metrics, finish_wandb
 
 CLIPS_PER_SHARD = get_pipeline_config()["data"]["clips_per_shard"]
@@ -125,8 +125,8 @@ def _filter_master_tags(saved_keys: list, master_tags_path: Path,
     """
     if not master_tags_path.is_file():
         print(f"FATAL: master tags.json missing at {master_tags_path}.")
-        print(f"  Run ./git_pull.sh or python -u src/utils/hf_outputs.py download-data first")
-        print(f"  to fetch m04 VLM tags from anonymousML123/factorjepa-outputs.")
+        print("  Run ./git_pull.sh or python -u src/utils/hf_outputs.py download-data first")
+        print("  to fetch m04 VLM tags from anonymousML123/factorjepa-outputs.")
         sys.exit(1)
 
     with open(master_tags_path) as f:
@@ -243,7 +243,7 @@ def download_subset(args):
     # + tags.json stay at the corpus root (corpus-level, not shard-level artifacts).
     shard_out = shards_dir(output_dir)
     shard_out.mkdir(parents=True, exist_ok=True)
-    manifest_path = output_dir / "manifest.json"
+    manifest_path = output_dir / artifact("manifest")
 
     mode_label = "FULL CORPUS" if full_mode else f"SUBSET ({len(subset_keys):,} keys)"
     print(f"=== m00d: Pre-download {mode_label} to local WebDataset ===")
@@ -288,7 +288,7 @@ def download_subset(args):
         print(f"  Remaining clips to find: {len(remaining_keys):,}")
     else:
         remaining_keys = None  # full mode: keep all clips
-        print(f"  Full mode: downloading ALL clips from ALL shards")
+        print("  Full mode: downloading ALL clips from ALL shards")
 
     # Filter to shards that still need processing
     pending_shards = [t for t in tar_files if t not in processed_hf_shards]
@@ -424,14 +424,14 @@ def download_subset(args):
 
     # Filter master m04 tags.json into output_dir/tags.json so downstream m10/m06/m09c
     # find it at the canonical `<*_local>/tags.json` path. Skip if --no-tags-filter.
-    if not getattr(args, "no_tags_filter", False):
+    if not args.no_tags_filter:
         master_tags = Path(args.master_tags)
-        out_tags = output_dir / "tags.json"
+        out_tags = output_dir / artifact("tags")
         print(f"\nFiltering master tags ({master_tags}) -> {out_tags} ...")
         _filter_master_tags(all_saved_keys, master_tags, out_tags)
 
     elapsed = time.time() - start_time
-    print(f"\n=== Download complete ===")
+    print("\n=== Download complete ===")
     limit_str = f"{clip_limit:,}" if clip_limit else "ALL"
     print(f"  Clips saved: {len(all_saved_keys):,}/{limit_str}")
     print(f"  Shards written: {len(shards_written)}")

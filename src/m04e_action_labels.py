@@ -41,6 +41,10 @@ from utils.cache_policy import (
 from utils.checkpoint import load_json_checkpoint
 from utils.config import get_pipeline_config, get_probe_split
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_TRAIN_PER_CLASS = 30   # class viability floor for the probe
 
 _PROBE_CFG = get_pipeline_config()["probe"]
 
@@ -52,12 +56,12 @@ def run_labels(args, wb) -> None:
         sys.exit("FATAL: m04e requires --motion-features "
                  "(m04d's motion_features.npy — see plan_code_dev.md Phase 2)")
     args.output_root.mkdir(parents=True, exist_ok=True)
-    labels_path = args.output_root / "action_labels.json"
+    labels_path = args.output_root / artifact("action_labels")
     if labels_path.exists() and args.cache_policy == "1":
         print(f"  [keep] {labels_path} present — skipping (--cache-policy 2 to redo)")
         return
-    guarded_delete(labels_path, args.cache_policy, "action_labels.json")
-    guarded_delete(args.output_root / "class_counts.json", args.cache_policy, "class_counts.json")
+    guarded_delete(labels_path, args.cache_policy, artifact("action_labels"))
+    guarded_delete(args.output_root / artifact("class_counts"), args.cache_policy, artifact("class_counts"))
 
     # Mode-keyed clip-pool subsampling (POC↔FULL parity; SANITY = sorted()[:n] code check).
     mode = "sanity" if args.SANITY else ("poc" if args.POC else "full")
@@ -85,7 +89,7 @@ def run_labels(args, wb) -> None:
                               mode=mode)
     write_action_labels_json(records, splits, labels_path)
 
-    counts = load_json_checkpoint(args.output_root / "class_counts.json")
+    counts = load_json_checkpoint(args.output_root / artifact("class_counts"))
     for cls, c in counts.items():
         if c["test"] < args.min_per_split or c["val"] < args.min_per_split:
             if mode == "sanity":
@@ -95,7 +99,7 @@ def run_labels(args, wb) -> None:
             else:
                 sys.exit(f"FATAL: class '{cls}' val={c['val']}/test={c['test']} "
                          f"(need >= {args.min_per_split} each)")
-        if c["train"] < 30:
+        if c["train"] < _MIN_TRAIN_PER_CLASS:
             print(f"  WARN: class '{cls}' train={c['train']} (recommended >=30)")
     log_metrics(wb, {"n_clips_labeled": len(records), "n_classes": len(counts)})
     print(f"Wrote: {labels_path}  +  class_counts.json")

@@ -35,6 +35,8 @@ import threading
 import time
 from pathlib import Path
 
+_LOW_PID_LIMIT = 2048   # iter18 W7: below this, decode-worker thread pools risk EAGAIN
+
 
 # cgroup v1 paths (Docker, k8s default)
 _V1_MEM_LIMIT  = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
@@ -139,7 +141,7 @@ def print_cgroup_header(prefix: str = "[cgroup]") -> dict:
         print(f"{prefix}   ⚠️  cgroup memory < 48 GB — tune pipeline.yaml "
               f"decode/queue knobs (see scaling table at "
               f"configs/pipeline.yaml:streaming:decode_workers_motion)")
-    if pid_limit is not None and pid_limit < 2048:
+    if pid_limit is not None and pid_limit < _LOW_PID_LIMIT:
         print(f"{prefix}   ⚠️  cgroup pids < 2048 — keep OMP_NUM_THREADS=1 "
               f"caps in m04d preamble (libgomp Thread creation failure risk)")
 
@@ -153,12 +155,14 @@ def print_cgroup_header(prefix: str = "[cgroup]") -> dict:
     }
 
 
-def start_oom_watchdog(threshold_warn: float = 0.80,
-                       threshold_crit: float = 0.90,
-                       threshold_imminent: float = 0.97,
-                       interval_sec: int = 10,
+def start_oom_watchdog(threshold_warn: float = None,
+                       threshold_crit: float = None,
+                       threshold_imminent: float = None,
+                       interval_sec: int = None,
                        prefix: str = "[cgroup-oom-watchdog]") -> threading.Thread:
     """Start a daemon thread that prints LOUD warnings as memory approaches the cap.
+
+    iter18 H6: None → pipeline.yaml train_guards.oom_watchdog.* (single source).
 
     Forensic trail: when the kernel SIGKILLs the process at the cap, Python's
     traceback handler doesn't run — but each print here has flush=True, so
@@ -172,6 +176,12 @@ def start_oom_watchdog(threshold_warn: float = 0.80,
     join — it's a daemon and dies with the process. Returns None if there's
     no cgroup memory limit (host runs unlimited).
     """
+    from utils.config import get_pipeline_config
+    _wd = get_pipeline_config()["train_guards"]["oom_watchdog"]
+    threshold_warn = _wd["threshold_warn"] if threshold_warn is None else threshold_warn
+    threshold_crit = _wd["threshold_crit"] if threshold_crit is None else threshold_crit
+    threshold_imminent = _wd["threshold_imminent"] if threshold_imminent is None else threshold_imminent
+    interval_sec = _wd["interval_sec"] if interval_sec is None else interval_sec
     mem_limit = read_cgroup_memory_limit()
     if mem_limit is None:
         print(f"{prefix} no cgroup memory limit detected — watchdog disabled")

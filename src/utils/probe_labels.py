@@ -33,6 +33,7 @@ from utils.action_labels import (
     subsample_manifest_for_mode,
     write_action_labels_json,
 )
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 # stratified_by_motion_class_subset is now called inside
 # subsample_manifest_for_mode (Option X). No direct import needed here.
 
@@ -105,14 +106,14 @@ def ensure_probe_labels_for_mode(
     min_per_split       = pal["min_per_split"][mode_dir]
 
     if motion_features is None:
-        motion_features = local_data / "m04d_motion_features" / "motion_features.npy"
+        motion_features = local_data / "m04d_motion_features" / artifact("motion_features")
     else:
         motion_features = Path(motion_features)
 
-    output_action_dir   = project_root / "outputs" / mode_dir / "probe_action"
-    output_taxonomy_dir = project_root / "outputs" / mode_dir / "probe_taxonomy"
-    action_path   = output_action_dir / "action_labels.json"
-    taxonomy_path = output_taxonomy_dir / "taxonomy_labels.json"
+    output_action_dir   = project_root / "outputs" / mode_dir / artifact("probe_action_dir")
+    output_taxonomy_dir = project_root / "outputs" / mode_dir / artifact("probe_taxonomy_dir")
+    action_path   = output_action_dir / artifact("action_labels")
+    taxonomy_path = output_taxonomy_dir / artifact("taxonomy_labels")
 
     result = {
         "action_path": action_path,
@@ -209,7 +210,7 @@ def ensure_probe_labels_for_mode(
     # iter16 M9 (2026-05-21): tags_json derived from local_data (M9 yaml flip
     # migrates eval_10k_local → full_local). tag_taxonomy stays as separate
     # cfg key (lives in configs/, not in the active local data dir).
-    tags_json = local_data / "tags.json"
+    tags_json = local_data / artifact("tags")
     tag_taxonomy = project_root / ptl["tag_taxonomy"]
     if not tag_taxonomy.exists():
         reason = f"{tag_taxonomy} not found"

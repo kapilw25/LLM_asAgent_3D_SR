@@ -15,6 +15,12 @@ from utils.config import (
     BAKEOFF_DIR, OUTPUTS_DIR, OUTPUTS_SANITY_DIR, TAG_TAXONOMY_JSON, VLM_MODELS,
     get_module_output_dir,
 )
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_MIN_PAIR = 2            # correlations/contrasts need >=2 items
+_MIN_CONF_SAMPLES = 10   # confidence-histogram floor
+_STD_EPS = 1e-9          # degenerate-variance floor
 
 # ── Config ────────────────────────────────────────────────────────────────
 
@@ -63,10 +69,10 @@ def load_bakeoff_tags(sanity: bool = False) -> dict:
     loaded = {}
     if sanity:
         tag_dir = OUTPUTS_SANITY_DIR
-        pattern = "tags_sanity_{}.json"
+        pattern = artifact("tags_sanity_fmt")
     else:
         tag_dir = BAKEOFF_DIR
-        pattern = "tags_{}.json"
+        pattern = artifact("tags_fmt")
 
     for model_name in VLM_MODELS:
         path = tag_dir / pattern.format(model_name)
@@ -81,7 +87,7 @@ def load_bakeoff_tags(sanity: bool = False) -> dict:
         loaded[model_name] = tags
         print(f"Loaded {model_name}: {len(tags):,} clips from {path.name}")
 
-    if len(loaded) < 2:
+    if len(loaded) < _MIN_PAIR:
         print(f"ERROR: Need at least 2 VLM tag files in {tag_dir}/")
         print(f"Found: {list(loaded.keys())}")
         sys.exit(1)
@@ -169,7 +175,7 @@ def compute_agreement(tags: list, majority: list) -> float:
 
 def compute_speed(tags: list) -> float:
     """Extract speed from _tagged_at timestamps (first vs last clip)."""
-    if len(tags) < 2:
+    if len(tags) < _MIN_PAIR:
         return 0.0
 
     from datetime import datetime
@@ -183,7 +189,7 @@ def compute_speed(tags: list) -> float:
             except (ValueError, TypeError):
                 continue
 
-    if len(timestamps) < 2:
+    if len(timestamps) < _MIN_PAIR:
         return 0.0
 
     timestamps.sort()
@@ -255,7 +261,7 @@ def compute_confidence_calibration(tags: list, majority: list) -> float:
             confidences.append(float(conf))
             agreements.append(agree)
 
-    if len(confidences) < 10:
+    if len(confidences) < _MIN_CONF_SAMPLES:
         return 0.5  # not enough data, neutral score
 
     # Pearson correlation
@@ -266,7 +272,7 @@ def compute_confidence_calibration(tags: list, majority: list) -> float:
     std_c = (sum((c - mean_c) ** 2 for c in confidences) / n) ** 0.5
     std_a = (sum((a - mean_a) ** 2 for a in agreements) / n) ** 0.5
 
-    if std_c < 1e-9 or std_a < 1e-9:
+    if std_c < _STD_EPS or std_a < _STD_EPS:
         return 0.5  # no variance, neutral
 
     r = cov / (std_c * std_a)
@@ -364,7 +370,6 @@ def generate_comparison_plot(results: dict, winner: str, output_dir: Path = BAKE
 
 def compute_dashboard_metrics(tags: list) -> dict:
     """Compute 4 visual-diagnostic metrics for one VLM's tags."""
-    import numpy as np
 
     n = len(tags)
 
@@ -525,7 +530,7 @@ def main():
 
     mode_label = "SANITY" if sanity else "BAKEOFF"
     output_dir = get_module_output_dir("m04b_vlm_select", sanity=sanity)
-    output_json = output_dir / "m04b_vlm_comparison.json"
+    output_json = output_dir / artifact("m04b_vlm_comparison")
 
     print(f"VLM Bake-off Selection  (mode={mode_label})")
     print(f"Tag dir: {OUTPUTS_DIR if sanity else BAKEOFF_DIR}")

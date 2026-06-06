@@ -16,6 +16,9 @@ from pathlib import Path
 
 import numpy as np
 
+from utils.config import get_pipeline_config as _gpc   # iter18 W7
+_LEGACY_FEATURE_DIM = 13   # pre-Phase-0 m04d schema (no fg-camera-subtracted dims)
+
 
 def sort_by_fg_magnitude(clip_keys, motion_features_path, order):
     """Sort clip_keys by FOREGROUND motion magnitude (vec[13]).
@@ -43,15 +46,15 @@ def sort_by_fg_magnitude(clip_keys, motion_features_path, order):
     key_to_idx = {Path(p).stem: i for i, p in enumerate(paths)}
 
     feat_dim = features.shape[1]
-    if feat_dim >= 23:
+    if feat_dim >= _gpc()["motion"]["feature_dim"]:
         difficulty_col = 13
         print(f"  [curriculum] using Phase-0 FG magnitude (vec[13]) — "
               f"camera-subtracted, agent-only ({feat_dim}-D features)")
-    elif feat_dim == 13:
+    elif feat_dim == _LEGACY_FEATURE_DIM:
         difficulty_col = 0
-        print(f"  WARN [curriculum] Phase 0 features NOT available (still 13-D); "
-              f"falling back to global mean_mag (vec[0]) — camera-motion-contaminated "
-              f"difficulty signal. Run Phase 0 (m04d 13→23-D) for principled curriculum.")
+        print("  WARN [curriculum] Phase 0 features NOT available (still 13-D); "
+              "falling back to global mean_mag (vec[0]) — camera-motion-contaminated "
+              "difficulty signal. Run Phase 0 (m04d 13→23-D) for principled curriculum.")
     else:
         sys.exit(f"FATAL: unexpected motion_features shape {features.shape}; "
                  f"expected (N, 13) or (N, 23+)")

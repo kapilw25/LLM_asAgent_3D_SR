@@ -39,6 +39,11 @@ from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.progress import make_pbar
 from utils.video_io import decode_video_bytes
 from utils.vjepa2_imports import get_vit_by_arch
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_PENDING_FLUSH_N = 32    # decoded-tensor flush batch (perf, not research)
+_TOKENS_RANK, _POOLED_RANK = 3, 2   # (N,tokens,D) vs (N,D) feature ranks
 
 
 # ── Constants ─────────────────────────────────────────────────────────
@@ -82,7 +87,9 @@ def _load_encoders_registry() -> dict:
     subdir layout for clarity.
     """
     import yaml
-    cfg_path = Path(__file__).resolve().parents[2] / "configs" / "eval" / "probe_encoders.yaml"
+    # iter18 H1: registry pointer from pipeline.yaml config_paths.
+    cfg_path = (Path(__file__).resolve().parents[2]
+                / _PCFG["config_paths"]["probe_encoders_registry"])
     if not cfg_path.exists():
         sys.exit(f"FATAL: encoder registry config missing: {cfg_path}")
     with open(cfg_path) as f:
@@ -424,7 +431,7 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    ckpt_file = output_dir / f".probe_{label}_ckpt.npz"
+    ckpt_file = output_dir / f".probe_{label}{artifact('probe_ckpt_suffix')}"
 
     # iter13 (2026-05-05): orphan-tmp cleanup. The 2026-05-04 v2 ENOSPC crash
     # left a 35 GB `.probe_features_train_ckpt.tmp.npz` behind because torch.save
@@ -573,7 +580,7 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
                 continue
             pending_tensors.append(t)
             pending_keys.append(clip_key)
-            if len(pending_tensors) >= 32:
+            if len(pending_tensors) >= _PENDING_FLUSH_N:
                 _flush_batch(pending_tensors, pending_keys,
                              model, encoder_kind, args.num_frames,
                              sizer, feats_acc, keys_acc, pbar,
@@ -629,8 +636,8 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
 # extracted features. Output saved separately as
 # motion_aux_concat_<label>.npy; probes load both at train/eval time.
 
-def apply_motion_aux_head_to_features(features, motion_aux_head, batch_size: int = 64,
-                                      align_to: int = 16):
+def apply_motion_aux_head_to_features(features, motion_aux_head, batch_size: int,
+                                      align_to: int = None):  # iter18 H6: None → pipeline.yaml eval.motion_aux_align_to
     """Run motion_aux head on mean-pooled features → (N, K + n_dims [+ pad]) concat tensor.
 
     Args:
@@ -660,10 +667,10 @@ def apply_motion_aux_head_to_features(features, motion_aux_head, batch_size: int
     """
     import torch
     import numpy as np
-    if features.ndim == 3:
+    if features.ndim == _TOKENS_RANK:
         # (N, n_tokens, D) → mean over token axis → (N, D)
         feats_pooled = features.astype(np.float32).mean(axis=1)
-    elif features.ndim == 2:
+    elif features.ndim == _POOLED_RANK:
         feats_pooled = features.astype(np.float32)
     else:
         raise ValueError(f"apply_motion_aux_head_to_features: features must be 2-D or 3-D, "
@@ -674,6 +681,9 @@ def apply_motion_aux_head_to_features(features, motion_aux_head, batch_size: int
             f"motion_aux_head.d_encoder={motion_aux_head.d_encoder}. "
             f"Wrong encoder/head pairing — check run_eval.sh motion_aux_head_for resolver.")
     device = next(motion_aux_head.parameters()).device
+    # iter18 H6: None → pipeline.yaml eval.motion_aux_align_to.
+    if align_to is None:
+        align_to = _PCFG["eval"]["motion_aux_align_to"]
     n = feats_pooled.shape[0]
     out_dim = motion_aux_head.n_motion_classes + motion_aux_head.n_motion_dims
     # D10 (2026-05-16): pad K+n_dims to next multiple of `align_to` so downstream

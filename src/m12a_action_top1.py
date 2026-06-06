@@ -66,6 +66,7 @@ from utils.config import (
     get_pipeline_config,
 )
 from utils.data_download import ensure_local_data
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names from pipeline.yaml
 from utils.frozen_features import (
     ENCODERS,
     extract_features_for_keys,
@@ -75,6 +76,10 @@ from utils.gpu_batch import cleanup_temp
 from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog
 from utils.vjepa2_imports import get_attentive_classifier
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+
+# iter18 W7 (PLR2004): semantic named constants.
+_TOKENS_RANK = 3      # (B, tokens, D)
+_MIN_COMPARABLE = 2   # paired comparison needs >=2 encoders
 
 
 # ── Constants (iter16 2026-05-20: yaml-resolved per CLAUDE.md) ──────
@@ -269,7 +274,7 @@ def run_features_stage(args, wb) -> None:
     cleanup_temp()
     ensure_local_data(args)
 
-    labels = load_action_labels(args.output_root / "action_labels.json")
+    labels = load_action_labels(args.output_root / artifact("action_labels"))
     enc_dir = args.output_root / args.encoder
     enc_dir.mkdir(parents=True, exist_ok=True)
 
@@ -320,7 +325,7 @@ def run_features_stage(args, wb) -> None:
             ma_head = load_motion_aux_head(args.motion_aux_head, device="cuda")
             ma_concat = apply_motion_aux_head_to_features(feats, ma_head, batch_size=256)
             # (N, K+n_dims) → tile across n_tokens → (N, n_tokens, K+n_dims) → concat
-            n_tokens = feats.shape[1] if feats.ndim == 3 else 1
+            n_tokens = feats.shape[1] if feats.ndim == _TOKENS_RANK else 1
             ma_tiled = np.broadcast_to(
                 ma_concat[:, None, :], (feats.shape[0], n_tokens, ma_concat.shape[1])
             ).astype(np.float16)
@@ -350,8 +355,9 @@ def _cleanup_lazy_feature_caches(enc_dir: Path) -> None:
     Stage 5 may consume it as a fallback if features_test.npy was wiped.
     """
     for split in ("train", "val"):
-        for path in (enc_dir / f".probe_features_{split}_ckpt.npz",
-                      enc_dir / f".probe_features_{split}_ckpt.tmp.npz"):
+        _sfx = artifact("probe_ckpt_suffix")                       # "_ckpt.npz"
+        for path in (enc_dir / f".probe_features_{split}{_sfx}",
+                      enc_dir / f".probe_features_{split}{_sfx.replace('.npz', '.tmp.npz')}"):
             if path.exists():
                 try:
                     sz_gb = path.stat().st_size / 1e9
@@ -378,10 +384,10 @@ def run_train_stage(args, wb) -> None:
     enc_dir_pre = args.output_root / args.encoder
     out_dir_pre = enc_dir_pre / args.output_subdir if args.output_subdir else enc_dir_pre
     required_outputs = [
-        out_dir_pre / "probe.pt",
-        out_dir_pre / "test_predictions.npy",
-        out_dir_pre / "test_clip_keys.npy",
-        out_dir_pre / "test_metrics.json",
+        out_dir_pre / artifact("probe_head"),
+        out_dir_pre / artifact("test_predictions"),
+        out_dir_pre / artifact("test_clip_keys"),
+        out_dir_pre / artifact("test_metrics"),
     ]
     if args.cache_policy == "1" and all(p.exists() for p in required_outputs):
         present = ", ".join(p.name for p in required_outputs)
@@ -400,7 +406,7 @@ def run_train_stage(args, wb) -> None:
     enc_dir = args.output_root / args.encoder
     out_dir = enc_dir / args.output_subdir if args.output_subdir else enc_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    labels = load_action_labels(args.output_root / "action_labels.json")
+    labels = load_action_labels(args.output_root / artifact("action_labels"))
     # iter13 v12 (2026-05-05): runtime-derived class_names from labels (motion-flow
     # classes are dataset-driven, K varies). Sorted alphabetically — matches
     # load_subset_with_labels' deterministic class_id assignment so class_id i ↔
@@ -434,9 +440,9 @@ def run_train_stage(args, wb) -> None:
             args, model, enc_kind, crop, embed_dim,
             by_split, labels_by_clip, n_classes, out_dir, wb)
         # Persist probe + test predictions in canonical layout (matches lazy path).
-        torch.save(best_state, out_dir / "probe.pt")
-        np.save(out_dir / "test_predictions.npy", test_correct)
-        np.save(out_dir / "test_clip_keys.npy", np.array(test_keys, dtype=object))
+        torch.save(best_state, out_dir / artifact("probe_head"))
+        np.save(out_dir / artifact("test_predictions"), test_correct)
+        np.save(out_dir / artifact("test_clip_keys"), np.array(test_keys, dtype=object))
         test_acc = float(test_correct.mean()) if test_correct.size else 0.0
         test_ci = bootstrap_ci(test_correct.astype(np.float64))
         save_json_checkpoint({
@@ -446,7 +452,7 @@ def run_train_stage(args, wb) -> None:
             "probe_lr": float(args.probe_lr), "warmup_pct": float(args.warmup_pct),
             "epochs": int(args.epochs),
             "stream_train": True,
-        }, out_dir / "test_metrics.json")
+        }, out_dir / artifact("test_metrics"))
         print(f"[stream-train] test top-1: {test_acc:.4f} ±{test_ci['ci_half']:.4f} (95% BCa CI)")
         log_metrics(wb, {"test_top1_acc": test_acc,
                          "test_top1_ci_half": test_ci["ci_half"],
@@ -502,7 +508,7 @@ def run_train_stage(args, wb) -> None:
         if ma_head_lazy is not None:
             from utils.frozen_features import apply_motion_aux_head_to_features
             ma_concat = apply_motion_aux_head_to_features(feats, ma_head_lazy, batch_size=256)
-            n_tokens = feats.shape[1] if feats.ndim == 3 else 1
+            n_tokens = feats.shape[1] if feats.ndim == _TOKENS_RANK else 1
             ma_tiled = np.broadcast_to(
                 ma_concat[:, None, :], (feats.shape[0], n_tokens, ma_concat.shape[1])
             ).astype(np.float16)
@@ -541,24 +547,24 @@ def run_train_stage(args, wb) -> None:
 
     best_val_acc, best_state = _train_attentive_classifier(
         probe, feats_train, y_train, feats_val, y_val,
-        args, jsonl_path=out_dir / "train_log.jsonl", wb=wb)
-    torch.save(best_state, out_dir / "probe.pt")
-    print(f"Saved best probe → {out_dir / 'probe.pt'} (val_acc={best_val_acc:.4f})")
+        args, jsonl_path=out_dir / artifact("train_log_jsonl"), wb=wb)
+    torch.save(best_state, out_dir / artifact("probe_head"))
+    print(f"Saved best probe → {out_dir / artifact('probe_head')} (val_acc={best_val_acc:.4f})")
 
     probe.load_state_dict(best_state)
     X_test_t = torch.from_numpy(feats_test).float()
     y_test_t = torch.from_numpy(y_test).long()
     test_correct, test_acc, test_ci = _eval_per_clip(probe, X_test_t, y_test_t, args.train_batch_size)
 
-    np.save(out_dir / "test_predictions.npy", test_correct)
-    np.save(out_dir / "test_clip_keys.npy", keys_test)
+    np.save(out_dir / artifact("test_predictions"), test_correct)
+    np.save(out_dir / artifact("test_clip_keys"), keys_test)
     save_json_checkpoint({
         "encoder": args.encoder, "n_classes": n_classes, "class_names": class_names,
         "n_test": int(len(test_correct)), "top1_acc": test_acc, "top1_ci": test_ci,
         "best_val_acc": float(best_val_acc),
         "probe_lr": float(args.probe_lr), "warmup_pct": float(args.warmup_pct),
         "epochs": int(args.epochs),
-    }, out_dir / "test_metrics.json")
+    }, out_dir / artifact("test_metrics"))
     print(f"Test top-1 acc: {test_acc:.4f}  ±{test_ci['ci_half']:.4f}  (95% BCa CI)")
     log_metrics(wb, {"test_top1_acc": test_acc, "test_top1_ci_half": test_ci["ci_half"]})
 
@@ -597,7 +603,7 @@ def run_select_best_lr_stage(args, wb) -> None:
         return
     best_dir, best_acc = None, -1.0
     for sub in lr_dirs:
-        mf = sub / "test_metrics.json"
+        mf = sub / artifact("test_metrics")
         if not mf.exists():
             continue
         val = json.loads(mf.read_text()).get("best_val_acc", -1.0)
@@ -608,8 +614,8 @@ def run_select_best_lr_stage(args, wb) -> None:
     print(f"Best LR for {args.encoder}: {best_dir.name} (best_val_acc={best_acc:.4f}) "
           f"out of {len(lr_dirs)} swept LRs")
     n_linked = 0
-    for fname in ("probe.pt", "test_predictions.npy", "test_clip_keys.npy",
-                  "test_metrics.json", "train_log.jsonl"):
+    for fname in (artifact("probe_head"), artifact("test_predictions"), artifact("test_clip_keys"),
+                  artifact("test_metrics"), artifact("train_log_jsonl")):
         if not (best_dir / fname).exists():
             continue
         target = enc_dir / fname
@@ -669,14 +675,14 @@ def run_paired_delta_stage(args, wb) -> None:
         if not enc_dir.is_dir():
             continue
         if all((enc_dir / f).exists() for f in
-               ("test_predictions.npy", "test_clip_keys.npy", "test_metrics.json")):
+               (artifact("test_predictions"), artifact("test_clip_keys"), artifact("test_metrics"))):
             enc_data[enc_dir.name] = {
-                "preds": np.load(enc_dir / "test_predictions.npy").astype(np.float32),
-                "keys":  [str(k) for k in np.load(enc_dir / "test_clip_keys.npy", allow_pickle=True)],
-                "agg":   json.loads((enc_dir / "test_metrics.json").read_text()),
+                "preds": np.load(enc_dir / artifact("test_predictions")).astype(np.float32),
+                "keys":  [str(k) for k in np.load(enc_dir / artifact("test_clip_keys"), allow_pickle=True)],
+                "agg":   json.loads((enc_dir / artifact("test_metrics")).read_text()),
             }
     available = sorted(enc_data.keys())
-    if len(available) < 2:
+    if len(available) < _MIN_COMPARABLE:
         sys.exit(f"FATAL: need >=2 encoders with probe outputs, found: {available} "
                  f"(run --stage train per-encoder first)")
     print(f"Encoders found: {available}")
@@ -759,7 +765,7 @@ def run_paired_delta_stage(args, wb) -> None:
            "by_encoder": by_encoder,
            "pairwise_deltas": pairwise_deltas,
            "iter14_paper_deltas": iter14_paper_deltas}
-    save_json_checkpoint(out, args.output_root / "probe_paired_delta.json")
+    save_json_checkpoint(out, args.output_root / artifact("probe_paired_delta"))
     log_metrics(wb, {"n_encoders_compared": len(available),
                      "n_pairwise_deltas":   len(pairwise_deltas),
                      "iter14_deltas_passed": sum(1 for d in iter14_paper_deltas.values()

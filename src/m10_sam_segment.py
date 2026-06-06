@@ -69,7 +69,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import (
     check_gpu, add_subset_arg, add_local_data_arg, get_output_dir, get_module_output_dir,
     load_subset, get_sanity_clip_limit, get_poc_clip_limit, get_total_clips,
-    load_train_config_with_extends,
+    load_train_config_with_extends, get_pipeline_config,
 )
 from utils.checkpoint import save_json_checkpoint, load_json_checkpoint
 from utils.data_download import ensure_local_data, iter_clips_parallel
@@ -95,9 +95,9 @@ from utils.mask_metrics import (
 # outputs/<mode>/m10_sam_segment/ default — LOCAL_DATA dir IS the source of truth.
 def _resolve_output_dir(args) -> Path:
     """Return m10's output dir: --output-dir > <--local-data>/m10_sam_segment/ > FATAL."""
-    if getattr(args, "output_dir", None):
+    if args.output_dir:
         return Path(args.output_dir)
-    if getattr(args, "local_data", None):
+    if args.local_data:
         return Path(args.local_data) / "m10_sam_segment"
     print("FATAL: m10_sam_segment requires either --output-dir or --local-data")
     print("  USAGE: python -u src/m10_sam_segment.py --FULL "
@@ -112,6 +112,12 @@ from transformers import (
     Sam3TrackerVideoModel,
     Sam3TrackerVideoProcessor,
 )
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+
+# iter18 W7 (PLR2004): semantic named constants.
+_BIN_THRESH = 127   # uint8 midpoint — mask binarization
+_RGB_RANK = 3
+_Q = get_pipeline_config()["m10_quality"]   # gates shared with utils/m10_merge (yaml single source)
 
 
 # ── Fixed Agent Taxonomy ─────────────────────────────────────────────
@@ -178,7 +184,6 @@ def load_grounding_dino(model_id: str):
     ~1.3-1.5× DINO speedup atop M6's 4-anchor batching. FAIL LOUD on Inductor
     errors (no eager fallback per CLAUDE.md).
     """
-    from utils.config import get_pipeline_config
     processor = AutoProcessor.from_pretrained(model_id)
     model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to("cuda").eval()
     _cfg = get_pipeline_config()["dino_compile"]                # FAIL LOUD
@@ -526,7 +531,7 @@ def segment_clip(sam_model, sam_processor, dino_processor, dino_model,
         m = np.asarray(mask_np, dtype=bool)
         if m.shape != (H, W):
             m = np.array(Image.fromarray(m.astype(np.uint8) * 255).resize(
-                (W, H), Image.NEAREST)) > 127
+                (W, H), Image.NEAREST)) > _BIN_THRESH
         min_area = int(H * W * min_mask_area_pct)
         if not (m.any() and prob >= min_confidence and m.sum() >= min_area):
             return None
@@ -838,7 +843,7 @@ def plot_overlay_per_clip(segments: dict, masks_dir: Path, tags_lookup: dict,
             continue
 
         frame_rgb = data["mid_frame_rgb"]  # (H, W, 3) uint8
-        mid = min(data["agent_mask"].shape[0] - 1, frame_rgb.shape[0] // 2 if frame_rgb.ndim == 3 else 0)
+        mid = min(data["agent_mask"].shape[0] - 1, frame_rgb.shape[0] // 2 if frame_rgb.ndim == _RGB_RANK else 0)
         agent_mask = data["agent_mask"][mid]
 
         # Resize mask to frame if needed
@@ -980,7 +985,7 @@ def main():
     if args.plot:
         output_dir = _resolve_output_dir(args)
         masks_dir = output_dir / "masks"
-        segments_file = output_dir / "segments.json"
+        segments_file = output_dir / artifact("segments")
         if not segments_file.exists():
             print(f"FATAL: {segments_file} not found. Run segmentation first (without --plot).")
             sys.exit(1)
@@ -989,12 +994,12 @@ def main():
         if args.tags_json:
             tags_path = Path(args.tags_json)
         else:
-            local_data = getattr(args, "local_data", None)
-            if local_data and Path(local_data).joinpath("tags.json").exists():
-                tags_path = Path(local_data) / "tags.json"
+            local_data = args.local_data
+            if local_data and Path(local_data).joinpath(artifact("tags")).exists():
+                tags_path = Path(local_data) / artifact("tags")
             else:
                 base = get_output_dir(args.subset, sanity=args.SANITY, poc=args.POC)
-                tags_path = base / "tags.json"
+                tags_path = base / artifact("tags")
         tags_lookup = load_tags_lookup(tags_path)
         print(f"Re-generating plots from {output_dir} ({len(segments)} clips)...")
         plot_overlay_per_clip(segments, masks_dir, tags_lookup, output_dir)
@@ -1014,7 +1019,7 @@ def main():
         interaction_cfg = train_cfg["interaction_mining"]
         output_dir = _resolve_output_dir(args)
         masks_dir = output_dir / "masks"
-        segments_file = output_dir / "segments.json"
+        segments_file = output_dir / artifact("segments")
         if not segments_file.exists():
             print(f"FATAL: {segments_file} not found. Run m10 (without --interactions-only) first.")
             sys.exit(1)
@@ -1120,7 +1125,7 @@ def main():
         clip_limit = get_poc_clip_limit("factor_prep")
     else:
         clip_limit = get_total_clips(
-            local_data=getattr(args, "local_data", None),
+            local_data=args.local_data,
             subset_file=args.subset)
         if clip_limit == 0:
             print("FATAL: FULL requires explicit --subset (JSON with clip_keys list) or "
@@ -1132,17 +1137,17 @@ def main():
         tags_path = Path(args.tags_json)
     else:
         # Auto-detect: look in local-data dir first, then output dir parent
-        local_data = getattr(args, "local_data", None)
-        if local_data and Path(local_data).joinpath("tags.json").exists():
-            tags_path = Path(local_data) / "tags.json"
+        local_data = args.local_data
+        if local_data and Path(local_data).joinpath(artifact("tags")).exists():
+            tags_path = Path(local_data) / artifact("tags")
         else:
             # Look in m04's output dir, then base dir (backward compat)
             m04_dir = get_module_output_dir("m04_vlm_tag", args.subset,
                                             sanity=args.SANITY, poc=args.POC)
-            if (m04_dir / "tags.json").exists():
-                tags_path = m04_dir / "tags.json"
+            if (m04_dir / artifact("tags")).exists():
+                tags_path = m04_dir / artifact("tags")
             else:
-                tags_path = get_output_dir(args.subset, sanity=args.SANITY, poc=args.POC) / "tags.json"
+                tags_path = get_output_dir(args.subset, sanity=args.SANITY, poc=args.POC) / artifact("tags")
 
     tags_lookup = load_tags_lookup(tags_path)
 
@@ -1163,11 +1168,11 @@ def main():
     ckpt_file = output_dir / ".m10_checkpoint.json"
     ckpt = load_json_checkpoint(ckpt_file, default={"processed_keys": []})
     processed_keys = set(ckpt["processed_keys"])
-    segments = load_json_checkpoint(output_dir / "segments.json", default={})
+    segments = load_json_checkpoint(output_dir / artifact("segments"), default={})
 
     # Iterate clips
     subset_keys = load_subset(args.subset) if args.subset else None
-    local_data = getattr(args, "local_data", None)
+    local_data = args.local_data
 
     print(f"\n{'='*60}")
     print(f"Grounded-SAM (DINO + SAM 3.1) — {mode}")
@@ -1262,7 +1267,7 @@ def main():
             # Checkpoint every 10 clips
             if n_processed % 10 == 0:
                 save_json_checkpoint({"processed_keys": list(processed_keys)}, ckpt_file)
-                save_json_checkpoint(segments, output_dir / "segments.json")
+                save_json_checkpoint(segments, output_dir / artifact("segments"))
                 # Periodic cache release — m10 doesn't use AdaptiveBatchSizer (per-clip
                 # SAM3 sessions, not batched) but still benefits from compaction every
                 # 10 clips to prevent fragmentation buildup over a 100-1000 clip run (#47).
@@ -1271,7 +1276,7 @@ def main():
     pbar.close()
 
     # Final save
-    save_json_checkpoint(segments, output_dir / "segments.json")
+    save_json_checkpoint(segments, output_dir / artifact("segments"))
     elapsed = time.time() - t0
     n_interactions_total = sum(s["n_interactions"] for s in segments.values())
     concept_recalls = [s["concept_recall"] for s in segments.values()]
@@ -1289,10 +1294,10 @@ def main():
     # (monuments, deserted lanes). Old 0.02 pixel_ratio_min was calibrated for noisy
     # SAM3-text pipeline (avg 3-5% from false positives); deprecated here.
     gate_checks = {
-        "pixel_ratio_min": mean_pixel_ratio >= 0.002,      # pipeline producing some mask
-        "pixel_ratio_max": mean_pixel_ratio <= 0.50,       # not everything masked
-        "mask_confidence": mean_mask_confidence >= 0.4,     # SAM is confident
-        "clips_with_agents": clips_with_agents_pct >= 0.5,  # >=50% clips have agents
+        "pixel_ratio_min": mean_pixel_ratio >= _Q["pixel_ratio_min"],      # pipeline producing some mask
+        "pixel_ratio_max": mean_pixel_ratio <= _Q["pixel_ratio_max"],       # not everything masked
+        "mask_confidence": mean_mask_confidence >= _Q["mask_confidence_min"],     # SAM is confident
+        "clips_with_agents": clips_with_agents_pct >= _Q["clips_with_agents_min"],  # >=50% clips have agents
     }
     quality_gate = all(gate_checks.values())
 
@@ -1341,7 +1346,7 @@ def main():
         # means. Read this to assess factor-quality regression across re-runs.
         "quality_aggregate": quality_aggregate,
     }
-    save_json_checkpoint(summary, output_dir / "summary.json")
+    save_json_checkpoint(summary, output_dir / artifact("summary"))
 
     # Cleanup checkpoint
     if ckpt_file.exists():

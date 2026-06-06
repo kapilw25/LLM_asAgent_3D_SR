@@ -4,6 +4,9 @@ Used by m03_pack_shards.py (TAR upload) and m04_vlm_tag.py (metadata upload).
 import os
 from pathlib import Path
 
+# iter18 W7 (PLR2004): dataset size-tier labels (display tiering).
+_TIER_100K, _TIER_10K, _TIER_1K = 100_000, 10_000, 1_000
+
 
 def _setup_hf_env():
     """Override HF cache paths for local machine (prevents .env GPU paths on Mac)."""
@@ -27,11 +30,11 @@ def _get_token() -> str:
 def generate_readme(num_clips: int, num_videos: int, total_gb: float,
                     num_shards: int = 0) -> str:
     """Generate README.md content. No ffprobe — uses pre-computed stats."""
-    if num_clips > 100000:
+    if num_clips > _TIER_100K:
         size_cat = "100K<n<1M"
-    elif num_clips > 10000:
+    elif num_clips > _TIER_10K:
         size_cat = "10K<n<100K"
-    elif num_clips > 1000:
+    elif num_clips > _TIER_1K:
         size_cat = "1K<n<10K"
     else:
         size_cat = "n<1K"
@@ -236,7 +239,7 @@ def upload_metadata(clips_dir: Path, repo_id: str) -> int:
         return 0
 
     count = upload_metadata_only(clips_dir, repo_id, token)
-    print(f"\n=== METADATA UPLOAD COMPLETE ===")
+    print("\n=== METADATA UPLOAD COMPLETE ===")
     print(f"Uploaded: {count} metadata.jsonl files")
     print(f"Dataset: https://huggingface.co/datasets/{repo_id}")
     return count

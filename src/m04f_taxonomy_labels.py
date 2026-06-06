@@ -29,17 +29,18 @@ from utils.cache_policy import (
 from utils.checkpoint import save_json_checkpoint
 from utils.taxonomy_labels import derive_taxonomy_labels
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 
 
 def run_labels(args, wb) -> None:
     if any(p is None for p in (args.tags_json, args.tag_taxonomy, args.eval_subset)):
         sys.exit("FATAL: m04f requires --tags-json + --tag-taxonomy + --eval-subset")
     args.output_root.mkdir(parents=True, exist_ok=True)
-    out_path = args.output_root / "taxonomy_labels.json"
+    out_path = args.output_root / artifact("taxonomy_labels")
     if out_path.exists() and args.cache_policy == "1":
         print(f"  [keep] {out_path} present — skipping (--cache-policy 2 to redo)")
         return
-    guarded_delete(out_path, args.cache_policy, "taxonomy_labels.json")
+    guarded_delete(out_path, args.cache_policy, artifact("taxonomy_labels"))
 
     labels_by_clip, dims = derive_taxonomy_labels(
         args.tags_json, args.tag_taxonomy, args.eval_subset)

@@ -244,10 +244,10 @@ def main() -> None:
                         help="Directory of small files to pack (e.g., masks/)")
     p_pack.add_argument("--shard-template", required=True,
                         help='Output template, e.g., "masks-{shard:05d}.tar"')
-    p_pack.add_argument("--max-shard-size-gb", type=float, default=1.0,
-                        help="Soft size cap per shard in GB (default 1.0 = HF's "
-                             "fast-upload sweet spot; matches pipeline.yaml "
-                             "data.max_tar_shard_gb). Files stream-fill the current "
+    p_pack.add_argument("--max-shard-size-gb", type=float, default=None,
+                        help="Soft size cap per shard in GB. Default: pipeline.yaml "
+                             "data.max_tar_shard_gb (single source — iter18 H2 removed "
+                             "the duplicated 1.0 literal). Files stream-fill the current "
                              "shard until adding the next would exceed this cap, "
                              "then a new shard rolls over (m00d-style auto-shard).")
     p_pack.add_argument("--keep-source", action="store_true",
@@ -263,23 +263,29 @@ def main() -> None:
                           help='Glob pattern matching shards, e.g., "masks-*.tar"')
     p_unpack.add_argument("--output-dir", type=Path, required=True,
                           help="Where to extract members (e.g., masks/ recreated)")
-    p_unpack.add_argument("--skip-existing", action="store_true", default=True,
-                          help="Skip files that already exist in output_dir (default ON)")
+    # iter18 H2: dropped the dead `--skip-existing` flag (store_true with
+    # default=True = a no-op switch). Skip-existing IS the documented default;
+    # --force-overwrite is the one real toggle.
     p_unpack.add_argument("--force-overwrite", action="store_true",
-                          help="Overwrite existing files (sets skip_existing=False)")
+                          help="Overwrite existing files (default: skip files that "
+                               "already exist in output_dir)")
 
     args = parser.parse_args()
 
     if args.cmd == "pack":
+        max_gb = args.max_shard_size_gb
+        if max_gb is None:
+            from utils.config import get_pipeline_config
+            max_gb = get_pipeline_config()["data"]["max_tar_shard_gb"]
         pack_dir_to_shards(
             input_dir=args.input_dir,
             shard_template=args.shard_template,
-            max_shard_size_gb=args.max_shard_size_gb,
+            max_shard_size_gb=max_gb,
             keep_source=args.keep_source,
             force=args.force,
         )
     elif args.cmd == "unpack":
-        skip = args.skip_existing and not args.force_overwrite
+        skip = not args.force_overwrite
         unpack_shards_to_dir(
             shards_glob=args.shards_glob,
             output_dir=args.output_dir,
