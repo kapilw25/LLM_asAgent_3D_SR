@@ -330,9 +330,12 @@ def _mirror_cleanup(api, local_path: Path, subfolder: str):
         # iter18 (2026-06-04): PROTECT `_full-*.tar` full-fidelity snapshots (upload-full) — they are
         # deliberately absent from the light upload set (and deleted locally post-upload), so the
         # light mirror must never purge them. upload_outputs_full does its own scoped remote purge.
+        # iter18 (2026-06-06): also protect `_full-manifest.json` — verify-full reads it;
+        # a light mirror purge deleting it would silently break A4/B3 verification.
         stale = sorted(p for p in remote_paths
                        if p not in upload_set
-                       and not (Path(p).name.startswith("_full-") and p.endswith(".tar")))
+                       and not (Path(p).name.startswith("_full-") and p.endswith(".tar"))
+                       and Path(p).name != artifact("full_manifest"))
 
         if not stale:
             print(f"  Mirror: HF in sync ({len(remote_paths)} files on remote, "
@@ -655,7 +658,19 @@ def upload_outputs_full(output_dir: str, subfolder: str = None):
           f"→ {output_path / mname}")
 
     api = HfApi(token=token)
-    _purge_remote_full_shards(api, subfolder)
+    # iter18 (2026-06-06): the SAME ask-first gate as `upload`/`upload-data`.
+    #   1=delete → wipe the remote folder first → what's on HF afterwards is EXACTLY
+    #              the manifest, nothing else (kills loose stale files from old light
+    #              uploads — download's skip-existing unpack would otherwise keep the
+    #              OLD copy and throw away the fresh one: the 2026-06-06 dl_test bug);
+    #   2=reuse  → old behavior: refresh the _full-*.tar shards only, strays survive.
+    # HF_UPLOAD_MODE=delete|reuse skips the question for tmux/overnight runs.
+    mode = resolve_upload_mode_interactive(
+        api, HF_OUTPUTS_REPO, "dataset", subfolder, f"outputs upload-full: {output_dir}")
+    if mode == "delete":
+        delete_repo_folder_scoped(api, HF_OUTPUTS_REPO, "dataset", subfolder)
+    else:
+        _purge_remote_full_shards(api, subfolder)
     t0 = time.time()
     with _UploadHeartbeat(f"upload-full {subfolder}"):
         api.upload_folder(
@@ -1077,7 +1092,8 @@ def _post_download_unpack_masks(data_root: Path) -> None:
             _unpack_one_subset(d)
 
 
-def _download_one_file(rpath: str, base_url: str, headers: dict) -> tuple:
+def _download_one_file(rpath: str, base_url: str, headers: dict,
+                       expected_size: int) -> tuple:
     """Worker: GET one HF file via plain HTTP, stream to disk. Idempotent.
 
     iter16 (2026-05-22): per-file helper used by `download_data`'s ThreadPool.
@@ -1085,13 +1101,14 @@ def _download_one_file(rpath: str, base_url: str, headers: dict) -> tuple:
     some files). Returns (rpath, status, error_or_None) where status is one
     of "skipped", "downloaded", "failed".
 
-    Idempotent skip: if local file exists + non-empty, assume it was already
-    downloaded (the bytes are the truth, not HF metadata). Re-download only
-    on missing/empty.
+    Idempotent skip — iter18 (2026-06-06): the local file must match the REMOTE
+    size to be skipped. The old "exists + non-empty" rule silently kept a stale
+    or truncated local copy when the remote file changed size (same trap class
+    as the dl_test loose-file incident). Size mismatch → re-download.
     """
     import requests
     local = Path(rpath)
-    if local.exists() and local.stat().st_size > 0:
+    if local.exists() and local.stat().st_size == expected_size:
         return (rpath, "skipped", None)
     local.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -1169,8 +1186,8 @@ def download_data(data_root: Path = None):
     pbar = make_pbar(total=len(remote_files), desc="download_data", unit="file")
     with ThreadPoolExecutor(max_workers=8) as ex:
         futures = {
-            ex.submit(_download_one_file, rpath, base_url, headers): rpath
-            for rpath, _expected in remote_files
+            ex.submit(_download_one_file, rpath, base_url, headers, expected): rpath
+            for rpath, expected in remote_files
         }
         for fut in as_completed(futures):
             rpath, status, err = fut.result()
@@ -1217,22 +1234,28 @@ if __name__ == "__main__":
 
     cmd = sys.argv[1]
 
+    # iter18 (2026-06-06): FAIL LOUD at the process level — every verb's False
+    # return becomes exit 1. Before this, `download-data` could print "failed: 3"
+    # and still exit 0, letting a `| tee` runbook chain sail past missing files.
+    rc = None
     if cmd == "upload" and len(sys.argv) >= _MIN_CLI_ARGS:
-        upload_outputs(sys.argv[2])
+        rc = upload_outputs(sys.argv[2])
     elif cmd == "download" and len(sys.argv) >= _MIN_CLI_ARGS:
-        download_outputs(sys.argv[2])
+        rc = download_outputs(sys.argv[2])
     elif cmd == "upload-full" and len(sys.argv) >= _MIN_CLI_ARGS:
-        upload_outputs_full(sys.argv[2])
+        rc = upload_outputs_full(sys.argv[2])
     elif cmd == "download-full" and len(sys.argv) >= _MIN_CLI_ARGS:
-        download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
+        rc = download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
     elif cmd == "verify-full" and len(sys.argv) >= _MIN_CLI_ARGS:
-        verify_outputs_full(sys.argv[2])
+        verify_outputs_full(sys.argv[2])     # exits 1 itself on any gap
     elif cmd == "upload-data":
         # iter13 v12+ (2026-05-06): optional positional <data_dir> override.
         # Default = "data" (project convention). No more hardcoded subfolder list.
-        upload_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
+        rc = upload_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
     elif cmd == "download-data":
-        download_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
+        rc = download_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
     else:
         print(f"Unknown command: {cmd}")
+        sys.exit(1)
+    if rc is False:
         sys.exit(1)

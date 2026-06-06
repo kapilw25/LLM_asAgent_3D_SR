@@ -80,9 +80,11 @@ data:
   # outputs snapshot for multi-box migration). Must exceed the largest single file
   # (m09*_ckpt_best.pt = 7.1 GB at vitG — pack_dir_to_shards FATALs on file > cap) and stay
   # well under HF's per-file limit.
-  max_tar_shard_gb_full: 5.0   # iter18 2026-06-06: was 20.0 — small shards let snapshot_download
-                               # (max_workers=16) fetch in PARALLEL on the safe non-Xet path; a
-                               # single 15G shard downloaded serially at ~50 MB/s (5+ min, looks stuck)
+  max_tar_shard_gb_full: 8.0   # iter18 2026-06-06: was 20.0 — smaller shards let snapshot_download
+                               # (max_workers=16) fetch in PARALLEL on the safe non-Xet path (one 15G
+                               # shard downloaded serially at ~50 MB/s, looked stuck). FLOOR = 8.0:
+                               # a shard cannot split ONE file, and the largest single file is
+                               # m09a_ckpt_best.pt at 7.61 GB (5.0 hit FATAL on it 2026-06-06).
 
 # ── Canonical artifact filenames (iter18 W4 H1-purge) ─────────────────────────
 # SINGLE SOURCE for every file NAME one module writes and another reads (or a

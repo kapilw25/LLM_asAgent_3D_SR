@@ -19,13 +19,13 @@ python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 1 --cache 2 --only pretra
 grep -E "probe-trio" logs/iter18_ngpu_poc_train_pretrain_encoder_*.log | tail -6   # MUST show (N=451), NOT (N=1000)
 
 # A3 · ship m09a (14 G) + label jsons to HF. upload-full, NOT `upload` — light upload DROPS m09a_ckpt_best.pt
-python -u src/utils/hf_outputs.py upload-full outputs/ 2>&1 | tee logs/upload_full_outputs_sanity_poc_$(date +%Y%m%d_%H%M%S).log
+python -u src/utils/hf_outputs.py upload-full outputs/ 2>&1 | tee logs/hf_outputs_upload_full_outputs_sanity_poc_$(date +%Y%m%d_%H%M%S).log
 
 # A4 · verify EVERY file (sanity + poc) made it — compares the local inventory file-by-file against the
 #      uploaded _full-manifest.json + checks every _full-*.tar shard exists on HF byte-identical;
 #      exits 1 and lists the exact missing files on ANY gap
-python -u src/utils/hf_outputs.py verify-full outputs/ 2>&1 | tee logs/verify_full_outputs_$(date +%Y%m%d_%H%M%S).log
-grep "VERIFY-FULL: PASS" logs/verify_full_outputs_*.log   # MUST print PASS (file + shard counts)
+python -u src/utils/hf_outputs.py verify-full outputs/ 2>&1 | tee logs/hf_outputs_verify_full_outputs_sanity_poc_$(date +%Y%m%d_%H%M%S).log
+grep "VERIFY-FULL: PASS" logs/hf_outputs_verify_full_outputs_sanity_poc_*.log   # MUST print PASS (file + shard counts)
 ```
 
 ### 0.B · 4× box — provision + gate NOW, in parallel with 0.A (do NOT wait for A5)
@@ -37,8 +37,6 @@ mkdir -p logs && bash setup_env_uv.sh --gpu --from-wheels 2>&1 | tee logs/setup_
 
 # B2 · data (22 G)
 python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/hf_outputs_download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
-
-
 
 # B3 · pull the fresh pretrain seed; --cache 1 will then skip ONLY pretrain (student_encoder.pt marker)
 python -u src/utils/hf_outputs.py download-full outputs/ 2>&1 | tee logs/hf_outputs_download_full_outputs_sanity_poc_$(date +%Y%m%d_%H%M%S).log
