@@ -13,9 +13,12 @@ ETA: a forward DAG simulation over the GPU pool. Per-arm durations are OBSERVED,
     seeded from the 06-05/06-06 measured runs and replaced the moment real data arrives.
 
 AUTO-BACKUP (POC only): while you watch, this backs up outputs/poc to HF every UPLOAD_EVERY_MIN
-  minutes (light `upload`, reuse mode — now carries ALL result artifacts incl. ckpt_best — HF dedups unchanged files; the full-fidelity `_full-*.tar`
-  shards + `_full-manifest.json` on the remote are PROTECTED from its mirror-cleanup) and once more
-  when the run finishes, so the paid node can be killed right after completion.
+  minutes (`upload`, reuse mode — iter18 2026-06-07: now mirrors EVERY file incl. the resume
+  checkpoints *ckpt_latest/stage*.pt, so a box migration needs no extra upload; HF dedups
+  unchanged files. The full-fidelity `_full-*.tar` shards + `_full-manifest.json` on the remote
+  are PROTECTED from its mirror-cleanup) and once more when the run finishes, so the paid node
+  can be killed right after completion. A missing HF_TOKEN now FAILS the backup loudly (rc=1 →
+  ❌ line) — it skipped silently as "✅" for 20 h on 06-06/07.
 
 USAGE:
   python -u scripts/iter18_poc_status.py                 # latest POC main log
@@ -33,7 +36,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
+sys.path.insert(0, str(REPO / "src"))
+import json  # noqa: E402
 from iter18_poc_ngpu import ARM2ENC, BACKBONE, S3_SKIP_PERENC, build_jobs  # noqa: E402  (canonical DAG)
+from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
 _MIN_EVAL_POINTS = 5     # eval rate needs a few clips before extrapolating
@@ -49,17 +55,112 @@ TRAIN_ORDER = [
     "cassle_encoder", "ewc_encoder",
 ]
 _HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
-# Factor arms run SEQUENTIAL STAGES (one tqdm bar each: 4 stages DI / 3 noDI / 4 raw) —
-# a per-stage bar must never be extrapolated to the whole job. Value = total stage count
-# (incl. LP-FT stage0): plan banners print only at STAGE START, so unstarted stages are
-# invisible in the log — the count lets the estimator pad them in (06-06: noDI sat at
-# stage1 bar 100% and read "~1m00s" while its whole 219-step stage2 hadn't begun).
-_MULTI_STAGE_ARMS = {"surgery_3stage_DI_encoder": 4, "surgery_noDI_encoder": 3,
-                     "surgery_raw_encoder": 4,
-                     # lpft = LP warmup (43 steps) + FT stage (06-07: its stage0 bar read
-                     # "~36m" for a ~5h arm). Until the FT banner prints, the pad
-                     # under-sizes stage1 (uses the 43-step banner) — exact after ~25m.
-                     "lpft_encoder": 2}
+# ── REAL-ETA WORKLOAD LEDGER (iter18 2026-06-07) ──────────────────────────
+# The total work of every arm is DETERMINED by yaml + split artifacts — guessing it
+# from log archaeology (priors, plan banners, hand-kept stage maps) is what caused the
+# all-night ETA drift (hidden noDI stage2, hidden lpft FT stage, hopeful 5.2h priors).
+# This ledger computes each arm's EXACT optimizer-step plan from the SAME single
+# sources the trainers read, mirroring their formulas line-by-line:
+#   · merged cfg via utils.config.load_merged_config (the trainers' own loader)
+#   · m09a1:514-515   spe = max(1, n_pool // batch);            total = spe × max_epochs
+#   · m09c2:525       spe = max(1, ceil(n_pool / batch))  (head arms)
+#   · m09c1:811-812   spe = n_factor // batch  (n_factor = pool ∩ factor_manifest)
+#   · m09c1:1270      stage_steps = max(int(total × max_epochs_pct), 1) per surgery stage
+#   · m09c1:700-710   LP-FT stage0 PREPENDED at lp_ft_stage0.max_epochs_pct of total
+#   · probe schedule  probe_every = spe // saves_per_epoch; per stage
+#                     n = max(1, round(stage_steps / probe_every))  (the exact schedule)
+# ETA then = (ledger_total − progress) ÷ measured rate + calibrated overheads — the
+# field-standard "remaining work / measured throughput", never extrapolated totals.
+_LEDGER_CACHE = {}
+
+
+def _build_ledger(mtag):
+    """{arm: {stages:[int], total:int, n_probes:int}} — static plan per arm."""
+    if mtag in _LEDGER_CACHE:
+        return _LEDGER_CACHE[mtag]
+    pcfg = get_pipeline_config()
+    model_cfg = pcfg["backbone_model_configs"][BACKBONE]
+    local = Path(pcfg["data"]["local_data_dir"])
+    pool = set(json.loads((local / "train_pool.json").read_text())["clip_keys"])
+    fm_raw = json.loads((local / pcfg["data"]["factor_subdir"] / "factor_manifest.json").read_text())
+    fm = set(fm_raw.keys()) if isinstance(fm_raw, dict) else {
+        x["clip_key"] if isinstance(x, dict) else x for x in fm_raw}
+    n_factor = len(pool & fm)
+    led = {}
+    for arm in TRAIN_ORDER:
+        cfg = load_merged_config(model_cfg, pcfg["arm_train_configs"][arm])
+        opt = cfg["optimization"]
+        batch = opt["batch_size"][mtag] if isinstance(opt["batch_size"], dict) else opt["batch_size"]
+        me = opt["max_epochs"]
+        max_epochs = me[mtag] if isinstance(me, dict) else me
+        sp = cfg["checkpoint"]["saves_per_epoch"]
+        saves = sp[mtag] if isinstance(sp, dict) else sp
+        if arm == "pretrain_encoder":
+            spe = max(1, len(pool) // batch)                       # m09a1:514
+            stages = [spe * max_epochs]
+        elif arm in _HEAD_ARMS:
+            spe = max(1, (len(pool) + batch - 1) // batch)         # m09c2:525 (ceil)
+            stages = [spe * max_epochs]
+        else:
+            spe = n_factor // batch                                # m09c1:811
+            total = spe * max_epochs
+            lp = cfg["surgery"]["lp_ft_stage0"]
+            stages = ([max(int(total * lp["max_epochs_pct"]), 1)] if lp["enabled"] else [])
+            stages += [max(int(total * s["max_epochs_pct"]), 1)    # m09c1:1270
+                       for s in cfg["surgery"]["stages"]]
+        probe_every = max(1, spe // saves)
+        n_probes = sum(max(1, round(st / probe_every)) for st in stages)
+        led[arm] = {"stages": stages, "total": sum(stages), "n_probes": n_probes}
+    _LEDGER_CACHE[mtag] = led
+    return led
+
+
+# Per-stage FINAL tqdm bars ("surgery:<name>: 100%|…| S/S [H:MM:SS<00:00" — tqdm omits
+# the hours field under 1h, so HH is optional) — their elapsed sums to the arm's pure
+# in-loop wall; (job wall − Σ) = startup + stage-end probes + finalize = the overhead.
+_RE_FINAL_BAR = re.compile(r"surgery:\S+\s+100%\|[^|]*\|\s*(\d+)/\1\s*\[(?:(\d+):)?(\d+):(\d+)<")
+_RE_LIVE_BAR = re.compile(r"surgery:\S+\s+\d+%\|[^|]*\|\s*(\d+)/(\d+)\s*\[(?:(\d+):)?(\d+):(\d+)<")
+
+
+def _bar_secs(h, m, s):
+    return (int(h) if h else 0) * 3600 + int(m) * 60 + int(s)
+
+
+def _calibrate(jobs, done, launched, mtag, ledger):
+    """Measured (pure step rate, per-pad overhead) from THIS run's completed train arms.
+    pure_rate = Σ(final-bar elapsed)/executed_steps; overhead = wall − Σ(bar elapsed),
+    split over (n executed stages + 2) pads (each stage-end probe + startup + finalize)."""
+    rates, pads = [], []
+    if not ledger:
+        return {"ledger": ledger, "rate": None, "pad": _FINALIZE_PAD_S}
+    for jid, t in done.items():
+        if t == "resume" or not jid.startswith("T:") or jid not in launched:
+            continue
+        arm = _arm_of(jid)
+        cands = sorted(REPO.glob(jobs[jid]["log"].format(ts="*")), key=lambda p: p.stat().st_mtime)
+        if not cands:
+            continue
+        try:
+            full = cands[-1].read_text(errors="replace")
+        except OSError:
+            continue
+        wall = (_sod(t) - _sod(launched[jid])) % 86400
+        # set(): tqdm prints the 100% bar line TWICE (last update + close) — without
+        # dedupe every stage double-counts (06-07: rate read 128 s/step = 2× true, pad 0).
+        bars = [_bar_secs(h, m, s) for _, h, m, s in set(_RE_FINAL_BAR.findall(full))]
+        rm = re.findall(r"Resumed from step (\d+)", full)
+        executed = ledger[arm]["total"] - (int(rm[-1]) if rm else 0)
+        if not bars or executed <= 0:
+            continue
+        rates.append((sum(bars), executed))
+        pads.append(max(wall - sum(bars), 0) / (len(bars) + 2))
+    pads.sort()
+    pooled = (sum(b for b, _ in rates) / sum(e for _, e in rates)) if rates else None
+    return {"ledger": ledger,
+            "rate": pooled,    # pooled Σbar-seconds / Σexecuted-steps across completions
+            "pad": pads[len(pads) // 2] if pads else _FINALIZE_PAD_S}
+
+
 _STAGE_NOTE = {}   # jid → "sN/M" live stage marker, filled by _running_total, shown in the cell
 # End-of-training finalize for a multi-stage arm (stage-end probe-trio on 451 clips +
 # best-ckpt reload + student_encoder export) — DI measured ~15m at POC. Shown once every
@@ -81,6 +182,11 @@ PRIOR_SANITY = {k: 7 * 60 for k in PRIOR}
 # Back up outputs/poc to HF this often (minutes) WHILE the run goes, so the final backup at the end
 # is tiny and the paid node can be killed right away. Driven by the 60s `watch` refresh + a stamp file.
 UPLOAD_EVERY_MIN = 45   # iter18 2026-06-06: full-artifact backups are heavier — user chose 45m
+# 2026-06-07 TEMP (user order): auto-backup PAUSED — the user runs the first every-file
+# mirror MANUALLY (python -u src/utils/hf_outputs.py upload outputs/poc …); two concurrent
+# upload_folder commits on the same tree race (412 retries / doubled bandwidth).
+# FLIP BACK TO False once the manual upload completes.
+AUTO_BACKUP_DISABLED = True
 # Rebuild the §3-style preview plots from whatever evals are DONE this often (minutes). CPU-only.
 PLOT_EVERY_MIN = 15
 
@@ -123,100 +229,76 @@ def _tail(path, nbytes=8000):
         return ""
 
 
-def _running_total(jobs, jid, elapsed, prior):
-    """Total-duration estimate for a RUNNING job, read from its own per-job log:
-      · TRAIN — extrapolate from the whole-job step tqdm `cur/tot [` (m09a is step-based; the
-        m09c/e/f/b/d per-stage bars also match — the LAST bar in the tail is the live one, and
-        within a stage the fraction is still a usable rate signal, capped at prior×2.5).
-      · EVAL — from the current stage's RECENT rate ('recent=<R>s/clip'): remaining ≈ (tot-cur)×R
-        (tqdm's overall 'remaining' is cold-start-inflated; the recent window tracks the live rate).
-      · else — prior, capped at prior×2.5."""
+def _running_total(jobs, jid, elapsed, prior, calib):
+    """Total-duration estimate for a RUNNING job.
+      · TRAIN — REAL ETA (iter18 2026-06-07): remaining = (ledger_total − progress) ×
+        live step rate + calibrated pads for the remaining stage-end probes + finalize.
+        Total work comes from the STATIC ledger (yaml+artifacts) — never extrapolated,
+        no hidden stages possible. Rate comes from the CURRENT stage's own bar.
+      · EVAL — from the current stage's RECENT rate ('recent=<R>s/clip').
+      · fallback — prior, capped (only before any in-log data exists)."""
     cap = max(prior * 2.5, elapsed + 600)
     tmpl = jobs[jid]["log"]
     cands = sorted(REPO.glob(tmpl.format(ts="*")), key=lambda p: p.stat().st_mtime)
     txt = _tail(cands[-1]) if cands else ""
-    # iter18 fix (2026-06-06): tqdm extrapolation is only valid for SINGLE-BAR jobs
-    # (pretrain, heads, autorgn/full_ft/lpft/peft/cassle/ewc — one whole-job bar).
-    # The multi-STAGE factor arms emit one bar PER stage, so "67/219 [" of stage 1
-    # made a ~5h arm read "~40m" (and its sibling "~57m" off a different stage) —
-    # they fall through to the class prior until a completion calibrates them.
-    if jid.startswith("T:") and txt and _arm_of(jid) not in _MULTI_STAGE_ARMS:
-        # --cache 1 resume offset: total ≈ elapsed × (tot - s0)/(cur - s0).
-        rm = re.findall(r"Resumed from step (\d+)", txt)
-        s0 = int(rm[-1]) if rm else 0
-        ms = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
-        if ms:
-            cur, tot = int(ms[-1][0]), int(ms[-1][1])
-            # strict cur < tot: a COMPLETE bar (e.g. probe_decode 451/451) is a finished
-            # sub-task, extrapolating from it pinned head ETAs to `elapsed` (the 51m vs
-            # 1h34m sibling asymmetry).
-            if s0 < cur < tot:
-                return min(max(elapsed * (tot - s0) / (cur - s0), elapsed + 120), cap)
     if _arm_of(jid) == "eval" and txt:
         cp = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
         rr = re.findall(r"recent=([\d.]+)s/clip", txt)
         if cp and rr and int(cp[-1][1]) and int(cp[-1][0]) >= _MIN_EVAL_POINTS:
             cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
             return min(elapsed + (tot - cur) * rate, 3 * 3600)
-    # Multi-stage arm progress (2026-06-06 fix: concurrent factor-streaming runs 60-140
-    # s/step vs the 27 s/step solo prior, so the prior-clamp printed 'remaining ~5m' at
-    # elapsed 10h). Honest estimate from the arm's OWN log: completed-stage step counts +
-    # live stage bar position + the stage plan banners give true global progress; the last
-    # recent= window gives the true current rate.
-    if _arm_of(jid) in _MULTI_STAGE_ARMS and cands:
+        return min(max(prior, elapsed + 300), cap)
+    led = (calib["ledger"] or {}).get(_arm_of(jid))
+    if jid.startswith("T:") and led and cands:
         try:
             full = cands[-1].read_text(errors="replace")
         except OSError:
             full = txt
-        n_total = _MULTI_STAGE_ARMS[_arm_of(jid)]
-        done_list = re.findall(r"Stage \w+ complete: (\d+) steps", full)
-        done_steps = sum(int(n) for n in done_list)
-        planned = [int(n) for n in re.findall(r"\| (\d+) steps \| warmup", full)]
-        # surgery: train-step bars ONLY (desc "surgery:<stage>") — the generic cur/tot
-        # pattern also matched the probe-trio's 451-clip bar and polluted the estimate.
-        bar = re.findall(r"surgery:\S+\s+\d+%\|[^|]*\|\s*(\d+)/(\d+)\s*\[", txt)
-        rr = re.findall(r"recent=([\d.]+)s/step", full)
-        # --cache 1 resume: the new log carries neither the skipped stages' "complete"
-        # lines nor their plan banners — fold them in from the resume prints.
+        stages, total = led["stages"], led["total"]
         rm = re.findall(r"Resumed from step (\d+)", full)
         base = int(rm[-1]) if rm else 0
-        sk = re.findall(r"skipping stages <= (\d+)", full)
-        n_prior = (int(sk[-1]) + 1) if sk else 0
         cont = re.findall(r"stage (\d+) continues at local step (\d+)", full)
-        if cont and not sk:        # mid-stage _latest anchor: bar starts at initial=L,
-            n_prior = int(cont[-1][0])     # so L is already inside the bar's cur —
-            base -= int(cont[-1][1])       # don't count it twice
-        # pad one entry per not-yet-started stage with the last banner's size
-        # (post-stage0 recipe stages are equal-sized: 50/50 noDI, 30/30 DI/raw tail).
-        missing = n_total - n_prior - len(planned)
-        if planned and missing > 0:
-            planned = planned + [planned[-1]] * missing
+        bar_init = int(cont[-1][1]) if cont else 0   # mid-stage anchor: bar starts at L
+        if cont:
+            base -= bar_init                         # L is already inside the bar's cur
+        done_now = sum(int(n) for n in re.findall(r"Stage \w+ complete: (\d+) steps", full))
+        # current stage index in the LEDGER (resumed prefix + stages completed this run)
+        pre, k = 0, 0
+        while k < len(stages) and pre + stages[k] <= base:
+            pre += stages[k]
+            k += 1
+        idx = min(k + len(re.findall(r"Stage \w+ complete:", full)), len(stages) - 1)
+        _STAGE_NOTE[jid] = f"s{idx + 1}/{len(stages)}"
+        bar = _RE_LIVE_BAR.findall(txt)
+        contrib, live_rate = 0, None
         if bar:
             cur, stage_tot = int(bar[-1][0]), int(bar[-1][1])
-            # stale-bar guard: when every STARTED stage already printed its "complete"
-            # line, the last bar belongs to a finished stage (between-stages probe is
-            # running) — its steps are already inside done_steps; contribution = 0.
-            live = len(done_list) < (len(planned) - max(missing, 0))
-            contrib = min(cur, stage_tot) if live else 0
-        else:
-            # between-stages the probe-trio bar spam can push the last "surgery:" bar
-            # out of the tail window — the plan + completed counts alone still give an
-            # honest estimate (contribution 0 = stage boundary).
-            cur = stage_tot = contrib = 0
-        if planned or bar:
-            gstep = base + done_steps + contrib
-            total = (base + sum(planned)) if planned else None
-            _STAGE_NOTE[jid] = f"s{min(n_prior + len(done_list) + 1, n_total)}/{n_total}"
-            if total and total > gstep:
-                steps_left = total - gstep
-            elif bar and stage_tot > cur:
-                steps_left = stage_tot - cur
-            else:
-                # every planned stage's steps are done → end-of-training finalize
-                # (stage-end probe + best-ckpt reload + student_encoder export).
-                return elapsed + _FINALIZE_PAD_S
-            rate = float(rr[-1]) if rr else (elapsed / max(done_steps + contrib, 1))
-            return min(elapsed + steps_left * rate, elapsed + 12 * 3600)
+            bsec = _bar_secs(*bar[-1][2:])
+            n_full_bars = len(set(_RE_FINAL_BAR.findall(full)))
+            n_complete = len(re.findall(r"Stage \w+ complete:", full))
+            if cur < stage_tot:
+                contrib = cur                          # live mid-stage bar
+                # RECENT rate from the last distinct bar pair (reacts to contention
+                # easing within minutes); whole-bar average as fallback (lags hours).
+                pairs = [(int(c), _bar_secs(*hms)) for c, _t, *hms in bar]
+                for (c1, e1), (c2, e2) in zip(pairs, pairs[1:]):
+                    if c2 > c1 and e2 > e1:
+                        live_rate = (e2 - e1) / (c2 - c1)
+                if live_rate is None and cur - bar_init > 0 and bsec > 0:
+                    live_rate = bsec / (cur - bar_init)
+            elif n_full_bars > n_complete:
+                # current stage's bar hit 100% but its "complete" line hasn't printed
+                # yet (stage-end probe running) → its steps aren't in done_now yet.
+                contrib = stage_tot
+        progress = min(base + done_now + contrib, total)
+        steps_left = total - progress
+        # remaining pads: one per not-yet-passed stage end + 1 finalize-equivalent
+        ends_left = sum(1 for i, s in enumerate(stages)
+                        if sum(stages[:i + 1]) > progress) + 1
+        rate = live_rate or calib["rate"] or (prior / max(total, 1))
+        if steps_left <= 0:
+            return elapsed + _FINALIZE_PAD_S          # finalize (probe+export) running
+        return elapsed + steps_left * rate + ends_left * calib["pad"]
     return min(max(prior, elapsed + 300), cap)
 
 
@@ -237,6 +319,9 @@ def _hf_backup():
 def maybe_backup(fully_done, mtag):
     """Keep outputs/poc backed up on HF every UPLOAD_EVERY_MIN minutes + once more at the finish.
     Returns one plain-English status line to print. SANITY runs are never backed up."""
+    if AUTO_BACKUP_DISABLED:
+        return ("  ⏸️  HF auto-backup PAUSED (manual upload in flight — flip "
+                "AUTO_BACKUP_DISABLED=False in iter18_poc_status.py to re-enable)")
     if mtag != "poc":
         return "  ⏫ HF backup: skipped (SANITY outputs are throwaway)"
     last = REPO / "logs" / ".upload_outputs_poc.LAST"
@@ -245,7 +330,10 @@ def maybe_backup(fully_done, mtag):
     now_ts = datetime.now(timezone.utc).timestamp()
     if done_flag.exists():
         return "  ✅ run finished and fully backed up to HF — you can kill the vast.ai node any time."
-    if lock.exists() and (now_ts - lock.stat().st_mtime) > 2 * UPLOAD_EVERY_MIN * 60:
+    # stale-lock clear: 4× the cadence (not 2×) — the first every-file mirror moves the
+    # ~346G resume anchors and can legitimately run ~2-3 h; clearing its lock early would
+    # start a CONCURRENT upload of the same tree (HF commit races).
+    if lock.exists() and (now_ts - lock.stat().st_mtime) > 4 * UPLOAD_EVERY_MIN * 60:
         lock.unlink(missing_ok=True)
     age_min = (now_ts - last.stat().st_mtime) / 60 if last.exists() else 1e9
     if age_min < UPLOAD_EVERY_MIN and not fully_done:
@@ -355,31 +443,40 @@ def main():
     def elapsed(jid):
         return (now_s - _sod(launched[jid])) % 86400 if jid in launched else 0
 
-    # ── live-calibrated per-arm-class duration estimate ──
+    # ── REAL-ETA inputs (iter18 2026-06-07): static workload ledger + calibration ──
+    try:
+        ledger = _build_ledger(mtag)
+    except Exception as e:   # the watch must survive a ledger failure — fall back LOUDLY
+        print(f"  ⚠️  workload ledger FAILED ({type(e).__name__}: {e}) — ETA on priors", flush=True)
+        ledger = None
+    calib = _calibrate(jobs, done, launched, mtag, ledger)
+
+    # evals stay duration-class-based (homogeneous); their measured mean replaces the prior.
     est = dict(PRIOR if mtag == "poc" else PRIOR_SANITY)
     measured = {}
     for jid, t in done.items():
         if t != "resume" and jid in launched:
             measured.setdefault(_arm_of(jid), []).append((_sod(t) - _sod(launched[jid])) % 86400)
-    # enc-class arms share one duration profile → pool their completions so the 2nd wave's
-    # estimates sharpen from the 1st wave (head arms + pretrain + eval stay their own class).
-    enc_class = [a for a in TRAIN_ORDER if a not in _HEAD_ARMS and a != "pretrain_encoder"]
-    enc_vals = [v for a in enc_class for v in measured.get(a, [])]
     for arm, vals in measured.items():
         est[arm] = sum(vals) / len(vals)
-    for arm in enc_class:
-        if arm not in measured and enc_vals:
-            est[arm] = sum(enc_vals) / len(enc_vals)
 
     # ── per-job remaining time ──
     remaining = {}
     for jid in jobs:
         st = classify(jid)
-        prior = est.get(_arm_of(jid), est["eval"])
+        arm = _arm_of(jid)
+        prior = est.get(arm, est["eval"])
         if st in ("done", "failed"):
             remaining[jid] = 0.0
         elif st == "running":
-            remaining[jid] = max(_running_total(jobs, jid, elapsed(jid), prior) - elapsed(jid), 60)
+            remaining[jid] = max(_running_total(jobs, jid, elapsed(jid), prior, calib)
+                                 - elapsed(jid), 60)
+        elif jid.startswith("T:") and ledger and calib["rate"] is not None:
+            # PENDING train = full ledger plan × measured pure rate + every pad —
+            # the REAL ETA (known work ÷ measured throughput), not a hopeful prior.
+            led = ledger[arm]
+            remaining[jid] = (led["total"] * calib["rate"]
+                              + (len(led["stages"]) + 2) * calib["pad"])
         else:
             remaining[jid] = prior
 

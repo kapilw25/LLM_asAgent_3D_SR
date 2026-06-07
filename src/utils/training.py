@@ -2984,6 +2984,11 @@ def run_trio_at_val(student, predictor, probe_clips, probe_labels, mask_gen,
             # — 4 of 4 surgery-strong heatmap metrics visible at selection time.
             "causal_l1":     trio["causal_l1"],
             "maskratio":     trio["maskratio"],
+            # iter18 (2026-06-07): per-clip BCa 95% CIs into the probe rows —
+            # kept_scorecard whiskers + future paired tests read these.
+            "top1_ci_half":       trio["top1_ci_half"],
+            "motion_cos_ci_half": trio["motion_cos_ci_half"],
+            "future_l1_ci_half":  trio["future_l1_ci_half"],
             "n_probe_clips": trio["n_clips"],
         })
         log_metrics(wb_run, {

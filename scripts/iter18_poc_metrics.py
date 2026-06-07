@@ -303,7 +303,24 @@ def render_metric_graphs(blocks, ev, out_dir):
     save_fig(fig, str(out_dir / "train_trajectories"))
     plt.close(fig)
 
-    # ── F2: KEPT-checkpoint scorecard + OURS-vs-BEST-OTHER verdict strip ──
+    # ── F2: KEPT-checkpoint scorecard (95% CI whiskers) + verdict strip ──
+    # CI sources, honest only (iter18 2026-06-07): rows written by the CI-enabled
+    # producer carry per-clip BCa half-widths (probe_trio); LEGACY rows (pre-CI)
+    # have none — for those, top-1 gets the analytic binomial half-width from
+    # (p, n_probe_clips); metrics without per-clip data get NO whisker.
+    _CI_KEY = {"probe_top1": "top1_ci_half", "motion_cos": "motion_cos_ci_half",
+               "future_l1": "future_l1_ci_half"}
+    _Z95 = 1.96
+
+    def _row_ci(row, key):
+        ck = _CI_KEY.get(key)
+        if ck and row.get(ck) is not None:
+            return float(row[ck])                      # stored per-clip BCa CI
+        if key == "probe_top1" and row.get("n_probe_clips"):
+            p, n_ = float(row["probe_top1"]), int(row["n_probe_clips"])
+            return _Z95 * (p * (1 - p) / n_) ** 0.5    # legacy rows: binomial approx
+        return None
+
     fig = plt.figure(figsize=(20, 14))
     gs = fig.add_gridspec(3, 3, height_ratios=[1.0, 1.0, 0.38], hspace=0.5, wspace=0.45)
     axes6 = [fig.add_subplot(gs[i // 3, i % 3]) for i in range(6)]
@@ -313,57 +330,66 @@ def render_metric_graphs(blocks, ev, out_dir):
         for b in blocks:
             row = _kept_row(b)
             if row is not None and row.get(key) is not None:
-                entries.append((b["arm"], float(row[key])))
+                entries.append((b["arm"], float(row[key]), _row_ci(row, key)))
         if not entries:
             ax.axis("off")
             ax.set_title(f"{title} — no data yet", fontsize=12)
-            verdicts.append((title, None, None, None))
+            verdicts.append((title, None, None, None, None, None))
             continue
         entries.sort(key=lambda t: t[1], reverse=(direction == "higher"))
         labels = [_TRAIN_STYLE[a][0] + (" (hd)" if a.endswith("_head") else "")
-                  for a, _ in entries]
-        colors = [_TRAIN_STYLE[a][1] for a, _ in entries]
-        vals = [v for _, v in entries]
+                  for a, _, _ in entries]
+        colors = [_TRAIN_STYLE[a][1] for a, _, _ in entries]
+        vals = [v for _, v, _ in entries]
+        errs = [(e or 0.0) for _, _, e in entries]
         ys = np.arange(len(entries))[::-1]
-        bars = ax.barh(ys, vals, color=colors, alpha=0.9, height=0.65)
-        for y, (arm, v), b_ in zip(ys, entries, bars):
+        bars = ax.barh(ys, vals, color=colors, alpha=0.9, height=0.65,
+                       xerr=errs, capsize=3, error_kw={"lw": 1.1, "ecolor": "#222"})
+        for y, (arm, v, e), b_ in zip(ys, entries, bars):
             if arm in _FAM_OURS:
                 b_.set_edgecolor("black")
                 b_.set_linewidth(1.8)
-            ax.text(v, y, f" {v:.4f}", va="center", fontsize=9)
+            ax.text(v + (e or 0.0), y, f" {v:.4f}" + (f"±{e:.3f}" if e else ""),
+                    va="center", fontsize=8)
         ax.set_yticks(ys)
         ax.set_yticklabels(labels, fontsize=9)
-        lo, hi = min(vals), max(vals)
+        lo = min(v - (e or 0.0) for _, v, e in entries)
+        hi = max(v + (e or 0.0) for _, v, e in entries)
         pad = (hi - lo) * 0.15 or abs(hi) * 0.05 or 0.01
-        ax.set_xlim(lo - pad, hi + pad * 3.5)
+        ax.set_xlim(lo - pad, hi + pad * 4.0)
         arrow = "↑" if direction == "higher" else "↓"
         ax.set_title(f"{title} {arrow} · best: {labels[0]}", fontweight="bold", fontsize=12)
-        ours = [v for a, v in entries if a in _FAM_OURS]
-        other = [v for a, v in entries if a not in _FAM_OURS]
+        ours = [(v, e) for a, v, e in entries if a in _FAM_OURS]
+        other = [(v, e) for a, v, e in entries if a not in _FAM_OURS]
         if ours and other:
             pick = max if direction == "higher" else min
-            bo, bx = pick(ours), pick(other)
-            verdicts.append((title, (bo > bx if direction == "higher" else bo < bx), bo, bx))
+            (bo, eo), (bx, ex) = pick(ours), pick(other)
+            win = bo > bx if direction == "higher" else bo < bx
+            verdicts.append((title, win, bo, bx, eo, ex))
         else:
-            verdicts.append((title, None, None, None))
+            verdicts.append((title, None, None, None, None, None))
     axv = fig.add_subplot(gs[2, :])
     axv.axis("off")
     n = len(verdicts)
-    for i, (title, win, bo, bx) in enumerate(verdicts):
+    for i, (title, win, bo, bx, eo, ex) in enumerate(verdicts):
         x0 = i / n
         if win is None:
             col, txt = "#ECEFF1", f"{title}\n(awaiting data)"
         else:
-            col = "#C8E6C9" if win else "#FFCDD2"
-            txt = (f"{title}\nOURS {bo:.4f} · other {bx:.4f}\n"
-                   + ("OURS LEAD" if win else "OTHERS LEAD"))
+            # CI-aware verdict: when both CIs are known and the intervals overlap,
+            # the lead is statistically a TIE at POC N — say so (no fake winners).
+            tie = (eo is not None and ex is not None and abs(bo - bx) <= (eo + ex))
+            col = "#FFF9C4" if tie else ("#C8E6C9" if win else "#FFCDD2")
+            tag = "≈ TIE (CIs overlap)" if tie else ("OURS LEAD" if win else "OTHERS LEAD")
+            txt = f"{title}\nOURS {bo:.4f} · other {bx:.4f}\n{tag}"
         axv.add_patch(plt.Rectangle((x0 + 0.004, 0.08), 1 / n - 0.008, 0.84,
                                     facecolor=col, edgecolor="#555",
                                     transform=axv.transAxes))
         axv.text(x0 + 1 / (2 * n), 0.5, txt, transform=axv.transAxes,
                  ha="center", va="center", fontsize=10, fontweight="bold")
-    axv.text(0.0, 1.06, "VERDICT — best OURS (surgery; black-edged bars) vs best OTHER, "
-                        "per metric · POC probe N=451 → gaps < ~0.05 are within noise",
+    axv.text(0.0, 1.06, "VERDICT — best OURS (surgery; black-edged bars) vs best OTHER · "
+                        "whiskers = 95% CI (per-clip BCa; legacy top-1 rows: binomial approx; "
+                        "causal/mask-ratio/val-loss have no per-clip data → no whisker)",
              transform=axv.transAxes, fontsize=11, fontweight="bold", va="bottom")
     fig.suptitle("iter18 KEPT-checkpoint scorecard — the encoder each arm EXPORTS to eval",
                  fontsize=15, fontweight="bold")

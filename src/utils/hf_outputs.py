@@ -82,12 +82,14 @@ HF_OUTPUTS_REPO = _get_pcfg()["hf_repos"]["outputs"]   # was "anonymousML123/fac
 # head, probe heads), .npy/.npz metric arrays, .jsonl logs — so a mid-run box death loses
 # nothing a FINISHED run would keep. Still excluded (and why):
 #   · _UPLOAD_SKIP_PATTERNS — regenerable caches (m12_frame_cache ~141G, masks, D_L/D_A/D_I)
-#   · *ckpt_latest.pt / *_ckpt_step*.pt — in-flight RESUME state the arm itself deletes on
-#     success (TRANSIENT_CKPT_IGNORES below); they only enable resume ON THIS box anyway
-#   · files modified <120s — _stale_checkpoint_ignores age guard (active writer)
+#   · files modified <120s — _stale_checkpoint_ignores age guard (active writer; the file
+#     uploads on the NEXT cycle, so nothing is ever permanently excluded)
+# iter18 (2026-06-07, user order): the *ckpt_latest/step/stage* TRANSIENT excludes are
+# GONE — the 45-min backup now mirrors EVERY file under outputs/, including the resume
+# anchors (~346G at POC peak), so a box migration needs no extra upload. HF dedups
+# unchanged files; only the ckpts that actually changed re-transfer each cycle.
 _UPLOAD_EXTENSIONS = {"*.json", "*.csv", "*.png", "*.pdf", "*.tex",
                       "*.pt", "*.npy", "*.npz", "*.jsonl"}
-_TRANSIENT_CKPT_IGNORES = ["*ckpt_latest.pt", "*_ckpt_step*.pt", "*_ckpt_stage*.pt"]
 
 # Large regeneratable m11 subdirs — mirror .gitignore lines 80-84. These are
 # deliberately EXCLUDED from HF upload because they are cheap to re-compute
@@ -116,10 +118,25 @@ _MIN_CLI_ARGS = 3                         # `hf_outputs.py <cmd> <dir>`
 
 
 def _get_token():
-    """Load HF_TOKEN from .env."""
+    """HF_TOKEN from the environment, else parsed DIRECTLY from the repo-root .env.
+
+    iter18 (2026-06-07): was load_dotenv()-only — python-dotenv is an OPTIONAL dep, so
+    under a watch shell whose `python` lacks it, every 45-min auto-backup silently
+    printed "HF_TOKEN not found" for 20 h (last real backup 06-06 10:09). The explicit
+    parse below works from ANY python/cwd; dotenv (when present) stays as a supplement."""
+    if os.getenv("HF_TOKEN"):
+        return os.getenv("HF_TOKEN")
     if load_dotenv is not None:
         load_dotenv()
-    return os.getenv("HF_TOKEN")
+        if os.getenv("HF_TOKEN"):
+            return os.getenv("HF_TOKEN")
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("HF_TOKEN=") or line.startswith("export HF_TOKEN="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'") or None
+    return None
 
 
 def _ensure_repo(token):
@@ -426,13 +443,36 @@ def upload_outputs(output_dir: str, subfolder: str = None):
     """
     token = _get_token()
     if not token:
-        print("SKIP upload: HF_TOKEN not found in .env")
-        return
+        # iter18 (2026-06-07): FAIL LOUD — the silent rc-0 skip let the watcher report
+        # "✅ backup done" through 20 h of no-token no-ops.
+        print("FATAL upload: HF_TOKEN not found (env or repo-root .env)")
+        sys.exit(1)
 
     output_path = Path(output_dir)
     if not output_path.exists():
         print(f"SKIP upload: {output_dir} does not exist")
         return
+
+    # iter18 (2026-06-07): HF platform pre-flight (docs/hub/repositories-recommendations:
+    # max 10,000 files/folder · 100,000 files/repo · ~50-100 files/commit recommended).
+    # upload_folder = ONE commit; a tree beyond the folder cap fails at the platform wall
+    # MID-transfer — FAIL LOUD here instead, pointing at the tar-packing channel
+    # (upload-full), which is HF's own recommended strategy for many-file trees.
+    _HF_MAX_FILES_PER_FOLDER = 10_000   # platform constant, cited above
+    per_folder = {}
+    for f in output_path.rglob("*"):
+        if f.is_file():
+            per_folder[f.parent] = per_folder.get(f.parent, 0) + 1
+    n_files = sum(per_folder.values())
+    worst_dir, worst_n = max(per_folder.items(), key=lambda kv: kv[1],
+                             default=(output_path, 0))
+    print(f"  [hf-preflight] {n_files} files · busiest folder = {worst_n} "
+          f"({worst_dir}) · HF cap {_HF_MAX_FILES_PER_FOLDER}/folder")
+    if worst_n > _HF_MAX_FILES_PER_FOLDER:
+        print(f"FATAL upload: {worst_dir} holds {worst_n} files > HF's "
+              f"{_HF_MAX_FILES_PER_FOLDER}/folder cap — pack this tree via `upload-full` "
+              f"(_full-*.tar shards) instead.")
+        sys.exit(1)
 
     _ensure_repo(token)
 
@@ -460,8 +500,9 @@ def upload_outputs(output_dir: str, subfolder: str = None):
                                     skip_patterns=_UPLOAD_SKIP_PATTERNS)
     total_bytes = sum(f.stat().st_size for f in local_files)
     print(f"Uploading {output_dir} → {HF_OUTPUTS_REPO}/{subfolder}/")
-    print("  Policy: light science (json/csv/png/pdf/tex) + student_encoder.pt only — "
-          "DROPPING *.npy / *.npz / non-encoder *.pt (regeneratable/duplicate heavies)")
+    print("  Policy (iter18 2026-06-07, user order): EVERY artifact matching "
+          f"{sorted(_UPLOAD_EXTENSIONS)} incl. resume ckpts — only *.tmp temps, <120s "
+          "active-writer files (re-tried next cycle) and regenerable caches stay out")
     print(f"  Skipping {len(_UPLOAD_SKIP_PATTERNS)} large regeneratable dirs "
           f"(see _UPLOAD_SKIP_PATTERNS in hf_outputs.py): "
           f"{', '.join(p.strip('/').split('/')[-2] for p in _UPLOAD_SKIP_PATTERNS)}")
@@ -475,17 +516,36 @@ def upload_outputs(output_dir: str, subfolder: str = None):
     # upload_folder is SILENT in a piped context (no per-file output) → the
     # heartbeat thread pulses elapsed + throughput every 30s so the multi-GB
     # .pt phase doesn't look stuck. Keeps upload_folder's dedup/batching/mirror.
-    with _UploadHeartbeat(f"upload {subfolder}"):
-        api.upload_folder(
-            folder_path=str(output_path),
-            repo_id=HF_OUTPUTS_REPO,
-            repo_type="dataset",
-            path_in_repo=subfolder,
-            allow_patterns=list(_UPLOAD_EXTENSIONS),
-            ignore_patterns=(["tmp_*"] + _TRANSIENT_CKPT_IGNORES
-                             + _stale_checkpoint_ignores(output_path)
-                             + _UPLOAD_SKIP_PATTERNS),
-        )
+    #
+    # iter18 (2026-06-07) LIVE-CHURN RETRY: a training arm finalizing DURING the
+    # ~10-min hash phase renames/removes its transients (06-07 06:57: full_ft promoted
+    # student_best.pt mid-upload → "is not a file on the local file system" killed the
+    # whole 350G backup). upload_folder re-lists the tree on each attempt, so a bounded
+    # retry sees the post-finalize stable tree. One churn event per arm → attempt 2
+    # virtually always lands; 3 strikes = real error, FAIL LOUD.
+    _CHURN_ATTEMPTS = 3
+    for _attempt in range(1, _CHURN_ATTEMPTS + 1):
+        try:
+            with _UploadHeartbeat(f"upload {subfolder}"):
+                api.upload_folder(
+                    folder_path=str(output_path),
+                    repo_id=HF_OUTPUTS_REPO,
+                    repo_type="dataset",
+                    path_in_repo=subfolder,
+                    allow_patterns=list(_UPLOAD_EXTENSIONS),
+                    # iter18 (2026-06-07, user order): EVERY artifact incl. resume
+                    # ckpts — only atomic-write temps, the <120s active-writer guard
+                    # (re-tried next cycle), and regenerable caches stay out.
+                    ignore_patterns=(["tmp_*", "*.tmp"]
+                                     + _stale_checkpoint_ignores(output_path)
+                                     + _UPLOAD_SKIP_PATTERNS),
+                )
+            break
+        except ValueError as e:
+            if "is not a file" not in str(e) or _attempt == _CHURN_ATTEMPTS:
+                raise
+            print(f"  [churn-retry {_attempt}/{_CHURN_ATTEMPTS}] a file vanished mid-upload "
+                  f"(training arm finalized): {e} — re-listing the tree and retrying")
 
     elapsed = time.time() - t0
     print(f"Upload complete: {elapsed:.0f}s → https://huggingface.co/datasets/{HF_OUTPUTS_REPO}")
@@ -500,8 +560,8 @@ def download_outputs(output_dir: str, subfolder: str = None):
     """
     token = _get_token()
     if not token:
-        print("SKIP download: HF_TOKEN not found in .env")
-        return False
+        print("FATAL download: HF_TOKEN not found (env or repo-root .env)")
+        sys.exit(1)
 
     if not repo_exists(HF_OUTPUTS_REPO, repo_type="dataset", token=token):
         print(f"SKIP download: repo {HF_OUTPUTS_REPO} does not exist")
@@ -638,8 +698,8 @@ def upload_outputs_full(output_dir: str, subfolder: str = None):
     """FULL-FIDELITY upload — every file under output_dir, no skips (see block comment above)."""
     token = _get_token()
     if not token:
-        print("SKIP upload-full: HF_TOKEN not found in .env")
-        return False
+        print("FATAL upload-full: HF_TOKEN not found (env or repo-root .env)")
+        sys.exit(1)
     _ensure_repo(token)
     output_path = Path(output_dir)
     if not output_path.is_dir():

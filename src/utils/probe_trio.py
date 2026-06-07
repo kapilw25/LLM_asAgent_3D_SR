@@ -46,6 +46,7 @@ import torch
 # m12e §2.2-eval implementations — single source (utils.pt_causal /
 # utils.pt_maskratio / predictor_eval.safe_metric), no drift possible.
 from utils import pt_causal, pt_maskratio
+from utils.bootstrap import bootstrap_ci   # iter18 (2026-06-07): probe rows carry 95% CIs
 from utils.config import get_pipeline_config
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.predictor_eval import safe_metric
@@ -81,16 +82,17 @@ def _per_clip_motion_score(emb: np.ndarray, labels: np.ndarray) -> tuple:
     return (pos - neg).astype(np.float32), pos.astype(np.float32), neg.astype(np.float32)
 
 
-def _knn_centroid_loocv(feats: np.ndarray, labels: np.ndarray) -> float:
+def _knn_centroid_loocv(feats: np.ndarray, labels: np.ndarray) -> tuple:
     """Top-1 via leave-one-out kNN-centroid classification. Mirrors
-    utils/training.py:run_probe_acc_eval but vectorised + bootstrap-CI dropped.
+    utils/training.py:run_probe_acc_eval, vectorised.
 
     For each clip i: per-class centroid = mean(features[j != i, y[j] == c]).
-    Predict argmax cosine(feat_i, centroids). Returns top-1 accuracy in [0, 1].
-    """
+    Predict argmax cosine(feat_i, centroids). Returns (top-1 accuracy in [0, 1],
+    per-clip correctness vector) — the vector feeds the BCa 95% CI (iter18
+    2026-06-07: probe rows now carry CIs per the repo-wide 95%-CI mandate)."""
     feats_n = feats / np.linalg.norm(feats, axis=1, keepdims=True).clip(min=1e-12)
     class_ids = sorted(set(labels.tolist()))
-    correct = 0
+    correct = np.zeros(len(feats_n), dtype=np.float64)
     for i in range(len(feats_n)):
         # Per-class centroid excluding clip i. With ~1000 clips and ~3 classes,
         # this loop is ~30 ms — fine. If we ever need to scale to 10K clips,
@@ -106,8 +108,9 @@ def _knn_centroid_loocv(feats: np.ndarray, labels: np.ndarray) -> float:
         centroids /= np.linalg.norm(centroids, axis=1, keepdims=True).clip(min=1e-12)
         sims = feats_n[i] @ centroids.T
         pred = class_ids[int(sims.argmax())]
-        correct += int(pred == labels[i])
-    return correct / max(len(feats_n), 1)
+        correct[i] = float(pred == labels[i])
+    acc = float(correct.mean()) if len(feats_n) else 0.0
+    return acc, correct
 
 
 # ─── Main entry point ─────────────────────────────────────────────────────
@@ -246,15 +249,20 @@ def compute_metric_trio(
         print(f"  [probe-trio][D15 cache HIT] reused {len(pooled_np)} pooled + "
               f"{len(per_clip_l1_cpu)} per-clip L1 — skipped encoder forward.",
               flush=True)
-        top1 = _knn_centroid_loocv(pooled_np, labels)
+        top1, _correct = _knn_centroid_loocv(pooled_np, labels)
         score, _, _ = _per_clip_motion_score(pooled_np, labels)
         motion_cos = float(score.mean())
+        # iter18 (2026-06-07): per-clip BCa 95% CIs (repo CI mandate). causal/maskratio
+        # are scalar aggregates with no per-clip vector → no CI, honest None.
         return {
             "top1":       round(top1, 6),
             "motion_cos": round(motion_cos, 6),
             "future_l1":  round(future_l1, 6),
             "causal_l1":  round(causal_l1, 6),
             "maskratio":  round(maskratio_slope, 6),
+            "top1_ci_half":       bootstrap_ci(_correct)["ci_half"],
+            "motion_cos_ci_half": bootstrap_ci(score)["ci_half"],
+            "future_l1_ci_half":  bootstrap_ci(per_clip_l1_cpu.numpy())["ci_half"],
             "n_clips":    len(pooled_np),
             "n_classes":  n_classes,
         }
@@ -458,18 +466,24 @@ def compute_metric_trio(
               f"reuse across val checkpoints.", flush=True)
 
     # Top-1 — vectorised LOOCV per-class centroid.
-    top1 = _knn_centroid_loocv(pooled_np, labels)
+    top1, _correct = _knn_centroid_loocv(pooled_np, labels)
 
     # Motion-cos — intra-inter mean.
     score, _, _ = _per_clip_motion_score(pooled_np, labels)
     motion_cos = float(score.mean())
 
+    # iter18 (2026-06-07): per-clip BCa 95% CIs (repo CI mandate). causal/maskratio
+    # are scalar aggregates with no per-clip vector → no CI, honest None.
     return {
         "top1":       round(top1, 6),
         "motion_cos": round(motion_cos, 6),
         "future_l1":  round(future_l1, 6) if not np.isnan(future_l1) else float("nan"),
         "causal_l1":  round(causal_l1, 6) if not np.isnan(causal_l1) else float("nan"),
         "maskratio":  round(maskratio_slope, 6) if not np.isnan(maskratio_slope) else float("nan"),
+        "top1_ci_half":       bootstrap_ci(_correct)["ci_half"],
+        "motion_cos_ci_half": bootstrap_ci(score)["ci_half"],
+        "future_l1_ci_half":  (bootstrap_ci(per_clip_l1_cpu.numpy())["ci_half"]
+                               if per_clip_l1_cpu is not None else None),
         "n_clips":    len(pooled_np),
         "n_classes":  n_classes,
     }
