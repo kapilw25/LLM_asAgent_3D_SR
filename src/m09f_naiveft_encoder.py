@@ -889,7 +889,8 @@ def train(cfg: dict, args):
     jsonl_path = output_dir / "loss_log.jsonl"
     # Resume appends (the prior run's rows are the same training trajectory);
     # fresh runs write the header.
-    _log_mode = "a" if resume_after_stage >= 0 else "w"
+    _log_mode = ("a" if (resume_after_stage >= 0 or resume_into_stage >= 0)
+                 else "w")   # iter18 06-07: mid-stage-0 anchor resume has after_stage=-1
     csv_file = open(csv_path, _log_mode, newline="")
     csv_writer = csv.writer(csv_file)
     if _log_mode == "w":
@@ -958,7 +959,25 @@ def train(cfg: dict, args):
             subset_keys_override=set(val_keys) if val_keys else None,
             train_pool_keys=_pool_set,
         )
-        probe_jsonl_file = open(probe_jsonl_path, "w")
+        # iter18 (2026-06-07): APPEND on resume — the unconditional "w" TRUNCATED the
+        # prior run's probe rows at resume startup (06-06 23:45: noDI + raw lost all
+        # 10 pre-kill rows; the best_state reseed below then read an EMPTY file →
+        # silent selection reset). Preload prior rows into the in-memory list so
+        # trajectory plots + the jsonl artifact span the WHOLE training run.
+        _resuming_probe = resume_after_stage >= 0 or resume_into_stage >= 0
+        if _resuming_probe and probe_jsonl_path.exists():
+            _torn = 0
+            for _l in probe_jsonl_path.read_text().splitlines():
+                if not _l.strip():
+                    continue
+                try:
+                    probe_history.append(json.loads(_l))
+                except json.JSONDecodeError:
+                    _torn += 1   # kill-during-write tail — counted, never silent
+            print(f"  [resume] preloaded {len(probe_history)} prior probe rows"
+                  + (f" · {_torn} torn row(s) dropped" if _torn else "")
+                  + " — probe_history.jsonl APPENDS (no truncation)")
+        probe_jsonl_file = open(probe_jsonl_path, "a" if _resuming_probe else "w")
     else:
         print("[probe] disabled (SANITY mode or --no-probe) — skipping probe + val-loss eval")
         probe_jsonl_file = None
@@ -981,7 +1000,7 @@ def train(cfg: dict, args):
     # worse post-resume probe can NOT overwrite student_best.pt (update_best_state_
     # on_score compares against best_state[best_ckpt_metric]). Uses the SAME
     # selector key + direction as the live tracker.
-    if resume_after_stage >= 0:
+    if resume_after_stage >= 0 or resume_into_stage >= 0:   # iter18 06-07: incl. mid-stage-0
         _ph_path = output_dir / "probe_history.jsonl"
         if _ph_path.exists():
             from utils.training import BEST_METRIC_DIRECTION as _DIR

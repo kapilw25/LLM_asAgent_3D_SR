@@ -78,7 +78,10 @@ factor_streaming:
                                   #   utils.stream_autotune resolves from live cores/concurrency/
                                   #   RAM; constants in pipeline.yaml streaming.worker_autotune.
     full:   auto                  # same resolver (scipy gaussian σ=15 is CPU-bound; needs processes)
-  prefetch_factor:     4          # 2 full batches lead → GPU never stalls
+  prefetch_factor:     2          # 06-07 OOM-137 fix: was 4 — at 20 workers × 4 arms that queued
+                                  # ~32G of in-flight batches PER ARM (516G/519G cgroup → kernel
+                                  # SIGKILLed noDI+raw at step 1). 2 still keeps the GPU fed; RAM
+                                  # in-flight halves. Infra knob — training math unchanged.
   persistent_workers:  true       # amortize worker-fork cost within a stage
   pin_memory:          true
 

@@ -184,6 +184,10 @@ def eval_rows(mtag):
             vals = [v["test_mean"] for v in tax["dims"].values() if "test_mean" in v]
             tax_macro = sum(vals) / len(vals) if vals else None
         n_test = next((src["n_test"] for src in (act, fm, mc) if src and "n_test" in src), None)
+
+        def _half(d, ci_key):
+            return d.get(ci_key, {}).get("ci_half") if (d and isinstance(d.get(ci_key), dict)) else None
+
         rows.append({
             "enc": enc.replace("vjepa_2_1_", ""),
             "n_te": "—" if n_test is None else str(n_test),
@@ -192,13 +196,213 @@ def eval_rows(mtag):
             "mcos": _ci(mc, "score_mean", "score_ci"),
             "fut": _ci(fm, "mse_mean", "mse_ci"),
             **{fam: _f(pt[fam]["mean"], 4) if pt[fam] else "—" for fam in _PT_FAMILIES},
+            # iter18 graphs (2026-06-07): raw numerics alongside the display strings —
+            # the table loop only reads the display keys, so its output is byte-identical.
+            "_enc_full": enc,
+            "_raw": {
+                "act":  (act["top1_acc"] if act and "top1_acc" in act else None, _half(act, "top1_ci")),
+                "tax":  (tax_macro, None),
+                "mcos": (mc["score_mean"] if mc and "score_mean" in mc else None, _half(mc, "score_ci")),
+                "fut":  (fm["mse_mean"] if fm and "mse_mean" in fm else None, _half(fm, "mse_ci")),
+                **{fam: ((pt[fam]["mean"], None) if pt[fam] and "mean" in pt[fam] else (None, None))
+                   for fam in _PT_FAMILIES},
+            },
         })
     return rows
+
+
+# ── matplotlib graphs (iter18, 2026-06-07) — the two tables, DRAWN ─────────
+# Reuses src/m13_eval_plot.py primitives (the §3 finale's plot module): _bar_with_ci
+# (CI bars + N/A hatching + direction badges) and _sort_by_metric for the EVAL scorecard;
+# utils.plots init_style/save_fig for publication style + png&pdf. Three figures into
+# outputs/<mode>/probe_plot/metrics_watch/ on every invocation (cheap, CPU-only, ~3 s):
+#   train_trajectories — every probe checkpoint of every arm, per metric (★ = KEPT ckpt)
+#   kept_scorecard     — each arm's KEPT-checkpoint value per metric, sorted, with an
+#                        OURS-vs-BEST-OTHER verdict strip (the paper question, per metric)
+#   eval_scorecard     — per-encoder eval artifacts with 95% CIs (graceful before evals)
+_FAM_OURS = {"surgery_3stage_DI_encoder", "surgery_noDI_encoder",
+             "surgery_3stage_DI_head", "surgery_noDI_head"}
+_TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = greens
+    "pretrain_encoder":          ("vCSSL",     "#1565C0", "-",  1.8),
+    "surgery_3stage_DI_encoder": ("s3DI-enc",  "#1B5E20", "-",  2.6),
+    "surgery_noDI_encoder":      ("sNoDI-enc", "#43A047", "-",  2.6),
+    "surgery_3stage_DI_head":    ("s3DI-hd",   "#81C784", ":",  1.8),
+    "surgery_noDI_head":         ("sNoDI-hd",  "#A5D6A7", ":",  1.8),
+    "surgical_autorgn_encoder":  ("autoRGN",   "#E65100", "--", 1.4),
+    "surgery_raw_encoder":       ("s-RAW",     "#827717", "-.", 1.8),
+    "full_ft_encoder":           ("fullFT",    "#F57C00", "--", 1.4),
+    "lpft_encoder":              ("LP-FT",     "#8D6E63", "--", 1.4),
+    "peft_lora_encoder":         ("LoRA",      "#78909C", "--", 1.4),
+    "peft_dora_encoder":         ("DoRA",      "#546E7A", "--", 1.4),
+    "cassle_encoder":            ("CaSSLe",    "#9E9D24", "--", 1.4),
+    "ewc_encoder":               ("EWC",       "#6D4C41", "--", 1.4),
+}
+_TRAIN_METRICS = [  # (probe-row key, panel title, direction) — mirrors the TRAIN table columns
+    ("probe_top1",    "action top-1",  "higher"),
+    ("motion_cos",    "motion-cos",    "higher"),
+    ("future_l1",     "future L1",     "lower"),
+    ("causal_l1",     "causal L1",     "lower"),
+    ("maskratio",     "mask-ratio",    "lower"),
+    ("val_jepa_loss", "val JEPA loss", "lower"),
+]
+_EVAL_METRICS = [  # (_raw key, panel title, direction) — mirrors the EVAL table columns
+    ("act", "action top-1", "higher"), ("tax", "taxonomy F1", "higher"),
+    ("mcos", "motion-cos", "higher"), ("fut", "future MSE", "lower"),
+    ("rollout", "rollout drift", "lower"), ("causal", "causal L1", "lower"),
+    ("tdist", "t-dist", "lower"), ("maskratio", "mask-ratio slope", "lower"),
+    ("teacher_free", "teacher-free", "lower"),
+]
+
+
+def render_metric_graphs(blocks, ev, out_dir):
+    """All three figures. Lazy imports so --no-plots costs nothing."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from m13_eval_plot import _bar_with_ci, _sort_by_metric
+    from utils.plots import init_style, save_fig
+    init_style()
+
+    def _kept_row(b):
+        """The row eval inherits: enc arms → KEPT ckpt; head arms → last probe (diagnostic)."""
+        if b["kept_i"] is not None:
+            return b["rows"][b["kept_i"]][0]
+        return b["rows"][-1][0] if b["rows"] else None
+
+    # ── F1: train trajectories (every probe checkpoint, per metric) ──
+    fig, axes = plt.subplots(2, 3, figsize=(20, 11))
+    arms_drawn = []
+    for ax, (key, title, direction) in zip(axes.flat, _TRAIN_METRICS):
+        for b in blocks:
+            sty = _TRAIN_STYLE[b["arm"]]
+            pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
+                         if r.get(key) is not None and r.get("step") is not None)
+            if not pts:
+                continue
+            if b["arm"] not in arms_drawn:
+                arms_drawn.append(b["arm"])
+            xs, ys = zip(*pts)
+            ax.plot(xs, ys, sty[2], color=sty[1], lw=sty[3], marker="o", ms=3.5)
+            kr = _kept_row(b)
+            if b["kept_i"] is not None and kr.get(key) is not None:
+                ax.plot(kr["step"], kr[key], marker="*", ms=15, color=sty[1],
+                        mec="black", mew=0.8, ls="none", zorder=5)
+        arrow = "↑ better" if direction == "higher" else "↓ better"
+        ax.set_title(f"{title}  ({arrow})", fontweight="bold", fontsize=13)
+        ax.set_xlabel("global step", fontsize=10)
+        ax.grid(alpha=0.25)
+    handles = [plt.Line2D([], [], color=_TRAIN_STYLE[a][1], ls=_TRAIN_STYLE[a][2],
+                          lw=_TRAIN_STYLE[a][3], marker="o", ms=4, label=_TRAIN_STYLE[a][0])
+               for a in _TRAIN_STYLE if a in arms_drawn]
+    fig.legend(handles=handles, loc="lower center", ncol=min(len(handles), 7),
+               frameon=True, fontsize=11)
+    fig.suptitle("iter18 TRAIN probe checkpoints — every arm, every probe · star marker = KEPT ckpt"
+                 " · OURS = greens (solid enc / dotted head)", fontsize=15, fontweight="bold")
+    fig.subplots_adjust(top=0.91, bottom=0.13, hspace=0.35, wspace=0.25)
+    save_fig(fig, str(out_dir / "train_trajectories"))
+    plt.close(fig)
+
+    # ── F2: KEPT-checkpoint scorecard + OURS-vs-BEST-OTHER verdict strip ──
+    fig = plt.figure(figsize=(20, 14))
+    gs = fig.add_gridspec(3, 3, height_ratios=[1.0, 1.0, 0.38], hspace=0.5, wspace=0.45)
+    axes6 = [fig.add_subplot(gs[i // 3, i % 3]) for i in range(6)]
+    verdicts = []
+    for ax, (key, title, direction) in zip(axes6, _TRAIN_METRICS):
+        entries = []
+        for b in blocks:
+            row = _kept_row(b)
+            if row is not None and row.get(key) is not None:
+                entries.append((b["arm"], float(row[key])))
+        if not entries:
+            ax.axis("off")
+            ax.set_title(f"{title} — no data yet", fontsize=12)
+            verdicts.append((title, None, None, None))
+            continue
+        entries.sort(key=lambda t: t[1], reverse=(direction == "higher"))
+        labels = [_TRAIN_STYLE[a][0] + (" (hd)" if a.endswith("_head") else "")
+                  for a, _ in entries]
+        colors = [_TRAIN_STYLE[a][1] for a, _ in entries]
+        vals = [v for _, v in entries]
+        ys = np.arange(len(entries))[::-1]
+        bars = ax.barh(ys, vals, color=colors, alpha=0.9, height=0.65)
+        for y, (arm, v), b_ in zip(ys, entries, bars):
+            if arm in _FAM_OURS:
+                b_.set_edgecolor("black")
+                b_.set_linewidth(1.8)
+            ax.text(v, y, f" {v:.4f}", va="center", fontsize=9)
+        ax.set_yticks(ys)
+        ax.set_yticklabels(labels, fontsize=9)
+        lo, hi = min(vals), max(vals)
+        pad = (hi - lo) * 0.15 or abs(hi) * 0.05 or 0.01
+        ax.set_xlim(lo - pad, hi + pad * 3.5)
+        arrow = "↑" if direction == "higher" else "↓"
+        ax.set_title(f"{title} {arrow} · best: {labels[0]}", fontweight="bold", fontsize=12)
+        ours = [v for a, v in entries if a in _FAM_OURS]
+        other = [v for a, v in entries if a not in _FAM_OURS]
+        if ours and other:
+            pick = max if direction == "higher" else min
+            bo, bx = pick(ours), pick(other)
+            verdicts.append((title, (bo > bx if direction == "higher" else bo < bx), bo, bx))
+        else:
+            verdicts.append((title, None, None, None))
+    axv = fig.add_subplot(gs[2, :])
+    axv.axis("off")
+    n = len(verdicts)
+    for i, (title, win, bo, bx) in enumerate(verdicts):
+        x0 = i / n
+        if win is None:
+            col, txt = "#ECEFF1", f"{title}\n(awaiting data)"
+        else:
+            col = "#C8E6C9" if win else "#FFCDD2"
+            txt = (f"{title}\nOURS {bo:.4f} · other {bx:.4f}\n"
+                   + ("OURS LEAD" if win else "OTHERS LEAD"))
+        axv.add_patch(plt.Rectangle((x0 + 0.004, 0.08), 1 / n - 0.008, 0.84,
+                                    facecolor=col, edgecolor="#555",
+                                    transform=axv.transAxes))
+        axv.text(x0 + 1 / (2 * n), 0.5, txt, transform=axv.transAxes,
+                 ha="center", va="center", fontsize=10, fontweight="bold")
+    axv.text(0.0, 1.06, "VERDICT — best OURS (surgery; black-edged bars) vs best OTHER, "
+                        "per metric · POC probe N=451 → gaps < ~0.05 are within noise",
+             transform=axv.transAxes, fontsize=11, fontweight="bold", va="bottom")
+    fig.suptitle("iter18 KEPT-checkpoint scorecard — the encoder each arm EXPORTS to eval",
+                 fontsize=15, fontweight="bold")
+    save_fig(fig, str(out_dir / "kept_scorecard"))
+    plt.close(fig)
+
+    # ── F3: EVAL scorecard (per-encoder artifacts, 95% CI via m13's bar) ──
+    have_any = any(r["_raw"][k][0] is not None for r in ev for k, _, _ in _EVAL_METRICS)
+    if not have_any:
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax.axis("off")
+        ax.text(0.5, 0.5, "no EVAL artifacts yet —\nper-encoder evals launch as each arm finishes training",
+                ha="center", va="center", fontsize=16, fontweight="bold", color="#666")
+        save_fig(fig, str(out_dir / "eval_scorecard"))
+        plt.close(fig)
+        return
+    fig, axes9 = plt.subplots(3, 3, figsize=(26, 17))
+    for ax, (k, title, direction) in zip(axes9.flat, _EVAL_METRICS):
+        encs = [r["_enc_full"] for r in ev]
+        vals = [r["_raw"][k][0] for r in ev]
+        errs = [(r["_raw"][k][1] or 0.0) for r in ev]
+        na = {e for e, v in zip(encs, vals) if v is None}
+        vals = [0.0 if v is None else v for v in vals]
+        s_enc, s_val, s_err = _sort_by_metric(encs, vals, errs, na,
+                                              "desc" if direction == "higher" else "asc")
+        _bar_with_ci(ax, s_enc, s_val, s_err, ylabel=title,
+                     title=title, na_set=na, direction=direction)
+    fig.suptitle("iter18 EVAL scorecard — per-encoder TEST artifacts · 95% BCa CI where available",
+                 fontsize=16, fontweight="bold")
+    fig.subplots_adjust(hspace=0.6, wspace=0.3, top=0.94)
+    save_fig(fig, str(out_dir / "eval_scorecard"))
+    plt.close(fig)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["POC", "SANITY"], default="POC")
+    ap.add_argument("--no-plots", action="store_true",
+                    help="skip the matplotlib graphs (terminal tables only)")
     args = ap.parse_args()
     mtag = args.mode.lower()
 
@@ -212,7 +416,8 @@ def main():
     print("│" + " arm · n_train/n_val".ljust(AW) + "│" + "│".join(h.center(C) for h in hdr)
           + "│" + "sel".center(SV) + "│")
     print("├" + bar * AW + "┼" + "┼".join(bar * C for _ in hdr) + "┼" + bar * SV + "┤")
-    for b in train_blocks(mtag):
+    blocks = train_blocks(mtag)
+    for b in blocks:
         nt = "—" if b["n_tr"] is None else f"{b['n_tr']:,}"
         nv = "—" if b["n_va"] is None else f"{b['n_va']:,}"
         label = f"{b['arm']}"
@@ -254,6 +459,13 @@ def main():
     print("\n  legend: ↑ higher better · ↓ lower better · ✅ trained · 🔄 training · ⬚ not started"
           "\n  sel: 🎯 promoted · ✋ held (worse than best) · ←KEPT = the exported ckpt · "
           "head arms select on head-val_loss (· rows = diagnostics)")
+
+    # ── graphs (iter18, 2026-06-07): the two tables drawn — see render_metric_graphs ──
+    if not args.no_plots:
+        out_dir = REPO / f"outputs/{mtag}/probe_plot/metrics_watch"
+        render_metric_graphs(blocks, ev, out_dir)
+        print(f"  🖼  graphs → outputs/{mtag}/probe_plot/metrics_watch/"
+              f"{{train_trajectories,kept_scorecard,eval_scorecard}}.png|.pdf")
 
 
 if __name__ == "__main__":

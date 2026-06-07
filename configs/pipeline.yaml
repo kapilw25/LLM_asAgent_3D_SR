@@ -218,8 +218,11 @@ streaming:
     reserve_per_proc: 12        # each arm's other CPU threads: 8 TAR readers + main + probe decode
     min_workers: 4              # never below the old fixed value
     max_workers: 24             # diminishing returns past this; protects 2-arm boxes from 60+ workers
-    ram_per_worker_gb: 2.0      # decoded-clip buffers per worker (prefetch_factor 4 × ~0.5G batch share)
-    ram_headroom_pct: 0.75      # leave 25% cgroup RAM for models/val-collect (06-06: 90% CRITICAL at peak)
+    ram_per_worker_gb: 4.0      # 06-07 OOM-137 recalibration: measured 516G/519G with 4 arms × 20
+                                # workers × prefetch 4 → kernel SIGKILLed noDI+raw at step 1. Real
+                                # per-worker RSS ≈ prefetch×batch-share + decode buffers + base ≈ 3.5-4G.
+    ram_headroom_pct: 0.55      # was 0.75 — leave 45% for 4 trainer mains + model-load transients
+                                # (~30G each) + frame-cache page-cache (counts toward cgroup v2)
   # iter18 (2026-06-06): deterministic-decode memoization for the TRAINER decode paths
   # (factor-stream D_L/D_A/D_I source clips, raw-replay, m09a producer, val-collect).
   # decode_video_bytes is DETERMINISTIC (linspace sampling, fixed decoder) and all

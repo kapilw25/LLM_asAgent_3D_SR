@@ -55,7 +55,11 @@ _HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
 # invisible in the log — the count lets the estimator pad them in (06-06: noDI sat at
 # stage1 bar 100% and read "~1m00s" while its whole 219-step stage2 hadn't begun).
 _MULTI_STAGE_ARMS = {"surgery_3stage_DI_encoder": 4, "surgery_noDI_encoder": 3,
-                     "surgery_raw_encoder": 4}
+                     "surgery_raw_encoder": 4,
+                     # lpft = LP warmup (43 steps) + FT stage (06-07: its stage0 bar read
+                     # "~36m" for a ~5h arm). Until the FT banner prints, the pad
+                     # under-sizes stage1 (uses the 43-step banner) — exact after ~25m.
+                     "lpft_encoder": 2}
 _STAGE_NOTE = {}   # jid → "sN/M" live stage marker, filled by _running_total, shown in the cell
 # End-of-training finalize for a multi-stage arm (stage-end probe-trio on 451 clips +
 # best-ckpt reload + student_encoder export) — DI measured ~15m at POC. Shown once every
