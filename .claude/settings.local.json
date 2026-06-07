@@ -281,7 +281,11 @@
       "Bash(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader)",
       "Bash(grep -av \"^$\")",
       "Bash(awk '{print $11, $12, $13, $14}')",
-      "Bash(grep -avE \"^\\\\s*$\")"
+      "Bash(grep -avE \"^\\\\s*$\")",
+      "Bash(timeout 580 bash -c 'until grep -qE \"Upload complete|Traceback|churn-retry\" /workspace/factorjepa/logs/upload_outputs_poc_20260607_085356.log; do sleep 20; done')",
+      "Bash(lscpu -p=CPU,NODE)",
+      "Bash(awk -F, '{print $2}')",
+      "Bash(lscpu -p=CPU,CORE)"
     ]
   }
 }

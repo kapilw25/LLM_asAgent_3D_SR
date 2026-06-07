@@ -60,6 +60,7 @@ except ImportError:
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 from huggingface_hub import HfApi, repo_exists, snapshot_download
+from huggingface_hub.errors import BadRequestError   # iter18 06-07: LFS churn-retry
 from utils.progress import make_pbar
 from utils.hf_upload_mode import resolve_upload_mode_interactive, delete_repo_folder_scoped
 
@@ -522,8 +523,13 @@ def upload_outputs(output_dir: str, subfolder: str = None):
     # student_best.pt mid-upload → "is not a file on the local file system" killed the
     # whole 350G backup). upload_folder re-lists the tree on each attempt, so a bounded
     # retry sees the post-finalize stable tree. One churn event per arm → attempt 2
-    # virtually always lands; 3 strikes = real error, FAIL LOUD.
-    _CHURN_ATTEMPTS = 3
+    # virtually always lands; final strike = real error, FAIL LOUD.
+    # 06-07 SECOND churn costume: live arms RE-RENDER their plot PNGs every val cycle
+    # (atomic replace) → a file modified between hash-upload and commit makes the commit
+    # reference an LFS blob that was never uploaded → BadRequestError "LFS pointer
+    # pointed to a file that does not exist". Retry is CHEAP: everything already
+    # transferred is deduped server-side; only the churned files re-upload.
+    _CHURN_ATTEMPTS = 4
     for _attempt in range(1, _CHURN_ATTEMPTS + 1):
         try:
             with _UploadHeartbeat(f"upload {subfolder}"):
@@ -541,11 +547,14 @@ def upload_outputs(output_dir: str, subfolder: str = None):
                                      + _UPLOAD_SKIP_PATTERNS),
                 )
             break
-        except ValueError as e:
-            if "is not a file" not in str(e) or _attempt == _CHURN_ATTEMPTS:
+        except (ValueError, BadRequestError) as e:
+            churn = ("is not a file" in str(e)          # file DELETED mid-upload (finalize)
+                     or "LFS pointer" in str(e))        # file MODIFIED mid-upload (plot re-render)
+            if not churn or _attempt == _CHURN_ATTEMPTS:
                 raise
-            print(f"  [churn-retry {_attempt}/{_CHURN_ATTEMPTS}] a file vanished mid-upload "
-                  f"(training arm finalized): {e} — re-listing the tree and retrying")
+            print(f"  [churn-retry {_attempt}/{_CHURN_ATTEMPTS}] live-training churn mid-upload "
+                  f"({type(e).__name__}): {e} — re-listing the tree and retrying "
+                  f"(already-transferred blobs dedup, retry is cheap)")
 
     elapsed = time.time() - t0
     print(f"Upload complete: {elapsed:.0f}s → https://huggingface.co/datasets/{HF_OUTPUTS_REPO}")

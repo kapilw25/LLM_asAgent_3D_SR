@@ -150,6 +150,11 @@ fi
 ENCODERS="${ENCODERS:-vjepa_2_1_frozen vjepa_2_1_pretrain_encoder vjepa_2_1_pretrain_2X_encoder vjepa_2_1_surgical_3stage_DI_encoder vjepa_2_1_surgical_noDI_encoder vjepa_2_1_pretrain_head vjepa_2_1_surgical_3stage_DI_head vjepa_2_1_surgical_noDI_head}"
 SKIP_STAGES="${SKIP_STAGES:-}"
 NUM_FRAMES="${NUM_FRAMES:-16}"
+# iter18 2026-06-07: which predictor_temporal metric(s) Stage 8b runs. Default "all" (the 6-metric
+# suite in one process). The metric-parallel scheduler (iter18_poc_ngpu) fans Stage 8b into 6
+# concurrent jobs, each setting PT_METRIC=<single> so m12e runs ONE metric → wall = slowest metric,
+# not the sum of six. m12e cache-skips already-done metrics, so a re-run is cheap.
+PT_METRIC="${PT_METRIC:-all}"
 
 # ── iter17: shared decoded-frame cache ──────────────────────────────────
 # The scheduler runs ONE run_eval.sh per encoder, so 8 processes decode the same ~1.8k
@@ -971,9 +976,9 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             if [[ " $STAGE8_ENCODERS " == *" $ENC "* ]]; then
                 PCKPT="$(encoder_predictor_ckpt_for "$ENC")"
                 if [ -e "$PCKPT" ]; then
-                    stamp "  STAGE 8b · predictor_temporal (6 metrics) for $ENC"
+                    stamp "  STAGE 8b · predictor_temporal (metric=${PT_METRIC}) for $ENC"
                     python -u src/m12e_predictor_temporal.py "--$MODE" \
-                        --stage forward --metric all \
+                        --stage forward --metric "$PT_METRIC" \
                         --variant "$ENC" --encoder-ckpt "$PCKPT" \
                         --model-config "$ENC_MCFG" \
                         $MA_FLAG \
@@ -984,7 +989,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                         --batch-size "$PT_BATCH" \
                         --cache-policy "$P_MSE" \
                         --no-wandb \
-                        2>&1 | tee "logs/m12e_predictor_temporal_forward_${ENC}.log"
+                        2>&1 | tee "logs/m12e_predictor_temporal_forward_${ENC}_${PT_METRIC}.log"
                 else
                     echo "  ⚠️  Stage 8b SKIP $ENC: predictor-bearing ckpt missing ($PCKPT)"
                 fi

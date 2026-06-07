@@ -18,6 +18,7 @@ PUBLIC API
     bootstrap_ci  (re-exported from utils.bootstrap)
 """
 import contextlib
+import os
 import sys
 
 import numpy as np
@@ -46,6 +47,13 @@ from utils.vjepa2_imports import (
 _PRED_TUPLE_LEN = 2      # predictor returns (z_pred, z_context) when predict_all
 _MIN_TEMPORAL_SLOTS = 2  # rollout needs ≥2 temporal slots
 _MIN_LOADED_FRAC = 0.5   # ckpt param-coverage floor — below = random init garbage
+
+# iter18 2026-06-07 — h-memoization (V-JEPA "amortize target computation"): when PT_H_MEMO=1, the
+# mask-INDEPENDENT full-forward target h=encoder(pixel) is computed ONCE per batch (full_target_h)
+# and reused across a metric's mask sweep (tdist Δt, maskratio r, teacher_free's 2 rollouts) instead
+# of recomputed each masked_predict_l1 call. Bit-identical (deterministic eval/no_grad forward of the
+# same pixel) — but ships FLAG-GATED OFF until a GPU parity smoke confirms it; default = exact prior path.
+_H_MEMO = os.environ.get("PT_H_MEMO", "0") == "1"
 
 # ── Constants (single-sourced from yaml — copied from probe_future_mse.py) ──
 _PCFG = get_pipeline_config()
@@ -210,19 +218,41 @@ def safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1):
         return np.concatenate([lo, hi], axis=0)
 
 
+# ── h-memoization helper (V-JEPA target amortization) ──────────────────
+@torch.no_grad()
+def full_target_h(encoder, pixel):
+    """The mask-INDEPENDENT full-forward target h = encoder(pixel) (hierarchical concat if the
+    encoder returns a list), computed ONCE per batch and passed to masked_predict_l1 /
+    rollout_l1_per_horizon so a metric's mask sweep reuses one target encode instead of redoing it.
+    Returns None when PT_H_MEMO is off → callers recompute h inline (exact current behavior, no
+    wasted forward). Bit-identical: deterministic eval/no_grad forward of the same pixel."""
+    if not _H_MEMO:
+        return None
+    h = encoder(pixel)
+    if isinstance(h, (list, tuple)):
+        h = torch.cat(list(h), dim=-1)
+    return h
+
+
 # ── The shared masked-predict L1 core (from probe_future_mse._forward_one_batch) ──
 @torch.no_grad()
-def masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred):
+def masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred, h_full=None):
     """pixel (B,3,T,H,W) bf16 cuda ; m_enc/m_pred (B,n) long cuda (custom per-metric).
     Returns (per_clip_l1 (B,) np.float32, out, h_target). Same path as future_mse.
+    h_full: optional precomputed full-forward target (full_target_h). When given, the
+    mask-INDEPENDENT `h = encoder(pixel)` is REUSED instead of recomputed (h-memoization) —
+    bit-identical, since h does not depend on the mask. None → recompute inline (current path).
     """
     apply_masks = get_apply_masks()
     z = encoder(pixel, masks=[m_enc])
     if isinstance(z, (list, tuple)):
         z = torch.cat(list(z), dim=-1)
-    h = encoder(pixel)
-    if isinstance(h, (list, tuple)):
-        h = torch.cat(list(h), dim=-1)
+    if h_full is not None:
+        h = h_full
+    else:
+        h = encoder(pixel)
+        if isinstance(h, (list, tuple)):
+            h = torch.cat(list(h), dim=-1)
     h_target = apply_masks(h, [m_pred])
     out = predictor(z, [m_enc], [m_pred], mask_index=0)
     if isinstance(out, tuple) and len(out) == _PRED_TUPLE_LEN:
@@ -234,7 +264,7 @@ def masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred):
 
 
 @torch.no_grad()
-def rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, *, free_running):
+def rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, *, free_running, h_full=None):
     """Iterated temporal rollout: predict slot k from the context of slots {0..k-1},
     for k=1..Tp-1; return per-clip L1 at each horizon → (B, Tp-1).
 
@@ -253,9 +283,12 @@ def rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, *, free_runnin
     if Tp < _MIN_TEMPORAL_SLOTS:
         raise ValueError(f"rollout needs Tp>=2 temporal slots; got {Tp}")
     b = pixel.shape[0]
-    h = encoder(pixel)                                   # full forward → per-slot targets
-    if isinstance(h, (list, tuple)):
-        h = torch.cat(list(h), dim=-1)                   # (B, N, 6656)
+    if h_full is not None:                               # h-memoization: reuse the shared target
+        h = h_full
+    else:
+        h = encoder(pixel)                               # full forward → per-slot targets
+        if isinstance(h, (list, tuple)):
+            h = torch.cat(list(h), dim=-1)               # (B, N, 6656)
 
     l1s = []
     if free_running:
@@ -306,6 +339,7 @@ def expand_mask(idx: torch.Tensor, B: int) -> torch.Tensor:
 
 __all__ = [
     "load_encoder_predictor", "build_mask_gen", "token_grid", "temporal_token_idx",
-    "to_pixel", "masked_predict_l1", "perclip_slope", "expand_mask", "bootstrap_ci",
+    "to_pixel", "masked_predict_l1", "full_target_h", "rollout_l1_per_horizon",
+    "perclip_slope", "expand_mask", "bootstrap_ci",
     "NUM_FRAMES_DEFAULT", "CROP", "TUBELET_SIZE", "PATCH_SIZE",
 ]

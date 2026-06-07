@@ -117,7 +117,11 @@ def run_forward_stage(args, wb) -> None:
     print(f"  encoder+predictor loaded (concat dim={embed_concat})")
 
     # Resume: one ckpt holds the shared keys + each metric's per-clip accumulator in lockstep.
-    ckpt = out_dir / ".m12e_ckpt.npz"
+    # iter18 2026-06-07: keyed by args.metric so the metric-parallel scheduler (iter18_poc_ngpu
+    # fans 6 concurrent `--metric <single>` m12e for the SAME variant across GPUs) writes DISJOINT
+    # resume ckpts — a shared ".m12e_ckpt.npz" raced the read-restore + atomic replace → corruption.
+    # `--metric all` → .m12e_ckpt_all.npz; `--metric tdist` → .m12e_ckpt_tdist.npz.
+    ckpt = out_dir / f".m12e_ckpt_{args.metric}.npz"
     acc = {m: [] for m in todo}
     keys_acc, processed = [], set()
     if ckpt.exists():

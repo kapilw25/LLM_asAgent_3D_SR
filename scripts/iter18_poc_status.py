@@ -8,7 +8,9 @@ scheduler). Classifies every job ✅/🔄/⬚/❌ from the main log's GPU ◀/�
 
 ETA: a forward DAG simulation over the GPU pool. Per-arm durations are OBSERVED, not hardcoded —
   · a completed job's measured wall sets that arm-class's estimate (mean of completed peers),
-  · a RUNNING job's total is extrapolated from its own per-job-log progress (step tqdm / recent rate),
+  · a RUNNING train's total = static step ledger ÷ its own live rate (see REAL-ETA below),
+  · a RUNNING/PENDING eval's total = the eval STAGE ledger: current-stage remainder
+    (live clip bar) + Σ measured walls of the queued stages (stamp-banner timestamps),
   · only an arm-class with NO completion yet AND no parseable progress falls back to a prior (below),
     seeded from the 06-05/06-06 measured runs and replaced the moment real data arrives.
 
@@ -38,7 +40,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "src"))
 import json  # noqa: E402
-from iter18_poc_ngpu import ARM2ENC, BACKBONE, S3_SKIP_PERENC, build_jobs  # noqa: E402  (canonical DAG)
+from iter18_poc_ngpu import ARM2DIR, ARM2ENC, BACKBONE, PT_METRICS, S3_SKIP_PERENC, build_jobs  # noqa: E402  (canonical DAG)
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
@@ -130,9 +132,10 @@ def _calibrate(jobs, done, launched, mtag, ledger):
     """Measured (pure step rate, per-pad overhead) from THIS run's completed train arms.
     pure_rate = Σ(final-bar elapsed)/executed_steps; overhead = wall − Σ(bar elapsed),
     split over (n executed stages + 2) pads (each stage-end probe + startup + finalize)."""
-    rates, pads = [], []
+    rates, pads, fins = [], [], []
     if not ledger:
-        return {"ledger": ledger, "rate": None, "pad": _FINALIZE_PAD_S}
+        return {"ledger": ledger, "rate": None, "pad": _FINALIZE_PAD_S,
+                "finalize": None, "mtag": mtag}
     for jid, t in done.items():
         if t == "resume" or not jid.startswith("T:") or jid not in launched:
             continue
@@ -154,18 +157,120 @@ def _calibrate(jobs, done, launched, mtag, ledger):
             continue
         rates.append((sum(bars), executed))
         pads.append(max(wall - sum(bars), 0) / (len(bars) + 2))
+        # MEASURED finalize: ✓stamp − newest stage-ckpt mtime (saved right before
+        # finalize). 06-07 measured 23m/32m/37m/67m — replaces the fake 15m constant.
+        mt = _newest_stage_ckpt_mtime(arm, mtag)
+        if mt is not None:
+            fins.append((_sod(t) - _epoch_sod(mt)) % 86400)
     pads.sort()
+    fins.sort()
     pooled = (sum(b for b, _ in rates) / sum(e for _, e in rates)) if rates else None
-    return {"ledger": ledger,
+    return {"ledger": ledger, "mtag": mtag,
             "rate": pooled,    # pooled Σbar-seconds / Σexecuted-steps across completions
-            "pad": pads[len(pads) // 2] if pads else _FINALIZE_PAD_S}
+            "pad": pads[len(pads) // 2] if pads else _FINALIZE_PAD_S,
+            "finalize": fins[len(fins) // 2] if fins else None}
 
 
 _STAGE_NOTE = {}   # jid → "sN/M" live stage marker, filled by _running_total, shown in the cell
-# End-of-training finalize for a multi-stage arm (stage-end probe-trio on 451 clips +
-# best-ckpt reload + student_encoder export) — DI measured ~15m at POC. Shown once every
-# stage's steps are done; "remaining ~1m00s" during a 15-min finalize was a display lie.
-_FINALIZE_PAD_S = 15 * 60
+# COLD-START fallback for the end-of-training finalize (stage-end probe-trio on 451 clips
+# + best-ckpt reload + export). 06-07 MEASURED on this run's completed arms (✓stamp −
+# last-stage-ckpt mtime): 23m / 32m / 37m / 67m — the old 15m constant was 2-4× fake.
+# Used ONLY before any in-log completion; afterwards calib["finalize"] (live median) wins,
+# and the remaining-finalize display counts DOWN from it anchored on the ckpt mtime.
+_FINALIZE_PAD_S = 35 * 60
+
+
+def _newest_stage_ckpt_mtime(arm, mtag):
+    """mtime (epoch) of the arm's newest *ckpt_stage*.pt — written immediately before
+    finalize starts, so (✓stamp − it) = measured finalize, (now − it) = time IN finalize."""
+    d = REPO / f"outputs/{mtag}/{BACKBONE}/{ARM2DIR[arm]}"
+    cks = sorted(d.glob("*ckpt_stage*.pt"), key=lambda p: p.stat().st_mtime)
+    return cks[-1].stat().st_mtime if cks else None
+
+
+def _epoch_sod(epoch):
+    import time as _t
+    g = _t.gmtime(epoch)
+    return g.tm_hour * 3600 + g.tm_min * 60 + g.tm_sec
+
+
+# ── EVAL REAL-ETA STAGE LEDGER (iter18 2026-06-07) ────────────────────────
+# A per-encoder eval is a FIXED stage chain (run_eval.sh per-encoder loop):
+#   2 features → 3 probe-train → 3.5 taxonomy (= stage id 11) → 5 motion-feat
+#   → 6 cosine → 8 future_mse → 8b predictor_temporal
+# The old estimator extrapolated ONLY the current stage's clip bar and capped the
+# job at a hardcoded 3 h — once elapsed passed 3 h the cell froze at the 60s floor
+# ("🔄 3h05m·~1m00s" while s7/7 had ~8m left AND nothing counted queued stages).
+# run_eval.sh stamps "═══ HH:MM:SS · STAGE <id>" before every stage (stamp(),
+# run_eval.sh:311), so completed stage walls are MEASURED from consecutive banner
+# timestamps (the "DONE · total wall" banner closes the last). A stage NO eval has
+# completed yet borrows the live full-stage projection (clip-bar total × recent
+# rate) from any sibling currently inside it; a stage no eval has even reached
+# falls back to the whole-job prior's per-stage share — replaced the moment any
+# sibling reaches it (the same self-correcting contract as the train priors).
+EVAL_PLAN = [("3.5" if s == "11" else s) for s in S3_SKIP_PERENC.split(",")]
+_RE_STAMP = re.compile(r"═══ (\d\d:\d\d:\d\d) ·\s*(?:STAGE ([\w.]+)|(DONE))")
+_RE_CLIP_BAR = re.compile(r"(\d+)/(\d+) \[[^\]]*recent=([\d.]+)s/clip")
+
+
+def _eval_plan_for(jid, mtag):
+    """Stage plan for one per-encoder E: eval — stages 2-8 ONLY (iter18 2026-06-07: Stage 8b
+    is now 6 separate P: metric jobs, estimated via _pt_total — so 8b is dropped here to avoid
+    double-counting). Stage 8 is ALSO dropped when the encoder's predictor-bearing best ckpt is
+    PROVABLY absent (student_encoder.pt exists, m09{a,c}_ckpt_best.pt doesn't) — mirrors
+    run_eval.sh's Stage-8 preflight. A still-training arm keeps the full 2-8 plan."""
+    plan = [s for s in EVAL_PLAN if s != "8b"]    # E: runs 2,3,3.5,5,6,8 — never 8b
+    enc = jid.split("E:vjepa_2_1_", 1)[-1]
+    if enc == "frozen":
+        return plan               # Meta ckpt always carries the predictor
+    arm = next(a for a, e in ARM2ENC.items() if e == enc)
+    d = REPO / f"outputs/{mtag}/{BACKBONE}/{ARM2DIR[arm]}"
+    best = "m09a_ckpt_best.pt" if ARM2DIR[arm].startswith("m09a_") else "m09c_ckpt_best.pt"
+    if (d / "student_encoder.pt").exists() and not (d / best).exists():
+        return [s for s in plan if s != "8"]
+    return plan
+
+
+def _eval_calibrate(jobs, mtag, now_s):
+    """(medians, state, plans) for the eval stage ledger.
+    medians: stage → median measured wall, pooled over EVERY eval log segment of this
+      run (banner-timestamp diffs; interrupted segments contribute their closed stages).
+      Stages with no closed wall get the median live projection (bar total × recent).
+    state[jid] (running evals only): {cur, in, rem_cur} — current stage, seconds inside
+      it, and its live-bar remainder (None when the stage has no recent= clip bar; the
+      bar is read ONLY from bytes after the last banner, so a finished stage's stale
+      bar can never masquerade as the current one's)."""
+    walls, projs, state, plans = {}, {}, {}, {}
+    for jid, j in jobs.items():
+        if _arm_of(jid) != "eval" or jid.startswith("P:"):
+            continue                  # P: (Stage-8b metric) jobs use _pt_total, not the stage ledger
+        plans[jid] = _eval_plan_for(jid, mtag)
+        cands = sorted(REPO.glob(j["log"].format(ts="*")), key=lambda p: p.stat().st_mtime)
+        for p in cands:
+            try:
+                txt = p.read_text(errors="replace")
+            except OSError:
+                continue
+            seq = [( _sod(m.group(1)), m.group(2) or "DONE", m.end())
+                   for m in _RE_STAMP.finditer(txt)
+                   if (m.group(2) in plans[jid]) or m.group(3)]
+            for (t1, s1, _), (t2, _s2, __) in zip(seq, seq[1:]):
+                walls.setdefault(s1, []).append((t2 - t1) % 86400)
+            if p is not cands[-1] or not seq or seq[-1][1] == "DONE":
+                continue
+            cur = seq[-1][1]
+            es = {"cur": cur, "in": (now_s - seq[-1][0]) % 86400, "rem_cur": None}
+            pb = _RE_CLIP_BAR.findall(txt[seq[-1][2]:])
+            if pb:
+                c, tot, r = int(pb[-1][0]), int(pb[-1][1]), float(pb[-1][2])
+                if tot and c >= _MIN_EVAL_POINTS:
+                    es["rem_cur"] = (tot - c) * r
+                    projs.setdefault(cur, []).append(tot * r)
+            state[jid] = es
+    med = {s: sorted(v)[len(v) // 2] for s, v in walls.items()}
+    for s, v in projs.items():
+        med.setdefault(s, sorted(v)[len(v) // 2])
+    return med, state, plans
 # COLD-START priors (seconds), used ONLY until a live measurement (a completion, or a running job's
 # step progress) replaces them. Empirical: 06-06 1× pretrain 4h32m; 06-05 enc arms ~5h10m;
 # head arms ~58m; eval = per-encoder stages only (2,3,11,5,6,8,8b) — self-corrects on 1st completion.
@@ -178,15 +283,19 @@ PRIOR["eval"] = int(0.75 * 3600)
 # priors above are ~50× too big there and made the first SANITY ETA read 10h46m. Mode-scaled
 # priors fix the cold start; live measurements still override both the moment they exist.
 PRIOR_SANITY = {k: 7 * 60 for k in PRIOR}
+# COLD prior for ONE Stage-8b metric job (P:) — used ONLY until that metric's first completion
+# populates pt_med (per-metric). The whole-eval prior (est["eval"], ~3.4h incl. 8b) is a terrible
+# per-metric prior, so use a dedicated one: at bs=16 the 6 metrics run ~10-25 min each (teacher_free
+# longest). 20 min is conservative (safe-high) and self-corrects within ~1 metric completion.
+_PT_COLD_PRIOR = {"poc": 20 * 60, "sanity": 60}
 
 # Back up outputs/poc to HF this often (minutes) WHILE the run goes, so the final backup at the end
 # is tiny and the paid node can be killed right away. Driven by the 60s `watch` refresh + a stamp file.
 UPLOAD_EVERY_MIN = 45   # iter18 2026-06-06: full-artifact backups are heavier — user chose 45m
-# 2026-06-07 TEMP (user order): auto-backup PAUSED — the user runs the first every-file
-# mirror MANUALLY (python -u src/utils/hf_outputs.py upload outputs/poc …); two concurrent
-# upload_folder commits on the same tree race (412 retries / doubled bandwidth).
-# FLIP BACK TO False once the manual upload completes.
-AUTO_BACKUP_DISABLED = True
+# 2026-06-07: re-enabled after the manual every-file mirror completed (08:53 run:
+# "Upload complete: 1781s", 12 churned files transferred, rest deduped). Flip True
+# only while a MANUAL upload is in flight (concurrent commits race).
+AUTO_BACKUP_DISABLED = False
 # Rebuild the §3-style preview plots from whatever evals are DONE this often (minutes). CPU-only.
 PLOT_EVERY_MIN = 15
 
@@ -198,6 +307,32 @@ def _latest_log(mtag):
     cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
              if "_train_" not in p.name and "_eval_" not in p.name and "_s3_" not in p.name]
     return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
+
+
+def _arm_consumed(jobs, mtag):
+    """{jid: Σ seconds across ALL of that job's per-arm log files} (iter18 2026-06-07:
+    '✅ (cached)' hid that a resume-skipped arm may have burned 12h+ in earlier runs).
+    One log per LAUNCH — mid-run interruptions create several logs per arm (full_ft has
+    4: _185942, _234435, _001232, _002339). Each segment = (log mtime − the UTC start
+    timestamp in its filename); mtime = the last byte tee wrote = completion/kill moment.
+    Symlinked logs (moved to result_outputs/) stat-follow to the target — mtimes intact.
+    A LIVE arm's open segment is included but unused (the 🔄 cell path never reads it)."""
+    totals = {}
+    del mtag  # jid→log template already carries the mode tag
+    for jid, j in jobs.items():
+        secs = 0
+        for p in REPO.glob(j["log"].format(ts="*")):
+            m = re.search(r"_(\d{8}_\d{6})\.log$", p.name)
+            if not m:
+                continue
+            start = datetime.strptime(m.group(1), "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
+            try:
+                secs += max(p.stat().st_mtime - start.timestamp(), 0)
+            except OSError:
+                continue
+        if secs:
+            totals[jid] = secs
+    return totals
 
 
 def _sod(hms):
@@ -229,25 +364,62 @@ def _tail(path, nbytes=8000):
         return ""
 
 
-def _running_total(jobs, jid, elapsed, prior, calib):
+def _eval_total(jid, elapsed, prior, ecalib):
+    """TOTAL wall estimate for ONE eval job from the stage ledger (med, state, plans).
+      · RUNNING (jid in state): elapsed + current-stage remainder (live clip bar, else
+        median-minus-time-in-stage) + Σ medians of the QUEUED stages — the queued 8b
+        (m12e ~2.2 h on 1825 clips) is now counted instead of capped away.
+      · PENDING: Σ medians over the full per-encoder stage plan.
+    A stage with no measured wall AND no live projection borrows the per-stage share of
+    the whole-job prior (self-corrects the moment any sibling walks that stage)."""
+    med, state, plans = ecalib
+    plan = plans.get(jid, EVAL_PLAN)
+    share = prior / max(len(EVAL_PLAN), 1)
+
+    def w(s):
+        return med.get(s, share)
+
+    es = state.get(jid)
+    if es is None:                                  # pending — whole plan
+        return sum(w(s) for s in plan)
+    cur = es["cur"]
+    i = plan.index(cur) if cur in plan else 0
+    rem_cur = es["rem_cur"] if es["rem_cur"] is not None else max(w(cur) - es["in"], 60)
+    _STAGE_NOTE[jid] = f"s{i + 1}/{len(plan)}"
+    return elapsed + rem_cur + sum(w(s) for s in plan[i + 1:])
+
+
+def _pt_total(jobs, jid, elapsed, prior, pt_med):
+    """TOTAL wall for a Stage-8b single-metric P: job (iter18 2026-06-07). Each P: log is ONE
+    metric's 0→1825 m12e run, so the single clip bar (cur/tot/`recent=`) is an exact estimate —
+    no stage ledger needed. Pending (no bar yet) → that metric's measured median (pt_med), else
+    the prior. Metrics differ a lot in cost (teacher_free ≫ causal) so pt_med is keyed per-metric."""
+    metric = jid.rsplit(":", 1)[-1]
+    cands = sorted(REPO.glob(jobs[jid]["log"].format(ts="*")), key=lambda p: p.stat().st_mtime)
+    txt = _tail(cands[-1]) if cands else ""
+    cp = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
+    rr = re.findall(r"recent=([\d.]+)s/clip", txt)
+    if cp and rr and int(cp[-1][1]) and int(cp[-1][0]) >= _MIN_EVAL_POINTS:
+        cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
+        return elapsed + (tot - cur) * rate
+    return max(pt_med.get(metric, prior), elapsed + 300)
+
+
+def _running_total(jobs, jid, elapsed, prior, calib, ecalib):
     """Total-duration estimate for a RUNNING job.
       · TRAIN — REAL ETA (iter18 2026-06-07): remaining = (ledger_total − progress) ×
         live step rate + calibrated pads for the remaining stage-end probes + finalize.
         Total work comes from the STATIC ledger (yaml+artifacts) — never extrapolated,
         no hidden stages possible. Rate comes from the CURRENT stage's own bar.
-      · EVAL — from the current stage's RECENT rate ('recent=<R>s/clip').
+      · EVAL — current-stage remainder + Σ queued-stage medians (the eval stage ledger,
+        _eval_total); no more current-stage-only blindness or 3 h cap.
       · fallback — prior, capped (only before any in-log data exists)."""
     cap = max(prior * 2.5, elapsed + 600)
+    if _arm_of(jid) == "eval":
+        return _eval_total(jid, elapsed, prior, ecalib)
     tmpl = jobs[jid]["log"]
     cands = sorted(REPO.glob(tmpl.format(ts="*")), key=lambda p: p.stat().st_mtime)
     txt = _tail(cands[-1]) if cands else ""
-    if _arm_of(jid) == "eval" and txt:
-        cp = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
-        rr = re.findall(r"recent=([\d.]+)s/clip", txt)
-        if cp and rr and int(cp[-1][1]) and int(cp[-1][0]) >= _MIN_EVAL_POINTS:
-            cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
-            return min(elapsed + (tot - cur) * rate, 3 * 3600)
-        return min(max(prior, elapsed + 300), cap)
     led = (calib["ledger"] or {}).get(_arm_of(jid))
     if jid.startswith("T:") and led and cands:
         try:
@@ -297,7 +469,15 @@ def _running_total(jobs, jid, elapsed, prior, calib):
                         if sum(stages[:i + 1]) > progress) + 1
         rate = live_rate or calib["rate"] or (prior / max(total, 1))
         if steps_left <= 0:
-            return elapsed + _FINALIZE_PAD_S          # finalize (probe+export) running
+            # FINALIZE running (stage-end probe-trio + export). Remaining = measured
+            # median finalize MINUS time already spent in it (anchored on the last
+            # stage-ckpt mtime) — counts down honestly instead of a frozen "~15m".
+            med = calib["finalize"] or _FINALIZE_PAD_S
+            mt = _newest_stage_ckpt_mtime(_arm_of(jid), calib["mtag"])
+            in_fin = ((_sod(datetime.now(timezone.utc).strftime("%H:%M:%S"))
+                       - _epoch_sod(mt)) % 86400) if mt else 0
+            _STAGE_NOTE[jid] = (_STAGE_NOTE.get(jid) or "") + "·final"
+            return elapsed + max(med - in_fin, 300)
         return elapsed + steps_left * rate + ends_left * calib["pad"]
     return min(max(prior, elapsed + 300), cap)
 
@@ -416,6 +596,15 @@ def main():
         keep = {f"T:{BACKBONE}:{a}" for a in only_arms}
         jobs = {jid: j for jid, j in jobs.items() if jid in keep}
 
+    # --skip-arms runs drop arms (train+eval) from the DAG — mirror it (iter18 2026-06-07).
+    sm = re.search(r"\[--skip-arms\] dropped \[(.*?)\]", text)
+    if sm:
+        skip = set(re.findall(r"'([^']+)'", sm.group(1)))
+        drop = ({f"T:{BACKBONE}:{a}" for a in skip}
+                | {f"E:vjepa_2_1_{ARM2ENC[a]}" for a in skip if a in ARM2ENC}
+                | {f"P:vjepa_2_1_{ARM2ENC[a]}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS})
+        jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
+
     launched = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ◀ (\S+)", text)}
     done = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ✓ (\S+)", text)}
     failed = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ✗ (\S+)", text)}
@@ -424,6 +613,14 @@ def main():
         # iter18 prints BARE arm names (iter17 printed bb:arm) → rebuild the full jid.
         for tok in re.findall(r"'([^']+)'", rm.group(1)):
             done.setdefault(f"T:{BACKBONE}:{tok}", "resume")
+    # P: (Stage-8b single-metric) jobs are 'done' when their aggregate_<metric>.json exists on disk.
+    # The scheduler resume-skips them silently (no per-job GPU ✓ marker logged), so mirror that from
+    # disk — and it also surfaces 8b metrics produced by a prior monolithic eval as already-done.
+    for jid in jobs:
+        if jid.startswith("P:"):
+            enc_name, metric = jid[2:].rsplit(":", 1)
+            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_name}/aggregate_{metric}.json").exists():
+                done.setdefault(jid, "resume")
     gm = re.search(r"gpus=(\d+)", text)
     gpus = int(gm.group(1)) if gm else 4
     s3 = re.search(r"§3 rc=(-?\d+)", text)
@@ -450,6 +647,8 @@ def main():
         print(f"  ⚠️  workload ledger FAILED ({type(e).__name__}: {e}) — ETA on priors", flush=True)
         ledger = None
     calib = _calibrate(jobs, done, launched, mtag, ledger)
+    # eval REAL-ETA: per-stage medians + running-eval stage state + per-job stage plans.
+    ecalib = _eval_calibrate(jobs, mtag, now_s)
 
     # evals stay duration-class-based (homogeneous); their measured mean replaces the prior.
     est = dict(PRIOR if mtag == "poc" else PRIOR_SANITY)
@@ -460,6 +659,17 @@ def main():
     for arm, vals in measured.items():
         est[arm] = sum(vals) / len(vals)
 
+    # Σ secs per jid across all log segments — reused for the P: per-metric medians here and the
+    # table's consumed/✅ cells + Σ TOTAL row below.
+    consumed = _arm_consumed(jobs, mtag)
+    # P: (Stage-8b single-metric) per-metric medians from COMPLETED P: jobs → priors for pending P:
+    # (metrics differ a lot in cost — teacher_free ≫ causal — so keep them per-metric).
+    _pt_by = {}
+    for jid in jobs:
+        if jid.startswith("P:") and classify(jid) == "done" and jid in consumed:
+            _pt_by.setdefault(jid.rsplit(":", 1)[-1], []).append(consumed[jid])
+    pt_med = {m: sorted(v)[len(v) // 2] for m, v in _pt_by.items()}
+
     # ── per-job remaining time ──
     remaining = {}
     for jid in jobs:
@@ -468,9 +678,20 @@ def main():
         prior = est.get(arm, est["eval"])
         if st in ("done", "failed"):
             remaining[jid] = 0.0
+        elif jid.startswith("P:"):
+            # Stage-8b single-metric job — estimated from its OWN m12e clip bar (running) or the
+            # per-metric median (pending), NOT the stage ledger. Cold prior is _PT_COLD_PRIOR
+            # (per-metric), NOT est["eval"] (the whole-eval time, ~10× too big for one metric).
+            el = elapsed(jid) if st == "running" else 0.0
+            tot = _pt_total(jobs, jid, el, _PT_COLD_PRIOR.get(mtag, 20 * 60), pt_med)
+            remaining[jid] = max(tot - el, 60) if st == "running" else tot
         elif st == "running":
-            remaining[jid] = max(_running_total(jobs, jid, elapsed(jid), prior, calib)
+            remaining[jid] = max(_running_total(jobs, jid, elapsed(jid), prior, calib, ecalib)
                                  - elapsed(jid), 60)
+        elif arm == "eval":
+            # PENDING E: eval = stages 2-8 plan × measured/projected stage walls (Stage 8b is the
+            # separate P: jobs above) — its OWN honest total, not a class prior.
+            remaining[jid] = _eval_total(jid, 0.0, prior, ecalib)
         elif jid.startswith("T:") and ledger and calib["rate"] is not None:
             # PENDING train = full ledger plan × measured pure rate + every pad —
             # the REAL ETA (known work ÷ measured throughput), not a hopeful prior.
@@ -479,15 +700,6 @@ def main():
                               + (len(led["stages"]) + 2) * calib["pad"])
         else:
             remaining[jid] = prior
-
-    # Lift each PENDING eval to the slowest RUNNING eval's remaining (fresh evals all hit the same
-    # slowest stage; a resume-contaminated tiny prior would otherwise freeze the run ETA).
-    run_eval_rem = [remaining[j] for j in jobs if classify(j) == "running" and _arm_of(j) == "eval"]
-    if run_eval_rem:
-        floor = max(run_eval_rem)
-        for jid in jobs:
-            if classify(jid) == "pending" and _arm_of(jid) == "eval":
-                remaining[jid] = max(remaining[jid], floor)
 
     # ── forward DAG sim over the GPU pool → finish time (secs from now) per job ──
     done_set = {j for j in jobs if classify(j) in ("done", "failed")}
@@ -515,9 +727,24 @@ def main():
         done_set.add(nxt)
         finish[nxt] = t
         free += 1
-    # §3 finale pad: paired-Δ + m13 over all encoders ≈ 15 min at POC (10K BCa over ~9k clips),
-    # ≈ 4 min at SANITY (20 clips) — the flat 15 made a finished SANITY read "ETA 16m".
-    s3_pad = (15 if mtag == "poc" else 4) * 60
+    # §3 finale: MEASURED from the 15-min preview runs (maybe_plot — the EXACT same
+    # run_eval recipe/stages). A preview lasting >120s had real eval caches to aggregate,
+    # so its wall ≈ the finale's; the 7s previews (caches missing, early exit) are
+    # excluded. Until a substantive preview exists, the documented prior is used and
+    # the printout SAYS so — no unlabeled fake numbers (user order, 06-07).
+    pv = []
+    for p in (REPO / "logs").glob("plot_preview_2*.log"):
+        m2 = re.search(r"_(\d{8}_\d{6})\.log$", p.name)
+        if m2:
+            st = datetime.strptime(m2.group(1), "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
+            d = p.stat().st_mtime - st.timestamp()
+            if d > 120:
+                pv.append(d)
+    pv.sort()
+    if pv:
+        s3_pad, s3_src = pv[len(pv) // 2], "measured"
+    else:
+        s3_pad, s3_src = (15 if mtag == "poc" else 4) * 60, "prior, unmeasured"
     eta_secs = (max(finish.values()) if finish else 0) + s3_pad
 
     # ── render: emoji table (rows = arm, cols = train | eval) ──
@@ -525,13 +752,21 @@ def main():
     for jid in jobs:
         counts[classify(jid)] += 1
 
+    # `consumed` (Σ GPU-seconds per jid across ALL log segments) was computed above for pt_med.
+
     def cell(jid):
         if jid not in jobs:
             return "—"
         st = classify(jid)
         if st == "done":
-            d = "(cached)" if done.get(jid) == "resume" else _dur((_sod(done[jid]) - _sod(launched[jid])) % 86400)
-            return f"✅ {d}"
+            # TOTAL duration consumed across ALL the arm's log segments (every launch,
+            # incl. interrupted ones) — one number, no per-run breakdown (user 06-07).
+            tot = consumed.get(jid, 0)
+            if tot:
+                return f"✅ {_dur(tot)}"
+            if done.get(jid) == "resume":
+                return "✅ (prior run)"
+            return f"✅ {_dur((_sod(done[jid]) - _sod(launched[jid])) % 86400)}"
         if st == "failed":
             return "❌ FAILED"
         if st == "running":
@@ -539,6 +774,25 @@ def main():
             stg = f"·{note}" if note else ""
             return f"🔄 {_dur(elapsed(jid))}{stg}·~{_dur(finish[jid])}"
         return f"⬚ ~{_dur(finish[jid])}"
+
+    def _eval_group_cell(enc_name):
+        # iter18 2026-06-07: an encoder's eval = ONE E: job (stages 2-8) + 6 P: jobs (Stage 8b, one
+        # metric each). They run in PARALLEL across the GPU pool, so the group's remaining is the
+        # MAX finish, not the sum. `·8b N/6` shows how many of the 6 metric jobs are done.
+        group = [j for j in ([f"E:{enc_name}"] + [f"P:{enc_name}:{m}" for m in PT_METRICS]) if j in jobs]
+        if not group:
+            return "—"
+        sts = [classify(j) for j in group]
+        if all(s == "done" for s in sts):
+            return f"✅ {_dur(sum(consumed.get(j, 0) for j in group))}"
+        if any(s == "failed" for s in sts):
+            return "❌ FAILED"
+        n8 = sum(1 for j in group if j.startswith("P:"))
+        n8done = sum(1 for j in group if j.startswith("P:") and classify(j) == "done")
+        rem = max((finish.get(j, 0.0) for j in group), default=0.0)
+        glyph = "🔄" if any(s == "running" for s in sts) else "⬚"
+        tag = f"·8b {n8done}/{n8}" if n8 else ""
+        return f"{glyph}{tag}·~{_dur(rem)}"
 
     def kemoji(arm):
         if arm.startswith("pretrain"):
@@ -554,14 +808,39 @@ def main():
     print("│" + " arm".ljust(SW) + "│" + " train".ljust(CW) + "│" + " eval".ljust(CW) + "│")
     print("├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
     print("│ " + "📊 frozen (eval-only)".ljust(SW - 1) + "│" + " —".ljust(CW) + "│ "
-          + cell("E:vjepa_2_1_frozen").ljust(CW - 1) + "│")
+          + _eval_group_cell("vjepa_2_1_frozen").ljust(CW - 1) + "│")
     for arm in TRAIN_ORDER:
         tj, ej = f"T:{BACKBONE}:{arm}", f"E:vjepa_2_1_{ARM2ENC[arm]}"
         if tj not in jobs and ej not in jobs:
             continue
         print("│ " + f"{kemoji(arm)} {arm}".ljust(SW - 1) + "│ "
-              + cell(tj).ljust(CW - 1) + "│ " + cell(ej).ljust(CW - 1) + "│")
+              + cell(tj).ljust(CW - 1) + "│ " + _eval_group_cell(f"vjepa_2_1_{ARM2ENC[arm]}").ljust(CW - 1) + "│")
+
+    # Σ TOTAL row (iter18 2026-06-07): per column, completed compute (consumed across
+    # every log segment) + estimated remaining for running/pending jobs — the full
+    # GPU-time bill of the table, done + still-to-come.
+    def _col_total(kind):
+        tot = 0.0
+        for jid in jobs:
+            if (_arm_of(jid) == "eval") != (kind == "eval"):
+                continue
+            st = classify(jid)
+            if st in ("done", "failed"):
+                tot += consumed.get(jid, 0) or (
+                    (_sod(done[jid]) - _sod(launched[jid])) % 86400
+                    if jid in done and done[jid] != "resume" and jid in launched else 0)
+            elif st == "running":
+                tot += consumed.get(jid, elapsed(jid)) + remaining[jid]
+            else:
+                tot += remaining[jid]
+        return tot
+
+    t_tot, e_tot = _col_total("train"), _col_total("eval")
+    print("├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
+    print("│ " + "Σ TOTAL (done + estimated)".ljust(SW - 1) + "│ "
+          + f"Σ {_dur(t_tot)}".ljust(CW - 1) + "│ " + f"Σ {_dur(e_tot)}".ljust(CW - 1) + "│")
     print("└" + bar * SW + "┴" + bar * CW + "┴" + bar * CW + "┘")
+    print(f"  Σ compute bill (train+eval, done+estimated): ~{_dur(t_tot + e_tot)} GPU-time")
 
     # ── summary + run ETA ──
     end_utc = datetime.now(timezone.utc) + timedelta(seconds=eta_secs)
@@ -593,7 +872,7 @@ def main():
         print(backup_msg)
     else:
         print(f"  🏁 run ETA  ~{_dur(eta_secs)} from now  →  {end_utc:%H:%M} UTC · "
-              f"{end_pdt:%H:%M} PDT  (incl. §3 finale ~{s3_pad // 60}m)")
+              f"{end_pdt:%H:%M} PDT  (incl. §3 finale ~{_dur(s3_pad)} · {s3_src})")
         if plot_msg:
             print(plot_msg)
         print(backup_msg)

@@ -89,19 +89,29 @@ def resolve_stream_workers(cfg_value, label: str) -> int:
             f"got {cfg_value!r} — declare it in the train yaml.")
 
     at = get_pipeline_config()["streaming"]["worker_autotune"]
-    cores = os.cpu_count()
+    # iter18 (2026-06-07) affinity-aware: under the scheduler's taskset cpuset
+    # (NGPU_CPUSET set) this arm OWNS its core slice — sched_getaffinity returns it
+    # and the CPU term divides by 1, not by sibling count. RAM stays shared → its
+    # clamp keeps dividing by concurrency either way.
+    try:
+        cores = len(os.sched_getaffinity(0))
+    except AttributeError:          # non-Linux fallback
+        cores = os.cpu_count()
     if not cores:
-        raise RuntimeError(f"[{label}] os.cpu_count() returned {cores!r} — cannot auto-tune; "
+        raise RuntimeError(f"[{label}] no usable CPU count — cannot auto-tune; "
                            f"set an explicit num_workers int in the train yaml.")
     conc = _detect_concurrency()
+    pinned = bool(os.environ.get("NGPU_CPUSET"))
+    cpu_div = 1 if pinned else conc
 
-    by_cpu = cores // conc - at["reserve_per_proc"]
+    by_cpu = cores // cpu_div - at["reserve_per_proc"]
     workers = max(min(by_cpu, at["max_workers"]), at["min_workers"])
     ram_gb = get_cgroup_memory_gb()
     if ram_gb != float("inf"):
         by_ram = int(ram_gb * at["ram_headroom_pct"] / conc / at["ram_per_worker_gb"])
         workers = max(min(workers, by_ram), at["min_workers"])
-    print(f"  [stream-autotune {label}] cores={cores} · concurrency={conc} "
+    print(f"  [stream-autotune {label}] cores={cores}{' (pinned cpuset)' if pinned else ''} · "
+          f"concurrency={conc} "
           f"(src={'env' if os.environ.get('NGPU_CONCURRENCY') else 'gpu-count'}) · "
           f"cgroup_ram={'inf' if ram_gb == float('inf') else f'{ram_gb:.0f}G'} "
           f"→ num_workers={workers}", flush=True)

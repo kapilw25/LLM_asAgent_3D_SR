@@ -4,6 +4,11 @@
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
 
+## Sat, June 6, 2026
+- Nine of thirteen arms trained; surgery leads future-frame and causal error at selected checkpoints.
+- Full fine-tuning leads action/motion recognition; semantic gaps still within noise at current scale.
+- Next: held-out test evaluations plus paired comparisons for all thirteen arms complete Sunday.
+
 ## Fri, June 5, 2026
 - Switched checkpoint selection to future-frame error — the metric our method actually claims.
 - Found the reference model's selection quiz overlapped its training clips (75%); fixed, guarded.

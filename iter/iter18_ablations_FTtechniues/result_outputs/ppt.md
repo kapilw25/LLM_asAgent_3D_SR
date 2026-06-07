@@ -37,8 +37,8 @@
 
 [![kept scorecard](v2/poc/probe_plot/metrics_watch/kept_scorecard.png)](v2/poc/probe_plot/metrics_watch/kept_scorecard.pdf)
 
-- Surgery sweeps all three prediction metrics; full-FT sweeps semantics (top-1, motion-cos).
-- Semantic gaps sit inside N=451 noise; surgery's prediction lead is consistent across variants.
+- Surgery leads future-L1 (0.4995) and causal (0.530); LoRA/DoRA trail ≤0.005; full-FT owns semantics.
+- Semantic gaps sit inside N=451 noise; surgery's ~0.035 future-L1 lead over pretrain/full-FT holds.
 
 ---
 
@@ -46,8 +46,8 @@
 
 [![train trajectories](v2/poc/probe_plot/metrics_watch/train_trajectories.png)](v2/poc/probe_plot/metrics_watch/train_trajectories.pdf)
 
-- Only surgery improves prediction metrics stage-by-stage; pretrain stays flat — progressive unfreeze works.
-- Selector keeps each arm's future-L1 minimum, not its last checkpoint — mid-training peaks matter.
+- Surgery's future-L1 falls every stage (0.523→0.4995); pretrain stays flat (~0.54) — progressive unfreeze works.
+- Selector keeps mid-training minima — LP-FT probe 1/5, full-FT 2/4; last checkpoints regress.
 
 ---
 

@@ -10,7 +10,8 @@ GPU-VALIDATION REQUIRED post-eval (§3.1).
 import numpy as np
 
 from utils.predictor_eval import (
-    PT_DELTAS, expand_mask, masked_predict_l1, perclip_slope, temporal_token_idx, to_pixel, token_grid,
+    PT_DELTAS, expand_mask, full_target_h, masked_predict_l1, perclip_slope, temporal_token_idx,
+    to_pixel, token_grid,
 )
 
 _MIN_SWEEP_POINTS = 2   # iter18 W7: slope needs ≥2 Δt points
@@ -26,10 +27,11 @@ def compute(encoder, predictor, batch, num_frames) -> np.ndarray:
     pixel = to_pixel(batch)
     b = pixel.shape[0]
     m_enc = expand_mask(temporal_token_idx(num_frames, [ctx]), b)
+    h_full = full_target_h(encoder, pixel)   # h-memo: one target encode reused across all Δt (None when off)
     cols = []
     for d in deltas:
         m_pred = expand_mask(temporal_token_idx(num_frames, [ctx + d]), b)
-        l1, _, _ = masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred)
+        l1, _, _ = masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred, h_full=h_full)
         cols.append(l1)
     L = np.stack(cols, axis=1)                       # (B, n_deltas)
     return perclip_slope(L, deltas)                  # (B,)

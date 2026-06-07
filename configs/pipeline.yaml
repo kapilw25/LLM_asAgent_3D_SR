@@ -376,7 +376,7 @@ gpu:
   #    24 fits without thrashing on RTX Pro 6000 / V-JEPA 2.1 ViT-G (1.85 B params, bf16).
   inference_adapted_probe_bs: 44
   training_adapted_probe_bs: 24
-  inference_predictor_temporal_bs: 4   # m12e: clips per predictor forward (heavy; OOM-subbatched downward). iter18 H2: was argparse default=4
+  inference_predictor_temporal_bs: 16  # m12e: clips per predictor forward. iter18 2026-06-07: 4→16 — stage 8b (135m, 90% of eval wall) ran bs=4 on a 96G GPU (~10% util). Per-clip metrics PROVEN batch-invariant (pt_order/pt_maskratio seed a local Generator(PT_SEED) → same perm for every clip; causal/tdist/rollout use deterministic temporal_token_idx; encoder/predictor eval()+no_grad) → bit-identical at any bs. safe_metric OOM-subbatches→1, so 16 is correctness-safe even if it overshoots VRAM. Stayed below adapted_probe_bs=24 (line 377) because the predictor fwd is heavier (holds h + a growing rollout bank). was argparse default=4 → H2 yaml
   # utils/gpu_watchdog.py ops tool (iter18 H2: were argparse defaults 50/5/30/30)
   watchdog:
     threshold_pct: 50      # alert if GPU util < this for window_min
