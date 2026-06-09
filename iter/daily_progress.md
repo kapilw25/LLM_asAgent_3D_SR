@@ -7,6 +7,7 @@
 - Surgery-on-raw matches surgery-on-factor on future-frame and causal — surgery's only clean wins over frozen.
 - Factorized data adds no edge over the surgery technique; frozen/vanilla still lead the semantic metrics.
 - Next: does factorization beat raw at full scale? else reposition the contribution to the technique.
+- Head variants removed: frozen predictor makes temporal scores identical to vanilla (0.0077/0.558/0.0065) — no new signal.
 
 ## Mon, June 8, 2026
 - Surgery-encoder wins future-frame and causal prediction; full fine-tuning leads motion-cosine — surgery not best everywhere.
