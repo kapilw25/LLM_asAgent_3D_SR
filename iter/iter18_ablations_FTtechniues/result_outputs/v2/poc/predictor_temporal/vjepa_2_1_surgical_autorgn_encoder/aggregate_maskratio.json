@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_autorgn_encoder",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.06118,
+  "std": 0.011679,
+  "ci": {
+    "mean": 0.06118,
+    "ci_lo": 0.060651,
+    "ci_hi": 0.061724,
+    "ci_half": 0.000537
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_ckpt_best.pt"
+}

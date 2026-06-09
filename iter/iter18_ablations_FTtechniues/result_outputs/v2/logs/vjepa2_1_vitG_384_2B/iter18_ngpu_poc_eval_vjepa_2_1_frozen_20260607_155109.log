@@ -1,0 +1,96 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 15:51:11 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun  6 09:41 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_frozen
+  ✓ skip_stages:          1,4,12,13,7,9,9b,10
+  ✓ cache_policy:         1
+  ✓ output_prefix:        outputs/poc
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_frozen: external/HF frozen (no trainer needed)
+  → final ENCODERS: vjepa_2_1_frozen
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_frozen: checkpoints/vjepa2_1_vitG_384.pt
+  → Stage 8 ENCODERS: vjepa_2_1_frozen
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_frozen: external frozen (no head — encoder-only path)
+  → head-augmented eval ENCODERS: <none>
+  → final ENCODERS after head preflight: vjepa_2_1_frozen
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 15:51:11 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b) — xxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_frozen  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+
+═══ 15:51:11 ·   STAGE 2 · features for vjepa_2_1_frozen (splits=test, dtype=fp16) ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 12.8
+[m12a_action_top1] cgroup envelope:
+[m12a_action_top1]   memory: 346.3 GB / 483.4 GB (72%)
+[m12a_action_top1]   pids:   1388 / 31232 (4%)
+[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+Loading V-JEPA frozen vjepa_2_1_frozen (vit_gigantic_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 588/588 params  (missing=0, unexpected=2)
+  [features] saving splits ['test']; lazy splits (extracted by Stage 3): ['train', 'val']
+
+=== Stage 2 features: test (1825 clips, encoder=vjepa_2_1_frozen, pool_tokens=16) ===
+  AdaptiveBatchSizer(features_test): start=20, max=44, target_vram=85%
+probe_features_test:   0%|          | 0/1825 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
+probe_features_test:   0%|          | 1/1825 [00:34<17:31:45, 34.60s/clip]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 20 → 21
+probe_features_test:   1%|          | 21/1825 [00:38<55:40,  1.85s/clip, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 21 → 22
+probe_features_test:   2%|▏         | 41/1825 [00:47<34:35,  1.16s/clip, recent=0.3s/clip ETA0.2h]  AdaptiveBatch: VRAM 17% < 65% → sub-batch 22 → 23
+probe_features_test:   3%|▎         | 61/1825 [00:51<24:42,  1.19clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 17% < 65% → sub-batch 23 → 24
+probe_features_test:   4%|▍         | 81/1825 [01:00<21:50,  1.33clip/s, recent=0.3s/clip ETA0.2h]  AdaptiveBatch: VRAM 21% < 65% → sub-batch 24 → 25
+  AdaptiveBatch: VRAM 21% < 65% → sub-batch 25 → 26
+probe_features_test:   5%|▌         | 96/1825 [01:12<21:37,  1.33clip/s, recent=0.3s/clip ETA0.1h]probe_features_test:   5%|▌         | 97/1825 [01:14<21:59,  1.31clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 24% < 65% → sub-batch 26 → 27
+probe_features_test:   7%|▋         | 123/1825 [01:16<17:33,  1.61clip/s, recent=0.3s/clip ETA0.2h]  AdaptiveBatch: VRAM 24% < 65% → sub-batch 27 → 28
+probe_features_test:   8%|▊         | 149/1825 [01:27<16:22,  1.71clip/s, recent=0.4s/clip ETA0.2h]  AdaptiveBatch: VRAM 29% < 65% → sub-batch 28 → 29
+probe_features_test:   9%|▊         | 157/1825 [01:28<15:42,  1.77clip/s, recent=0.3s/clip ETA0.2h]  AdaptiveBatch: VRAM 29% < 65% → sub-batch 29 → 30
+probe_features_test:   9%|▉         | 165/1825 [01:40<16:52,  1.64clip/s, recent=0.4s/clip ETA0.2h]  AdaptiveBatch: VRAM 33% < 65% → sub-batch 30 → 31
+probe_features_test:  10%|█         | 191/1825 [01:41<14:26,  1.89clip/s, recent=0.3s/clip ETA0.2h]  AdaptiveBatch: VRAM 33% < 65% → sub-batch 31 → 32
+probe_features_test:  11%|█         | 192/1825 [01:52<15:53,  1.71clip/s, recent=0.3s/clip ETA0.2h]probe_features_test:  11%|█         | 193/1825 [01:53<16:03,  1.69clip/s, recent=0.3s/clip ETA0.2h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 32 → 33
+probe_features_test:  12%|█▏        | 225/1825 [02:06<15:00,  1.78clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 33 → 34
+probe_features_test:  14%|█▍        | 257/1825 [02:19<14:10,  1.84clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 34 → 35
+probe_features_test:  16%|█▌        | 289/1825 [02:32<13:28,  1.90clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 35 → 36
+probe_features_test:  18%|█▊        | 321/1825 [02:45<12:53,  1.94clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 36 → 37
+probe_features_test:  19%|█▉        | 353/1825 [02:57<12:21,  1.98clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 37 → 38
+probe_features_test:  21%|██        | 385/1825 [03:10<11:53,  2.02clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 38 → 39
+probe_features_test:  23%|██▎       | 417/1825 [03:23<11:27,  2.05clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 39 → 40
+probe_features_test:  25%|██▍       | 449/1825 [03:36<11:03,  2.07clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 40 → 41
+probe_features_test:  26%|██▋       | 481/1825 [03:49<10:40,  2.10clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 41 → 42
+probe_features_test:  28%|██▊       | 513/1825 [04:01<10:18,  2.12clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 42 → 43
+probe_features_test:  30%|██▉       | 545/1825 [04:14<09:58,  2.14clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 38% < 65% → sub-batch 43 → 44
+probe_features_test:  32%|███▏      | 577/1825 [04:27<09:38,  2.16clip/s, recent=0.3s/clip ETA0.1h]probe_features_test:  33%|███▎      | 609/1825 [04:40<09:19,  2.17clip/s, recent=0.3s/clip ETA0.1h]
+❌ FATAL: run_eval.sh aborted at line 776 (exit=130) — sequential dependency failed; downstream stages skipped

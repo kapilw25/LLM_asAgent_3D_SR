@@ -3,6 +3,20 @@
 # AUDIENCE has knowledge about ONLY plots from @iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/poc/probe_plot/eval/
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
+## Tue, June 9, 2026
+- Surgery-on-raw matches surgery-on-factor on future-frame and causal — surgery's only clean wins over frozen.
+- Factorized data adds no edge over the surgery technique; frozen/vanilla still lead the semantic metrics.
+- Next: does factorization beat raw at full scale? else reposition the contribution to the technique.
+
+## Mon, June 8, 2026
+- Surgery-encoder wins future-frame and causal prediction; full fine-tuning leads motion-cosine — surgery not best everywhere.
+- Frozen tops taxonomy (fine-tuning distorts general features); head variant only ties vanilla on rollout, no gain.
+- Next: repeat the full surgery-vs-baselines comparison on the smaller 1B backbone (scale ablation).
+
+## Sun, June 7, 2026
+- 
+-
+-
 
 ## Sat, June 6, 2026
 - Nine of thirteen arms trained; surgery leads future-frame and causal error at selected checkpoints.

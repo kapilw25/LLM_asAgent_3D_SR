@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_full_ft_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.54114,
+  "mse_std": 0.020698,
+  "mse_ci": {
+    "mean": 0.54114,
+    "ci_lo": 0.540191,
+    "ci_hi": 0.542095,
+    "ci_half": 0.000952
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_ckpt_best.pt"
+}

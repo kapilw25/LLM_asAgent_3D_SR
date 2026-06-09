@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_surgical_noDI_head",
+  "n_test": 1825,
+  "pos_mean": 0.762542,
+  "neg_mean": 0.627937,
+  "score_mean": 0.134605,
+  "score_ci": {
+    "mean": 0.134605,
+    "ci_lo": 0.130031,
+    "ci_hi": 0.139294,
+    "ci_half": 0.004632
+  },
+  "elapsed_sec": 0.04
+}

@@ -149,6 +149,19 @@ if [ -n "$ENCODERS_CLI" ]; then
 fi
 ENCODERS="${ENCODERS:-vjepa_2_1_frozen vjepa_2_1_pretrain_encoder vjepa_2_1_pretrain_2X_encoder vjepa_2_1_surgical_3stage_DI_encoder vjepa_2_1_surgical_noDI_encoder vjepa_2_1_pretrain_head vjepa_2_1_surgical_3stage_DI_head vjepa_2_1_surgical_noDI_head}"
 SKIP_STAGES="${SKIP_STAGES:-}"
+# iter18 2026-06-08: RUNTIME extra skip-list — lets PENDING evals launched by an ALREADY-RUNNING
+# scheduler drop stages (e.g. 11 = STAGE 3.5 taxonomy, ~49 min/encoder) WITHOUT a scheduler restart.
+# Each run_eval.sh subprocess reads it FRESH at launch: EXTRA_SKIP_STAGES env wins, else the
+# logs/.eval_extra_skip sentinel file. Already-running evals keep their old plan; new launches skip.
+# Restore taxonomy by `rm logs/.eval_extra_skip` (and unset EXTRA_SKIP_STAGES).
+_EXTRA_SKIP="${EXTRA_SKIP_STAGES:-}"
+if [ -z "$_EXTRA_SKIP" ] && [ -f logs/.eval_extra_skip ]; then
+    _EXTRA_SKIP="$(tr -d '[:space:]' < logs/.eval_extra_skip)"
+fi
+if [ -n "$_EXTRA_SKIP" ]; then
+    SKIP_STAGES="${SKIP_STAGES:+$SKIP_STAGES,}${_EXTRA_SKIP}"
+    echo "  [eval] RUNTIME extra skip-stages: +${_EXTRA_SKIP}  →  SKIP_STAGES=${SKIP_STAGES}"
+fi
 NUM_FRAMES="${NUM_FRAMES:-16}"
 # iter18 2026-06-07: which predictor_temporal metric(s) Stage 8b runs. Default "all" (the 6-metric
 # suite in one process). The metric-parallel scheduler (iter18_poc_ngpu) fans Stage 8b into 6
@@ -544,7 +557,7 @@ HEAD_AWARE_ENCODERS=""
 NEW_ENCODERS=""
 for ENC in $ENCODERS; do
     case "$ENC" in
-        vjepa_2_1_frozen)
+        *_frozen)   # any backbone's frozen (vjepa_2_1_frozen / vjepa_2_1_vitg_frozen / ...) — encoder-only, no head
             echo "  ✓ $ENC: external frozen (no head — encoder-only path)"
             NEW_ENCODERS="$NEW_ENCODERS $ENC"
             continue
@@ -613,7 +626,7 @@ if [ "${EVAL_KEEP_LATEST:-0}" != "1" ]; then
         # exists on the path encoder_ckpt_for resolves to). External (frozen)
         # encoders are skipped — their ckpt is shared and immutable.
         case "$ENC" in
-            vjepa_2_1_frozen) continue ;;
+            *_frozen) continue ;;   # any backbone's frozen — no resume anchor to clean
         esac
         LATEST="$(pretrain_cleanup_get_latest "$ENC")"
         if [ -z "$LATEST" ] || [ ! -f "$LATEST" ]; then
@@ -903,9 +916,14 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             # (--share-features, default) inherits augmentation from probe_action's
             # features_test.npy automatically. Flag is forwarded for Path B
             # (--no-share-features) parity + future-proofing.
+            # iter18 2026-06-08: thread $EXTRA_CKPT (--encoder-ckpt) too — when the action_probe
+            # share-cache is ABSENT (e.g. cleaned, or a fresh run), m12b falls back to
+            # _fresh_extract_pooled which FATALs without it ("fresh-extract path for V-JEPA requires
+            # --encoder-ckpt"). It's a no-op when share-features succeeds. Bit the 1B frozen SANITY.
             python -u src/m12b_motion_cos.py "--$MODE" \
                 --stage features \
                 --encoder "$ENC" \
+                $EXTRA_CKPT \
                 $MA_FLAG \
                 --action-probe-root "$OUTPUT_ACTION" \
                 --output-root "$OUTPUT_COS" \

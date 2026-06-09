@@ -229,6 +229,15 @@ encoders:
   vjepa_2_1_vitg_surgical_noDI_encoder:      {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   vjepa_2_1_vitg_surgical_3stage_DI_head:    {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   vjepa_2_1_vitg_surgical_noDI_head:         {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # iter18 FT-baseline arms on the 1B (scale axis) — mirror the vitG rows; encoder-only eval (base
+  # 1408 dim, vit_giant_xformers). Per-arm student_encoder.pt resolved by run_eval encoder_ckpt_for →
+  # outputs/<mode>/vjepa_2_1_vitg/<m09 arm dir>/. cassle/ewc parked (not in the POC paper arm set).
+  vjepa_2_1_vitg_surgical_autorgn_encoder:   {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgery_raw_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_full_ft_encoder:            {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_lpft_encoder:               {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_peft_lora_encoder:          {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_peft_dora_encoder:          {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   # vjepa_2_0_vitg (1B, version axis) — same dims (2.0 g): https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
   vjepa_2_0_vitg_pretrain_encoder:           {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   vjepa_2_0_vitg_pretrain_2X_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}

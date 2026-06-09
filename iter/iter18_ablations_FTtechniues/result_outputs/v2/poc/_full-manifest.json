@@ -1,0 +1,4812 @@
+{
+ "created_utc": "2026-06-08T14:02:02Z",
+ "root": "outputs/poc",
+ "files": [
+  {
+   "path": "predictor_temporal/predictor_temporal_per_variant.json",
+   "size": 138803
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/.m12e_ckpt.npz",
+   "size": 119606
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/aggregate_causal.json",
+   "size": 382
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/aggregate_maskratio.json",
+   "size": 396
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/aggregate_order.json",
+   "size": 395
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/aggregate_rollout.json",
+   "size": 393
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/aggregate_tdist.json",
+   "size": 398
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/aggregate_teacher_free.json",
+   "size": 400
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/.m12e_ckpt_causal.npz",
+   "size": 88424
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88139
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/.m12e_ckpt_order.npz",
+   "size": 88464
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88406
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88451
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88421
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/aggregate_causal.json",
+   "size": 424
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/aggregate_maskratio.json",
+   "size": 437
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/aggregate_order.json",
+   "size": 440
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/aggregate_rollout.json",
+   "size": 435
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/aggregate_tdist.json",
+   "size": 438
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/aggregate_teacher_free.json",
+   "size": 443
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/.m12e_ckpt_causal.npz",
+   "size": 88361
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88241
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/.m12e_ckpt_order.npz",
+   "size": 88449
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88522
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88388
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88321
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/aggregate_causal.json",
+   "size": 415
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/aggregate_maskratio.json",
+   "size": 432
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/aggregate_order.json",
+   "size": 434
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/aggregate_rollout.json",
+   "size": 429
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/aggregate_tdist.json",
+   "size": 432
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/aggregate_teacher_free.json",
+   "size": 436
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/.m12e_ckpt_causal.npz",
+   "size": 88316
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88419
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/.m12e_ckpt_order.npz",
+   "size": 88367
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88333
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88397
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88228
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/aggregate_causal.json",
+   "size": 430
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/aggregate_maskratio.json",
+   "size": 441
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/aggregate_order.json",
+   "size": 441
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/aggregate_rollout.json",
+   "size": 439
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/aggregate_tdist.json",
+   "size": 443
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/aggregate_teacher_free.json",
+   "size": 447
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/.m12e_ckpt_causal.npz",
+   "size": 88329
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88431
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/.m12e_ckpt_order.npz",
+   "size": 88364
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88314
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88497
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88367
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/aggregate_causal.json",
+   "size": 430
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/aggregate_maskratio.json",
+   "size": 442
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/aggregate_order.json",
+   "size": 444
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/aggregate_rollout.json",
+   "size": 439
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/aggregate_tdist.json",
+   "size": 444
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/aggregate_teacher_free.json",
+   "size": 444
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt.npz",
+   "size": 119511
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt_causal.npz",
+   "size": 88324
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88463
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt_order.npz",
+   "size": 88286
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88432
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88265
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88440
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/aggregate_causal.json",
+   "size": 427
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/aggregate_maskratio.json",
+   "size": 438
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/aggregate_order.json",
+   "size": 442
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/aggregate_rollout.json",
+   "size": 434
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/aggregate_tdist.json",
+   "size": 441
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/aggregate_teacher_free.json",
+   "size": 445
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/.m12e_ckpt_causal.npz",
+   "size": 88465
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88362
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/.m12e_ckpt_order.npz",
+   "size": 88342
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88243
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88421
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88331
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/aggregate_causal.json",
+   "size": 433
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/aggregate_maskratio.json",
+   "size": 446
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/aggregate_order.json",
+   "size": 448
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/aggregate_rollout.json",
+   "size": 442
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/aggregate_tdist.json",
+   "size": 447
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/aggregate_teacher_free.json",
+   "size": 451
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12e_ckpt_causal.npz",
+   "size": 88369
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88492
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12e_ckpt_order.npz",
+   "size": 88460
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88231
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88413
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88287
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_causal.json",
+   "size": 445
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_maskratio.json",
+   "size": 457
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_order.json",
+   "size": 460
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_rollout.json",
+   "size": 454
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_tdist.json",
+   "size": 460
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_teacher_free.json",
+   "size": 464
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/.m12e_ckpt_causal.npz",
+   "size": 88278
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/.m12e_ckpt_maskratio.npz",
+   "size": 88482
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/.m12e_ckpt_order.npz",
+   "size": 88514
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/.m12e_ckpt_rollout.npz",
+   "size": 88462
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/.m12e_ckpt_tdist.npz",
+   "size": 88403
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/.m12e_ckpt_teacher_free.npz",
+   "size": 88433
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/aggregate_causal.json",
+   "size": 441
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/aggregate_maskratio.json",
+   "size": 452
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/aggregate_order.json",
+   "size": 455
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/aggregate_rollout.json",
+   "size": 449
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/aggregate_tdist.json",
+   "size": 455
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/aggregate_teacher_free.json",
+   "size": 457
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/.m12e_ckpt_causal.npz",
+   "size": 88435
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88485
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/.m12e_ckpt_order.npz",
+   "size": 88239
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88423
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88224
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88421
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/aggregate_causal.json",
+   "size": 435
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/aggregate_maskratio.json",
+   "size": 445
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/aggregate_order.json",
+   "size": 447
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/aggregate_rollout.json",
+   "size": 444
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/aggregate_tdist.json",
+   "size": 447
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/aggregate_teacher_free.json",
+   "size": 450
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/.m12e_ckpt_causal.npz",
+   "size": 88412
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/.m12e_ckpt_maskratio.npz",
+   "size": 88403
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/.m12e_ckpt_order.npz",
+   "size": 88509
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/.m12e_ckpt_rollout.npz",
+   "size": 88221
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/.m12e_ckpt_tdist.npz",
+   "size": 88486
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/.m12e_ckpt_teacher_free.npz",
+   "size": 88424
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/aggregate_causal.json",
+   "size": 428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/aggregate_maskratio.json",
+   "size": 449
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/aggregate_order.json",
+   "size": 450
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/aggregate_rollout.json",
+   "size": 446
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/aggregate_tdist.json",
+   "size": 451
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/aggregate_teacher_free.json",
+   "size": 454
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/.m12e_ckpt_causal.npz",
+   "size": 88354
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/.m12e_ckpt_maskratio.npz",
+   "size": 88482
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/.m12e_ckpt_order.npz",
+   "size": 88316
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/.m12e_ckpt_rollout.npz",
+   "size": 88446
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/.m12e_ckpt_tdist.npz",
+   "size": 88272
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/.m12e_ckpt_teacher_free.npz",
+   "size": 88411
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/aggregate_causal.json",
+   "size": 431
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/aggregate_maskratio.json",
+   "size": 442
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/aggregate_order.json",
+   "size": 444
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/aggregate_rollout.json",
+   "size": 439
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/aggregate_tdist.json",
+   "size": 445
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/aggregate_teacher_free.json",
+   "size": 448
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/clip_keys_causal.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/clip_keys_maskratio.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/clip_keys_order.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/clip_keys_rollout.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/clip_keys_tdist.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/clip_keys_teacher_free.npy",
+   "size": 99824
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/per_clip_causal.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/per_clip_maskratio.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/per_clip_order.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/per_clip_rollout.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/per_clip_tdist.npy",
+   "size": 7428
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/per_clip_teacher_free.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_action/action_labels.json",
+   "size": 1233799
+  },
+  {
+   "path": "probe_action/class_counts.json",
+   "size": 838
+  },
+  {
+   "path": "probe_action/probe_paired_delta.json",
+   "size": 28396
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/features_test.npy",
+   "size": 97177728
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/probe.pt",
+   "size": 520984600
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/test_metrics.json",
+   "size": 582
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/train_log.jsonl",
+   "size": 2241
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/test_metrics.json",
+   "size": 591
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/train_log.jsonl",
+   "size": 2236
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/test_metrics.json",
+   "size": 588
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/train_log.jsonl",
+   "size": 2233
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/test_metrics.json",
+   "size": 592
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/train_log.jsonl",
+   "size": 2232
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/test_metrics.json",
+   "size": 592
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/train_log.jsonl",
+   "size": 2236
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/test_metrics.json",
+   "size": 592
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/train_log.jsonl",
+   "size": 2236
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/test_metrics.json",
+   "size": 594
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/train_log.jsonl",
+   "size": 2236
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/test_metrics.json",
+   "size": 602
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/train_log.jsonl",
+   "size": 2241
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/test_metrics.json",
+   "size": 598
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/train_log.jsonl",
+   "size": 2234
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_autorgn_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_autorgn_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_autorgn_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/test_metrics.json",
+   "size": 596
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/train_log.jsonl",
+   "size": 2237
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/.probe_features_test_ckpt.npz",
+   "size": 97277806
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/features_test.npy",
+   "size": 99980928
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/probe.pt",
+   "size": 551461720
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/test_clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/test_metrics.json",
+   "size": 592
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/test_predictions.npy",
+   "size": 1953
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/train_log.jsonl",
+   "size": 2233
+  },
+  {
+   "path": "probe_future_mse/probe_future_mse_per_variant.json",
+   "size": 35294
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_frozen/.probe_future_mse_ckpt.npz",
+   "size": 89139
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_frozen/aggregate_mse.json",
+   "size": 293
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_frozen/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_frozen/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95201
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/aggregate_motion_aux_l1.json",
+   "size": 470
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/aggregate_mse.json",
+   "size": 334
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95351
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/aggregate_motion_aux_l1.json",
+   "size": 463
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/aggregate_mse.json",
+   "size": 329
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95305
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/aggregate_motion_aux_l1.json",
+   "size": 476
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/aggregate_mse.json",
+   "size": 337
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95459
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/aggregate_motion_aux_l1.json",
+   "size": 475
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/aggregate_mse.json",
+   "size": 339
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95341
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/aggregate_motion_aux_l1.json",
+   "size": 475
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/aggregate_mse.json",
+   "size": 338
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95309
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/aggregate_motion_aux_l1.json",
+   "size": 483
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/aggregate_mse.json",
+   "size": 344
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95455
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_motion_aux_l1.json",
+   "size": 501
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_mse.json",
+   "size": 357
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/.probe_future_mse_ckpt.npz",
+   "size": 95437
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/aggregate_motion_aux_l1.json",
+   "size": 492
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/aggregate_mse.json",
+   "size": 350
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95334
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/aggregate_motion_aux_l1.json",
+   "size": 481
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/aggregate_mse.json",
+   "size": 345
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/.probe_future_mse_ckpt.npz",
+   "size": 95143
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/aggregate_motion_aux_l1.json",
+   "size": 488
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/aggregate_mse.json",
+   "size": 347
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/.probe_future_mse_ckpt.npz",
+   "size": 95323
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/aggregate_motion_aux_l1.json",
+   "size": 477
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/aggregate_mse.json",
+   "size": 341
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/clip_keys.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/per_clip_motion_aux_l1.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/per_clip_mse.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/probe_motion_cos_paired.json",
+   "size": 34403
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_frozen/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_frozen/intra_inter_ratio.json",
+   "size": 263
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_frozen/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_frozen/pooled_features_test.npy",
+   "size": 12147328
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_full_ft_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_full_ft_encoder/intra_inter_ratio.json",
+   "size": 271
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_full_ft_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_full_ft_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_lpft_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_lpft_encoder/intra_inter_ratio.json",
+   "size": 269
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_lpft_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_lpft_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_dora_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_dora_encoder/intra_inter_ratio.json",
+   "size": 273
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_dora_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_dora_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_lora_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_lora_encoder/intra_inter_ratio.json",
+   "size": 272
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_lora_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_lora_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_pretrain_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_pretrain_encoder/intra_inter_ratio.json",
+   "size": 273
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_pretrain_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_pretrain_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgery_raw_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgery_raw_encoder/intra_inter_ratio.json",
+   "size": 274
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgery_raw_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgery_raw_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_encoder/intra_inter_ratio.json",
+   "size": 283
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_head/intra_inter_ratio.json",
+   "size": 280
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_head/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_head/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_autorgn_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_autorgn_encoder/intra_inter_ratio.json",
+   "size": 281
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_autorgn_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_autorgn_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_encoder/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_encoder/intra_inter_ratio.json",
+   "size": 278
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_encoder/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_encoder/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_head/clip_keys_test.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_head/intra_inter_ratio.json",
+   "size": 275
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_head/per_clip_motion_cos.npy",
+   "size": 7428
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_head/pooled_features_test.npy",
+   "size": 12497728
+  },
+  {
+   "path": "probe_plot/eval/head/m13_taxonomy_f1_compare.pdf",
+   "size": 26413
+  },
+  {
+   "path": "probe_plot/eval/head/m13_taxonomy_f1_compare.png",
+   "size": 573219
+  },
+  {
+   "path": "probe_plot/eval/head/probe_action_acc_compare.pdf",
+   "size": 26386
+  },
+  {
+   "path": "probe_plot/eval/head/probe_action_acc_compare.png",
+   "size": 557856
+  },
+  {
+   "path": "probe_plot/eval/head/probe_future_mse_compare.pdf",
+   "size": 26712
+  },
+  {
+   "path": "probe_plot/eval/head/probe_future_mse_compare.png",
+   "size": 552616
+  },
+  {
+   "path": "probe_plot/eval/head/probe_motion_cos_compare.pdf",
+   "size": 26241
+  },
+  {
+   "path": "probe_plot/eval/head/probe_motion_cos_compare.png",
+   "size": 543985
+  },
+  {
+   "path": "probe_plot/eval/m13_hero_raw_values.pdf",
+   "size": 1697606
+  },
+  {
+   "path": "probe_plot/eval/m13_hero_raw_values.png",
+   "size": 1373182
+  },
+  {
+   "path": "probe_plot/eval/m13_paired_diff_heatmap.pdf",
+   "size": 25585
+  },
+  {
+   "path": "probe_plot/eval/m13_paired_diff_heatmap.png",
+   "size": 295059
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_causal_compare.pdf",
+   "size": 24294
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_causal_compare.png",
+   "size": 554514
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_maskratio_compare.pdf",
+   "size": 23114
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_maskratio_compare.png",
+   "size": 540487
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_rollout_compare.pdf",
+   "size": 23527
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_rollout_compare.png",
+   "size": 540889
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_tdist_compare.pdf",
+   "size": 23715
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_tdist_compare.png",
+   "size": 561878
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_teacher_free_compare.pdf",
+   "size": 25293
+  },
+  {
+   "path": "probe_plot/eval/predictor/m13_teacher_free_compare.png",
+   "size": 570509
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_grouped_winner_surgery_vs_pretrain.pdf",
+   "size": 118567
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_grouped_winner_surgery_vs_pretrain.png",
+   "size": 953616
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_hero_raw_values.pdf",
+   "size": 196597
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_hero_raw_values.png",
+   "size": 1457796
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_hero_table.csv",
+   "size": 2395
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_hero_table.pdf",
+   "size": 30934
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_hero_table.png",
+   "size": 714354
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_paired_forest_surgery_vs_pretrain.pdf",
+   "size": 29971
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_paired_forest_surgery_vs_pretrain.png",
+   "size": 359023
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_scoreboard_surgery_vs_pretrain.pdf",
+   "size": 21541
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/m13_scoreboard_surgery_vs_pretrain.png",
+   "size": 337179
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/hero_coleader_set.pdf",
+   "size": 137276
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/hero_coleader_set.png",
+   "size": 1088214
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/hero_surgery_coleader.pdf",
+   "size": 139044
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/hero_surgery_coleader.png",
+   "size": 1060872
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/hero_tie_badge.pdf",
+   "size": 138663
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/hero_tie_badge.png",
+   "size": 1058644
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/eval_scorecard.pdf",
+   "size": 44517
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/eval_scorecard.png",
+   "size": 1770287
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/kept_scorecard.pdf",
+   "size": 37415
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/kept_scorecard.png",
+   "size": 891556
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/train_trajectories.pdf",
+   "size": 60363
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/train_trajectories.png",
+   "size": 1269086
+  },
+  {
+   "path": "probe_taxonomy/per_dim_acc.json",
+   "size": 286991
+  },
+  {
+   "path": "probe_taxonomy/probe_taxonomy_per_dim.pdf",
+   "size": 51095
+  },
+  {
+   "path": "probe_taxonomy/probe_taxonomy_per_dim.png",
+   "size": 1258007
+  },
+  {
+   "path": "probe_taxonomy/taxonomy_labels.json",
+   "size": 7342541
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/test_metrics.json",
+   "size": 5467
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/test_metrics.json",
+   "size": 5483
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/test_metrics.json",
+   "size": 5477
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/test_metrics.json",
+   "size": 5480
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/test_metrics.json",
+   "size": 5477
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/test_metrics.json",
+   "size": 5476
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/test_metrics.json",
+   "size": 5478
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/test_metrics.json",
+   "size": 5482
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/test_metrics.json",
+   "size": 5483
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/test_metrics.json",
+   "size": 5485
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_crowd_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_infrastructure_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_lighting.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_notable_objects.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_pedestrian_vehicle_separation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_road_encroachment.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_road_layout.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_road_surface.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_scene_type.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_time_of_day.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_traffic_density.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_traffic_mix.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_vegetation.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_video_quality.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/clip_keys_test_weather.npy",
+   "size": 99824
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_crowd_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_infrastructure_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_lighting.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_notable_objects.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_pedestrian_vehicle_separation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_road_encroachment.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_road_layout.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_road_surface.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_scene_type.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_time_of_day.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_traffic_density.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_traffic_mix.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_vegetation.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_video_quality.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/per_clip_weather.npy",
+   "size": 14728
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/test_metrics.json",
+   "size": 5473
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/loss_log.csv",
+   "size": 27047
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/loss_log.jsonl",
+   "size": 183380
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_block_drift.pdf",
+   "size": 45008
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_block_drift.png",
+   "size": 382602
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_block_drift_history.json",
+   "size": 5666
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_loss_decomposition.pdf",
+   "size": 36892
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_loss_decomposition.png",
+   "size": 412057
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_probe_trajectory_trio.pdf",
+   "size": 27631
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png",
+   "size": 499023
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_train_loss.pdf",
+   "size": 31015
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_train_loss.png",
+   "size": 513607
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_val_loss_jepa.pdf",
+   "size": 18348
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_val_loss_jepa.png",
+   "size": 193641
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/probe_history.jsonl",
+   "size": 1413
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/student_encoder.pt",
+   "size": 7375968835
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/training_summary.json",
+   "size": 361
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/loss_log.csv",
+   "size": 51874
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/loss_log.jsonl",
+   "size": 211092
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_loss_decomposition.pdf",
+   "size": 37418
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_loss_decomposition.png",
+   "size": 451508
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27442
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_probe_trajectory_trio.png",
+   "size": 494443
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_train_loss.pdf",
+   "size": 33471
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_train_loss.png",
+   "size": 486664
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_val_loss_jepa.pdf",
+   "size": 17182
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_val_loss_jepa.png",
+   "size": 181739
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/probe_history.jsonl",
+   "size": 2386
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/training_summary.json",
+   "size": 32227
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/loss_log.csv",
+   "size": 45994
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/loss_log.jsonl",
+   "size": 187208
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_loss_decomposition.pdf",
+   "size": 35554
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_loss_decomposition.png",
+   "size": 411692
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27707
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_probe_trajectory_trio.png",
+   "size": 508056
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_train_loss.pdf",
+   "size": 32211
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_train_loss.png",
+   "size": 478982
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_val_loss_jepa.pdf",
+   "size": 18729
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_val_loss_jepa.png",
+   "size": 210434
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/probe_history.jsonl",
+   "size": 2387
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/training_summary.json",
+   "size": 33136
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/loss_log.csv",
+   "size": 52017
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/loss_log.jsonl",
+   "size": 212228
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_block_drift.pdf",
+   "size": 54404
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_block_drift.png",
+   "size": 409069
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_block_drift_history.json",
+   "size": 10134
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_loss_decomposition.pdf",
+   "size": 46007
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_loss_decomposition.png",
+   "size": 648623
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27683
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_probe_trajectory_trio.png",
+   "size": 526850
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_train_loss.pdf",
+   "size": 34598
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_train_loss.png",
+   "size": 520428
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_val_loss_jepa.pdf",
+   "size": 18168
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_val_loss_jepa.png",
+   "size": 199930
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/probe_history.jsonl",
+   "size": 3679
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/training_summary.json",
+   "size": 34860
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/loss_log.csv",
+   "size": 1847
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/loss_log.jsonl",
+   "size": 7697
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_block_drift.pdf",
+   "size": 33333
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_block_drift.png",
+   "size": 311997
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_block_drift_history.json",
+   "size": 977
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_loss_decomposition.pdf",
+   "size": 22802
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_loss_decomposition.png",
+   "size": 290525
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_probe_trajectory_trio.pdf",
+   "size": 27887
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_probe_trajectory_trio.png",
+   "size": 503559
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_train_loss.pdf",
+   "size": 21629
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_train_loss.png",
+   "size": 253928
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_val_loss_jepa.pdf",
+   "size": 18347
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c2_val_loss_jepa.png",
+   "size": 245166
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/m09c_ckpt_best.pt",
+   "size": 7615555655
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/probe_history.jsonl",
+   "size": 1673
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/student_encoder.pt",
+   "size": 7375968835
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/training_summary.json",
+   "size": 497
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/loss_log.csv",
+   "size": 51381
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/loss_log.jsonl",
+   "size": 212401
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_block_drift.pdf",
+   "size": 37587
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_block_drift.png",
+   "size": 322645
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_block_drift_history.json",
+   "size": 2888
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_loss_decomposition.pdf",
+   "size": 46253
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_loss_decomposition.png",
+   "size": 647426
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27573
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_probe_trajectory_trio.png",
+   "size": 508156
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_train_loss.pdf",
+   "size": 34589
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_train_loss.png",
+   "size": 490928
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_val_loss_jepa.pdf",
+   "size": 16845
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_val_loss_jepa.png",
+   "size": 178883
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/probe_history.jsonl",
+   "size": 2883
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/probe_history.prekill.jsonl",
+   "size": 1820
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/training_summary.json",
+   "size": 33059
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/loss_log.csv",
+   "size": 1903
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/loss_log.jsonl",
+   "size": 7754
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_block_drift.pdf",
+   "size": 33350
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_block_drift.png",
+   "size": 309738
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_block_drift_history.json",
+   "size": 976
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_loss_decomposition.pdf",
+   "size": 22237
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_loss_decomposition.png",
+   "size": 281263
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.pdf",
+   "size": 28003
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_probe_trajectory_trio.png",
+   "size": 506347
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_train_loss.pdf",
+   "size": 21625
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_train_loss.png",
+   "size": 250086
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_val_loss_jepa.pdf",
+   "size": 17811
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c2_val_loss_jepa.png",
+   "size": 214063
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/m09c_ckpt_best.pt",
+   "size": 7615555655
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/probe_history.jsonl",
+   "size": 1679
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/student_encoder.pt",
+   "size": 7375968835
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/training_summary.json",
+   "size": 493
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/loss_log.csv",
+   "size": 63571
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/loss_log.jsonl",
+   "size": 260570
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_block_drift.pdf",
+   "size": 37687
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_block_drift.png",
+   "size": 325072
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_block_drift_history.json",
+   "size": 2883
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_loss_decomposition.pdf",
+   "size": 50294
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_loss_decomposition.png",
+   "size": 686907
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27554
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_probe_trajectory_trio.png",
+   "size": 496146
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_train_loss.pdf",
+   "size": 37852
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_train_loss.png",
+   "size": 588260
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_val_loss_jepa.pdf",
+   "size": 18107
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/m09c_val_loss_jepa.png",
+   "size": 202498
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/probe_history.jsonl",
+   "size": 2435
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/probe_history.prekill.jsonl",
+   "size": 1364
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/training_summary.json",
+   "size": 33163
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/loss_log.csv",
+   "size": 11453
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/loss_log.jsonl",
+   "size": 47097
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/m09c_ckpt_latest.pt",
+   "size": 30255129553
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/probe_history.jsonl",
+   "size": 0
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/loss_log.csv",
+   "size": 21712
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/loss_log.jsonl",
+   "size": 90828
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_block_drift.pdf",
+   "size": 28953
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_block_drift.png",
+   "size": 287590
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_block_drift_history.json",
+   "size": 1426
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_ckpt_latest.pt",
+   "size": 30200545321
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_loss_decomposition.pdf",
+   "size": 26241
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_loss_decomposition.png",
+   "size": 394032
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27020
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_probe_trajectory_trio.png",
+   "size": 446003
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_train_loss.pdf",
+   "size": 23465
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_train_loss.png",
+   "size": 396609
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_val_loss_jepa.pdf",
+   "size": 17879
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/m09c_val_loss_jepa.png",
+   "size": 142126
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/probe_history.jsonl",
+   "size": 584
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/student_best.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/loss_log.csv",
+   "size": 47308
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/loss_log.jsonl",
+   "size": 191528
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_block_drift.pdf",
+   "size": 36273
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_block_drift.png",
+   "size": 331756
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_block_drift_history.json",
+   "size": 3802
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_loss_decomposition.pdf",
+   "size": 36157
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_loss_decomposition.png",
+   "size": 407755
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27793
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_probe_trajectory_trio.png",
+   "size": 512263
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_train_loss.pdf",
+   "size": 32048
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_train_loss.png",
+   "size": 491402
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_val_loss_jepa.pdf",
+   "size": 18491
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/m09c_val_loss_jepa.png",
+   "size": 208073
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/probe_history.jsonl",
+   "size": 2549
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/training_summary.json",
+   "size": 33346
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/loss_log.csv",
+   "size": 47308
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/loss_log.jsonl",
+   "size": 191554
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_block_drift.pdf",
+   "size": 45265
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_block_drift.png",
+   "size": 341704
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_block_drift_history.json",
+   "size": 5698
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_loss_decomposition.pdf",
+   "size": 36239
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_loss_decomposition.png",
+   "size": 435249
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27744
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_probe_trajectory_trio.png",
+   "size": 522249
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_train_loss.pdf",
+   "size": 32196
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_train_loss.png",
+   "size": 490439
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_val_loss_jepa.pdf",
+   "size": 18293
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_val_loss_jepa.png",
+   "size": 219758
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/probe_history.jsonl",
+   "size": 2049
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/training_summary.json",
+   "size": 32673
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/loss_log.csv",
+   "size": 49848
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/loss_log.jsonl",
+   "size": 208175
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_block_drift.pdf",
+   "size": 48610
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_block_drift.png",
+   "size": 367831
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_block_drift_history.json",
+   "size": 7281
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_ckpt_best.pt",
+   "size": 7613809821
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_loss_decomposition.pdf",
+   "size": 36529
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_loss_decomposition.png",
+   "size": 426561
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_probe_trajectory_trio.pdf",
+   "size": 27475
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_probe_trajectory_trio.png",
+   "size": 488538
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_train_loss.pdf",
+   "size": 34686
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_train_loss.png",
+   "size": 521605
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_val_loss_jepa.pdf",
+   "size": 18643
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/m09c_val_loss_jepa.png",
+   "size": 210776
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/motion_aux_head.pt",
+   "size": 1746501
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/probe_history.jsonl",
+   "size": 2536
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/student_encoder.pt",
+   "size": 7375967053
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/training_summary.json",
+   "size": 33331
+  }
+ ],
+ "shards": [
+  {
+   "path": "predictor_temporal/_full-00000.tar",
+   "size": 143360
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_frozen/_full-00000.tar",
+   "size": 798720
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_full_ft_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_lpft_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_dora_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_peft_lora_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_pretrain_encoder/_full-00000.tar",
+   "size": 1341440
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgery_raw_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_3stage_DI_head/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_autorgn_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_encoder/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "predictor_temporal/vjepa_2_1_surgical_noDI_head/_full-00000.tar",
+   "size": 1218560
+  },
+  {
+   "path": "probe_action/_full-00000.tar",
+   "size": 1269760
+  },
+  {
+   "path": "probe_action/vjepa_2_1_frozen/_full-00000.tar",
+   "size": 715663360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_full_ft_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_lpft_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_dora_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_peft_lora_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_pretrain_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgery_raw_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_3stage_DI_head/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_autorgn_encoder/_full-00000.tar",
+   "size": 197365760
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_encoder/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_action/vjepa_2_1_surgical_noDI_head/_full-00000.tar",
+   "size": 748943360
+  },
+  {
+   "path": "probe_future_mse/_full-00000.tar",
+   "size": 40960
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_frozen/_full-00000.tar",
+   "size": 204800
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_full_ft_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_lpft_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_dora_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_peft_lora_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_pretrain_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgery_raw_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_3stage_DI_head/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_autorgn_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_encoder/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_future_mse/vjepa_2_1_surgical_noDI_head/_full-00000.tar",
+   "size": 225280
+  },
+  {
+   "path": "probe_motion_cos/_full-00000.tar",
+   "size": 40960
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_frozen/_full-00000.tar",
+   "size": 12267520
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_full_ft_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_lpft_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_dora_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_peft_lora_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_pretrain_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgery_raw_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_3stage_DI_head/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_autorgn_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_encoder/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_motion_cos/vjepa_2_1_surgical_noDI_head/_full-00000.tar",
+   "size": 12615680
+  },
+  {
+   "path": "probe_plot/eval/_full-00000.tar",
+   "size": 3399680
+  },
+  {
+   "path": "probe_plot/eval/head/_full-00000.tar",
+   "size": 2355200
+  },
+  {
+   "path": "probe_plot/eval/predictor/_full-00000.tar",
+   "size": 2908160
+  },
+  {
+   "path": "probe_plot/eval/vjepa_2_1_vitG/_full-00000.tar",
+   "size": 4249600
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/_winner_variants/_full-00000.tar",
+   "size": 3635200
+  },
+  {
+   "path": "probe_plot/vjepa2_1_vitG_384/metrics_watch/_full-00000.tar",
+   "size": 4085760
+  },
+  {
+   "path": "probe_taxonomy/_full-00000.tar",
+   "size": 8949760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_frozen/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_full_ft_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_lpft_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_dora_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_peft_lora_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_pretrain_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgery_raw_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_3stage_DI_head/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_encoder/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "probe_taxonomy/vjepa_2_1_surgical_noDI_head/_full-00000.tar",
+   "size": 1781760
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/_full-00000.tar",
+   "size": 7617966080
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09a_pretrain_encoder/_full-00001.tar",
+   "size": 7375974400
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/_full-00000.tar",
+   "size": 7617576960
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_dora_encoder/_full-00001.tar",
+   "size": 7376005120
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/_full-00000.tar",
+   "size": 7617546240
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09b_peft_lora_encoder/_full-00001.tar",
+   "size": 7376005120
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/_full-00000.tar",
+   "size": 7618355200
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/_full-00001.tar",
+   "size": 7376015360
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/_full-00000.tar",
+   "size": 7619082240
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_3stage_DI_head/_full-00001.tar",
+   "size": 7375974400
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/_full-00000.tar",
+   "size": 7618170880
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_encoder/_full-00001.tar",
+   "size": 7376005120
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/_full-00000.tar",
+   "size": 7619031040
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_noDI_head/_full-00001.tar",
+   "size": 7375974400
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/_full-00000.tar",
+   "size": 7618396160
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09c_surgery_raw_encoder/_full-00001.tar",
+   "size": 7376005120
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/_full-00000.tar",
+   "size": 71680
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/_full-00001.tar",
+   "size": 30255134720
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_cassle_encoder/_full-00002.tar",
+   "size": 10240
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/_full-00000.tar",
+   "size": 440320
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/_full-00001.tar",
+   "size": 30200555520
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09d_ewc_encoder/_full-00002.tar",
+   "size": 7377469440
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/_full-00000.tar",
+   "size": 7617935360
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09e_autorgn_encoder/_full-00001.tar",
+   "size": 7376005120
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/_full-00000.tar",
+   "size": 7618007040
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_full_ft_encoder/_full-00001.tar",
+   "size": 7376005120
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/_full-00000.tar",
+   "size": 7618037760
+  },
+  {
+   "path": "vjepa_2_1_vitG/m09f_lpft_encoder/_full-00001.tar",
+   "size": 7376005120
+  }
+ ]
+}

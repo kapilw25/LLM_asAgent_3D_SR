@@ -112,6 +112,8 @@ def run_forward_stage(args, wb) -> None:
     if not test_keys:
         sys.exit("FATAL: 0 test clips in action_labels.json — re-run the labels stage")
     print(f"Forward {todo} on {len(test_keys)} test clips, variant={args.variant}")
+    from utils import predictor_eval as _pe  # noqa: E402 — local import to read the live flag
+    print(f"  h-memoization (PT_H_MEMO): {'ON — target encode reused across mask sweep' if _pe._H_MEMO else 'OFF — recomputed each call (legacy)'}")
 
     encoder, predictor, embed_concat = load_encoder_predictor(args.encoder_ckpt, args.num_frames, args.model_config)
     print(f"  encoder+predictor loaded (concat dim={embed_concat})")

@@ -99,15 +99,18 @@ def pack_dir_to_shards(
 
     max_bytes = int(max_shard_size_gb * 1e9)
 
-    # Single-file size guard — if any input file is larger than the shard cap,
-    # we cannot pack it. FATAL with diagnostic so the operator either bumps
-    # max_shard_size_gb in pipeline.yaml or splits the file upstream.
-    for f in files:
-        if f.stat().st_size > max_bytes:
-            print(f"FATAL: single file {f.name} = {f.stat().st_size / 1e9:.2f} GB exceeds "
-                  f"max_shard_size_gb={max_shard_size_gb:.2f}. Bump pipeline.yaml "
-                  f"data.max_tar_shard_gb or split this file upstream.")
-            sys.exit(1)
+    # Oversized single files (> the soft cap) are UNSPLITTABLE by tar, so each lands ALONE in its
+    # own dedicated shard that legitimately exceeds the cap. The roll-before-add loop below already
+    # guarantees this: a non-empty shard always rolls before a too-big file is added (so the big
+    # file starts a fresh shard), and the big file then rolls out the next file too (so it stays
+    # alone). iter18 2026-06-08: this REPLACED a hard FATAL/sys.exit that aborted upload-full
+    # mid-pack on the 30 GB cassle/ewc m09c_ckpt_latest.pt resume anchors — a backup tool must
+    # never refuse to back a large file up; it shards it solo and logs it loudly.
+    oversize = [f for f in files if f.stat().st_size > max_bytes]
+    if oversize:
+        print(f"  [tar_shard pack] {len(oversize)} file(s) exceed the {max_shard_size_gb:.1f} GB "
+              f"cap → each gets its OWN over-cap shard (tar can't split one file): "
+              f"{', '.join(f'{f.name}={f.stat().st_size / 1e9:.1f}GB' for f in oversize)}")
 
     # Idempotency: skip if any shard already exists (caller wipes via
     # cache-policy=2 before re-packing). Discovers existing shards by globbing

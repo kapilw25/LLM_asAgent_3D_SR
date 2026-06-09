@@ -40,7 +40,8 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "src"))
 import json  # noqa: E402
-from iter18_poc_ngpu import ARM2DIR, ARM2ENC, BACKBONE, PT_METRICS, S3_SKIP_PERENC, build_jobs  # noqa: E402  (canonical DAG)
+from iter18_poc_ngpu import (  # noqa: E402  (canonical DAG — single source for naming + jobs)
+    ARM2DIR, ARM2ENC, BACKBONE, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name, enc_prefix)
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
@@ -140,7 +141,7 @@ def _calibrate(jobs, done, launched, mtag, ledger):
         if t == "resume" or not jid.startswith("T:") or jid not in launched:
             continue
         arm = _arm_of(jid)
-        cands = sorted(REPO.glob(jobs[jid]["log"].format(ts="*")), key=lambda p: p.stat().st_mtime)
+        cands = sorted((p for p in REPO.glob(jobs[jid]["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
         if not cands:
             continue
         try:
@@ -184,7 +185,7 @@ def _newest_stage_ckpt_mtime(arm, mtag):
     """mtime (epoch) of the arm's newest *ckpt_stage*.pt — written immediately before
     finalize starts, so (✓stamp − it) = measured finalize, (now − it) = time IN finalize."""
     d = REPO / f"outputs/{mtag}/{BACKBONE}/{ARM2DIR[arm]}"
-    cks = sorted(d.glob("*ckpt_stage*.pt"), key=lambda p: p.stat().st_mtime)
+    cks = sorted((p for p in d.glob("*ckpt_stage*.pt") if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling/cleared ckpt symlinks
     return cks[-1].stat().st_mtime if cks else None
 
 
@@ -213,6 +214,21 @@ _RE_STAMP = re.compile(r"═══ (\d\d:\d\d:\d\d) ·\s*(?:STAGE ([\w.]+)|(DONE
 _RE_CLIP_BAR = re.compile(r"(\d+)/(\d+) \[[^\]]*recent=([\d.]+)s/clip")
 
 
+def _runtime_extra_skip():
+    """EVAL_PLAN display-ids dropped at runtime by run_eval.sh's EXTRA_SKIP_STAGES env /
+    logs/.eval_extra_skip sentinel (iter18 2026-06-08) — so a mid-run `echo '3,11' >
+    logs/.eval_extra_skip` (skip STAGE 3 action-probe-train + STAGE 3.5 taxonomy) makes the ETA
+    DROP by those stages without a scheduler restart. Skip-id 11 maps to plan id '3.5'."""
+    raw = os.environ.get("EXTRA_SKIP_STAGES", "")
+    f = REPO / "logs" / ".eval_extra_skip"
+    if not raw and f.exists():
+        try:
+            raw = f.read_text().strip()
+        except OSError:
+            raw = ""
+    return {("3.5" if s.strip() == "11" else s.strip()) for s in raw.split(",") if s.strip()}
+
+
 def _eval_plan_for(jid, mtag):
     """Stage plan for one per-encoder E: eval — stages 2-8 ONLY (iter18 2026-06-07: Stage 8b
     is now 6 separate P: metric jobs, estimated via _pt_total — so 8b is dropped here to avoid
@@ -220,7 +236,8 @@ def _eval_plan_for(jid, mtag):
     PROVABLY absent (student_encoder.pt exists, m09{a,c}_ckpt_best.pt doesn't) — mirrors
     run_eval.sh's Stage-8 preflight. A still-training arm keeps the full 2-8 plan."""
     plan = [s for s in EVAL_PLAN if s != "8b"]    # E: runs 2,3,3.5,5,6,8 — never 8b
-    enc = jid.split("E:vjepa_2_1_", 1)[-1]
+    plan = [s for s in plan if s not in _runtime_extra_skip()]   # runtime taxonomy/probe-skip → ETA drops
+    enc = jid.split(f"E:{enc_prefix()}_", 1)[-1]
     if enc == "frozen":
         return plan               # Meta ckpt always carries the predictor
     arm = next(a for a, e in ARM2ENC.items() if e == enc)
@@ -245,7 +262,7 @@ def _eval_calibrate(jobs, mtag, now_s):
         if _arm_of(jid) != "eval" or jid.startswith("P:"):
             continue                  # P: (Stage-8b metric) jobs use _pt_total, not the stage ledger
         plans[jid] = _eval_plan_for(jid, mtag)
-        cands = sorted(REPO.glob(j["log"].format(ts="*")), key=lambda p: p.stat().st_mtime)
+        cands = sorted((p for p in REPO.glob(j["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
         for p in cands:
             try:
                 txt = p.read_text(errors="replace")
@@ -295,17 +312,23 @@ UPLOAD_EVERY_MIN = 45   # iter18 2026-06-06: full-artifact backups are heavier �
 # 2026-06-07: re-enabled after the manual every-file mirror completed (08:53 run:
 # "Upload complete: 1781s", 12 churned files transferred, rest deduped). Flip True
 # only while a MANUAL upload is in flight (concurrent commits race).
-AUTO_BACKUP_DISABLED = False
+# 2026-06-08: DISABLED by user — manual `python src/utils/hf_outputs.py upload outputs/poc`
+# is running; the watch's auto-backup would race its commit (the rc=1 042554 failure was
+# exactly this collision). Flip back to False once the manual upload finishes.
+AUTO_BACKUP_DISABLED = True
 # Rebuild the §3-style preview plots from whatever evals are DONE this often (minutes). CPU-only.
 PLOT_EVERY_MIN = 15
 
 
 def _latest_log(mtag):
     """Latest MAIN scheduler log — excludes the per-job logs the scheduler itself writes
-    (iter18_ngpu_<mtag>_train_*/_eval_*/_s3_*). Matches both the B5 main tee
-    (iter18_ngpu_poc_<ts>.log) and variants like _regate_/_only_pretrain_."""
+    (iter18_ngpu_<mtag>_train_*/_eval_*/_pt_*/_s3_*). Matches both the B5 main tee
+    (iter18_ngpu_poc_<ts>.log) and variants like _regate_/_only_pretrain_.
+    iter18 2026-06-07: _pt_ (the metric-parallel P: job logs) MUST be excluded too — they are
+    NEWER than the main tee and carry no GPU ◀/✓ markers, so picking one made every job read as
+    pending (all train cells showed ⬚ despite the resume-skip of 10 trained arms)."""
     cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
-             if "_train_" not in p.name and "_eval_" not in p.name and "_s3_" not in p.name]
+             if p.exists() and not any(seg in p.name for seg in ("_train_", "_eval_", "_pt_", "_s3_"))]
     return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
 
 
@@ -395,7 +418,7 @@ def _pt_total(jobs, jid, elapsed, prior, pt_med):
     no stage ledger needed. Pending (no bar yet) → that metric's measured median (pt_med), else
     the prior. Metrics differ a lot in cost (teacher_free ≫ causal) so pt_med is keyed per-metric."""
     metric = jid.rsplit(":", 1)[-1]
-    cands = sorted(REPO.glob(jobs[jid]["log"].format(ts="*")), key=lambda p: p.stat().st_mtime)
+    cands = sorted((p for p in REPO.glob(jobs[jid]["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
     txt = _tail(cands[-1]) if cands else ""
     cp = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt)
     rr = re.findall(r"recent=([\d.]+)s/clip", txt)
@@ -418,7 +441,8 @@ def _running_total(jobs, jid, elapsed, prior, calib, ecalib):
     if _arm_of(jid) == "eval":
         return _eval_total(jid, elapsed, prior, ecalib)
     tmpl = jobs[jid]["log"]
-    cands = sorted(REPO.glob(tmpl.format(ts="*")), key=lambda p: p.stat().st_mtime)
+    cands = sorted((p for p in REPO.glob(tmpl.format(ts="*")) if p.exists()),
+                   key=lambda p: p.stat().st_mtime)   # if p.exists(): skip a log deleted mid-glob (dangling) — .stat() on it crashes the whole watch
     txt = _tail(cands[-1]) if cands else ""
     led = (calib["ledger"] or {}).get(_arm_of(jid))
     if jid.startswith("T:") and led and cands:
@@ -559,7 +583,7 @@ def maybe_plot(mtag, mode):
         return "  🖼  preview already rebuilding — leaving it."
     try:
         last.write_text("")
-        all_encs = " ".join(["vjepa_2_1_frozen"] + [f"vjepa_2_1_{e}" for e in ARM2ENC.values()])
+        all_encs = " ".join([enc_name("frozen")] + [enc_name(e) for e in ARM2ENC.values()])
         chain = (f"SKIP_STAGES={S3_SKIP_PERENC} CACHE_POLICY_ALL=1 "
                  f"./scripts/run_eval.sh --{mode} --encoders \"{all_encs}\"")
         plog = REPO / "logs" / f"plot_preview_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.log"
@@ -589,6 +613,14 @@ def main():
 
     text = log.read_text(errors="replace")
 
+    # iter18 2026-06-08: the run's backbone is in the banner (backbone=…). If THIS watch pane was
+    # launched without the matching ITER18_BACKBONE, our imported BACKBONE (+ all job-ids/paths)
+    # are for the wrong family → every cell would read pending. Warn LOUDLY rather than mislead.
+    _bm = re.search(r"backbone=(\S+)", text)
+    if _bm and _bm.group(1) != BACKBONE:
+        print(f"  ⚠️  BACKBONE MISMATCH — run is '{_bm.group(1)}' but this watch pane is '{BACKBONE}'. "
+              f"Re-run:  ITER18_BACKBONE={_bm.group(1)} python -u scripts/iter18_poc_status.py", flush=True)
+
     # An --only run restricts the DAG — mirror that restriction so this table matches reality.
     om = re.search(r"\[--only\] restricted to \[(.*?)\]", text)
     only_arms = set(re.findall(r"'([^']+)'", om.group(1))) if om else None
@@ -601,8 +633,8 @@ def main():
     if sm:
         skip = set(re.findall(r"'([^']+)'", sm.group(1)))
         drop = ({f"T:{BACKBONE}:{a}" for a in skip}
-                | {f"E:vjepa_2_1_{ARM2ENC[a]}" for a in skip if a in ARM2ENC}
-                | {f"P:vjepa_2_1_{ARM2ENC[a]}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS})
+                | {f"E:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}
+                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS})
         jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
 
     launched = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ◀ (\S+)", text)}
@@ -618,9 +650,16 @@ def main():
     # disk — and it also surfaces 8b metrics produced by a prior monolithic eval as already-done.
     for jid in jobs:
         if jid.startswith("P:"):
-            enc_name, metric = jid[2:].rsplit(":", 1)
-            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_name}/aggregate_{metric}.json").exists():
+            enc_nm, metric = jid[2:].rsplit(":", 1)   # NOT 'enc_name' — that's the imported helper (shadowing it makes it a main()-local → UnboundLocalError)
+            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_nm}/aggregate_{metric}.json").exists():
                 done.setdefault(jid, "resume")
+    # iter18 2026-06-08: drop any log-parsed jid NOT in THIS run's job set. A watch pane reading a
+    # DIFFERENT-backbone or OLD (pre-banner) log carries foreign jids (e.g. T:vjepa_2_1_vitG:… while
+    # this pane built vjepa_2_1_vitg jobs); feeding one into jobs[jid] downstream → KeyError. The
+    # backbone-mismatch warning above flags the case when the banner records backbone=.
+    launched = {j: t for j, t in launched.items() if j in jobs}
+    done = {j: t for j, t in done.items() if j in jobs}
+    failed = {j: t for j, t in failed.items() if j in jobs}
     gm = re.search(r"gpus=(\d+)", text)
     gpus = int(gm.group(1)) if gm else 4
     s3 = re.search(r"§3 rc=(-?\d+)", text)
@@ -734,6 +773,8 @@ def main():
     # the printout SAYS so — no unlabeled fake numbers (user order, 06-07).
     pv = []
     for p in (REPO / "logs").glob("plot_preview_2*.log"):
+        if not p.exists():        # skip dangling symlinks
+            continue
         m2 = re.search(r"_(\d{8}_\d{6})\.log$", p.name)
         if m2:
             st = datetime.strptime(m2.group(1), "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
@@ -775,11 +816,12 @@ def main():
             return f"🔄 {_dur(elapsed(jid))}{stg}·~{_dur(finish[jid])}"
         return f"⬚ ~{_dur(finish[jid])}"
 
-    def _eval_group_cell(enc_name):
+    def _eval_group_cell(enc):   # param is 'enc' (a full encoder name) — NOT 'enc_name' (shadowing the imported helper is the bug that bit twice)
         # iter18 2026-06-07: an encoder's eval = ONE E: job (stages 2-8) + 6 P: jobs (Stage 8b, one
         # metric each). They run in PARALLEL across the GPU pool, so the group's remaining is the
-        # MAX finish, not the sum. `·8b N/6` shows how many of the 6 metric jobs are done.
-        group = [j for j in ([f"E:{enc_name}"] + [f"P:{enc_name}:{m}" for m in PT_METRICS]) if j in jobs]
+        # MAX finish, not the sum. `·8b D✓R▶/6` = D done, R running of the 6 metric jobs — so the
+        # one rolled-up cell reconciles with the 🔄 job counter (3 parallel metrics here = 3▶).
+        group = [j for j in ([f"E:{enc}"] + [f"P:{enc}:{m}" for m in PT_METRICS]) if j in jobs]
         if not group:
             return "—"
         sts = [classify(j) for j in group]
@@ -789,9 +831,10 @@ def main():
             return "❌ FAILED"
         n8 = sum(1 for j in group if j.startswith("P:"))
         n8done = sum(1 for j in group if j.startswith("P:") and classify(j) == "done")
+        n8run = sum(1 for j in group if j.startswith("P:") and classify(j) == "running")
         rem = max((finish.get(j, 0.0) for j in group), default=0.0)
         glyph = "🔄" if any(s == "running" for s in sts) else "⬚"
-        tag = f"·8b {n8done}/{n8}" if n8 else ""
+        tag = (f"·8b {n8done}✓{n8run}▶/{n8}" if n8 else "")
         return f"{glyph}{tag}·~{_dur(rem)}"
 
     def kemoji(arm):
@@ -808,13 +851,13 @@ def main():
     print("│" + " arm".ljust(SW) + "│" + " train".ljust(CW) + "│" + " eval".ljust(CW) + "│")
     print("├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
     print("│ " + "📊 frozen (eval-only)".ljust(SW - 1) + "│" + " —".ljust(CW) + "│ "
-          + _eval_group_cell("vjepa_2_1_frozen").ljust(CW - 1) + "│")
+          + _eval_group_cell(enc_name("frozen")).ljust(CW - 1) + "│")
     for arm in TRAIN_ORDER:
-        tj, ej = f"T:{BACKBONE}:{arm}", f"E:vjepa_2_1_{ARM2ENC[arm]}"
+        tj, ej = f"T:{BACKBONE}:{arm}", f"E:{enc_name(ARM2ENC[arm])}"
         if tj not in jobs and ej not in jobs:
             continue
         print("│ " + f"{kemoji(arm)} {arm}".ljust(SW - 1) + "│ "
-              + cell(tj).ljust(CW - 1) + "│ " + _eval_group_cell(f"vjepa_2_1_{ARM2ENC[arm]}").ljust(CW - 1) + "│")
+              + cell(tj).ljust(CW - 1) + "│ " + _eval_group_cell(enc_name(ARM2ENC[arm])).ljust(CW - 1) + "│")
 
     # Σ TOTAL row (iter18 2026-06-07): per column, completed compute (consumed across
     # every log segment) + estimated remaining for running/pending jobs — the full
@@ -841,6 +884,36 @@ def main():
           + f"Σ {_dur(t_tot)}".ljust(CW - 1) + "│ " + f"Σ {_dur(e_tot)}".ljust(CW - 1) + "│")
     print("└" + bar * SW + "┴" + bar * CW + "┴" + bar * CW + "┘")
     print(f"  Σ compute bill (train+eval, done+estimated): ~{_dur(t_tot + e_tot)} GPU-time")
+
+    # ── Stage-8b metric fan: encoder × 6 predictor-temporal metrics, LIVE grid (iter18 2026-06-07) ──
+    # Makes the metric-parallel fan-out visible — each cell = the P:<enc>:<metric> job's state.
+    # "2-8" = the encoder's E: job (the non-8b eval stages: features/probe/taxonomy/motion/future).
+    _GLYPH = {"done": "✓", "running": "▶", "pending": "·", "failed": "✗"}
+    _ABBR = {"rollout": "roll", "causal": "caus", "tdist": "tdis",
+             "teacher_free": "t-fr", "maskratio": "mask", "order": "ordr"}
+    enc_rows = ([("frozen", enc_name("frozen"))]
+                + [(a, enc_name(ARM2ENC[a])) for a in TRAIN_ORDER
+                   if f"E:{enc_name(ARM2ENC[a])}" in jobs])
+    EW, PW = 26, 5
+
+    def _gl(jid):
+        return _GLYPH[classify(jid)] if jid in jobs else " "
+    g_top = "┌" + bar * EW + "┬" + bar * 5 + ("┬" + bar * PW) * len(PT_METRICS) + "┐"
+    g_mid = "├" + bar * EW + "┼" + bar * 5 + ("┼" + bar * PW) * len(PT_METRICS) + "┤"
+    g_bot = "└" + bar * EW + "┴" + bar * 5 + ("┴" + bar * PW) * len(PT_METRICS) + "┘"
+    print(f"\n  Stage-8b metric fan (encoder × {len(PT_METRICS)} metrics · ✓ done · ▶ run · · pend)")
+    print("  " + g_top)
+    print("  │" + " encoder".ljust(EW) + "│" + "2-8".center(5)
+          + "│" + "│".join(_ABBR[m].center(PW) for m in PT_METRICS) + "│")
+    print("  " + g_mid)
+    for label, enc in enc_rows:
+        cells = "│".join(_gl(f"P:{enc}:{m}").center(PW) for m in PT_METRICS)
+        print("  │ " + label.ljust(EW - 1) + "│" + _gl(f"E:{enc}").center(5) + "│" + cells + "│")
+    print("  " + g_bot)
+    _pall = [j for j in jobs if j.startswith("P:")]
+    _pc = {k: sum(1 for j in _pall if classify(j) == k) for k in ("done", "running", "pending")}
+    print(f"  {_pc['done']}✓ done · {_pc['running']}▶ running · {_pc['pending']}· pending"
+          f"  of {len(_pall)} metric jobs")
 
     # ── summary + run ETA ──
     end_utc = datetime.now(timezone.utc) + timedelta(seconds=eta_secs)

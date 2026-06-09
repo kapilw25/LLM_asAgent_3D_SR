@@ -1,0 +1,106 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+═══ 00:17:53 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 6854 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 451 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 1825 clips (split=test)
+═══ 00:17:53 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [POC]) ═══
+  [clip_splits] universe=broad_manifest: 10000 − val(451) − test(1825) = 7724 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 7724 train-pool keys → data/eval_10k_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/poc/probe_taxonomy/taxonomy_labels.json
+═══ 00:17:54 · m09b_peft_lora train [variant=encoder] (POC) ═══
+  config:    configs/train/peft_lora_encoder.yaml
+  subset:    data/eval_10k_local/train_pool.json  (leakage-safe: universe − val − test)
+  factor:    data/eval_10k_local/m11_factor_datasets
+  output:    outputs/poc/vjepa_2_1_vitG/m09b_peft_lora_encoder
+  init:      outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)
+  recipe (MANDATORY, resolved from configs/train/peft_lora_encoder.yaml + optional env overrides): --teacher-mode FROZEN --lp-ft-stage0 off --warmup-mode single --subset-mode recipe_v3 --saliency off --spd off --replay on
+[live-debug] installed — pid=1622311. Force a stack dump anytime via:
+[live-debug]   kill -USR1 1622311   # signal-safe native dump
+[live-debug]   kill -USR2 1622311   # Python dump with banner
+  [train-frame-cache] ON → data/eval_10k_local/m12_frame_cache (min_free=200G) — deterministic decode memoized; shared across epochs/stages/arms/evals
+  [stream-autotune m09b_peft_encoder] cores=128 · concurrency=4 (src=env) · cgroup_ram=483G → num_workers=20
+  [recipe-v3 receipts] saliency_weighting=False · spd.enabled=False · raw_pretrain_pct=1.0 · factor_streaming.enabled=True
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 12.8
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json
+  [cache-policy=1/keep] preserved output_dir (m09b_peft_lora_encoder): outputs/poc/vjepa_2_1_vitG/m09b_peft_lora_encoder — rerun with --cache-policy 2 to delete (whole folder wipe)
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  [iter15] Local init from: /workspace/factorjepa/outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Loading init from prior-run ckpt: /workspace/factorjepa/outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Schema: student (588 keys) + predictor (300 keys)
+Student loaded: 1,843,937,152 params (588/588 keys = 100%)
+Teacher created (deepcopy of student) — mode=FROZEN (SALT) → EMA updates will be SKIPPED; teacher == init checkpoint forever
+Predictor loaded from checkpoint (300/300 keys = 100%)
+Predictor: 59,430,400 params
+  PEFT: LoRA r=16 alpha=32 targets=['qkv', 'proj', 'fc1', 'fc2'] → 22,857,728 trainable adapter params (base FROZEN)
+  [motion_aux] enabled: 11 classes, 23-D vec, 9,130 clips with targets, 435,490 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+[POC] Loaded subset: 7,724 clip keys from train_pool.json
+  train/val split: 7021 train / 451 val (--subset pool ∩ factor_manifest (leakage-safe, test excluded upstream))
+  Factor index: 71 clips (D_L=69, D_A=53, D_I=48)
+  build_streaming_indices: 9297 clips ready (9297 mp4, 9297 masks, 10 TARs scanned)
+[loss] Pure JEPA L1 (α=1, β=γ=0) — default scaffold path, no multi-task active
+  [pre-flight] mode_mixture vs manifest availability OK: {'D_L': 9238, 'D_A': 7702, 'D_I': 6860}
+
+============================================================
+SURGERY TRAINING — 1 stages on 7021 factor clips
+Model: vit_gigantic_xformers (48 blocks, 1664-dim)
+Epochs: 2 | Steps: 438 | BS: 32
+Dense loss: predict_all=True | Deep supervision: 4 levels
+============================================================
+AdaptiveBatchSizer (surgery, grad-accum): start=30, max=32 (= effective BS), target VRAM=85%
+
+============================================================
+[probe] N=451 held-out val clips, cadence=saves_per_epoch, saves_per_epoch=2 (probe_every=109 steps, ~4 total probes), val_loss=True
+============================================================
+  [probe] frame-cache ON → data/eval_10k_local/m12_frame_cache (shared across arms + evals)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00004.tar: emitted=46, dropped=0 (missing_part=0, empty_mp4=0), filtered=954 (subset=954, resume=0)
+  [tar reader] subset-00002.tar: emitted=41, dropped=0 (missing_part=0, empty_mp4=0), filtered=959 (subset=959, resume=0)
+  [tar reader] subset-00005.tar: emitted=39, dropped=0 (missing_part=0, empty_mp4=0), filtered=961 (subset=961, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00003.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00006.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00007.tar: emitted=55, dropped=0 (missing_part=0, empty_mp4=0), filtered=945 (subset=945, resume=0)
+  [tar reader] subset-00001.tar: emitted=92, dropped=0 (missing_part=0, empty_mp4=0), filtered=908 (subset=908, resume=0)
+  [tar reader] subset-00008.tar: emitted=28, dropped=0 (missing_part=0, empty_mp4=0), filtered=972 (subset=972, resume=0)
+  [tar reader] subset-00000.tar: emitted=118, dropped=0 (missing_part=0, empty_mp4=0), filtered=882 (subset=882, resume=0)
+  [probe] decoding 451 clips with 8 CPU workers (was serial → ~8x speedup expected)
+probe_decode:   0%|          | 0/451 [00:00<?, ?clip/s]probe_decode:   0%|          | 1/451 [01:19<9:56:08, 79.48s/clip]probe_decode:   2%|▏         | 9/451 [01:19<1:05:14,  8.86s/clip, recent=0.0s/clip ETA0.0h]probe_decode:   7%|▋         | 33/451 [01:20<16:53,  2.42s/clip, recent=0.0s/clip ETA0.0h] probe_decode:  13%|█▎        | 57/451 [01:20<09:14,  1.41s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  18%|█▊        | 81/451 [01:20<06:08,  1.00clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  23%|██▎       | 105/451 [01:20<04:26,  1.30clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  29%|██▊       | 129/451 [01:21<03:22,  1.59clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  34%|███▍      | 153/451 [01:22<02:39,  1.86clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  39%|███▉      | 177/451 [01:22<02:07,  2.15clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  45%|████▍     | 201/451 [01:22<01:42,  2.43clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  50%|████▉     | 225/451 [01:23<01:23,  2.71clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  55%|█████▌    | 249/451 [01:23<01:07,  2.98clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  61%|██████    | 273/451 [01:24<00:54,  3.24clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  66%|██████▌   | 297/451 [01:24<00:43,  3.51clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  71%|███████   | 321/451 [01:25<00:34,  3.77clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  76%|███████▋  | 345/451 [01:25<00:26,  4.02clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  82%|████████▏ | 369/451 [01:26<00:19,  4.27clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  87%|████████▋ | 393/451 [01:26<00:12,  4.53clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  92%|█████████▏| 417/451 [01:27<00:07,  4.77clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  98%|█████████▊| 441/451 [01:28<00:01,  5.01clip/s, recent=0.0s/clip ETA0.0h]probe_decode: 100%|██████████| 451/451 [01:28<00:00,  5.11clip/s, recent=0.0s/clip ETA0.0h]
+  [probe] decoded 451 clips (0 skipped — no tag match)
+
+============================================================
+STAGE 1/1: peft_single
+  Layers 0-48 trainable | 438 steps | warmup 43
+  Mixture: {'L': 1.0, 'A': 0.0, 'I': 0.0}
+============================================================
+  PEFT: set_trainable_prefix SKIPPED (stage depth-fraction n=48); adapters stay trainable, base frozen
+  Optimizer: AdamW (fp32, vanilla — SPD off) — 686 param groups
+  StreamingFactorDataset: REQUESTED={'L': 1.0} → ACTUAL={D_L=100%} (indexed=7021 clips)
+surgery:peft_single:   0%|          | 0/438 [00:00<?, ?step/s]  StreamingFactorDataset: raw-replay ENABLED (worker 13/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 17/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 14/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 15/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 11/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 12/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 3/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 6/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 7/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 16/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 5/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 4/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 9/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 1/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 0/20) raw_pct=100% · raw_clips_local=352  StreamingFactorDataset: raw-replay ENABLED (worker 10/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 2/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 19/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 18/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 8/20) raw_pct=100% · raw_clips_local=351
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  AdaptiveBatch: VRAM 20% < 65% → sub-batch 30 → 31
+surgery:peft_single:   0%|          | 0/438 [03:25<?, ?step/s, S1 loss=0.5008 lr=2.33e-06 grad=1.73 0.01 step/s]surgery:peft_single:   0%|          | 1/438 [03:25<24:57:01, 205.54s/step, S1 loss=0.5008 lr=2.33e-06 grad=1.73 0.01 step/s]  AdaptiveBatch: VRAM 20% < 65% → sub-batch 31 → 32
+surgery:peft_single:   0%|          | 1/438 [04:02<29:23:19, 242.11s/step, S1 loss=0.4972 lr=3.49e-06 grad=1.37 0.03 step/s]surgery:peft_single:   0%|          | 2/438 [04:02<14:39:38, 121.05s/step, S1 loss=0.4972 lr=3.49e-06 grad=1.37 0.03 step/s]
+❌ FATAL: run_train.sh aborted at line 455 (exit=130)

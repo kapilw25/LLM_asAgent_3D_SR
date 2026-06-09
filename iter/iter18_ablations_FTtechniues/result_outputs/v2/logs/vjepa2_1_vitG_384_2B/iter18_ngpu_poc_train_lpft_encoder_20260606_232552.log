@@ -1,0 +1,104 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+═══ 23:25:53 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 6854 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 451 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 1825 clips (split=test)
+═══ 23:25:53 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [POC]) ═══
+  [clip_splits] universe=broad_manifest: 10000 − val(451) − test(1825) = 7724 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 7724 train-pool keys → data/eval_10k_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/poc/probe_taxonomy/taxonomy_labels.json
+═══ 23:25:54 · m09f_lpft train [variant=encoder] (POC) ═══
+  config:    configs/train/lpft_encoder.yaml
+  subset:    data/eval_10k_local/train_pool.json  (leakage-safe: universe − val − test)
+  factor:    data/eval_10k_local/m11_factor_datasets
+  output:    outputs/poc/vjepa_2_1_vitG/m09f_lpft_encoder
+  init:      outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)
+  recipe (MANDATORY, resolved from configs/train/lpft_encoder.yaml + optional env overrides): --teacher-mode EMA --lp-ft-stage0 on --warmup-mode single --subset-mode recipe_v3 --saliency off --spd off --replay on
+[live-debug] installed — pid=824645. Force a stack dump anytime via:
+[live-debug]   kill -USR1 824645   # signal-safe native dump
+[live-debug]   kill -USR2 824645   # Python dump with banner
+  [stream-autotune m09f_naiveft_encoder] cores=128 · concurrency=4 (src=gpu-count) · cgroup_ram=483G → num_workers=20
+  [recipe-v3 receipts] saliency_weighting=False · spd.enabled=False · raw_pretrain_pct=1.0 · factor_streaming.enabled=True
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 12.8
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json
+  [cache-policy=1/keep] preserved output_dir (m09f_lpft_encoder): outputs/poc/vjepa_2_1_vitG/m09f_lpft_encoder — rerun with --cache-policy 2 to delete (whole folder wipe)
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  [iter15] Local init from: /workspace/factorjepa/outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Loading init from prior-run ckpt: /workspace/factorjepa/outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Schema: student (588 keys) + predictor (300 keys)
+Student loaded: 1,843,937,152 params (588/588 keys = 100%)
+Teacher created (deepcopy of student) — mode=EMA (legacy; τ=0.99925, hierarchical output enabled)
+Predictor loaded from checkpoint (300/300 keys = 100%)
+Predictor: 59,430,400 params
+  [motion_aux] enabled: 11 classes, 23-D vec, 9,130 clips with targets, 435,490 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+[POC] Loaded subset: 7,724 clip keys from train_pool.json
+  train/val split: 7021 train / 451 val (--subset pool ∩ factor_manifest (leakage-safe, test excluded upstream))
+  Factor index: 71 clips (D_L=69, D_A=53, D_I=48)
+  build_streaming_indices: 9297 clips ready (9297 mp4, 9297 masks, 10 TARs scanned)
+  [LP-FT Stage 0 ENABLED] prepended head-only warmup stage: 10% of total_steps, mixture={'L': 0.5, 'A': 0.5, 'I': 0.0}, encoder FROZEN (predictor + motion_aux head trainable only)
+[loss] Pure JEPA L1 (α=1, β=γ=0) — default scaffold path, no multi-task active
+  [pre-flight] mode_mixture vs manifest availability OK: {'D_L': 9238, 'D_A': 7702, 'D_I': 6860}
+
+============================================================
+SURGERY TRAINING — 2 stages on 7021 factor clips
+Model: vit_gigantic_xformers (48 blocks, 1664-dim)
+Epochs: 2 | Steps: 438 | BS: 32
+Dense loss: predict_all=True | Deep supervision: 4 levels
+============================================================
+AdaptiveBatchSizer (surgery, grad-accum): start=30, max=32 (= effective BS), target VRAM=85%
+
+============================================================
+[probe] N=451 held-out val clips, cadence=saves_per_epoch, saves_per_epoch=2 (probe_every=109 steps, ~4 total probes), val_loss=True
+============================================================
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00003.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00007.tar: emitted=55, dropped=0 (missing_part=0, empty_mp4=0), filtered=945 (subset=945, resume=0)
+  [tar reader] subset-00002.tar: emitted=41, dropped=0 (missing_part=0, empty_mp4=0), filtered=959 (subset=959, resume=0)
+  [tar reader] subset-00006.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00005.tar: emitted=39, dropped=0 (missing_part=0, empty_mp4=0), filtered=961 (subset=961, resume=0)
+  [tar reader] subset-00004.tar: emitted=46, dropped=0 (missing_part=0, empty_mp4=0), filtered=954 (subset=954, resume=0)
+  [tar reader] subset-00001.tar: emitted=92, dropped=0 (missing_part=0, empty_mp4=0), filtered=908 (subset=908, resume=0)
+  [tar reader] subset-00000.tar: emitted=118, dropped=0 (missing_part=0, empty_mp4=0), filtered=882 (subset=882, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=28, dropped=0 (missing_part=0, empty_mp4=0), filtered=972 (subset=972, resume=0)
+  [probe] decoding 451 clips with 8 CPU workers (was serial → ~8x speedup expected)
+probe_decode:   0%|          | 0/451 [00:00<?, ?clip/s]probe_decode:   0%|          | 1/451 [00:54<6:48:34, 54.48s/clip]probe_decode:   7%|▋         | 33/451 [00:55<11:47,  1.69s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  14%|█▍        | 65/451 [00:57<05:39,  1.14clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  22%|██▏       | 97/451 [00:59<03:35,  1.64clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  29%|██▊       | 129/451 [01:00<02:32,  2.12clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  36%|███▌      | 161/451 [01:02<01:52,  2.57clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  43%|████▎     | 193/451 [01:04<01:26,  2.98clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  50%|████▉     | 225/451 [01:06<01:06,  3.38clip/s, recent=0.1s/clip ETA0.0h]probe_decode:  57%|█████▋    | 257/451 [01:08<00:51,  3.74clip/s, recent=0.1s/clip ETA0.0h]probe_decode:  64%|██████▍   | 289/451 [01:10<00:39,  4.08clip/s, recent=0.1s/clip ETA0.0h]probe_decode:  71%|███████   | 321/451 [01:12<00:29,  4.43clip/s, recent=0.1s/clip ETA0.0h]probe_decode:  78%|███████▊  | 353/451 [01:14<00:20,  4.75clip/s, recent=0.1s/clip ETA0.0h]probe_decode:  85%|████████▌ | 385/451 [01:16<00:13,  5.04clip/s, recent=0.1s/clip ETA0.0h]probe_decode:  92%|█████████▏| 417/451 [01:18<00:06,  5.35clip/s, recent=0.1s/clip ETA0.0h]probe_decode: 100%|█████████▉| 449/451 [01:19<00:00,  5.63clip/s, recent=0.1s/clip ETA0.0h]probe_decode: 100%|██████████| 451/451 [01:20<00:00,  5.63clip/s, recent=0.1s/clip ETA0.0h]
+  [probe] decoded 451 clips (0 skipped — no tag match)
+
+============================================================
+STAGE 1/2: stage0_head_only
+  Layers 0-0 trainable | 43 steps | warmup 43
+  Mixture: {'L': 0.5, 'A': 0.5, 'I': 0.0}
+============================================================
+  Trainable prefix: 0/48 blocks (332,800/1,843,937,152 = 0.0%)
+  Optimizer: AdamW (fp32, vanilla — SPD off) — 500 param groups
+  StreamingFactorDataset: REQUESTED={'L': 0.5, 'A': 0.5} → ACTUAL={D_L=50%, D_A=50%} (indexed=7021 clips)
+surgery:stage0_head_only:   0%|          | 0/43 [00:00<?, ?step/s]  StreamingFactorDataset: raw-replay ENABLED (worker 16/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 15/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 8/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 1/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 13/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 14/20) raw_pct=100% · raw_clips_local=351
+
+
+  StreamingFactorDataset: raw-replay ENABLED (worker 19/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 12/20) raw_pct=100% · raw_clips_local=351
+
+
+
+
+  StreamingFactorDataset: raw-replay ENABLED (worker 9/20) raw_pct=100% · raw_clips_local=351
+  StreamingFactorDataset: raw-replay ENABLED (worker 6/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 11/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 0/20) raw_pct=100% · raw_clips_local=352  StreamingFactorDataset: raw-replay ENABLED (worker 7/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 18/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 5/20) raw_pct=100% · raw_clips_local=351
+
+  StreamingFactorDataset: raw-replay ENABLED (worker 2/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 17/20) raw_pct=100% · raw_clips_local=351
+
+
+
+  StreamingFactorDataset: raw-replay ENABLED (worker 4/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 10/20) raw_pct=100% · raw_clips_local=351  StreamingFactorDataset: raw-replay ENABLED (worker 3/20) raw_pct=100% · raw_clips_local=351
+
+
+
+
+/venv/main/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  AdaptiveBatch: VRAM 29% < 65% → sub-batch 30 → 31
+surgery:stage0_head_only:   0%|          | 0/43 [03:21<?, ?step/s, S1 loss=0.4934 lr=4.65e-07 grad=1.13 0.01 step/s]surgery:stage0_head_only:   2%|▏         | 1/43 [03:21<2:20:46, 201.11s/step, S1 loss=0.4934 lr=4.65e-07 grad=1.13 0.01 step/s]  AdaptiveBatch: VRAM 29% < 65% → sub-batch 31 → 32
+surgery:stage0_head_only:   2%|▏         | 1/43 [04:01<2:49:01, 241.46s/step, S1 loss=0.5008 lr=6.98e-07 grad=0.95 0.02 step/s]surgery:stage0_head_only:   5%|▍         | 2/43 [04:01<1:22:29, 120.73s/step, S1 loss=0.5008 lr=6.98e-07 grad=0.95 0.02 step/s]surgery:stage0_head_only:   5%|▍         | 2/43 [04:38<1:35:19, 139.49s/step, S1 loss=0.5010 lr=9.30e-07 grad=1.01 0.03 step/s]surgery:stage0_head_only:   7%|▋         | 3/43 [04:38<1:01:59, 92.99s/step, S1 loss=0.5010 lr=9.30e-07 grad=1.01 0.03 step/s] surgery:stage0_head_only:   7%|▋         | 3/43 [05:19<1:10:54, 106.36s/step, S1 loss=0.4949 lr=1.16e-06 grad=1.05 0.02 step/s]surgery:stage0_head_only:   9%|▉         | 4/43 [05:19<51:51, 79.77s/step, S1 loss=0.4949 lr=1.16e-06 grad=1.05 0.02 step/s]   surgery:stage0_head_only:   9%|▉         | 4/43 [06:02<58:57, 90.70s/step, S1 loss=0.5015 lr=1.40e-06 grad=1.00 0.02 step/s]surgery:stage0_head_only:  12%|█▏        | 5/43 [06:02<45:57, 72.56s/step, S1 loss=0.5015 lr=1.40e-06 grad=1.00 0.02 step/s]surgery:stage0_head_only:  12%|█▏        | 5/43 [06:47<51:34, 81.45s/step, S1 loss=0.4999 lr=1.63e-06 grad=1.11 0.02 step/s]surgery:stage0_head_only:  14%|█▍        | 6/43 [06:47<41:51, 67.87s/step, S1 loss=0.4999 lr=1.63e-06 grad=1.11 0.02 step/s]surgery:stage0_head_only:  14%|█▍        | 6/43 [07:31<46:23, 75.23s/step, S1 loss=0.4952 lr=1.86e-06 grad=0.84 0.02 step/s]surgery:stage0_head_only:  16%|█▋        | 7/43 [07:31<38:41, 64.48s/step, S1 loss=0.4952 lr=1.86e-06 grad=0.84 0.02 step/s]surgery:stage0_head_only:  16%|█▋        | 7/43 [08:16<42:32, 70.92s/step, S1 loss=0.4974 lr=2.09e-06 grad=1.12 0.02 step/s]surgery:stage0_head_only:  19%|█▊        | 8/43 [08:16<36:11, 62.05s/step, S1 loss=0.4974 lr=2.09e-06 grad=1.12 0.02 step/s]surgery:stage0_head_only:  19%|█▊        | 8/43 [09:01<39:29, 67.69s/step, S1 loss=0.5007 lr=2.33e-06 grad=0.87 0.02 step/s]surgery:stage0_head_only:  21%|██        | 9/43 [09:01<34:05, 60.17s/step, S1 loss=0.5007 lr=2.33e-06 grad=0.87 0.02 step/s]surgery:stage0_head_only:  21%|██        | 9/43 [09:46<36:55, 65.17s/step, S1 loss=0.4927 lr=2.56e-06 grad=0.95 0.02 step/s]surgery:stage0_head_only:  23%|██▎       | 10/43 [09:46<32:15, 58.65s/step, S1 loss=0.4927 lr=2.56e-06 grad=0.95 0.02 step/s]surgery:stage0_head_only:  23%|██▎       | 10/43 [10:31<34:42, 63.11s/step, S1 loss=0.4962 lr=2.79e-06 grad=0.84 0.02 step/s]surgery:stage0_head_only:  26%|██▌       | 11/43 [10:31<30:35, 57.37s/step, S1 loss=0.4962 lr=2.79e-06 grad=0.84 0.02 step/s]surgery:stage0_head_only:  26%|██▌       | 11/43 [11:15<32:46, 61.45s/step, S1 loss=0.4998 lr=3.02e-06 grad=0.90 0.02 step/s]surgery:stage0_head_only:  28%|██▊       | 12/43 [11:15<29:06, 56.33s/step, S1 loss=0.4998 lr=3.02e-06 grad=0.90 0.02 step/s]surgery:stage0_head_only:  28%|██▊       | 12/43 [11:58<30:57, 59.91s/step, S1 loss=0.5009 lr=3.26e-06 grad=0.87 0.02 step/s]surgery:stage0_head_only:  30%|███       | 13/43 [11:58<27:39, 55.31s/step, S1 loss=0.5009 lr=3.26e-06 grad=0.87 0.02 step/s]surgery:stage0_head_only:  30%|███       | 13/43 [12:42<29:20, 58.67s/step, S1 loss=0.5037 lr=3.49e-06 grad=0.87 0.02 step/s]surgery:stage0_head_only:  33%|███▎      | 14/43 [12:42<26:19, 54.48s/step, S1 loss=0.5037 lr=3.49e-06 grad=0.87 0.02 step/s]surgery:stage0_head_only:  33%|███▎      | 14/43 [13:27<27:52, 57.68s/step, S1 loss=0.4973 lr=3.72e-06 grad=1.05 0.02 step/s]surgery:stage0_head_only:  35%|███▍      | 15/43 [13:27<25:07, 53.83s/step, S1 loss=0.4973 lr=3.72e-06 grad=1.05 0.02 step/s]surgery:stage0_head_only:  35%|███▍      | 15/43 [14:12<26:31, 56.83s/step, S1 loss=0.4947 lr=3.95e-06 grad=0.78 0.02 step/s]surgery:stage0_head_only:  37%|███▋      | 16/43 [14:12<23:58, 53.28s/step, S1 loss=0.4947 lr=3.95e-06 grad=0.78 0.02 step/s]surgery:stage0_head_only:  37%|███▋      | 16/43 [14:56<25:12, 56.02s/step, S1 loss=0.4976 lr=4.19e-06 grad=0.77 0.02 step/s]surgery:stage0_head_only:  40%|███▉      | 17/43 [14:56<22:50, 52.73s/step, S1 loss=0.4976 lr=4.19e-06 grad=0.77 0.02 step/s]surgery:stage0_head_only:  40%|███▉      | 17/43 [15:41<23:59, 55.38s/step, S1 loss=0.4979 lr=4.42e-06 grad=0.79 0.02 step/s]surgery:stage0_head_only:  42%|████▏     | 18/43 [15:41<21:47, 52.30s/step, S1 loss=0.4979 lr=4.42e-06 grad=0.79 0.02 step/s]surgery:stage0_head_only:  42%|████▏     | 18/43 [16:27<22:51, 54.87s/step, S1 loss=0.4900 lr=4.65e-06 grad=0.74 0.02 step/s]surgery:stage0_head_only:  44%|████▍     | 19/43 [16:27<20:47, 51.98s/step, S1 loss=0.4900 lr=4.65e-06 grad=0.74 0.02 step/s]surgery:stage0_head_only:  44%|████▍     | 19/43 [17:15<21:47, 54.49s/step, S1 loss=0.4909 lr=4.88e-06 grad=0.94 0.02 step/s]surgery:stage0_head_only:  47%|████▋     | 20/43 [17:15<19:50, 51.77s/step, S1 loss=0.4909 lr=4.88e-06 grad=0.94 0.02 step/s]
+❌ FATAL: run_train.sh aborted at line 455 (exit=130)

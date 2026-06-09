@@ -1,5 +1,0 @@
-  [--only] restricted to ['pretrain_encoder'] — eval jobs + §3 finale SKIPPED
-  [disk-preflight] free=438G · required≈250G
-  [cpu-preflight] 128 cores ≥ ~6 (gpus×6) — OK
-═══ iter18 N-GPU scheduler · mode=POC · gpus=1 · cache=2 · 1 jobs (1 train + 0 eval) ═══
-[04:36:35] GPU0 ◀ T:vjepa_2_1_vitG:pretrain_encoder  → logs/iter18_ngpu_poc_train_pretrain_encoder_20260606_043635.log

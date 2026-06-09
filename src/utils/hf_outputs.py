@@ -136,7 +136,15 @@ def _get_token():
         for line in env_path.read_text().splitlines():
             line = line.strip()
             if line.startswith("HF_TOKEN=") or line.startswith("export HF_TOKEN="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'") or None
+                val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                # iter18 2026-06-07: MUST match python-dotenv — a whitespace-preceded inline
+                # `# comment` is NOT part of the value. The .env line is
+                # `HF_TOKEN=hf_xxx # username: anonymousML123`; without this strip the fallback
+                # returned the 64-char "hf_xxx # username: ..." → HF 401 (Invalid username/password)
+                # on every auto-backup whose python lacked dotenv. HF tokens carry no whitespace/#,
+                # so the first field after dropping the comment is the token.
+                fields = val.split("#", 1)[0].split()
+                return fields[0] if fields else None
     return None
 
 
@@ -723,6 +731,24 @@ def upload_outputs_full(output_dir: str, subfolder: str = None):
     print(f"upload-full: {output_dir} → {HF_OUTPUTS_REPO}/{subfolder}/")
     print(f"  Policy: EVERYTHING — {n_files} files ({_fmt_size(total)}), all extensions, "
           f"packed per-dir into {_FULL_SHARD_GLOB} (cap {max_shard_gb:g} GB/shard)")
+
+    # iter18 (2026-06-08, user order): ASK delete-vs-reuse BEFORE the (slow) pack — same as
+    # `upload`/`upload-data`. This gate USED to sit AFTER _pack_outputs_full, so a 225 G tree
+    # packed for ~hours before the prompt ever showed (it looked like upload-full never asked).
+    #   1=delete → scoped-wipe the remote folder first → what lands on HF is EXACTLY this
+    #              snapshot's shards+manifest, no stale strays (incl. loose files from a prior
+    #              light `upload`; download's skip-existing unpack would otherwise keep an OLD
+    #              copy and throw away the fresh one — the 2026-06-06 dl_test bug);
+    #   2=reuse  → refresh the _full-*.tar shards only; other remote files survive.
+    # HF_UPLOAD_MODE=delete|reuse bypasses the question for tmux/overnight runs.
+    api = HfApi(token=token)
+    mode = resolve_upload_mode_interactive(
+        api, HF_OUTPUTS_REPO, "dataset", subfolder, f"outputs upload-full: {output_dir}")
+    if mode == "delete":
+        delete_repo_folder_scoped(api, HF_OUTPUTS_REPO, "dataset", subfolder)
+    else:
+        _purge_remote_full_shards(api, subfolder)
+
     shards = _pack_outputs_full(output_path, max_shard_gb)
     shard_bytes = sum(t.stat().st_size for t in shards)
     print(f"  Packed {len(shards)} shard(s) ({_fmt_size(shard_bytes)}) across "
@@ -745,20 +771,6 @@ def upload_outputs_full(output_dir: str, subfolder: str = None):
     print(f"  Manifest: {len(manifest['files'])} files + {len(manifest['shards'])} shards "
           f"→ {output_path / mname}")
 
-    api = HfApi(token=token)
-    # iter18 (2026-06-06): the SAME ask-first gate as `upload`/`upload-data`.
-    #   1=delete → wipe the remote folder first → what's on HF afterwards is EXACTLY
-    #              the manifest, nothing else (kills loose stale files from old light
-    #              uploads — download's skip-existing unpack would otherwise keep the
-    #              OLD copy and throw away the fresh one: the 2026-06-06 dl_test bug);
-    #   2=reuse  → old behavior: refresh the _full-*.tar shards only, strays survive.
-    # HF_UPLOAD_MODE=delete|reuse skips the question for tmux/overnight runs.
-    mode = resolve_upload_mode_interactive(
-        api, HF_OUTPUTS_REPO, "dataset", subfolder, f"outputs upload-full: {output_dir}")
-    if mode == "delete":
-        delete_repo_folder_scoped(api, HF_OUTPUTS_REPO, "dataset", subfolder)
-    else:
-        _purge_remote_full_shards(api, subfolder)
     t0 = time.time()
     with _UploadHeartbeat(f"upload-full {subfolder}"):
         api.upload_folder(

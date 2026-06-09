@@ -26,6 +26,9 @@ USAGE (run inside tmux on the multi-GPU box; data + env must already be provisio
   python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 2 --cache 2 --dry-run    # plan only
 """
 import argparse
+import contextlib
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -33,7 +36,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-BACKBONE = "vjepa_2_1_vitG"
+# iter18 2026-06-08: BACKBONE is the run's encoder family, switchable via env so the SAME scheduler
+# runs the 2B champion (vjepa_2_1_vitG, default) or the 1B scale-axis backbone (vjepa_2_1_vitg). The
+# status tool reads it back from the run banner (or this same env) so its job-ids match. Set it once
+# in BOTH the launch and the watch panes (or rely on the banner parse in the status tool).
+BACKBONE = os.environ.get("ITER18_BACKBONE", "vjepa_2_1_vitG")
+
+
+def enc_prefix():
+    """iter17 multi-backbone naming: the CHAMPION 2B vitG drops its size tag → eval encoders are the
+    bare 'vjepa_2_1_<arm>'; every OTHER backbone keeps its full name ('vjepa_2_1_vitg_<arm>',
+    'vjepa_2_0_vitg_<arm>') so per-backbone eval dirs + the m13 stacked hero never collide/overwrite."""
+    return "vjepa_2_1" if BACKBONE == "vjepa_2_1_vitG" else BACKBONE
+
+
+def enc_name(arm_enc):
+    """Full eval-encoder name for the current BACKBONE, e.g. 'vjepa_2_1_frozen' (2B) /
+    'vjepa_2_1_vitg_frozen' (1B). Single source for both this scheduler and the status tool."""
+    return f"{enc_prefix()}_{arm_enc}"
 
 # (run_train arm → eval-encoder suffix). NOTE the surgery_→surgical_ rename for the factor arms +
 # autorgn; the iter18 baselines keep their arm name verbatim (registry rows added 2026-06-04).
@@ -148,21 +168,21 @@ def build_jobs(mode):
     # concurrently with stages 2-8. Each job gets its OWN deps set (set(deps)); --only mutates deps
     # in place, so a shared set object would cross-contaminate the 7 sibling jobs.
     for arm, enc in [("frozen", "frozen")] + list(ARM2ENC.items()):
-        enc_name = f"vjepa_2_1_{enc}"
+        encn = enc_name(enc)
         deps = set() if arm == "frozen" else {f"T:{BACKBONE}:{arm}"}
-        ejid = f"E:{enc_name}"
+        ejid = f"E:{encn}"
         jobs[ejid] = dict(
             id=ejid, kind="eval", deps=set(deps), needs_labels=True,
             cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_PERENC_NO8B} "
-                 f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {enc_name}"),
-            log=f"logs/iter18_ngpu_{mtag}_eval_{enc_name}_{{ts}}.log")
+                 f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
+            log=f"logs/iter18_ngpu_{mtag}_eval_{encn}_{{ts}}.log")
         for m in PT_METRICS:
-            pjid = f"P:{enc_name}:{m}"
+            pjid = f"P:{encn}:{m}"
             jobs[pjid] = dict(
                 id=pjid, kind="eval", deps=set(deps), needs_labels=True,
                 cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8B} PT_METRIC={m} "
-                     f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {enc_name}"),
-                log=f"logs/iter18_ngpu_{mtag}_pt_{enc}_{m}_{{ts}}.log")
+                     f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
+                log=f"logs/iter18_ngpu_{mtag}_pt_{encn}_{m}_{{ts}}.log")
     return jobs, mtag
 
 
@@ -211,8 +231,8 @@ def main():
         if "pretrain_encoder" in args.skip_arms:
             sys.exit("FATAL: cannot skip pretrain_encoder — it is every arm's init dependency.")
         drop = ({f"T:{BACKBONE}:{a}" for a in args.skip_arms}
-                | {f"E:vjepa_2_1_{ARM2ENC[a]}" for a in args.skip_arms}
-                | {f"P:vjepa_2_1_{ARM2ENC[a]}:{m}" for a in args.skip_arms for m in PT_METRICS})
+                | {f"E:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}
+                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in PT_METRICS})
         jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
         print(f"  [--skip-arms] dropped {sorted(args.skip_arms)} (train+eval+8b-metrics) — §3 finale "
               f"will cover the remaining encoders only", flush=True)
@@ -255,8 +275,8 @@ def main():
         for jid in jobs:
             if not jid.startswith("P:"):
                 continue
-            enc_name, metric = jid[2:].rsplit(":", 1)
-            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_name}/aggregate_{metric}.json").exists():
+            enc_nm, metric = jid[2:].rsplit(":", 1)   # NOT 'enc_name' — that's the module helper; a main()-local shadows it → UnboundLocalError at the skip-arms block
+            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_nm}/aggregate_{metric}.json").exists():
                 done.add(jid)
                 pt_done += 1
         if pt_done:
@@ -276,9 +296,9 @@ def main():
                 if slots[g] else "")
 
     free = list(range(args.gpus))
-    print(f"═══ iter18 N-GPU scheduler · mode={args.mode} · gpus={args.gpus} · cache={args.cache} · "
-          f"{len(jobs)} jobs ({sum(j['kind'] == 'train' for j in jobs.values())} train + "
-          f"{sum(j['kind'] == 'eval' for j in jobs.values())} eval) ═══", flush=True)
+    print(f"═══ iter18 N-GPU scheduler · mode={args.mode} · backbone={BACKBONE} · gpus={args.gpus} · "
+          f"cache={args.cache} · {len(jobs)} jobs ({sum(j['kind'] == 'train' for j in jobs.values())} "
+          f"train + {sum(j['kind'] == 'eval' for j in jobs.values())} eval) ═══", flush=True)
 
     def ready(jid):
         j = jobs[jid]
@@ -305,16 +325,25 @@ def main():
         return
 
     t0 = time.time()
+    # FAIL-FAST (iter18 2026-06-08, user order): the FIRST job failure aborts the WHOLE run — stop
+    # launching new jobs, SIGTERM every still-running job, and exit(1) — mirroring run_train.sh /
+    # run_eval.sh's own `set -euo pipefail`. The OLD behaviour (keep launching all 95, report the
+    # failures only at the very end, then skip §3) buried the first failure under ~80 later launches,
+    # which read as "still making progress" — misleading. Now the run stops AT the first ✗.
+    abort = None
     while len(done) + len(failed) < len(jobs):
         for jid in list(jobs):
-            if not free or not ready(jid):
+            if abort or not free or not ready(jid):
                 continue
             g = free.pop(0)
             log = jobs[jid]["log"].format(ts=ts())
             cmd = jobs[jid]["cmd"].format(gpu=g, cache=args.cache, conc=args.gpus, pin=pin_for(g))
             print(f"[{now()}] GPU{g} ◀ {jid}  → {log}", flush=True)
             lf = open(REPO / log, "w")
-            p = subprocess.Popen(cmd, shell=True, cwd=str(REPO), stdout=lf, stderr=subprocess.STDOUT)
+            # start_new_session: each job is its OWN process group, so a fail-fast abort can SIGTERM
+            # the whole tree (shell + python + DataLoader/decode workers), not just the wrapper shell.
+            p = subprocess.Popen(cmd, shell=True, cwd=str(REPO), stdout=lf,
+                                 stderr=subprocess.STDOUT, start_new_session=True)
             running[g] = (jid, p, lf)
         for g in list(running):
             jid, p, lf = running[g]
@@ -330,19 +359,31 @@ def main():
             else:
                 failed[jid] = rc
                 print(f"[{now()}] GPU{g} ✗ {jid} rc={rc} — see its log", flush=True)
+                if abort is None:
+                    abort = jid          # first failure → trip the fail-fast abort
+        if abort is not None:
+            if running:
+                print(f"  ⛔ FAIL-FAST: {abort} failed (rc={failed[abort]}) — SIGTERM "
+                      f"{len(running)} still-running job(s) + aborting the run", flush=True)
+                for _g, (_jid, _p, _lf) in list(running.items()):
+                    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+                        os.killpg(os.getpgid(_p.pid), signal.SIGTERM)   # whole process group
+                    _lf.close()
+                running.clear()
+            break
         if running or any(ready(j) for j in jobs):
             time.sleep(10)
         elif free and not running:   # nothing ready, nothing running → a failed dep blocks the rest
             break
 
     el = (time.time() - t0) / 3600
-    print(f"═══ jobs settled in {el:.1f}h · done={len(done)} failed={len(failed)} ═══", flush=True)
-    if failed:
-        print("FAILED jobs (their dependents were skipped):")
-        for jid, rc in failed.items():
-            print(f"  ✗ {jid} (rc={rc})")
-        print("Fix + re-run with --cache 1 to resume the survivors; NOT running the §3 finale.")
+    if abort is not None:
+        print(f"═══ ⛔ FAIL-FAST ABORT after {el:.1f}h · {abort} failed (rc={failed[abort]}) · "
+              f"{len(done)} job(s) done before the abort · §3 finale NOT run ═══", flush=True)
+        print(f"  ✗ first failure: {abort} — read its per-job log (named on its GPU ◀ line above).")
+        print(f"  Fix the cause, then re-run with --cache 1 to keep the {len(done)} completed job(s).")
         sys.exit(1)
+    print(f"═══ jobs settled in {el:.1f}h · done={len(done)} failed={len(failed)} ═══", flush=True)
 
     if args.only:
         print(f"═══ --only run complete ({sorted(args.only)}) — §3 finale skipped by design ═══",
@@ -354,8 +395,8 @@ def main():
     #    --skip-arms: the finale covers only the encoders whose evals ran (paired-Δ/m13
     #    handle encoder subsets — the live 15-min preview exercises this same path daily).
     _skip = set(args.skip_arms or [])
-    all_encs = " ".join(["vjepa_2_1_frozen"]
-                        + [f"vjepa_2_1_{e}" for a, e in ARM2ENC.items() if a not in _skip])
+    all_encs = " ".join([enc_name("frozen")]
+                        + [enc_name(e) for a, e in ARM2ENC.items() if a not in _skip])
     s3_log = f"logs/iter18_ngpu_{mtag}_s3_{ts()}.log"
     s3 = (f"SKIP_STAGES={S3_SKIP_PERENC} CACHE_POLICY_ALL=1 "
           f"./scripts/run_eval.sh --{args.mode} --encoders \"{all_encs}\"")

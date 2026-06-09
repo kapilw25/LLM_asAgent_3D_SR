@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_peft_dora_encoder",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.056544,
+  "std": 0.00981,
+  "ci": {
+    "mean": 0.056544,
+    "ci_lo": 0.056097,
+    "ci_hi": 0.056999,
+    "ci_half": 0.000451
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_ckpt_best.pt"
+}

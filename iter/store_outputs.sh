@@ -11,7 +11,7 @@ rm -rf <file1_path1> <file2_path1>
 
 # ── Archive outputs/poc/ → iter15_v2 result_outputs, SKIPPING heavy binaries (ckpts + arrays) ──
 # keeps .json/.png/.pdf/.csv/.jsonl/.log; drops .pt/.npy/.npz. -a preserves the tree.
-rsync -av --exclude='*.pt' --exclude='*.npy' --exclude='*.npz' --exclude='tmp_*' \
+rsync -av --exclude='*.pt' --exclude='*.npy' --exclude='*.npz' --exclude='tmp_*' --exclude='*.tar' \
 outputs/poc/ iter/iter18_ablations_FTtechniues/result_outputs/v2/poc
 
 

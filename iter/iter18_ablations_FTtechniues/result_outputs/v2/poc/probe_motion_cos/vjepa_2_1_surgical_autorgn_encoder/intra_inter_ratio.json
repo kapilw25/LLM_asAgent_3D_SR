@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_surgical_autorgn_encoder",
+  "n_test": 1825,
+  "pos_mean": 0.752607,
+  "neg_mean": 0.563989,
+  "score_mean": 0.188618,
+  "score_ci": {
+    "mean": 0.188618,
+    "ci_lo": 0.183375,
+    "ci_hi": 0.194104,
+    "ci_half": 0.005364
+  },
+  "elapsed_sec": 0.12
+}

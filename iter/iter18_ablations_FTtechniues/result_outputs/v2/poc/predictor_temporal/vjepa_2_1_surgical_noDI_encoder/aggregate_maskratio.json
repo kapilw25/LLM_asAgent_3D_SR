@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_noDI_encoder",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.056823,
+  "std": 0.011419,
+  "ci": {
+    "mean": 0.056823,
+    "ci_lo": 0.056309,
+    "ci_hi": 0.057352,
+    "ci_half": 0.000522
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt"
+}

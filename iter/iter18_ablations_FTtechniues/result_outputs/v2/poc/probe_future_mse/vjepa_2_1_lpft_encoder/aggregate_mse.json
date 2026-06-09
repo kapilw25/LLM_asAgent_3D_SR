@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_lpft_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.536159,
+  "mse_std": 0.01904,
+  "mse_ci": {
+    "mean": 0.536159,
+    "ci_lo": 0.535297,
+    "ci_hi": 0.537043,
+    "ci_half": 0.000873
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitG/m09f_lpft_encoder/m09c_ckpt_best.pt"
+}

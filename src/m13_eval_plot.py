@@ -36,6 +36,7 @@ USAGE:
 """
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -85,6 +86,11 @@ _ARM_SHORT = {
     "frozen": "frozen", "pretrain_encoder": "vCSSL-enc", "pretrain_2X_encoder": "vCSSL-2X", "pretrain_head": "vCSSL-hd",
     "surgical_3stage_DI_encoder": "s3DI-enc", "surgical_noDI_encoder": "sNoDI-enc",
     "surgical_3stage_DI_head": "s3DI-hd", "surgical_noDI_head": "sNoDI-hd",
+    # iter18 FT baselines (encoder-only; no head twin → no -enc suffix needed) — clean distinct WINNER tags
+    "surgery_raw_encoder": "raw", "surgical_autorgn_encoder": "argn",
+    "full_ft_encoder": "fullFT", "lpft_encoder": "LPFT",
+    "peft_lora_encoder": "LoRA", "peft_dora_encoder": "DoRA",
+    "cassle_encoder": "CaSSLe", "ewc_encoder": "EWC",
 }
 # Per-backbone header label (name + model size) for the stacked §G overview. Architecture facts are
 # pinned in configs/model/*.yaml (embed_dim/depth VERIFIED there); mirrored here as the plot caption.
@@ -109,14 +115,47 @@ def _display_label(enc: str) -> str:
 _FALLBACK_COLOR_CYCLE = ("blue", "green", "orange", "purple", "red", "cyan", "gold")
 
 
+# iter18 2026-06-08: the 4 OURS (surgery novelty) share GREEN so they read as ONE group in every
+# bar — but stay 4 separately-labelled bars (NOT merged) so you can see WHICH ours wins by height.
+_OURS_GREEN = {"surgical_3stage_DI_encoder", "surgical_noDI_encoder",
+               "surgical_3stage_DI_head", "surgical_noDI_head"}
+# every OTHER arm gets its OWN distinct colour, keyed by NAME (stable across all metric panels —
+# the old code keyed off enc.startswith("vjepa") so ALL 14 encoders rendered in one identical blue).
+_ITER18_ENC_COLOR = {
+    "frozen":                   "#616161",  # gray   — frozen baseline
+    "pretrain_encoder":         "#1565C0",  # blue   — vanilla cont-SSL anchor
+    "surgical_autorgn_encoder": "#E65100",  # orange — Auto-RGN (Surgical-FT baseline)
+    "surgery_raw_encoder":      "#8D6E63",  # brown  — surgery-on-raw control
+    "full_ft_encoder":          "#C62828",  # red    — Full-FT
+    "lpft_encoder":             "#D81B60",  # magenta— LP-FT
+    "peft_lora_encoder":        "#6A1B9A",  # purple — LoRA
+    "peft_dora_encoder":        "#00838F",  # cyan   — DoRA
+    "cassle_encoder":           "#F9A825",  # gold   — CaSSLe
+    "ewc_encoder":              "#827717",  # olive  — EWC
+}
+_SURG_GREEN = "#2E7D32"   # the OURS-group green, reused to flag surgery in the WINNER row
+# iter18 2026-06-08: WINNER-row render style for the hero heatmap. At POC the per-metric 95% CIs are
+# wide enough that a surgery arm is a CO-LEADER (CI overlaps the point-best) on EVERY metric, so a
+# single point-best name under-sells it. Three honest styles, selected by env so all three can be
+# rendered side-by-side for the user to pick (none invents significance — every style keeps the "~"/
+# tie marker and boxes ALL CI-tied co-leaders):
+#   coleader_set     — list ALL arms tied for #1 (surgery bold-green), competitors shown too
+#   surgery_coleader — name the best SURGERY arm (green); "~" prefix when it's a CI-tie
+#   tie_badge        — "~ tie (n)" / "<arm> WIN (sole)"; names nobody, boxes carry the co-leaders
+_WINNER_MODE = os.environ.get("HERO_WINNER_MODE", "coleader_set")
+
+
 def _color_for(enc: str, idx: int) -> str:
-    """Pick a color for an encoder bar (canonical map first, else deterministic rotation)."""
+    """Per-encoder colour: the 4 OURS → one GREEN; every other arm → its own distinct colour keyed
+    by name (stable across panels). Legacy/cross-arch encoders fall back to the canonical map."""
+    short = enc.replace("vjepa_2_1_", "")
+    if short in _OURS_GREEN:
+        return "#2E7D32"                                  # GREEN — the OURS group
+    if short in _ITER18_ENC_COLOR:
+        return _ITER18_ENC_COLOR[short]
     if enc in ENCODER_COLORS:
         return ENCODER_COLORS[enc]
-    if enc.startswith("vjepa"):
-        return ENCODER_COLORS["vjepa"]
-    fallback_key = _FALLBACK_COLOR_CYCLE[idx % len(_FALLBACK_COLOR_CYCLE)]
-    return COLORS.get(fallback_key, COLORS["gray"])
+    return COLORS.get(_FALLBACK_COLOR_CYCLE[idx % len(_FALLBACK_COLOR_CYCLE)], COLORS["gray"])
 
 
 # ── Loaders ──────────────────────────────────────────────────────────
@@ -571,6 +610,98 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
           f"(+signed 'order' in CSV only) × {len(col_labels)} cols (transposed) · WINNER col = champion duel (ties shown)")
 
 
+def _winner_row(ax, tiesets, ny, mode):
+    """Render the hero's bottom WINNER row in one of 3 honest styles and RETURN its height in grid
+    units (so the caller extends ylim). tiesets[j] = {"sorted":[(e,v,ci) best-first], "tie":[e...
+    95%-CI co-leaders], "leader":e, "lead_is_surg":bool}. "OURS" = the 4 GREEN surgery-novelty arms
+    only (_OURS_GREEN) — argn (Auto-RGN baseline) and raw (surgery-on-raw control) are NOT credited
+    as OURS even though their names contain 'surg' (the figure already colours them orange/brown).
+    No style claims a significance the CIs don't support — ties are always marked; OURS (green) is
+    highlighted only where it genuinely co-leads.
+      · coleader_set     — stack ALL co-leaders, each in its OWN arm-colour (OURS green+bold); '+k more' if >4
+      · surgery_coleader — name the best OURS co-leader (green); '~' unless it's the sole #1; else the true leader + 'OURS #rank'
+      · tie_badge        — '~ tie (n)' when ≥2 co-leaders, else '<arm> WIN (sole)'; OURS tints the cell green"""
+    ncol = max(tiesets, default=-1) + 1
+
+    def _ours(e):
+        return e.replace("vjepa_2_1_", "") in _OURS_GREEN
+
+    def _empty(j):
+        ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=(0.85, 0.85, 0.85, 0.35),
+                               edgecolor="white", lw=1.0, zorder=2))
+        ax.text(j, ny, "—", ha="center", va="center", fontsize=10, color="black", zorder=3)
+
+    if mode == "coleader_set":
+        nmax = max((len(ts["tie"]) for ts in tiesets.values()), default=1)
+        shown = min(nmax, 4)
+        dy, over = 0.30, (nmax > 4)
+        row_h = 0.5 + (shown + (1 if over else 0)) * dy + 0.1
+        for j in range(ncol):
+            ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, row_h, facecolor=(0.96, 0.96, 0.96, 0.7),
+                                   edgecolor="white", lw=1.0, zorder=2))
+            ts = tiesets.get(j)
+            if not ts:
+                _empty(j)
+                continue
+            for k, e in enumerate(ts["tie"][:4]):         # each co-leader in its OWN arm colour; OURS bold
+                ax.text(j, ny - 0.20 + k * dy, _short_label(e), ha="center", va="center", fontsize=6.5,
+                        fontweight="bold" if _ours(e) else "normal", color=_color_for(e, j), zorder=3)
+            if len(ts["tie"]) > 4:
+                ax.text(j, ny - 0.20 + 4 * dy, f"+{len(ts['tie']) - 4} more", ha="center", va="center",
+                        fontsize=5.5, color="#999999", style="italic", zorder=3)
+        return row_h
+
+    if mode == "tie_badge":
+        for j in range(ncol):
+            ts = tiesets.get(j)
+            if not ts:
+                _empty(j)
+                continue
+            n = len(ts["tie"])
+            sole_ours = (n == 1 and _ours(ts["leader"]))
+            any_ours = any(_ours(e) for e in ts["tie"])
+            face = (_SURG_GREEN if sole_ours else (0.80, 0.90, 0.80, 0.55) if any_ours
+                    else (0.85, 0.85, 0.85, 0.45))
+            ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=face,
+                                   edgecolor="white", lw=1.0, zorder=2))
+            if n == 1:
+                ax.text(j, ny - 0.16, _short_label(ts["leader"]), ha="center", va="center", fontsize=7,
+                        fontweight="bold", color="white" if sole_ours else "black", zorder=3)
+                ax.text(j, ny + 0.24, "WIN (sole)", ha="center", va="center", fontsize=6, color="black", zorder=3)
+            else:
+                ax.text(j, ny - 0.14, "~ tie", ha="center", va="center", fontsize=8, fontweight="bold",
+                        color="black", zorder=3)
+                ax.text(j, ny + 0.24, f"n={n}", ha="center", va="center", fontsize=7, color="black", zorder=3)
+        return 1.0
+
+    # default: surgery_coleader
+    for j in range(ncol):
+        ts = tiesets.get(j)
+        if not ts:
+            _empty(j)
+            continue
+        ours = next((e for (e, _v, _c) in ts["sorted"] if _ours(e)), None)
+        if ours is None or ours not in ts["tie"]:        # no OURS arm co-leads → name the true leader, honestly
+            le = ts["leader"]
+            ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=_color_for(le, j), alpha=0.5,
+                                   edgecolor="white", lw=1.0, zorder=2))
+            ax.text(j, ny - 0.16, _short_label(le), ha="center", va="center", fontsize=7,
+                    fontweight="bold", color="black", zorder=3)
+            if ours is not None:
+                rank = [e for (e, _v, _c) in ts["sorted"]].index(ours) + 1
+                ax.text(j, ny + 0.24, f"OURS #{rank}", ha="center", va="center", fontsize=6,
+                        color=_SURG_GREEN, zorder=3)
+            continue
+        sole = (ts["tie"] == [ours])                     # OURS is the ONLY co-leader → a clear win
+        ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=_SURG_GREEN, alpha=0.55,
+                               edgecolor="white", lw=1.0, zorder=2))
+        ax.text(j, ny - 0.16, ("" if sole else "~") + _short_label(ours), ha="center", va="center",
+                fontsize=7, fontweight="bold", color="black", zorder=3)
+        ax.text(j, ny + 0.24, "clear #1" if sole else f"tie:{len(ts['tie'])}", ha="center",
+                va="center", fontsize=6, color="black", zorder=3)
+    return 1.0
+
+
 def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Path):
     """B2: per-metric RAW-VALUE heatmap WITH numbers. TOP row = FROZEN baseline, then the contender arms,
     cols = hero metrics. Each cell PRINTS that arm's raw metric value 95% BCa CI [min, max] in native
@@ -612,73 +743,58 @@ def plot_hero_heatmap(metrics: dict, encoders: list, frozen: str, output_dir: Pa
     ax.tick_params(length=0)
     ax.set_xticks(range(len(cat)))
     ax.set_xticklabels([f"{c[0]}\n{_DIR_TAG[c[3]]}" for c in cat], rotation=45, ha="right", fontsize=9)
+    _WTICK = {"coleader_set": "CO-LEADERS\n(95%CI #1)", "surgery_coleader": "WINNER\n(surgery)",
+              "tie_badge": "STAT #1\n(95%CI)"}
     ax.set_yticks(list(range(len(rows))) + [len(rows)])
     ax.set_yticklabels([f"{_display_label(frozen)}  (baseline)"]
-                       + [_display_label(e) for e in contenders] + ["WINNER"], fontsize=10)
-    # Plain BLACK BOLD numbers (no halo): Δ on top, CI below. SPOTLIGHT (thick blue outline +
-    # enlarged Δ font) = the champion-duel WINNING ARM per metric — SAME _family_verdict as the
-    # WINNER row / hero table / scoreboard, NOT raw best-Δ. Tie metric → no box (no single winner).
-    _surg = [e for e in contenders if _arm_family(e) == "surgery"]
-    _pre = [e for e in contenders if _arm_family(e) == "pretrain"]
-    _per = _family_verdict(metrics, encoders, frozen)[3]
-    _row = {e: i for i, e in enumerate(rows)}           # display-row index (frozen=0, arms 1..n)
-    spotlight = set()                                   # cells to blue-box: decisive→winner; TIE→BOTH champions
-    for j, (key, *_r) in enumerate(cat):
-        v = _per.get(key)
-        champs = ([_family_champion(metrics, key, frozen, _surg), _family_champion(metrics, key, frozen, _pre)]
-                  if v == "tie"
-                  else [_family_champion(metrics, key, frozen, _surg) if v == "surgery"
-                        else _family_champion(metrics, key, frozen, _pre) if v == "pretrain" else None])
-        for champ in champs:
-            if champ in _row:
-                spotlight.add((_row[champ], j))
-    # per-metric PAIRED surgery−pretrain Δ + CI (good-oriented: + = surgery ahead) — the DECIDER the
-    # WINNER row + boxed sub-lines now show, so a tie is self-explanatory (its paired CI overlaps 0).
-    _paired = {}                                       # j -> (surgery_row, pretrain_row, d, lo, hi)
-    for j, (key, *_r) in enumerate(cat):
-        _sc = _family_champion(metrics, key, frozen, _surg)
-        _pc = _family_champion(metrics, key, frozen, _pre)
-        if _sc not in _row or _pc not in _row:
+                       + [_display_label(e) for e in contenders]
+                       + [_WTICK.get(_WINNER_MODE, "WINNER")], fontsize=10)
+    # iter18 2026-06-08 (user order): the bottom row reports the 95%-CI CO-LEADER set per metric —
+    # EVERY arm statistically tied for #1 (its CI overlaps the point-best) — NOT a single point-best.
+    # At POC the CIs are wide enough that a SURGERY arm co-leads EVERY metric, so the old single-name
+    # row under-sold it. The blue SPOTLIGHT now boxes EVERY co-leader cell (surgery boxed on each
+    # metric it ties). Three honest render styles (env HERO_WINNER_MODE) — none invents significance.
+    tiesets = {}     # j -> {"sorted":[(e,v,ci) best-first], "tie":[e... CI-tied #1], "leader":e, "lead_is_surg":bool}
+    for j, (key, _fam, _on, direction, *_z) in enumerate(cat):
+        cands = [(e, metrics[key]["by_encoder"][e][0], metrics[key]["by_encoder"][e][1] or 0.0)
+                 for e in contenders
+                 if e in metrics[key]["by_encoder"]
+                 and metrics[key]["by_encoder"][e][0] is not None
+                 and np.isfinite(metrics[key]["by_encoder"][e][0])]
+        if not cands:
             continue
-        _dv = _delta_v_vs_frozen(metrics[key]["deltas"], _sc, _pc)
-        if _dv is None:
-            continue
-        _d, _lo, _hi = _good_orient(_dv[0], _dv[1], _dv[2], _direction_of(key))
-        _paired[j] = (_row[_sc], _row[_pc], _d, _lo, _hi)
+        cands.sort(key=lambda x: x[1], reverse=(direction != "lower"))   # best raw value first
+        le, lv, lci = cands[0]
+        tie = [e for (e, v, ci) in cands if abs(v - lv) <= (ci + lci)]    # 95% CI overlaps the point-leader
+        tiesets[j] = {"sorted": cands, "tie": tie, "leader": le,
+                      "lead_is_surg": _arm_family(le) == "surgery"}
+    _ri = {e: i for i, e in enumerate(rows)}             # display-row index (frozen=0, arms 1..n)
+    spotlight = {(_ri[e], j) for j, ts in tiesets.items() for e in ts["tie"] if e in _ri}
     for (i, j), (rlo, rhi) in cells.items():
         win = (i, j) in spotlight
-        # Each cell shows ONLY that arm's RAW metric value 95% CI [min, max] — no Δ, no sub-line.
+        # Each cell shows ONLY that arm's RAW metric value 95% CI [min, max].
         _ci = "nan" if (np.isnan(rlo) or np.isnan(rhi)) else f"[{_fmt_val(rlo)},\n{_fmt_val(rhi)}]"
         ax.text(j, i, _ci, ha="center", va="center",
                 fontsize=11 if win else 9, fontweight="bold", color="black")
         if win:
             ax.add_patch(Rectangle((j - 0.5, i - 0.5), 1, 1, fill=False,
                                    edgecolor="#1a3cff", linewidth=3.0, zorder=4))
-    # WINNER row (champion duel — best-surgery vs best-pretrain per metric), mirroring the grouped
-    # plot's [S/P/=] band. One extra row BELOW the contenders; signed metrics (order) aren't a
-    # win/loss → neutral "·". Verdict single-sourced via _family_verdict (same tally as scoreboard).
-    ny = len(rows)                                      # WINNER row sits below frozen + all arms
-    _verdict_per = _per                                 # reuse (computed above for the spotlight)
-    _VC = {"surgery": ((0.17, 0.63, 0.17, 0.6), "S"), "pretrain": ((0.84, 0.15, 0.16, 0.6), "V"),
-           "tie": ((0.6, 0.6, 0.6, 0.35), "=")}
-    for j, c in enumerate(cat):
-        vcol, vlab = _VC.get(_verdict_per.get(c[0]), ((0.85, 0.85, 0.85, 0.35), "·"))
-        ax.add_patch(Rectangle((j - 0.5, ny - 0.5), 1, 1, facecolor=vcol, edgecolor="white",
-                               lw=1.0, zorder=2))
-        ax.text(j, ny - 0.22, vlab, ha="center", va="center", fontsize=12, fontweight="bold",
-                color="black", zorder=3)
-        _pj = _paired.get(j)                           # the decider shown numerically: paired S−P Δ + 95% CI
-        if _pj:
-            _wci = "(≈ equal)" if (np.isnan(_pj[3]) or np.isnan(_pj[4])) else f"[{_fmt_fine(_pj[3])}, {_fmt_fine(_pj[4])}]"
-            ax.text(j, ny + 0.20, f"S−V = {_fmt_fine(_pj[2])}\n{_wci}",
-                    ha="center", va="center", fontsize=6.5, color="black", zorder=3)
-    ax.set_ylim(ny + 0.5, -0.5)                         # extend bottom to include the WINNER row
-    ax.axhline(0.5, color="#444444", lw=1.3, ls="--")  # separator BELOW the FROZEN baseline (row 0)
-    ax.axhline(ny - 0.5, color="black", lw=1.5)         # separator above the WINNER row
+    ny = len(rows)
+    row_h = _winner_row(ax, tiesets, ny, _WINNER_MODE)   # render the bottom row per mode → its height
+    ax.set_ylim(ny - 0.5 + row_h, -0.5)                  # extend bottom to include the WINNER row(s)
+    ax.axhline(0.5, color="#444444", lw=1.3, ls="--")    # separator BELOW the FROZEN baseline (row 0)
+    ax.axhline(ny - 0.5, color="black", lw=1.5)           # separator above the WINNER row
+    _TITLE_TAIL = {
+        "coleader_set": "BOTTOM = CO-LEADER SET: every arm whose 95% CI overlaps the point-best "
+                        "(statistically tied for #1), surgery in green · BLUE BOX = each co-leader cell",
+        "surgery_coleader": "BOTTOM = best SURGERY arm among the 95%-CI co-leaders (green; ~ = it's a "
+                            "statistical tie, not a significant win) · BLUE BOX = every co-leader cell",
+        "tie_badge": "BOTTOM = statistical status: '~ tie (n)' when the top arms' 95% CIs overlap, "
+                     "else 'WIN (sole)' · BLUE BOX = every co-leader cell (surgery boxed where it ties)"}
     ax.set_title("HERO — raw metric value  ·  per cell: that arm's value 95% BCa CI [min, max] · "
-                 "TOP ROW = FROZEN baseline (read each arm's growth over it)\ncolour: red = worst, green "
-                 "= best (per-metric min-max incl. frozen, good-oriented) · BLUE BOX = champion-duel "
-                 "winner · WINNER row = paired surgery − vanilla-cont-SSL Δ + 95% CI (S−V; tie = CI overlaps 0)",
+                 "TOP ROW = FROZEN baseline (read each arm's growth over it)\ncolour: red = worst, "
+                 "green = best (per-metric min-max incl. frozen, good-oriented) · "
+                 + _TITLE_TAIL.get(_WINNER_MODE, _TITLE_TAIL["coleader_set"]),
                  fontsize=11, fontweight="bold")
     fig.colorbar(im, ax=ax, shrink=0.7, label="red = worst   →   green = best (per-metric normalized value, good-oriented)")
     fig.tight_layout()
@@ -779,6 +895,12 @@ def _arm_family(enc: str) -> str:
         return "surgery"
     if "pretrain" in enc:
         return "pretrain"
+    # iter18 2026-06-08: FT-technique baselines (B1-B4: Full-FT / LP-FT / PEFT-LoRA-DoRA / CaSSLe /
+    # EWC) are the ABLATION COMPARISON SET — they must join the hero `core` (table + raw-value
+    # heatmap), not the external-baseline scorecard. Without this they classified as "other" and
+    # were silently dropped from m13_hero_raw_values / m13_hero_table.
+    if any(t in enc for t in ("full_ft", "lpft", "peft", "cassle", "ewc")):
+        return "ft"
     return "other"
 
 
@@ -792,7 +914,7 @@ def _pick_frozen_ref(encoders):
     frozens = sorted(e for e in encoders if "frozen" in e)
     if not frozens:
         return None
-    arms = sorted(e for e in encoders if _arm_family(e) in ("surgery", "pretrain"))
+    arms = sorted(e for e in encoders if _arm_family(e) in ("surgery", "pretrain", "ft"))
     if arms:
         lo, hi = arms[0], arms[-1]                          # common prefix of the arm names
         i = 0
@@ -819,7 +941,7 @@ def _backbone_of(enc):
 def _backbones_present(encoders) -> list:
     """Distinct trained backbones with ≥1 surgery/pretrain arm, in _BB_TAG display order
     (ViT-G → ViT-g → ViT-g·2.0). Drives the per-backbone hero breakouts."""
-    have = {_backbone_of(e) for e in encoders if _arm_family(e) in ("surgery", "pretrain")}
+    have = {_backbone_of(e) for e in encoders if _arm_family(e) in ("surgery", "pretrain", "ft")}
     return [pre.rstrip("_") for pre, _l, _s in _BB_TAG if pre.rstrip("_") in have]
 
 
@@ -907,7 +1029,7 @@ def plot_scoreboard(metrics, encoders, frozen, output_dir):
     order = sorted(arms, key=lambda a: arm_wins.get(a, 0))
     fig, ax = plt.subplots(figsize=(10, max(3.0, 0.55 * len(order) + 2)))
     y = np.arange(len(order))
-    colors = ["#2ca02c" if _arm_family(a) == "surgery" else "#1f77b4" for a in order]
+    colors = [_color_for(a, i) for i, a in enumerate(order)]   # per-encoder colours (OURS green)
     ax.barh(y, [arm_wins.get(a, 0) for a in order], color=colors, alpha=0.85)
     for i, a in enumerate(order):
         ax.text(arm_wins.get(a, 0), i, f" {arm_wins.get(a, 0)}", va="center", fontsize=10, fontweight="bold")
@@ -1253,6 +1375,28 @@ def _vstack_panels(output_dir, backbones, src_name, out_name):
 
 # ── CLI ──────────────────────────────────────────────────────────────
 
+def _skip_encoders_from_env(encoders):
+    """Encoder names to HIDE from the m13 plots — honors ITER18_SKIP_ARMS (the run's --skip-arms),
+    matching by arm-suffix with the surgery↔surgical rename so 'surgery_noDI_head' hides the encoder
+    'vjepa_2_1[_vitg]_surgical_noDI_head'. Empty when the env isn't set (plot everything). The §3
+    finale already passes a skip-filtered --encoders list; this is the belt-and-suspenders for the
+    live preview + direct m13 runs."""
+    raw = os.environ.get("ITER18_SKIP_ARMS", "").strip()
+    if not raw:
+        return set()
+    _norm = lambda s: s.replace("surgical", "surgery")           # noqa: E731 (one-liner rename)
+    # .strip("\"'") per token: a direct-prompt paste of the runbook's ITER18_SKIP_ARMS=\"$SKIP\" watch
+    # form bakes LITERAL quotes into the value → '"cassle_encoder' / 'surgery_noDI_head"' won't match.
+    skip = {_norm(a.strip().strip("\"'")) for a in raw.split() if a.strip().strip("\"'")}
+    _pres = ("vjepa_2_1_vitG_", "vjepa_2_1_vitg_", "vjepa_2_0_vitg_", "vjepa_2_1_vitL_", "vjepa_2_1_")
+    out = set()
+    for e in encoders:
+        suf = next((e[len(p):] for p in _pres if e.startswith(p)), e)
+        if _norm(suf) in skip:
+            out.add(e)
+    return out
+
+
 def main():
     p = argparse.ArgumentParser(
         description="m13 — 14-metric bar-with-CI viz for the probe eval suite (hero: §3.3c).")
@@ -1319,6 +1463,13 @@ def main():
         )
         if not encoders:
             sys.exit("FATAL: no encoders found in the action/motion/future JSONs")
+        _hide = _skip_encoders_from_env(encoders)   # honor ITER18_SKIP_ARMS in the PLOTS
+        if _hide:
+            print(f"  [--skip-arms] hiding {len(_hide)} arm(s) from the plots: "
+                  f"{sorted(_short_label(e) for e in _hide)}")
+            encoders = [e for e in encoders if e not in _hide]
+            if not encoders:
+                sys.exit("FATAL: all encoders skipped via ITER18_SKIP_ARMS — nothing to plot")
 
         metrics = _load_all_metrics(srcs, encoders)
         pbar = make_pbar(total=len(_CATALOG), desc="m13_eval_plot", unit="panel")
@@ -1336,7 +1487,7 @@ def main():
         # Split: the trained arms + their same-backbone frozen reference = the 'core' hero views.
         # The external image/video baselines (frozen/other) would clutter those views with mostly-N/A
         # predictor cells, so they get a SEPARATE absolute-value scorecard (no Δ) instead.
-        core = [e for e in encoders if _arm_family(e) in ("surgery", "pretrain") or e == frozen]
+        core = [e for e in encoders if _arm_family(e) in ("surgery", "pretrain", "ft") or e == frozen]
         frozen_only = [e for e in encoders if _arm_family(e) in ("frozen", "other")]
         # Reference heroes: BACKBONE=PNG to paste verbatim (a prior-iter champion not evaluated here).
         ref_heroes = {}
@@ -1354,7 +1505,7 @@ def main():
             for bb in _backbones_present(encoders):
                 bb_enc = [e for e in encoders if _backbone_of(e) == bb]
                 bb_frozen = _pick_frozen_ref(bb_enc)
-                bb_core = [e for e in bb_enc if _arm_family(e) in ("surgery", "pretrain") or e == bb_frozen]
+                bb_core = [e for e in bb_enc if _arm_family(e) in ("surgery", "pretrain", "ft") or e == bb_frozen]
                 if bb_frozen and len(bb_core) >= _MIN_COMPARABLE:
                     print(f"  [per-backbone] {bb} → {args.output_dir.name}/{bb}/  "
                           f"({len(bb_core)} arms vs {_short_label(bb_frozen)})")
