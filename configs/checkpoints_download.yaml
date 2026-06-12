@@ -28,7 +28,7 @@ groups:
   # also appears under eval_baselines (no URL duplication — the catalog above is the single filename→url source).
   trainable:
     - vjepa2_1_vitG_384.pt
-    - vjepa2_1_vitg_384.pt
+    # - vjepa2_1_vitg_384.pt
 
   # iter16 champion (2.1 ViT-G 2B) + image/version frozen baselines (~59 GB). NOT needed to train on the
   # iter17 node (§G carries their metrics via outputs/poc); fetch on demand to (re)eval the frozen row.

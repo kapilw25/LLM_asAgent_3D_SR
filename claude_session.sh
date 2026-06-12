@@ -15,7 +15,7 @@ Required SSH alias (Mac ~/.ssh/config):
         IdentityFile ~/.ssh/id_ed25519
 
 Usage:
-    bash claude_session.sh --upload
+    bash claude_session.sh --upload --host vast_RTXpro4000_24GB     # push .env + git_push.sh + sessions
         # Mac -> GPU. Run on a fresh GPU instance.
         # Pushes:
         #   .env         -> /workspace/factorjepa/.env
@@ -23,11 +23,15 @@ Usage:
         #   sessions     -> ~/.claude/projects/-workspace-factorjepa/
         # On GPU after this, run: claude --resume
 
-    bash claude_session.sh --download
+    bash claude_session.sh --download --host vast_RTXpro4000_24GB   # back up sessions before destroy
         # GPU -> Mac. Run BEFORE destroying the GPU instance.
         # Pulls:
         #   GPU ~/.claude/projects/-workspace-factorjepa/
         #     -> Mac $MAC_BASE/.claude_sessions/projects/-workspace-factorjepa/
+
+    --host <ssh_alias>   (optional) SSH alias from ~/.ssh/config to target.
+        # Default: vast_RTXpro6000_96GB
+        # e.g.  bash claude_session.sh --upload --host vast_RTXpro4000_24GB
 
 Notes:
     - Sessions are keyed by absolute path. GPU project MUST live at
@@ -41,16 +45,34 @@ Notes:
 
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-    echo "Error: exactly one arg required"
-    echo "Usage: ./claude_session.sh --upload | --download"
+# === Configurable ===
+SSH_HOST="vast_RTXpro6000_96GB"   # default — override per-run with --host <ssh_alias>
+
+usage() {
+    echo "Usage: ./claude_session.sh --upload|--download [--host <ssh_alias>]"
+    echo "  e.g. ./claude_session.sh --upload --host vast_RTXpro4000_24GB"
+}
+
+MODE=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --upload|--download)
+            MODE="$1" ;;
+        --host)
+            shift
+            [ $# -gt 0 ] || { echo "Error: --host requires an SSH alias (from ~/.ssh/config)"; usage; exit 1; }
+            SSH_HOST="$1" ;;
+        *)
+            echo "Unknown arg: $1"; usage; exit 1 ;;
+    esac
+    shift
+done
+
+if [ -z "$MODE" ]; then
+    echo "Error: --upload or --download required"
+    usage
     exit 1
 fi
-
-MODE="$1"
-
-# === Configurable ===
-SSH_HOST="vast_RTXpro6000_96GB"
 MAC_BASE="/Users/kapilwanaskar/Downloads/research_projects/factorjepa"
 GPU_REPO="/workspace/factorjepa"
 PROJECT_SLUG="-workspace-factorjepa"
@@ -62,7 +84,7 @@ MAC_SESSIONS_DIR="$MAC_BASE/.claude_sessions/projects"
 MAC_SESSIONS="$MAC_SESSIONS_DIR/$PROJECT_SLUG"
 
 # Light guard — most macs aren't named "Linux"; this protects against accidental
-# runs on the GPU where outbound SSH to vast_RTXpro6000_96GB will not work.
+# runs on the GPU where outbound SSH to $SSH_HOST will not work.
 if [ "$(uname)" != "Darwin" ]; then
     echo "Warning: this script is meant to run on the Mac, not on $(uname). Continuing anyway."
 fi

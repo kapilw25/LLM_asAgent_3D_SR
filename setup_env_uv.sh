@@ -45,18 +45,32 @@ export UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-600}"
 # ============================================================================
 # Pinned versions (Blackwell sm_120 + CUDA 13.0 + Python 3.12)
 # ============================================================================
-TORCH_VERSION="2.12.0.dev20260407"  # PyTorch nightly cu128 — pinned for FA2 wheel compat.
+TORCH_VERSION="2.12.0.dev20260408"  # PyTorch nightly cu128 — pinned for FA2 wheel compat.
                                     # 2026-04-30 bump #1: dev20260228 was rotated off the nightly CDN
                                     # (logs/setup_env_gpu_v1.log:277-279).
                                     # 2026-04-30 bump #2: dev20260408 has no paired torchvision build
                                     # — latest torchvision (0.27.0.dev20260407) only declares compat
                                     # with torch 20260406/20260407, so we drop one day to dev20260407
                                     # which DOES have a paired torchvision (logs/setup_env_gpu_v2.log:414).
+                                    # 2026-06-12 bump #3: dev20260407 rotated off the CDN too
+                                    # (logs/setup_env_gpu_20260612_061338.log:650 "no version of
+                                    # torch==2.12.0.dev20260407"). dev20260408 is now the ONLY 2.12
+                                    # nightly left on whl/nightly/cu128, and the only surviving
+                                    # torchvision (0.27.0.dev20260407) hard-pins the ROTATED torch
+                                    # (its wheel METADATA: "Requires-Dist: torch (==2.12.0.dev20260407)",
+                                    # verified 2026-06-12) → NO resolver-clean pair exists. Fix:
+                                    # install torch==dev20260408, then torchvision --no-deps (below).
+                                    # ABI-safe: same 2.12 branch, one day apart. If dev20260408 also
+                                    # rotates, re-derive: curl the torch/ + torchvision/ index pages,
+                                    # pick the newest surviving pair, update BOTH pins here.
                                     # NOTE: the prebuilt FA2 wheel in wheels/ was built against the
                                     # 20260228 ABI. With this pin the auto-detect at line ~343 will
                                     # take the source-rebuild path (~30-90 min) unless a fresh
-                                    # FA2 wheel matching dev20260407 is uploaded to GitHub release
+                                    # FA2 wheel matching dev20260408 is uploaded to GitHub release
                                     # `sm120-cu128-py312` first. Same applies to FAISS-GPU.
+TORCHVISION_VERSION="0.27.0.dev20260407"  # last torchvision on nightly/cu128 (2026-06-12); its
+                                    # metadata pins the rotated torch dev20260407 → installed with
+                                    # --no-deps against torch dev20260408 (same-branch ABI).
 RELEASE_TAG="sm120-cu128-py312"     # GitHub release tag for prebuilt FA2 + FAISS wheels
 
 # ============================================================================
@@ -320,7 +334,12 @@ PYEOF
     echo "Detected GPU: ${GPU_NAME:-unknown}"
     if echo "$GPU_NAME" | grep -qiE "blackwell|rtx.*pro.*(4000|6000)|rtx.*5090|rtx.*5080|rtx.*5070"; then
         echo "[1/10] Installing PyTorch ${TORCH_VERSION}+cu128 (Blackwell — pinned)..."
-        uv pip install "torch==${TORCH_VERSION}" torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
+        # Two-step install (bump #3, 2026-06-12): torchvision dev20260407's metadata pins the
+        # CDN-rotated torch dev20260407, so a combined resolve is UNSATISFIABLE. Install torch
+        # alone, then torchvision --no-deps (same 2.12 branch, 1 day apart → ABI-compatible;
+        # the [2/10] verify imports torchvision so an ABI break still FAILS LOUD right here).
+        uv pip install "torch==${TORCH_VERSION}" --index-url https://download.pytorch.org/whl/nightly/cu128
+        uv pip install --no-deps "torchvision==${TORCHVISION_VERSION}" --index-url https://download.pytorch.org/whl/nightly/cu128
     else
         echo "[1/10] Installing PyTorch 2.5.1+cu124..."
         uv pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
@@ -334,7 +353,11 @@ import torch
 if not torch.cuda.is_available():
     print('ERROR: CUDA not available. Nvidia GPU required.')
     exit(1)
+# torchvision is installed --no-deps (bump #3) — importing its compiled ops here
+# FAILS LOUD on a torch ABI mismatch instead of mid-pipeline.
+import torchvision
 print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cuda.get_device_name(0)}')
+print(f'torchvision: {torchvision.__version__} (installed --no-deps, ABI import OK)')
 "
 
     # 3. Install GPU requirements (hf-xet ships with huggingface_hub >=1.x for fast HF transfers)
