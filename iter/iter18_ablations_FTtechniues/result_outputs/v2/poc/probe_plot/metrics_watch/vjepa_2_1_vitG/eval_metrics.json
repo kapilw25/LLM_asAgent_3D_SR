@@ -41,6 +41,26 @@
   "teacher_free": {
    "mean": 0.045634,
    "ci_half": 0.000475
+  },
+  "aot": {
+   "mean": 0.96274,
+   "ci_half": 0.006301
+  },
+  "tov": {
+   "mean": 0.950274,
+   "ci_half": 0.005411
+  },
+  "pace": {
+   "mean": 0.740822,
+   "ci_half": 0.012603
+  },
+  "tcc_cycle": {
+   "mean": 2.11027,
+   "ci_half": 0.008577
+  },
+  "tcc_tau": {
+   "mean": 0.293355,
+   "ci_half": 0.005463
   }
  },
  {
@@ -85,6 +105,26 @@
   "teacher_free": {
    "mean": 0.037695,
    "ci_half": 0.000552
+  },
+  "aot": {
+   "mean": 0.946301,
+   "ci_half": 0.007534
+  },
+  "tov": {
+   "mean": 0.927534,
+   "ci_half": 0.006507
+  },
+  "pace": {
+   "mean": 0.731142,
+   "ci_half": 0.012603
+  },
+  "tcc_cycle": {
+   "mean": 2.273349,
+   "ci_half": 0.009483
+  },
+  "tcc_tau": {
+   "mean": 0.291725,
+   "ci_half": 0.005662
   }
  },
  {
@@ -129,6 +169,26 @@
   "teacher_free": {
    "mean": 0.045383,
    "ci_half": 0.000729
+  },
+  "aot": {
+   "mean": 0.931507,
+   "ci_half": 0.008904
+  },
+  "tov": {
+   "mean": 0.943014,
+   "ci_half": 0.005959
+  },
+  "pace": {
+   "mean": 0.730594,
+   "ci_half": 0.012511
+  },
+  "tcc_cycle": {
+   "mean": 2.259295,
+   "ci_half": 0.009548
+  },
+  "tcc_tau": {
+   "mean": 0.268736,
+   "ci_half": 0.005526
   }
  },
  {
@@ -173,6 +233,26 @@
   "teacher_free": {
    "mean": 0.051982,
    "ci_half": 0.000799
+  },
+  "aot": {
+   "mean": 0.940274,
+   "ci_half": 0.008493
+  },
+  "tov": {
+   "mean": 0.942466,
+   "ci_half": 0.005959
+  },
+  "pace": {
+   "mean": 0.711781,
+   "ci_half": 0.012329
+  },
+  "tcc_cycle": {
+   "mean": 2.281098,
+   "ci_half": 0.008919
+  },
+  "tcc_tau": {
+   "mean": 0.262319,
+   "ci_half": 0.005386
   }
  },
  {
@@ -217,6 +297,26 @@
   "teacher_free": {
    "mean": 0.037695,
    "ci_half": 0.000548
+  },
+  "aot": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tov": {
+   "mean": null,
+   "ci_half": null
+  },
+  "pace": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_cycle": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_tau": {
+   "mean": null,
+   "ci_half": null
   }
  },
  {
@@ -261,17 +361,37 @@
   "teacher_free": {
    "mean": 0.037695,
    "ci_half": 0.000546
+  },
+  "aot": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tov": {
+   "mean": null,
+   "ci_half": null
+  },
+  "pace": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_cycle": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_tau": {
+   "mean": null,
+   "ci_half": null
   }
  },
  {
   "encoder": "vjepa_2_1_surgical_autorgn_encoder",
   "n_test": "1825",
   "act": {
-   "mean": null,
-   "ci_half": null
+   "mean": 0.5227397260273973,
+   "ci_half": 0.023014
   },
   "tax": {
-   "mean": null,
+   "mean": 0.7791201333333333,
    "ci_half": null
   },
   "mcos": {
@@ -305,6 +425,26 @@
   "teacher_free": {
    "mean": 0.04744,
    "ci_half": 0.000746
+  },
+  "aot": {
+   "mean": 0.941096,
+   "ci_half": 0.008219
+  },
+  "tov": {
+   "mean": 0.943014,
+   "ci_half": 0.005753
+  },
+  "pace": {
+   "mean": 0.722009,
+   "ci_half": 0.012603
+  },
+  "tcc_cycle": {
+   "mean": 2.352028,
+   "ci_half": 0.009388
+  },
+  "tcc_tau": {
+   "mean": 0.268841,
+   "ci_half": 0.005453
   }
  },
  {
@@ -349,6 +489,26 @@
   "teacher_free": {
    "mean": 0.044581,
    "ci_half": 0.000763
+  },
+  "aot": {
+   "mean": 0.934795,
+   "ci_half": 0.00863
+  },
+  "tov": {
+   "mean": 0.936712,
+   "ci_half": 0.005959
+  },
+  "pace": {
+   "mean": 0.730228,
+   "ci_half": 0.012694
+  },
+  "tcc_cycle": {
+   "mean": 2.295316,
+   "ci_half": 0.008939
+  },
+  "tcc_tau": {
+   "mean": 0.251913,
+   "ci_half": 0.005372
   }
  },
  {
@@ -393,6 +553,26 @@
   "teacher_free": {
    "mean": 0.049308,
    "ci_half": 0.000681
+  },
+  "aot": {
+   "mean": 0.935068,
+   "ci_half": 0.008904
+  },
+  "tov": {
+   "mean": 0.931507,
+   "ci_half": 0.006301
+  },
+  "pace": {
+   "mean": 0.717078,
+   "ci_half": 0.011507
+  },
+  "tcc_cycle": {
+   "mean": 2.424975,
+   "ci_half": 0.010531
+  },
+  "tcc_tau": {
+   "mean": 0.283649,
+   "ci_half": 0.00511
   }
  },
  {
@@ -437,6 +617,26 @@
   "teacher_free": {
    "mean": 0.047739,
    "ci_half": 0.00071
+  },
+  "aot": {
+   "mean": 0.945753,
+   "ci_half": 0.008082
+  },
+  "tov": {
+   "mean": 0.941918,
+   "ci_half": 0.005753
+  },
+  "pace": {
+   "mean": 0.70758,
+   "ci_half": 0.011781
+  },
+  "tcc_cycle": {
+   "mean": 2.280033,
+   "ci_half": 0.008767
+  },
+  "tcc_tau": {
+   "mean": 0.260318,
+   "ci_half": 0.005215
   }
  },
  {
@@ -481,6 +681,26 @@
   "teacher_free": {
    "mean": 0.045195,
    "ci_half": 0.00072
+  },
+  "aot": {
+   "mean": 0.937808,
+   "ci_half": 0.008493
+  },
+  "tov": {
+   "mean": 0.92589,
+   "ci_half": 0.006414
+  },
+  "pace": {
+   "mean": 0.724018,
+   "ci_half": 0.012785
+  },
+  "tcc_cycle": {
+   "mean": 2.326768,
+   "ci_half": 0.009222
+  },
+  "tcc_tau": {
+   "mean": 0.269943,
+   "ci_half": 0.005478
   }
  },
  {
@@ -525,6 +745,26 @@
   "teacher_free": {
    "mean": 0.051386,
    "ci_half": 0.000827
+  },
+  "aot": {
+   "mean": 0.94137,
+   "ci_half": 0.008082
+  },
+  "tov": {
+   "mean": 0.936575,
+   "ci_half": 0.006027
+  },
+  "pace": {
+   "mean": 0.71726,
+   "ci_half": 0.012694
+  },
+  "tcc_cycle": {
+   "mean": 2.330617,
+   "ci_half": 0.009215
+  },
+  "tcc_tau": {
+   "mean": 0.26906,
+   "ci_half": 0.005475
   }
  },
  {
@@ -569,6 +809,26 @@
   "teacher_free": {
    "mean": null,
    "ci_half": null
+  },
+  "aot": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tov": {
+   "mean": null,
+   "ci_half": null
+  },
+  "pace": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_cycle": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_tau": {
+   "mean": null,
+   "ci_half": null
   }
  },
  {
@@ -611,6 +871,26 @@
    "ci_half": null
   },
   "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  },
+  "aot": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tov": {
+   "mean": null,
+   "ci_half": null
+  },
+  "pace": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_cycle": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tcc_tau": {
    "mean": null,
    "ci_half": null
   }

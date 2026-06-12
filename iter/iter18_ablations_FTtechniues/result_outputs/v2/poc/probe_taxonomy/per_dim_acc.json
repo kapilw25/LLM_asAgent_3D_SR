@@ -95,6 +95,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.808767,
+          "test_ci": {
+            "mean": 0.808767,
+            "ci_lo": 0.790137,
+            "ci_hi": 0.826301,
+            "ci_half": 0.018082
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.812603,
           "test_ci": {
@@ -199,6 +209,15 @@
           "p_value": 0.8832,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.021918,
+          "ci_lo": 0.003836,
+          "ci_hi": 0.039452,
+          "ci_half": 0.017808,
+          "p_value": 0.0162,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.018082,
@@ -289,6 +308,15 @@
           "p_value": 0.015,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.003288,
+          "ci_lo": -0.012603,
+          "ci_hi": 0.019178,
+          "ci_half": 0.01589,
+          "p_value": 0.7102,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.000548,
@@ -370,6 +398,15 @@
           "p_value": 0.0142,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.003836,
+          "ci_lo": -0.009863,
+          "ci_hi": 0.018082,
+          "ci_half": 0.013973,
+          "p_value": 0.622,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.0,
@@ -442,6 +479,15 @@
           "p_value": 0.2768,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.014795,
+          "ci_lo": -0.001096,
+          "ci_hi": 0.031781,
+          "ci_half": 0.016438,
+          "p_value": 0.0758,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.010959,
@@ -505,6 +551,15 @@
           "p_value": 0.2036,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.013699,
+          "ci_lo": -0.00274,
+          "ci_hi": 0.030137,
+          "ci_half": 0.016438,
+          "p_value": 0.0996,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.009863,
@@ -559,6 +614,15 @@
           "p_value": 0.4338,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.017534,
+          "ci_lo": 0.001644,
+          "ci_hi": 0.033973,
+          "ci_half": 0.016164,
+          "p_value": 0.0356,
+          "gate_pass": true
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.013699,
@@ -604,6 +668,15 @@
           "p_value": 0.9216,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.022466,
+          "ci_lo": 0.006575,
+          "ci_hi": 0.038356,
+          "ci_half": 0.01589,
+          "p_value": 0.0058,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.01863,
@@ -640,6 +713,15 @@
           "p_value": 0.5244,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.01863,
+          "ci_lo": 0.002192,
+          "ci_hi": 0.034521,
+          "ci_half": 0.016164,
+          "p_value": 0.0292,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.014795,
@@ -667,6 +749,15 @@
           "p_value": 0.4656,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.023562,
+          "ci_lo": 0.008219,
+          "ci_hi": 0.04,
+          "ci_half": 0.01589,
+          "p_value": 0.0032,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.019726,
@@ -692,6 +783,33 @@
           "ci_hi": 0.028493,
           "ci_half": 0.01726,
           "p_value": 0.2072,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.003836,
+          "ci_lo": -0.01863,
+          "ci_hi": 0.011507,
+          "ci_half": 0.015068,
+          "p_value": 0.6418,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.008767,
+          "ci_lo": -0.02411,
+          "ci_hi": 0.006575,
+          "ci_half": 0.015342,
+          "p_value": 0.2672,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.012055,
+          "ci_lo": -0.028493,
+          "ci_hi": 0.004932,
+          "ci_half": 0.016712,
+          "p_value": 0.1616,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -818,6 +936,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.825753,
+          "test_ci": {
+            "mean": 0.825753,
+            "ci_lo": 0.807671,
+            "ci_hi": 0.842192,
+            "ci_half": 0.01726
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.830685,
           "test_ci": {
@@ -922,6 +1050,15 @@
           "p_value": 0.8374,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.02411,
+          "ci_lo": 0.007123,
+          "ci_hi": 0.041096,
+          "ci_half": 0.016986,
+          "p_value": 0.008,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.019178,
@@ -1012,6 +1149,15 @@
           "p_value": 0.2184,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.012055,
+          "ci_lo": -0.005479,
+          "ci_hi": 0.029041,
+          "ci_half": 0.01726,
+          "p_value": 0.1818,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.007123,
@@ -1093,6 +1239,15 @@
           "p_value": 0.2994,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.013699,
+          "ci_lo": -0.002192,
+          "ci_hi": 0.029041,
+          "ci_half": 0.015616,
+          "p_value": 0.0908,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.008767,
@@ -1165,6 +1320,15 @@
           "p_value": 0.059,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007671,
+          "ci_lo": -0.008767,
+          "ci_hi": 0.02411,
+          "ci_half": 0.016438,
+          "p_value": 0.3764,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.00274,
@@ -1228,6 +1392,15 @@
           "p_value": 0.0162,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.003836,
+          "ci_lo": -0.012603,
+          "ci_hi": 0.019726,
+          "ci_half": 0.016164,
+          "p_value": 0.651,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.001096,
@@ -1282,6 +1455,15 @@
           "p_value": 0.0082,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.0,
+          "ci_lo": -0.018082,
+          "ci_hi": 0.017534,
+          "ci_half": 0.017808,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.004932,
@@ -1327,6 +1509,15 @@
           "p_value": 0.1574,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.011507,
+          "ci_lo": -0.005479,
+          "ci_hi": 0.027945,
+          "ci_half": 0.016712,
+          "p_value": 0.1914,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.006575,
@@ -1363,6 +1554,15 @@
           "p_value": 0.0732,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.009315,
+          "ci_lo": -0.007671,
+          "ci_hi": 0.025205,
+          "ci_half": 0.016438,
+          "p_value": 0.2716,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.004384,
@@ -1390,6 +1590,15 @@
           "p_value": 0.8756,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.021918,
+          "ci_lo": 0.006027,
+          "ci_hi": 0.037808,
+          "ci_half": 0.01589,
+          "p_value": 0.0076,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.016986,
@@ -1415,6 +1624,33 @@
           "ci_hi": 0.030685,
           "ci_half": 0.016986,
           "p_value": 0.1104,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.004932,
+          "ci_lo": -0.021918,
+          "ci_hi": 0.012603,
+          "ci_half": 0.01726,
+          "p_value": 0.5976,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.020274,
+          "ci_lo": -0.036164,
+          "ci_hi": -0.003836,
+          "ci_half": 0.016164,
+          "p_value": 0.016,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.007671,
+          "ci_lo": -0.025205,
+          "ci_hi": 0.009863,
+          "ci_half": 0.017534,
+          "p_value": 0.4096,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -1541,6 +1777,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.957808,
+          "test_ci": {
+            "mean": 0.957808,
+            "ci_lo": 0.947945,
+            "ci_hi": 0.966027,
+            "ci_half": 0.009041
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.958356,
           "test_ci": {
@@ -1645,6 +1891,15 @@
           "p_value": 0.0002,
           "gate_pass": true
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.011507,
+          "ci_lo": 0.003836,
+          "ci_hi": 0.019178,
+          "ci_half": 0.007671,
+          "p_value": 0.0044,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.010959,
@@ -1735,6 +1990,15 @@
           "p_value": 0.6034,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.00274,
+          "ci_lo": -0.010411,
+          "ci_hi": 0.004384,
+          "ci_half": 0.007397,
+          "p_value": 0.516,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.003288,
@@ -1816,6 +2080,15 @@
           "p_value": 0.139,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.006027,
+          "ci_lo": -0.001644,
+          "ci_hi": 0.014247,
+          "ci_half": 0.007945,
+          "p_value": 0.144,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.005479,
@@ -1888,6 +2161,15 @@
           "p_value": 0.669,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.00274,
+          "ci_lo": -0.010411,
+          "ci_hi": 0.004384,
+          "ci_half": 0.007397,
+          "p_value": 0.5254,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.003288,
@@ -1951,6 +2233,15 @@
           "p_value": 0.711,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001096,
+          "ci_lo": -0.006027,
+          "ci_hi": 0.008219,
+          "ci_half": 0.007123,
+          "p_value": 0.8068,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.000548,
@@ -2005,6 +2296,15 @@
           "p_value": 0.364,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.002192,
+          "ci_lo": -0.004932,
+          "ci_hi": 0.009315,
+          "ci_half": 0.007123,
+          "p_value": 0.6002,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001644,
@@ -2050,6 +2350,15 @@
           "p_value": 0.0038,
           "gate_pass": true
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007671,
+          "ci_lo": 0.000548,
+          "ci_hi": 0.014795,
+          "ci_half": 0.007123,
+          "p_value": 0.0468,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.007123,
@@ -2086,6 +2395,15 @@
           "p_value": 0.6734,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.002192,
+          "ci_lo": -0.010959,
+          "ci_hi": 0.006027,
+          "ci_half": 0.008493,
+          "p_value": 0.6436,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.00274,
@@ -2113,6 +2431,15 @@
           "p_value": 0.0,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.000548,
+          "ci_lo": -0.008767,
+          "ci_hi": 0.007123,
+          "ci_half": 0.007945,
+          "p_value": 0.948,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.001096,
@@ -2138,6 +2465,33 @@
           "ci_hi": -0.006027,
           "ci_half": 0.006027,
           "p_value": 0.0002,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.000548,
+          "ci_lo": -0.008767,
+          "ci_hi": 0.007671,
+          "ci_half": 0.008219,
+          "p_value": 0.9536,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": 0.010959,
+          "ci_lo": 0.001644,
+          "ci_hi": 0.020822,
+          "ci_half": 0.009589,
+          "p_value": 0.032,
+          "gate_pass": true
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.010959,
+          "ci_lo": -0.01863,
+          "ci_hi": -0.003836,
+          "ci_half": 0.007397,
+          "p_value": 0.0042,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -2264,6 +2618,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.641054,
+          "test_ci": {
+            "mean": 0.641054,
+            "ci_lo": 0.626703,
+            "ci_hi": 0.654747,
+            "ci_half": 0.014022
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.648751,
           "test_ci": {
@@ -2368,6 +2732,15 @@
           "p_value": 0.14,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.02088,
+          "ci_lo": 0.010932,
+          "ci_hi": 0.030528,
+          "ci_half": 0.009798,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.013183,
@@ -2458,6 +2831,15 @@
           "p_value": 0.592,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016462,
+          "ci_lo": 0.007731,
+          "ci_hi": 0.025395,
+          "ci_half": 0.008832,
+          "p_value": 0.0006,
+          "gate_pass": true
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.008765,
@@ -2539,6 +2921,15 @@
           "p_value": 0.1446,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.020201,
+          "ci_lo": 0.011472,
+          "ci_hi": 0.028941,
+          "ci_half": 0.008734,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.012504,
@@ -2611,6 +3002,15 @@
           "p_value": 0.0026,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.00028,
+          "ci_lo": -0.008337,
+          "ci_hi": 0.008973,
+          "ci_half": 0.008655,
+          "p_value": 0.943,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.007417,
@@ -2674,6 +3074,15 @@
           "p_value": 0.0038,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.000963,
+          "ci_lo": -0.007738,
+          "ci_hi": 0.009543,
+          "ci_half": 0.00864,
+          "p_value": 0.82,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.006734,
@@ -2728,6 +3137,15 @@
           "p_value": 0.4984,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016887,
+          "ci_lo": 0.008334,
+          "ci_hi": 0.025534,
+          "ci_half": 0.0086,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.00919,
@@ -2773,6 +3191,15 @@
           "p_value": 0.3816,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.010386,
+          "ci_lo": 0.00222,
+          "ci_hi": 0.018395,
+          "ci_half": 0.008087,
+          "p_value": 0.0128,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.002689,
@@ -2809,6 +3236,15 @@
           "p_value": 0.467,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.010906,
+          "ci_lo": 0.002597,
+          "ci_hi": 0.019269,
+          "ci_half": 0.008336,
+          "p_value": 0.0102,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.00321,
@@ -2836,6 +3272,15 @@
           "p_value": 0.0,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.013948,
+          "ci_lo": 0.005247,
+          "ci_hi": 0.022248,
+          "ci_half": 0.008501,
+          "p_value": 0.001,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.006251,
@@ -2861,6 +3306,33 @@
           "ci_hi": -0.006698,
           "ci_half": 0.009118,
           "p_value": 0.001,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.007697,
+          "ci_lo": -0.01618,
+          "ci_hi": 0.000941,
+          "ci_half": 0.008561,
+          "p_value": 0.0732,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.014849,
+          "ci_lo": -0.023145,
+          "ci_hi": -0.006399,
+          "ci_half": 0.008373,
+          "p_value": 0.0002,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.029711,
+          "ci_lo": -0.039439,
+          "ci_hi": -0.019951,
+          "ci_half": 0.009744,
+          "p_value": 0.0,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -2987,6 +3459,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.836712,
+          "test_ci": {
+            "mean": 0.836712,
+            "ci_lo": 0.819178,
+            "ci_hi": 0.853699,
+            "ci_half": 0.01726
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.835068,
           "test_ci": {
@@ -3091,6 +3573,15 @@
           "p_value": 0.0324,
           "gate_pass": true
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.0,
+          "ci_lo": -0.01589,
+          "ci_hi": 0.01589,
+          "ci_half": 0.01589,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001644,
@@ -3181,6 +3672,15 @@
           "p_value": 0.0168,
           "gate_pass": true
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001644,
+          "ci_lo": -0.010959,
+          "ci_hi": 0.014247,
+          "ci_half": 0.012603,
+          "p_value": 0.8322,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.003288,
@@ -3262,6 +3762,15 @@
           "p_value": 0.0082,
           "gate_pass": true
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.00274,
+          "ci_lo": -0.011507,
+          "ci_hi": 0.017534,
+          "ci_half": 0.014521,
+          "p_value": 0.7362,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.004384,
@@ -3334,6 +3843,15 @@
           "p_value": 0.4826,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.011507,
+          "ci_lo": -0.025205,
+          "ci_hi": 0.002192,
+          "ci_half": 0.013699,
+          "p_value": 0.1044,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.009863,
@@ -3397,6 +3915,15 @@
           "p_value": 0.0322,
           "gate_pass": true
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001096,
+          "ci_lo": -0.011507,
+          "ci_hi": 0.013699,
+          "ci_half": 0.012603,
+          "p_value": 0.9116,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.00274,
@@ -3451,6 +3978,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.010411,
+          "ci_lo": -0.00274,
+          "ci_hi": 0.02411,
+          "ci_half": 0.013425,
+          "p_value": 0.1366,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.012055,
@@ -3496,6 +4032,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.012603,
+          "ci_lo": -0.000548,
+          "ci_hi": 0.025753,
+          "ci_half": 0.013151,
+          "p_value": 0.0668,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.014247,
@@ -3532,6 +4077,15 @@
           "p_value": 0.0002,
           "gate_pass": true
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.008767,
+          "ci_lo": -0.004932,
+          "ci_hi": 0.023014,
+          "ci_half": 0.013973,
+          "p_value": 0.2286,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.010411,
@@ -3559,6 +4113,15 @@
           "p_value": 0.2774,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.016986,
+          "ci_lo": -0.032329,
+          "ci_hi": -0.001096,
+          "ci_half": 0.015616,
+          "p_value": 0.039,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.015342,
@@ -3584,6 +4147,33 @@
           "ci_hi": -0.018082,
           "ci_half": 0.016438,
           "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001644,
+          "ci_lo": -0.012055,
+          "ci_hi": 0.015342,
+          "ci_half": 0.013699,
+          "p_value": 0.8386,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": 0.015342,
+          "ci_lo": 0.001096,
+          "ci_hi": 0.029589,
+          "ci_half": 0.014247,
+          "p_value": 0.0392,
+          "gate_pass": true
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.017534,
+          "ci_lo": -0.033973,
+          "ci_hi": -0.001644,
+          "ci_half": 0.016164,
+          "p_value": 0.0346,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -3710,6 +4300,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.840548,
+          "test_ci": {
+            "mean": 0.840548,
+            "ci_lo": 0.823562,
+            "ci_hi": 0.856986,
+            "ci_half": 0.016712
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.845479,
           "test_ci": {
@@ -3814,6 +4414,15 @@
           "p_value": 0.2386,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.00274,
+          "ci_lo": -0.013699,
+          "ci_hi": 0.019726,
+          "ci_half": 0.016712,
+          "p_value": 0.7902,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.002192,
@@ -3904,6 +4513,15 @@
           "p_value": 0.763,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.004384,
+          "ci_lo": -0.019726,
+          "ci_hi": 0.011507,
+          "ci_half": 0.015616,
+          "p_value": 0.598,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.009315,
@@ -3985,6 +4603,15 @@
           "p_value": 0.919,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.006027,
+          "ci_lo": -0.02137,
+          "ci_hi": 0.009863,
+          "ci_half": 0.015616,
+          "p_value": 0.4666,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.010959,
@@ -4057,6 +4684,15 @@
           "p_value": 0.3222,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.015342,
+          "ci_lo": -0.031781,
+          "ci_hi": 0.001096,
+          "ci_half": 0.016438,
+          "p_value": 0.073,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.020274,
@@ -4120,6 +4756,15 @@
           "p_value": 0.6168,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.00274,
+          "ci_lo": -0.017534,
+          "ci_hi": 0.012603,
+          "ci_half": 0.015068,
+          "p_value": 0.7526,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.007671,
@@ -4174,6 +4819,15 @@
           "p_value": 0.4974,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.001096,
+          "ci_lo": -0.017534,
+          "ci_hi": 0.014795,
+          "ci_half": 0.016164,
+          "p_value": 0.9338,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.006027,
@@ -4219,6 +4873,15 @@
           "p_value": 0.6108,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.00274,
+          "ci_lo": -0.018082,
+          "ci_hi": 0.012055,
+          "ci_half": 0.015068,
+          "p_value": 0.7526,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.007671,
@@ -4255,6 +4918,15 @@
           "p_value": 0.0536,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007671,
+          "ci_lo": -0.007671,
+          "ci_hi": 0.023014,
+          "ci_half": 0.015342,
+          "p_value": 0.3398,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.00274,
@@ -4282,6 +4954,15 @@
           "p_value": 0.7308,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.007123,
+          "ci_lo": -0.023562,
+          "ci_hi": 0.009315,
+          "ci_half": 0.016438,
+          "p_value": 0.4234,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.012055,
@@ -4307,6 +4988,33 @@
           "ci_hi": -0.001096,
           "ci_half": 0.01726,
           "p_value": 0.0428,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.004932,
+          "ci_lo": -0.019726,
+          "ci_hi": 0.009315,
+          "ci_half": 0.014521,
+          "p_value": 0.5262,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": 0.0,
+          "ci_lo": -0.016438,
+          "ci_hi": 0.016438,
+          "ci_half": 0.016438,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.010959,
+          "ci_lo": -0.027945,
+          "ci_hi": 0.007123,
+          "ci_half": 0.017534,
+          "p_value": 0.247,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -4433,6 +5141,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.70931,
+          "test_ci": {
+            "mean": 0.70931,
+            "ci_lo": 0.693784,
+            "ci_hi": 0.724469,
+            "ci_half": 0.015342
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.712684,
           "test_ci": {
@@ -4537,6 +5255,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.025669,
+          "ci_lo": 0.01504,
+          "ci_hi": 0.036666,
+          "ci_half": 0.010813,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.022295,
@@ -4627,6 +5354,15 @@
           "p_value": 0.2112,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.013367,
+          "ci_lo": -0.02385,
+          "ci_hi": -0.002782,
+          "ci_half": 0.010534,
+          "p_value": 0.0128,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.016741,
@@ -4708,6 +5444,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.006792,
+          "ci_lo": -0.003045,
+          "ci_hi": 0.016843,
+          "ci_half": 0.009944,
+          "p_value": 0.1734,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.003418,
@@ -4780,6 +5525,15 @@
           "p_value": 0.002,
           "gate_pass": true
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.003556,
+          "ci_lo": -0.012874,
+          "ci_hi": 0.005852,
+          "ci_half": 0.009363,
+          "p_value": 0.477,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.00693,
@@ -4843,6 +5597,15 @@
           "p_value": 0.0014,
           "gate_pass": true
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.001709,
+          "ci_lo": -0.01102,
+          "ci_hi": 0.007673,
+          "ci_half": 0.009346,
+          "p_value": 0.7344,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.005083,
@@ -4897,6 +5660,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.009806,
+          "ci_lo": -0.000969,
+          "ci_hi": 0.020453,
+          "ci_half": 0.010711,
+          "p_value": 0.07,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.006432,
@@ -4942,6 +5714,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.008274,
+          "ci_lo": -0.00141,
+          "ci_hi": 0.017919,
+          "ci_half": 0.009665,
+          "p_value": 0.0924,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.0049,
@@ -4978,6 +5759,15 @@
           "p_value": 0.0,
           "gate_pass": true
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.019708,
+          "ci_lo": 0.010081,
+          "ci_hi": 0.029608,
+          "ci_half": 0.009763,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.016334,
@@ -5005,6 +5795,15 @@
           "p_value": 0.5842,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.021292,
+          "ci_lo": -0.033343,
+          "ci_hi": -0.009084,
+          "ci_half": 0.01213,
+          "p_value": 0.0004,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.024665,
@@ -5030,6 +5829,33 @@
           "ci_hi": -0.027288,
           "ci_half": 0.010948,
           "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.003374,
+          "ci_lo": -0.013279,
+          "ci_hi": 0.005742,
+          "ci_half": 0.00951,
+          "p_value": 0.4842,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.008809,
+          "ci_lo": -0.018987,
+          "ci_hi": 0.001367,
+          "ci_half": 0.010177,
+          "p_value": 0.0872,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.016981,
+          "ci_lo": -0.028797,
+          "ci_hi": -0.005582,
+          "ci_half": 0.011607,
+          "p_value": 0.0042,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -5156,6 +5982,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.756712,
+          "test_ci": {
+            "mean": 0.756712,
+            "ci_lo": 0.737534,
+            "ci_hi": 0.776438,
+            "ci_half": 0.019452
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.780822,
           "test_ci": {
@@ -5260,6 +6096,15 @@
           "p_value": 0.0266,
           "gate_pass": true
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.038356,
+          "ci_lo": 0.019178,
+          "ci_hi": 0.057534,
+          "ci_half": 0.019178,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.014247,
@@ -5350,6 +6195,15 @@
           "p_value": 0.7752,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.01589,
+          "ci_lo": -0.001096,
+          "ci_hi": 0.032329,
+          "ci_half": 0.016712,
+          "p_value": 0.0702,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.008219,
@@ -5431,6 +6285,15 @@
           "p_value": 0.8638,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016986,
+          "ci_lo": 0.000548,
+          "ci_hi": 0.033425,
+          "ci_half": 0.016438,
+          "p_value": 0.0426,
+          "gate_pass": true
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.007123,
@@ -5503,6 +6366,15 @@
           "p_value": 0.9842,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.018082,
+          "ci_lo": 0.00274,
+          "ci_hi": 0.033973,
+          "ci_half": 0.015616,
+          "p_value": 0.0244,
+          "gate_pass": true
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.006027,
@@ -5566,6 +6438,15 @@
           "p_value": 0.1316,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.004932,
+          "ci_lo": -0.010959,
+          "ci_hi": 0.020822,
+          "ci_half": 0.01589,
+          "p_value": 0.5672,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.019178,
@@ -5620,6 +6501,15 @@
           "p_value": 0.6138,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.014247,
+          "ci_lo": -0.002192,
+          "ci_hi": 0.030685,
+          "ci_half": 0.016438,
+          "p_value": 0.0942,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.009863,
@@ -5665,6 +6555,15 @@
           "p_value": 0.2822,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.009315,
+          "ci_lo": -0.008219,
+          "ci_hi": 0.027397,
+          "ci_half": 0.017808,
+          "p_value": 0.3194,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.014795,
@@ -5701,6 +6600,15 @@
           "p_value": 0.1584,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007123,
+          "ci_lo": -0.010411,
+          "ci_hi": 0.024658,
+          "ci_half": 0.017534,
+          "p_value": 0.4528,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.016986,
@@ -5728,6 +6636,15 @@
           "p_value": 0.0056,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.01863,
+          "ci_lo": 0.003288,
+          "ci_hi": 0.034563,
+          "ci_half": 0.015638,
+          "p_value": 0.0244,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.005479,
@@ -5753,6 +6670,33 @@
           "ci_hi": 0.002192,
           "ci_half": 0.018904,
           "p_value": 0.0816,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.02411,
+          "ci_lo": -0.040548,
+          "ci_hi": -0.008219,
+          "ci_half": 0.016164,
+          "p_value": 0.0046,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.007123,
+          "ci_lo": -0.024658,
+          "ci_hi": 0.009863,
+          "ci_half": 0.01726,
+          "p_value": 0.4446,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.035616,
+          "ci_lo": -0.055342,
+          "ci_hi": -0.016438,
+          "ci_half": 0.019452,
+          "p_value": 0.0006,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -5879,6 +6823,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.554521,
+          "test_ci": {
+            "mean": 0.554521,
+            "ci_lo": 0.532055,
+            "ci_hi": 0.577507,
+            "ci_half": 0.022726
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.557808,
           "test_ci": {
@@ -5983,6 +6937,15 @@
           "p_value": 0.0582,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.019178,
+          "ci_lo": -0.003836,
+          "ci_hi": 0.042192,
+          "ci_half": 0.023014,
+          "p_value": 0.1012,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.01589,
@@ -6073,6 +7036,15 @@
           "p_value": 0.3334,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.013699,
+          "ci_lo": -0.032877,
+          "ci_hi": 0.006027,
+          "ci_half": 0.019452,
+          "p_value": 0.1846,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.016986,
@@ -6154,6 +7126,15 @@
           "p_value": 0.809,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.005479,
+          "ci_lo": -0.026849,
+          "ci_hi": 0.015342,
+          "ci_half": 0.021096,
+          "p_value": 0.6254,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.008767,
@@ -6226,6 +7207,15 @@
           "p_value": 0.0116,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.030137,
+          "ci_lo": -0.050959,
+          "ci_hi": -0.009863,
+          "ci_half": 0.020548,
+          "p_value": 0.0042,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.033425,
@@ -6289,6 +7279,15 @@
           "p_value": 0.5492,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.009315,
+          "ci_lo": -0.029041,
+          "ci_hi": 0.010136,
+          "ci_half": 0.019588,
+          "p_value": 0.368,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.012603,
@@ -6343,6 +7342,15 @@
           "p_value": 0.1246,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.020274,
+          "ci_lo": -0.041644,
+          "ci_hi": 0.001096,
+          "ci_half": 0.02137,
+          "p_value": 0.0708,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.023562,
@@ -6388,6 +7396,15 @@
           "p_value": 0.3502,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007123,
+          "ci_lo": -0.013151,
+          "ci_hi": 0.026849,
+          "ci_half": 0.02,
+          "p_value": 0.5042,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.003836,
@@ -6424,6 +7441,15 @@
           "p_value": 0.6768,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.002192,
+          "ci_lo": -0.018082,
+          "ci_hi": 0.021918,
+          "ci_half": 0.02,
+          "p_value": 0.8308,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.001096,
@@ -6451,6 +7477,15 @@
           "p_value": 0.0018,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.00274,
+          "ci_lo": -0.024658,
+          "ci_hi": 0.01863,
+          "ci_half": 0.021644,
+          "p_value": 0.8272,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.006027,
@@ -6476,6 +7511,33 @@
           "ci_hi": -0.020274,
           "ci_half": 0.022466,
           "p_value": 0.0004,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.003288,
+          "ci_lo": -0.023562,
+          "ci_hi": 0.017516,
+          "ci_half": 0.020539,
+          "p_value": 0.757,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": 0.008767,
+          "ci_lo": -0.012603,
+          "ci_hi": 0.029589,
+          "ci_half": 0.021096,
+          "p_value": 0.4328,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.04,
+          "ci_lo": -0.063562,
+          "ci_hi": -0.017534,
+          "ci_half": 0.023014,
+          "p_value": 0.0012,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -6602,6 +7664,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.973151,
+          "test_ci": {
+            "mean": 0.973151,
+            "ci_lo": 0.964932,
+            "ci_hi": 0.979726,
+            "ci_half": 0.007397
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.973151,
           "test_ci": {
@@ -6706,6 +7778,15 @@
           "p_value": 0.9216,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001096,
+          "ci_lo": -0.004932,
+          "ci_hi": 0.007671,
+          "ci_half": 0.006301,
+          "p_value": 0.8066,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001096,
@@ -6796,6 +7877,15 @@
           "p_value": 0.5248,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.000548,
+          "ci_lo": -0.006575,
+          "ci_hi": 0.005479,
+          "ci_half": 0.006027,
+          "p_value": 0.9368,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.000548,
@@ -6877,6 +7967,15 @@
           "p_value": 0.315,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.001644,
+          "ci_lo": -0.008219,
+          "ci_hi": 0.004384,
+          "ci_half": 0.006301,
+          "p_value": 0.685,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.001644,
@@ -6949,6 +8048,15 @@
           "p_value": 0.012,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.006027,
+          "ci_lo": -0.012603,
+          "ci_hi": 0.0,
+          "ci_half": 0.006301,
+          "p_value": 0.0626,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.006027,
@@ -7012,6 +8120,15 @@
           "p_value": 0.1454,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.00274,
+          "ci_lo": -0.008767,
+          "ci_hi": 0.00274,
+          "ci_half": 0.005753,
+          "p_value": 0.403,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.00274,
@@ -7066,6 +8183,15 @@
           "p_value": 0.9296,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001096,
+          "ci_lo": -0.004384,
+          "ci_hi": 0.006575,
+          "ci_half": 0.005479,
+          "p_value": 0.7622,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001096,
@@ -7111,6 +8237,15 @@
           "p_value": 0.8086,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.00274,
+          "ci_lo": -0.00274,
+          "ci_hi": 0.008767,
+          "ci_half": 0.005753,
+          "p_value": 0.4212,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.00274,
@@ -7147,6 +8282,15 @@
           "p_value": 0.1398,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.006027,
+          "ci_lo": 0.000548,
+          "ci_hi": 0.012055,
+          "ci_half": 0.005753,
+          "p_value": 0.043,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.006027,
@@ -7174,6 +8318,15 @@
           "p_value": 0.5864,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.001644,
+          "ci_lo": -0.00274,
+          "ci_hi": 0.006575,
+          "ci_half": 0.004658,
+          "p_value": 0.572,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001644,
@@ -7199,6 +8352,33 @@
           "ci_hi": 0.003836,
           "ci_half": 0.006027,
           "p_value": 0.546,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": 0.0,
+          "ci_lo": -0.005479,
+          "ci_hi": 0.005479,
+          "ci_half": 0.005479,
+          "p_value": 1.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.003836,
+          "ci_lo": -0.009863,
+          "ci_hi": 0.001644,
+          "ci_half": 0.005753,
+          "p_value": 0.2076,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.003836,
+          "ci_lo": -0.010959,
+          "ci_hi": 0.00274,
+          "ci_half": 0.006849,
+          "p_value": 0.3128,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -7325,6 +8505,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.741918,
+          "test_ci": {
+            "mean": 0.741918,
+            "ci_lo": 0.722192,
+            "ci_hi": 0.761096,
+            "ci_half": 0.019452
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.763836,
           "test_ci": {
@@ -7429,6 +8619,15 @@
           "p_value": 0.8978,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.038904,
+          "ci_lo": 0.018082,
+          "ci_hi": 0.059726,
+          "ci_half": 0.020822,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.016986,
@@ -7519,6 +8718,15 @@
           "p_value": 0.262,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.030137,
+          "ci_lo": 0.010959,
+          "ci_hi": 0.048777,
+          "ci_half": 0.018909,
+          "p_value": 0.002,
+          "gate_pass": true
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.008219,
@@ -7600,6 +8808,15 @@
           "p_value": 0.1126,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.029041,
+          "ci_lo": 0.010959,
+          "ci_hi": 0.047671,
+          "ci_half": 0.018356,
+          "p_value": 0.0034,
+          "gate_pass": true
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.007123,
@@ -7672,6 +8889,15 @@
           "p_value": 0.0298,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.023562,
+          "ci_lo": 0.006575,
+          "ci_hi": 0.041644,
+          "ci_half": 0.017534,
+          "p_value": 0.0076,
+          "gate_pass": true
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001644,
@@ -7735,6 +8961,15 @@
           "p_value": 0.1124,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.027397,
+          "ci_lo": 0.010411,
+          "ci_hi": 0.045479,
+          "ci_half": 0.017534,
+          "p_value": 0.0032,
+          "gate_pass": true
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.005479,
@@ -7789,6 +9024,15 @@
           "p_value": 0.1544,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.028493,
+          "ci_lo": 0.009315,
+          "ci_hi": 0.047671,
+          "ci_half": 0.019178,
+          "p_value": 0.0026,
+          "gate_pass": true
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.006575,
@@ -7834,6 +9078,15 @@
           "p_value": 0.0318,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.023562,
+          "ci_lo": 0.004932,
+          "ci_hi": 0.042192,
+          "ci_half": 0.01863,
+          "p_value": 0.0128,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.001644,
@@ -7870,6 +9123,15 @@
           "p_value": 0.0,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.003836,
+          "ci_lo": -0.023014,
+          "ci_hi": 0.01589,
+          "ci_half": 0.019452,
+          "p_value": 0.7206,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.025753,
@@ -7897,6 +9159,15 @@
           "p_value": 0.0164,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.040548,
+          "ci_lo": 0.023562,
+          "ci_hi": 0.057534,
+          "ci_half": 0.016986,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.01863,
@@ -7922,6 +9193,33 @@
           "ci_hi": 0.03726,
           "ci_half": 0.02,
           "p_value": 0.106,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.021918,
+          "ci_lo": -0.040548,
+          "ci_hi": -0.003836,
+          "ci_half": 0.018356,
+          "p_value": 0.0192,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.039452,
+          "ci_lo": -0.056986,
+          "ci_hi": -0.022466,
+          "ci_half": 0.01726,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.023562,
+          "ci_lo": -0.045479,
+          "ci_hi": -0.002081,
+          "ci_half": 0.021699,
+          "p_value": 0.036,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -8048,6 +9346,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.728767,
+          "test_ci": {
+            "mean": 0.728767,
+            "ci_lo": 0.707397,
+            "ci_hi": 0.749041,
+            "ci_half": 0.020822
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.699178,
           "test_ci": {
@@ -8152,6 +9460,15 @@
           "p_value": 0.1428,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.006027,
+          "ci_lo": -0.025753,
+          "ci_hi": 0.014247,
+          "ci_half": 0.02,
+          "p_value": 0.555,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.023562,
@@ -8242,6 +9559,15 @@
           "p_value": 0.5688,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.00274,
+          "ci_lo": -0.013699,
+          "ci_hi": 0.01863,
+          "ci_half": 0.016164,
+          "p_value": 0.757,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.032329,
@@ -8323,6 +9649,15 @@
           "p_value": 0.02,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.012603,
+          "ci_lo": -0.030137,
+          "ci_hi": 0.004932,
+          "ci_half": 0.017534,
+          "p_value": 0.1712,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.016986,
@@ -8395,6 +9730,15 @@
           "p_value": 0.011,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.016986,
+          "ci_lo": -0.035616,
+          "ci_hi": 0.001096,
+          "ci_half": 0.018356,
+          "p_value": 0.0728,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.012603,
@@ -8458,6 +9802,15 @@
           "p_value": 0.5458,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.013699,
+          "ci_lo": -0.00274,
+          "ci_hi": 0.030137,
+          "ci_half": 0.016438,
+          "p_value": 0.1104,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.043288,
@@ -8512,6 +9865,15 @@
           "p_value": 1.0,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.008219,
+          "ci_lo": -0.010411,
+          "ci_hi": 0.027397,
+          "ci_half": 0.018904,
+          "p_value": 0.4014,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.037808,
@@ -8557,6 +9919,15 @@
           "p_value": 0.6246,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.003836,
+          "ci_lo": -0.014247,
+          "ci_hi": 0.021918,
+          "ci_half": 0.018082,
+          "p_value": 0.703,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.033425,
@@ -8593,6 +9964,15 @@
           "p_value": 0.3636,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016438,
+          "ci_lo": -0.000548,
+          "ci_hi": 0.033425,
+          "ci_half": 0.016986,
+          "p_value": 0.0586,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.046027,
@@ -8620,6 +10000,15 @@
           "p_value": 0.3978,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.008219,
+          "ci_lo": -0.010411,
+          "ci_hi": 0.025753,
+          "ci_half": 0.018082,
+          "p_value": 0.3906,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.037808,
@@ -8645,6 +10034,33 @@
           "ci_hi": 0.002192,
           "ci_half": 0.018438,
           "p_value": 0.0816,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": 0.029589,
+          "ci_lo": 0.008219,
+          "ci_hi": 0.050959,
+          "ci_half": 0.02137,
+          "p_value": 0.0046,
+          "gate_pass": true
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.008219,
+          "ci_lo": -0.026301,
+          "ci_hi": 0.00946,
+          "ci_half": 0.017881,
+          "p_value": 0.3824,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.024658,
+          "ci_lo": -0.04274,
+          "ci_hi": -0.005479,
+          "ci_half": 0.01863,
+          "p_value": 0.0098,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -8771,6 +10187,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.747945,
+          "test_ci": {
+            "mean": 0.747945,
+            "ci_lo": 0.728219,
+            "ci_hi": 0.767671,
+            "ci_half": 0.019726
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.749041,
           "test_ci": {
@@ -8875,6 +10301,15 @@
           "p_value": 0.4038,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016438,
+          "ci_lo": -0.003288,
+          "ci_hi": 0.036164,
+          "ci_half": 0.019726,
+          "p_value": 0.1144,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.015342,
@@ -8965,6 +10400,15 @@
           "p_value": 0.9788,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.006575,
+          "ci_lo": -0.011507,
+          "ci_hi": 0.025205,
+          "ci_half": 0.018356,
+          "p_value": 0.4862,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.005479,
@@ -9046,6 +10490,15 @@
           "p_value": 0.2328,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.018082,
+          "ci_lo": 0.0,
+          "ci_hi": 0.036712,
+          "ci_half": 0.018356,
+          "p_value": 0.0582,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.016986,
@@ -9118,6 +10571,15 @@
           "p_value": 0.4312,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.014795,
+          "ci_lo": -0.002192,
+          "ci_hi": 0.031508,
+          "ci_half": 0.01685,
+          "p_value": 0.0904,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.013699,
@@ -9181,6 +10643,15 @@
           "p_value": 0.3188,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016438,
+          "ci_lo": 0.0,
+          "ci_hi": 0.033425,
+          "ci_half": 0.016712,
+          "p_value": 0.0558,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.015342,
@@ -9235,6 +10706,15 @@
           "p_value": 0.351,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.01589,
+          "ci_lo": -0.001644,
+          "ci_hi": 0.033425,
+          "ci_half": 0.017534,
+          "p_value": 0.0786,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.014795,
@@ -9280,6 +10760,15 @@
           "p_value": 0.233,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.018082,
+          "ci_lo": 0.001644,
+          "ci_hi": 0.035068,
+          "ci_half": 0.016712,
+          "p_value": 0.0378,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.016986,
@@ -9316,6 +10805,15 @@
           "p_value": 0.1024,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.010411,
+          "ci_lo": -0.029589,
+          "ci_hi": 0.008767,
+          "ci_half": 0.019178,
+          "p_value": 0.293,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.011507,
@@ -9343,6 +10841,15 @@
           "p_value": 0.0,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007123,
+          "ci_lo": -0.009863,
+          "ci_hi": 0.025205,
+          "ci_half": 0.017534,
+          "p_value": 0.4516,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.006027,
@@ -9368,6 +10875,33 @@
           "ci_hi": -0.004384,
           "ci_half": 0.02,
           "p_value": 0.018,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.001096,
+          "ci_lo": -0.01863,
+          "ci_hi": 0.01589,
+          "ci_half": 0.01726,
+          "p_value": 0.9278,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.016986,
+          "ci_lo": -0.033973,
+          "ci_hi": 0.000548,
+          "ci_half": 0.01726,
+          "p_value": 0.059,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.031781,
+          "ci_lo": -0.051507,
+          "ci_hi": -0.012603,
+          "ci_half": 0.019452,
+          "p_value": 0.001,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -9494,6 +11028,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.743562,
+          "test_ci": {
+            "mean": 0.743562,
+            "ci_lo": 0.723288,
+            "ci_hi": 0.763288,
+            "ci_half": 0.02
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.749041,
           "test_ci": {
@@ -9598,6 +11142,15 @@
           "p_value": 0.584,
           "gate_pass": false
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.002192,
+          "ci_lo": -0.01863,
+          "ci_hi": 0.023014,
+          "ci_half": 0.020822,
+          "p_value": 0.8574,
+          "gate_pass": false
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.003288,
@@ -9688,6 +11241,15 @@
           "p_value": 0.4586,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.003288,
+          "ci_lo": -0.016438,
+          "ci_hi": 0.022466,
+          "ci_half": 0.019452,
+          "p_value": 0.7474,
+          "gate_pass": false
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.002192,
@@ -9769,6 +11331,15 @@
           "p_value": 0.0832,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.012603,
+          "ci_lo": -0.005479,
+          "ci_hi": 0.031233,
+          "ci_half": 0.018356,
+          "p_value": 0.1928,
+          "gate_pass": false
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.007123,
@@ -9841,6 +11412,15 @@
           "p_value": 0.0268,
           "gate_pass": true
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016986,
+          "ci_lo": 0.0,
+          "ci_hi": 0.034521,
+          "ci_half": 0.01726,
+          "p_value": 0.0518,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.011507,
@@ -9904,6 +11484,15 @@
           "p_value": 0.0794,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.012603,
+          "ci_lo": -0.004384,
+          "ci_hi": 0.029589,
+          "ci_half": 0.016986,
+          "p_value": 0.1478,
+          "gate_pass": false
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.007123,
@@ -9958,6 +11547,15 @@
           "p_value": 0.0382,
           "gate_pass": true
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.016986,
+          "ci_lo": -0.001644,
+          "ci_hi": 0.035068,
+          "ci_half": 0.018356,
+          "p_value": 0.0756,
+          "gate_pass": false
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.011507,
@@ -10003,6 +11601,15 @@
           "p_value": 0.1856,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.007671,
+          "ci_lo": -0.009315,
+          "ci_hi": 0.024658,
+          "ci_half": 0.016986,
+          "p_value": 0.384,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.002192,
@@ -10039,6 +11646,15 @@
           "p_value": 0.0478,
           "gate_pass": true
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.014247,
+          "ci_lo": -0.00274,
+          "ci_hi": 0.031781,
+          "ci_half": 0.01726,
+          "p_value": 0.106,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.008767,
@@ -10066,6 +11682,15 @@
           "p_value": 0.7414,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": -0.003836,
+          "ci_lo": -0.021918,
+          "ci_hi": 0.013699,
+          "ci_half": 0.017808,
+          "p_value": 0.7112,
+          "gate_pass": false
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.009315,
@@ -10091,6 +11716,33 @@
           "ci_hi": -0.001644,
           "ci_half": 0.02,
           "p_value": 0.0374,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.005479,
+          "ci_lo": -0.023562,
+          "ci_hi": 0.012603,
+          "ci_half": 0.018082,
+          "p_value": 0.569,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": 0.012603,
+          "ci_lo": -0.005479,
+          "ci_hi": 0.031233,
+          "ci_half": 0.018356,
+          "p_value": 0.193,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.018082,
+          "ci_lo": -0.037808,
+          "ci_hi": 0.001096,
+          "ci_half": 0.019452,
+          "p_value": 0.0784,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {
@@ -10217,6 +11869,16 @@
           },
           "n_test": 1825
         },
+        "vjepa_2_1_surgical_autorgn_encoder": {
+          "test_mean": 0.820274,
+          "test_ci": {
+            "mean": 0.820274,
+            "ci_lo": 0.802192,
+            "ci_hi": 0.83726,
+            "ci_half": 0.017534
+          },
+          "n_test": 1825
+        },
         "vjepa_2_1_surgical_noDI_encoder": {
           "test_mean": 0.852603,
           "test_ci": {
@@ -10321,6 +11983,15 @@
           "p_value": 0.027,
           "gate_pass": true
         },
+        "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.05863,
+          "ci_lo": 0.04274,
+          "ci_hi": 0.075616,
+          "ci_half": 0.016438,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_frozen_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.026301,
@@ -10411,6 +12082,15 @@
           "p_value": 0.1076,
           "gate_pass": false
         },
+        "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.030685,
+          "ci_lo": 0.015342,
+          "ci_hi": 0.046027,
+          "ci_half": 0.015342,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_full_ft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.001644,
@@ -10492,6 +12172,15 @@
           "p_value": 0.8436,
           "gate_pass": false
         },
+        "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.040548,
+          "ci_lo": 0.024658,
+          "ci_hi": 0.056986,
+          "ci_half": 0.016164,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_lpft_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.008219,
@@ -10564,6 +12253,15 @@
           "p_value": 0.0388,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.026849,
+          "ci_lo": 0.013151,
+          "ci_hi": 0.040548,
+          "ci_half": 0.013699,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_peft_dora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.005479,
@@ -10627,6 +12325,15 @@
           "p_value": 0.0422,
           "gate_pass": false
         },
+        "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.027397,
+          "ci_lo": 0.012603,
+          "ci_hi": 0.04274,
+          "ci_half": 0.015068,
+          "p_value": 0.0002,
+          "gate_pass": true
+        },
         "vjepa_2_1_peft_lora_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": -0.004932,
@@ -10681,6 +12388,15 @@
           "p_value": 0.9726,
           "gate_pass": false
         },
+        "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.041644,
+          "ci_lo": 0.027397,
+          "ci_hi": 0.056438,
+          "ci_half": 0.014521,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_pretrain_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.009315,
@@ -10726,6 +12442,15 @@
           "p_value": 0.8308,
           "gate_pass": false
         },
+        "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.043836,
+          "ci_lo": 0.030137,
+          "ci_hi": 0.058082,
+          "ci_half": 0.013973,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgery_raw_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.011507,
@@ -10762,6 +12487,15 @@
           "p_value": 0.6648,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.045479,
+          "ci_lo": 0.030137,
+          "ci_hi": 0.06137,
+          "ci_half": 0.015616,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.013151,
@@ -10789,6 +12523,15 @@
           "p_value": 0.3246,
           "gate_pass": false
         },
+        "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_autorgn_encoder": {
+          "n_shared": 1825,
+          "delta": 0.042192,
+          "ci_lo": 0.026301,
+          "ci_hi": 0.058082,
+          "ci_half": 0.01589,
+          "p_value": 0.0,
+          "gate_pass": true
+        },
         "vjepa_2_1_surgical_3stage_DI_head_minus_vjepa_2_1_surgical_noDI_encoder": {
           "n_shared": 1825,
           "delta": 0.009863,
@@ -10814,6 +12557,33 @@
           "ci_hi": 0.004384,
           "ci_half": 0.015342,
           "p_value": 0.184,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_encoder": {
+          "n_shared": 1825,
+          "delta": -0.032329,
+          "ci_lo": -0.047671,
+          "ci_hi": -0.016438,
+          "ci_half": 0.015616,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_surgical_noDI_head": {
+          "n_shared": 1825,
+          "delta": -0.032329,
+          "ci_lo": -0.047671,
+          "ci_hi": -0.01589,
+          "ci_half": 0.01589,
+          "p_value": 0.0,
+          "gate_pass": false
+        },
+        "vjepa_2_1_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_frozen": {
+          "n_shared": 1825,
+          "delta": -0.053151,
+          "ci_lo": -0.070685,
+          "ci_hi": -0.036712,
+          "ci_half": 0.016986,
+          "p_value": 0.0,
           "gate_pass": false
         },
         "vjepa_2_1_surgical_noDI_encoder_minus_vjepa_2_1_surgical_noDI_head": {

@@ -2,8 +2,8 @@
  {
   "arm": "pretrain_encoder",
   "status": "\u2705",
-  "n_train": 7724,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 1,
   "probes": [
@@ -143,8 +143,8 @@
  {
   "arm": "surgery_noDI_encoder",
   "status": "\u2705",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 3,
   "probes": [
@@ -392,8 +392,8 @@
  {
   "arm": "surgery_raw_encoder",
   "status": "\u2705",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 3,
   "probes": [
@@ -457,8 +457,8 @@
  {
   "arm": "full_ft_encoder",
   "status": "\u2705",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 1,
   "probes": [
@@ -511,8 +511,8 @@
  {
   "arm": "lpft_encoder",
   "status": "\u2705",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 0,
   "probes": [
@@ -576,8 +576,8 @@
  {
   "arm": "peft_lora_encoder",
   "status": "\u2705",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 1,
   "probes": [
@@ -630,8 +630,8 @@
  {
   "arm": "peft_dora_encoder",
   "status": "\u2705",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 1,
   "probes": [
@@ -684,8 +684,8 @@
  {
   "arm": "cassle_encoder",
   "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": null,
   "probes": []
@@ -693,8 +693,8 @@
  {
   "arm": "ewc_encoder",
   "status": "\ud83d\udd04",
-  "n_train": 7021,
-  "n_val": 451,
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
   "kept_idx": 0,
   "probes": [
