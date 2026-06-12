@@ -29,6 +29,7 @@ After upload, the model is loadable via:
     state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 """
 import argparse
+import csv
 import json
 import os
 import sys
@@ -59,6 +60,10 @@ _DEFAULT_IGNORE = [
     artifact("ckpt_latest_upload_skip"),      # training-resume anchor (no downstream use)
     artifact("ckpt_step_upload_skip"),       # rotation-buffer step ckpts (no downstream use)
     "README.md.bak",
+    "_full-*.tar",              # hf_outputs.py upload-full TRANSPORT shards (dataset-repo format) —
+    "_full-manifest.json",      # model repos serve RAW .pt files (verified: the existing
+                                # factorjepa-pretrain-vjepa21-vitg-5ep repo has zero tars);
+                                # these linger locally while an upload-full run is in flight.
 ]
 
 
@@ -67,6 +72,98 @@ def _get_token():
     if load_dotenv is not None:
         load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
     return os.getenv("HF_TOKEN")
+
+
+# iter18 (2026-06-12): all 13 trainable arms — stage label → one-line card framing.
+# Single source for the --stage choices AND the model-card intro/tags.
+_STAGES = {
+    "pretrain":             "continual self-supervised V-JEPA pretraining on Indian-context clips",
+    "pretrain_2X":          "continual SSL pretraining at 2× epoch budget (compute control)",
+    "surgery_3stage_DI":    "FACTOR SURGERY (novelty): 3-stage progressive unfreezing over D_L→D_A→D_I factor views, SALT teacher + SPD",
+    "surgery_noDI":         "FACTOR SURGERY ablation: 2-stage D_L→D_A (no D_I interaction phase)",
+    "surgery_3stage_DI_head": "surgery HEAD variant: encoder+predictor FROZEN at pretrain init; only the motion_aux head trains (3-stage DI mixture)",
+    "surgery_noDI_head":    "surgery HEAD variant: encoder+predictor FROZEN at pretrain init; only the motion_aux head trains (noDI mixture)",
+    "surgery_raw":          "surgery CONTROL: identical surgery recipe on RAW clips (no factor views) — isolates technique vs data",
+    "surgical_autorgn":     "Auto-RGN baseline: per-layer LR from relative gradient norms (adaptive surgical fine-tuning)",
+    "full_ft":              "full fine-tuning baseline: every encoder parameter updates (B1)",
+    "lpft":                 "LP-FT baseline: linear-probe warmup then full fine-tune (Kumar et al. ICLR'22) (B2)",
+    "peft_lora":            "PEFT baseline: LoRA adapters on attention projections (B3)",
+    "peft_dora":            "PEFT baseline: DoRA (weight-decomposed LoRA) adapters (B3)",
+}
+
+
+def _summary_rows(summary: dict) -> list:
+    """Schema-aware Training-summary table rows. The three trainer families write DIFFERENT
+    training_summary.json schemas (verified 2026-06-12 against outputs/poc/vjepa_2_1_vitG):
+      · m09a continual-pretrain : final_jepa_loss / best_sel_score / lambda_reg / clips_seen
+      · m09c-family encoders    : best_ckpt{...} / final_loss / stages[] / total_factor_clips
+      · m09c2 heads             : best_val_loss + head_params / n_train / wall_sec
+    Schema is DETECTED from its marker field; an unknown schema FAILS LOUD (no silent N/A card)."""
+    r = []
+    if "final_jepa_loss" in summary:                       # m09a pretrain schema
+        n_clips = summary["clips_seen"]
+        r += [("Epochs", summary["epochs"]), ("Steps", summary["steps"]),
+              ("Clips seen", f"{n_clips:,}" if isinstance(n_clips, int) else n_clips),
+              ("Batch size", summary["batch_size"]), ("Final LR", summary["final_lr"]),
+              ("Final val JEPA loss", summary["final_jepa_loss"]),
+              (f"Best {summary['best_ckpt_metric']}", summary["best_sel_score"]),
+              ("Drift control λ", summary["lambda_reg"])]
+    elif "best_ckpt" in summary:                           # m09c-family encoder schema
+        bc = summary["best_ckpt"]
+        r += [("Steps", summary["steps"]), ("Batch size", summary["batch_size"]),
+              ("Training stages", " → ".join(summary["stages"])),
+              ("Factor/train clips", f"{summary['total_factor_clips']:,}"),
+              ("Train/val split", f"{summary['train_val_split']['train']:,} / {summary['train_val_split']['val']}"),
+              ("Final loss", round(summary["final_loss"], 5)),
+              ("KEPT ckpt (selector)", f"step {bc['global_step']} · future_l1={bc['future_l1']:.4f} · "
+                                       f"top1={bc['top1']:.4f} · motion_cos={bc['motion_cos']:.4f}"),
+              ("Early stop", "triggered" if summary["early_stop"]["triggered"] else "not triggered")]
+    elif "head_params" in summary:                         # m09c2 head schema
+        r += [("Mode", summary["mode"]), ("Max epochs", summary["max_epochs"]),
+              ("Total steps", summary["total_steps"]), ("Batch size", summary["batch_size"]),
+              ("Train / val clips", f"{summary['n_train']:,} / {summary['n_val']}"),
+              ("Best epoch (head val-loss)", f"{summary['best_epoch']} (loss {summary['best_val_loss']:.4f})"),
+              ("Trainable head params", f"{summary['head_params']:,}"),
+              ("Mode mixture (L/A/I)", json.dumps(summary["mode_mixture"])),
+              ("Wall time", f"{summary['wall_sec'] / 3600:.1f} h"),
+              ("Encoder", "FROZEN at pretrain init (head-only training)")]
+    else:
+        raise SystemExit(f"FATAL: unknown training_summary schema — fields {sorted(summary)}; "
+                         "extend _summary_rows for this trainer family (no silent N/A cards).")
+    return [f"| {k} | {v} |" for k, v in r]
+
+
+# eval_metrics.csv column → (label, direction). 95% BCa CIs ship in the *_ci columns.
+_EVAL_COLS = [
+    ("act", "action top-1", "↑"), ("tax", "taxonomy F1", "↑"), ("mcos", "motion-cos margin", "↑"),
+    ("fut", "future-frame MSE", "↓"), ("rollout", "rollout drift", "↓"), ("causal", "causal L1", "↓"),
+    ("tdist", "t-dist error", "↓"), ("maskratio", "mask-ratio slope", "↓"),
+    ("order", "order sensitivity", "·"), ("teacher_free", "teacher-free drift", "↓"),
+]
+
+
+def _eval_table(eval_csv: Path, encoder: str) -> str:
+    """Per-arm held-out TEST results (N=1825, 95% BCa CI) from the metrics-watch CSV — the
+    'real numbers' block of the card. Returns '' when the encoder row is absent (FAIL LOUD
+    is wrong here: cassle/ewc rows legitimately have no values; the push for an arm WITH a
+    row but a malformed one still crashes on float())."""
+    with open(eval_csv) as f:
+        rows = {r["encoder"]: r for r in csv.DictReader(f)}
+    r = rows.get(encoder)
+    if not r or r.get("n_test") in (None, "", "—"):
+        return ""
+    lines = ["| Metric | Value | 95% CI (±) | better |", "|---|---:|---:|:---:|"]
+    for key, label, arrow in _EVAL_COLS:
+        v, ci = r.get(key, ""), r.get(f"{key}_ci", "")
+        if v in ("", None):
+            lines.append(f"| {label} | — | — | {arrow} |")
+            continue
+        ci_s = f"{float(ci):.4f}" if ci not in ("", None) else "—"
+        lines.append(f"| {label} | {float(v):.4f} | {ci_s} | {arrow} |")
+    return (f"## 🧪 Held-out test evaluation (N={r['n_test']} clips · 95% BCa bootstrap CI)\n\n"
+            + "\n".join(lines)
+            + "\n\n_Direction: ↑ higher better · ↓ lower better · `·` signed diagnostic. "
+              "`—` = not computed for this arm._\n")
 
 
 def _fmt_size(nbytes: int) -> str:
@@ -106,7 +203,8 @@ def _format_lift_row(key: str, label: str, fmt: str, initial: dict, final: dict)
 
 
 def _generate_model_card(repo_id: str, base_model: str, stage: str,
-                         metrics: dict, paired_results: dict = None) -> str:
+                         metrics: dict, paired_results: dict = None,
+                         eval_block: str = "") -> str:
     """Build README.md content with HF YAML frontmatter + metrics + usage example.
 
     paired_results: optional dict from probe_eval's paired_delta JSON; emits the
@@ -131,8 +229,8 @@ def _generate_model_card(repo_id: str, base_model: str, stage: str,
     lift_block = "\n".join(lift_rows) if lift_rows else "_(no probe_history.jsonl found)_"
 
     files_table = [
-        "| `student_encoder.pt` | ~7 GB | Inference-ready ViT-G encoder weights — **use for surgery init / m09c `--init-from-ckpt`** |",
-        "| `m09a_ckpt_best.pt` | ~14 GB | Best-val ckpt w/ optimizer + **predictor** — **required for `probe_eval.sh` Stage 8 `future_mse`** |",
+        "| `student_encoder.pt` | ~7 GB | Inference-ready ViT-G encoder weights — **load this for feature extraction / inference** |",
+        "| `m09*_ckpt_best.pt` | ~8-14 GB | Best-selected ckpt incl. **predictor** — required for predictor-temporal evals (Stage 8/8b) |",
         "| `motion_aux_head.pt` | ~2 MB | Motion auxiliary head (paired with student_encoder) |",
         "| `training_summary.json` | ~2 KB | Final-step metrics |",
         "| `probe_history.jsonl` | ~few KB/step | Per-checkpoint probe + drift metrics |",
@@ -153,11 +251,10 @@ def _generate_model_card(repo_id: str, base_model: str, stage: str,
 → This checkpoint **statistically beats the frozen V-JEPA 2.1 baseline** on future-frame prediction over 1,398 held-out clips.
 """
 
-    # iter18 H3: strict — training_summary.json is written by THIS pipeline's
-    # m09 trainers with all card fields; a missing key = schema drift = crash
-    # the push (never publish a model card with silent 'N/A' science fields).
-    n_clips = summary["clips_seen"]
-    n_clips_str = f"{n_clips:,}" if isinstance(n_clips, int) else str(n_clips)
+    # iter18 H3: strict — schema-aware rows; an UNKNOWN summary schema crashes the push
+    # inside _summary_rows (never publish a model card with silent 'N/A' science fields).
+    summary_block = "\n".join(_summary_rows(summary))
+    stage_desc = _STAGES[stage]
 
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     short_id = repo_id.split("/")[-1]
@@ -180,10 +277,13 @@ pipeline_tag: feature-extraction
 
 # {short_id}
 
-**FactorJEPA — V-JEPA 2.1 ViT-G continual-pretrained on Indian-context urban driving / walking / monument clips.**
+**FactorJEPA — V-JEPA 2.1 ViT-G (2B) adapted on Indian-context urban driving / walking / monument clips.**
 
-This is a **`{stage}`** checkpoint from the FactorJEPA pipeline, a sequential SSL composition that aims to prove
-`vjepa_surgery >> vjepa_pretrain >> vjepa_frozen` on motion / temporal features for Indian urban video.
+This is the **`{stage}`** arm of the iter18 FactorJEPA ablation: {stage_desc}.
+The study compares factor-surgery against strong fine-tuning baselines on the claim
+`vjepa_surgery >> vjepa_pretrain >> vjepa_frozen` for motion / temporal features on Indian urban video.
+Every non-pretrain arm initializes from the SAME continual-pretrain checkpoint (fair duel — identical
+data, identical starting weights).
 
 ## 🎯 Training summary
 
@@ -191,17 +291,9 @@ This is a **`{stage}`** checkpoint from the FactorJEPA pipeline, a sequential SS
 |---|---|
 | Base model | [`{base_model}`](https://huggingface.co/{base_model}) |
 | Stage | `{stage}` |
-| Architecture | V-JEPA 2.1 ViT-G (1664-dim, 48 layers, dense predictive L1 loss) |
-| Training data | 9,297 Indian-context clips (`data/eval_10k_local`) |
-| Epochs | {summary['epochs']} |
-| Steps | {summary['steps']} |
-| Clips seen | {n_clips_str} |
-| Batch size | {summary['batch_size']} |
-| Final LR | {summary['final_lr']} |
-| Final val JEPA loss | {summary['final_jepa_loss']} |
-| Best {summary['best_ckpt_metric']} | {summary['best_sel_score']} |
-| Drift control λ | {summary['lambda_reg']} |
-| Final encoder drift `‖Δ‖/‖init‖` | reported in training log (e.g., 2.46 % for the iter13 5-epoch run) |
+| Architecture | V-JEPA 2.1 ViT-G (~2B params, 1664-dim, 48 layers, hierarchical concat 6656-dim) |
+| Training data | Indian-context urban clips (10k POC pool, leakage-safe train/val/test split) |
+{summary_block}
 
 ## 📈 Training trajectory (initial → final, from `probe_history.jsonl`)
 
@@ -211,6 +303,7 @@ This is a **`{stage}`** checkpoint from the FactorJEPA pipeline, a sequential SS
 
 ({metrics.get('history_steps', 0)} checkpoints across training.)
 
+{eval_block}
 {paired_block}
 
 ## 🚀 Usage
@@ -285,6 +378,8 @@ def push_to_huggingface(
     paired_results: dict = None,
     private: bool = False,
     dry_run: bool = False,
+    eval_csv: Path = None,
+    eval_encoder: str = None,
 ) -> str:
     """Create HF MODEL repo, upload weights + plots + metrics, push README model card.
 
@@ -316,11 +411,15 @@ def push_to_huggingface(
     else:
         print(f"Repo already exists: {repo_id} (will update)")
 
-    # 2. Generate model card.
+    # 2. Generate model card (+ per-arm held-out eval table when the CSV row exists).
     metrics = _load_training_metrics(source_dir)
+    eval_block = ""
+    if eval_csv and eval_encoder:
+        eval_block = _eval_table(Path(eval_csv), eval_encoder)
+        print(f"  eval table: {'INCLUDED' if eval_block else f'absent for {eval_encoder} (no CSV row)'}")
     card = _generate_model_card(
         repo_id=repo_id, base_model=base_model, stage=stage,
-        metrics=metrics, paired_results=paired_results,
+        metrics=metrics, paired_results=paired_results, eval_block=eval_block,
     )
     card_path = source_dir / "README.md"
     if dry_run:
@@ -380,10 +479,13 @@ def main():
     p.add_argument("--base-model", required=True,
                    help="HF id of the base model this was fine-tuned from "
                         "(e.g., facebook/v-jepa-2-vitg)")
-    p.add_argument("--stage", required=True,
-                   choices=["pretrain", "pretrain_2X",
-                            "surgery_3stage_DI", "surgery_noDI"],
+    p.add_argument("--stage", required=True, choices=list(_STAGES),
                    help="Training stage label (drives model-card framing + tags)")
+    p.add_argument("--eval-csv", type=Path, default=None,
+                   help="metrics-watch eval_metrics.csv — adds the per-arm held-out TEST table "
+                        "(e.g. outputs/poc/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.csv)")
+    p.add_argument("--eval-encoder", default=None,
+                   help="CSV encoder row for this arm (e.g. vjepa_2_1_surgical_3stage_DI_encoder)")
     p.add_argument("--private", action="store_true",
                    help="Create as private repo (default: public — paper companion).")
     p.add_argument("--dry-run", action="store_true",
@@ -397,6 +499,8 @@ def main():
         stage=args.stage,
         private=args.private,
         dry_run=args.dry_run,
+        eval_csv=args.eval_csv,
+        eval_encoder=args.eval_encoder,
     )
 
 

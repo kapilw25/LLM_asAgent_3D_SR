@@ -33,10 +33,16 @@ _MIN_PERMS = 2
 
 
 @torch.no_grad()
-def compute_features(encoder, batch, num_frames, tubelet_size, permutations):
-    """Forward through encoder once per permutation in `permutations` (list of (T,) LongTensor;
+def compute_features(encoder, batch, num_frames, tubelet_size, permutations, *, skip_first=False):
+    """Encoder features per permutation in `permutations` (list of (T,) LongTensor;
     permutations[0] MUST be identity = torch.arange(T) — orchestrator enforces). Returns
-    LongTensor stack (n_perm, B, D) — mean-pooled features per permutation variant."""
+    stack (n_perm, B, D) — mean-pooled features per permutation variant.
+    iter18 #2 (variant-batching): the per-permutation loop is replaced by ONE stacked
+    (K·B) forward — same math (encoder is per-sample independent), far better GPU util at
+    small B; OOM safety = m12f's halving backoff.
+    skip_first=True (iter18 #6 share-features): identity features are served from
+    probe_action's cache by the orchestrator → only permutations[1:] are forwarded and the
+    returned stack has n_perm−1 rows (caller prepends the cached identity row)."""
     if len(permutations) < _MIN_PERMS:
         raise RuntimeError(
             f"compute_features: need >=2 permutations (identity + >=1 shuffled); got {len(permutations)}")
@@ -45,12 +51,11 @@ def compute_features(encoder, batch, num_frames, tubelet_size, permutations):
     if not torch.equal(permutations[0].cpu().long(), expected_identity):
         raise RuntimeError(
             f"permutations[0] must be identity arange({T}); got {permutations[0].tolist()}")
-    feats = []
-    for perm in permutations:
-        x = permute_frames(batch, perm)
-        f = forward_per_frame(encoder, x, num_frames, tubelet_size).mean(dim=1)
-        feats.append(f.float().cpu())
-    return torch.stack(feats, dim=0)  # (n_perm, B, D)
+    todo = permutations[1:] if skip_first else permutations
+    B = batch.shape[0]
+    x_all = torch.cat([permute_frames(batch, p) for p in todo], dim=0)    # (K·B, T, C, H, W)
+    f_all = forward_per_frame(encoder, x_all, num_frames, tubelet_size).mean(dim=1).float().cpu()
+    return f_all.view(len(todo), B, -1)  # (n_perm[−1], B, D) — cat order is perm-major
 
 
 def train_head(train_feats, train_labels, *, embed_dim, n_classes, lr, epochs, weight_decay,

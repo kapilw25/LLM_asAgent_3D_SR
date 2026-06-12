@@ -289,7 +289,9 @@
       "Bash(curl -s https://download.pytorch.org/whl/nightly/cu128/torchvision/)",
       "Bash(shellcheck setup_env_uv.sh)",
       "Bash(bash -n setup_env_uv.sh)",
-      "Bash(curl -s https://download.pytorch.org/whl/nightly/cu128/torch/)"
+      "Bash(curl -s https://download.pytorch.org/whl/nightly/cu128/torch/)",
+      "Bash(awk '/^  encoder_temporal:/{f=1;print;next} f&&/^  [a-z]/{f=0} f' configs/pipeline.yaml)",
+      "Bash(bash -c ' *)"
     ]
   }
 }

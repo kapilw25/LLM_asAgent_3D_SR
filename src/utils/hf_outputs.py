@@ -3,17 +3,11 @@ Upload/download compute outputs + POC/val data to HuggingFace Hub.
 Repo: anonymousML123/factorjepa-outputs (public, gated, auto-created on first upload).
 
 USAGE:
-    # FULL/POC/SANITY usage: from outputs/
-    python -u src/utils/hf_outputs.py upload outputs 2>&1 | tee logs/upload_outputs_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py download outputs 2>&1 | tee logs/hf_download_outputs_$(date +%Y%m%d_%H%M%S).log
-
-    # Upload/download: from outputs/full/ ONLY
-    python -u src/utils/hf_outputs.py upload outputs/poc  2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py download outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-
     # FULL fidelity (EVERY file incl. m09*_ckpt_best.pt/*.npy, per-dir _full-*.tar) — multi-box migration
     python -u src/utils/hf_outputs.py upload-full outputs/ 2>&1 | tee logs/upload_full_outputs_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-full outputs/ 2>&1 | tee logs/download_full_outputs_$(date +%Y%m%d_%H%M%S).log
+    
+    python -u src/utils/hf_outputs.py download-full outputs/poc/vjepa_2_1_vitG/ 2>&1 | tee logs/download_full_outputs_poc_vjepa_2_1_vitG_$(date +%Y%m%d_%H%M%S).log
     
     # verify the snapshot file-by-file (local inventory vs uploaded manifest + remote shard sizes; exit 1 on ANY gap)
     python -u src/utils/hf_outputs.py verify-full outputs/ 2>&1 | tee logs/verify_full_outputs_$(date +%Y%m%d_%H%M%S).log
@@ -21,11 +15,6 @@ USAGE:
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
-    
-    # from @checkpoints/
-    python -u src/utils/hf_outputs.py upload-data checkpoints 2>&1 | tee logs/upload_checkpoints_$(date +%Y%m%d_%H%M%S).log
-    python -u src/utils/hf_outputs.py download-data checkpoints 2>&1 | tee logs/download_checkpoints_$(date +%Y%m%d_%H%M%S).log
-    
 
 
 

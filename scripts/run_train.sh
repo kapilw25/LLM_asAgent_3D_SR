@@ -38,6 +38,10 @@ trap 'rc=$?; echo "" >&2; echo "❌ FATAL: run_train.sh aborted at line $LINENO 
 cd "$(dirname "$0")/.."
 source venv_walkindia/bin/activate
 mkdir -p logs
+# iter18 (2026-06-12): mandated fragmentation guard (src/CLAUDE.md GPU rules) — dropped in the
+# refactor from scripts/legacy/train_*.sh, which exported exactly this value; restored alongside
+# the same fix in run_eval.sh.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True,garbage_collection_threshold:0.8}"
 
 if [ $# -lt 2 ]; then
     echo "USAGE: $0 {pretrain_encoder|pretrain_2X_encoder|pretrain_head|surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head} {--SANITY|--POC|--FULL}" >&2

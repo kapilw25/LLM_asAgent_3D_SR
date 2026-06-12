@@ -47,13 +47,15 @@ def compute_features(encoder, source_batch, num_frames, tubelet_size, strides):
     if len(strides) < _MIN_STRIDES:
         raise RuntimeError(f"strides must have >=2 distinct rates; got {list(strides)}")
     T_src = source_batch.shape[1]
-    feats = []
-    for stride in strides:
-        idx = stride_indices(num_frames, int(stride), T_src).to(source_batch.device)
-        x = source_batch.index_select(1, idx).contiguous()
-        f = forward_per_frame(encoder, x, num_frames, tubelet_size).mean(dim=1)
-        feats.append(f.float().cpu())
-    return torch.stack(feats, dim=0)  # (n_strides, B, D)
+    # iter18 #2 (variant-batching): one stacked (K·B) forward replaces the per-stride loop —
+    # same math (per-sample independent), better GPU util at small B; OOM = m12f halving backoff.
+    B = source_batch.shape[0]
+    x_all = torch.cat(
+        [source_batch.index_select(1, stride_indices(num_frames, int(s), T_src)
+                                   .to(source_batch.device)) for s in strides],
+        dim=0).contiguous()                                               # (K·B, T, C, H, W)
+    f_all = forward_per_frame(encoder, x_all, num_frames, tubelet_size).mean(dim=1).float().cpu()
+    return f_all.view(len(strides), B, -1)  # (n_strides, B, D) — cat order is stride-major
 
 
 def train_head(train_feats, train_labels, *, embed_dim, n_classes, lr, epochs, weight_decay,

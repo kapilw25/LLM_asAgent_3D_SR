@@ -722,13 +722,23 @@ probe:
     deltas:            [1, 2, 4, 8]  # §3.4: was pt_tdist._DELTAS — Δt target-offset sweep (frames)
     mask_ratios:       [0.3, 0.5, 0.7, 0.9]  # §3.4: was pt_maskratio._RATIOS — masked-token fraction
     seed:              0             # §3.4: was pt_maskratio._SEED / pt_order._SEED (det. partition)
-  encoder_temporal:                  # m12f_encoder_temporal.py (Stages 8c/9c) — iter16 §6/§3.3/§opt
-    batch_size:        32            # §opt 4→32: fills idle VRAM; m12f cleanly sys.exits on OOM (SANITY-smoked)
+  encoder_temporal:                  # m12f_encoder_temporal.py (Stages 8c/9c) — iter18 revival + speedups #1-#8
+    batch_size:        32            # §opt 4→32: fills idle VRAM; iter18 #4: OOM now HALVES the clip batch
+                                     # (recursive sub-batch, m12e safe_metric pattern) instead of sys.exit
     tubelet_size:      2             # V-JEPA 2.1 ViT-G tubelet (matches configs/model/vjepa2_1.yaml)
     tov_n_permutations: 4            # TOV/VCOP: identity + 3 frame-shuffles
     pace_strides:      "1,2,4"       # Pace playback rates (sorted, distinct)
     pace_source_frames: 64           # oversample decode = num_frames(16) × max(strides)(4)
     tcc_temperature:   0.1           # TCC soft-NN temperature (Dwibedi eq.1)
+    tcc_pair_chunk:    auto          # iter18 #8: pairs per batched-TCC chunk. 'auto' = derived at runtime
+                                     # from free VRAM × gpu.gpu_memory_target (same universal cap as
+                                     # AdaptiveBatchSizer) ÷ per-pair bytes (3·T_eff·D gathers + 2 T_eff²
+                                     # maps, fp32, ×2 safety) → scales itself across 24/48/96 GB boxes.
+                                     # An explicit int pins it (e.g. 4096 ≈ 1.7 GB at T_eff=8, D=6656).
+    share_features:    1             # iter18 #6: serve the IDENTITY forward (AoT-fwd / TOV perm-0) from
+                                     # probe_action's features_{split}.npy (m12b share pattern); m12f falls
+                                     # back to fresh forwards WITH an explicit reason if the cache can't
+                                     # serve every split key (never silent)
     head_lr:           1.0e-3        # tiny linear head (aot/tov/pace)
     head_epochs:       20
     head_weight_decay: 1.0e-4

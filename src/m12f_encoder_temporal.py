@@ -32,7 +32,8 @@ USAGE:
         --action-probe-root outputs/poc/probe_action --local-data data/eval_10k_local \\
         --output-root outputs/poc/encoder_temporal \\
         --tubelet-size 2 --tov-n-permutations 4 --pace-strides 1,2,4 \\
-        --pace-source-frames 64 --tcc-temperature 0.1 \\
+        --pace-source-frames 64 --tcc-temperature 0.1 --tcc-pair-chunk auto \\
+        --share-features 1 \\
         --head-lr 1e-3 --head-epochs 20 --head-weight-decay 1e-4 --head-batch-size 64 \\
         --cache-policy 1 --no-wandb
 """
@@ -116,23 +117,39 @@ def _gen_permutations(n_permutations, T, seed):
     return perms
 
 
-def _run_metric_forward(metric, encoder, batch, num_frames, args):
+def _run_metric_forward(metric, encoder, batch, keys, num_frames, args, share_map):
     """Per-metric dispatch — returns (per_example_features, per_example_labels) on CPU, where
     each clip contributes K variant examples (K=2 aot, K=n_permutations tov, K=len(strides)
-    pace, K=1 tcc-per-frame stack)."""
+    pace, K=1 tcc-per-frame stack). ALL layouts are CLIP-MAJOR (clip0's K rows contiguous) so
+    (a) the per-clip collapse reshape(-1, K) pairs the right rows — the legacy aot layout was
+    VARIANT-MAJOR ([fwd×B, rev×B]) which silently mis-paired per-clip correctness — and
+    (b) OOM-halved sub-batches concatenate correctly (iter18 #4).
+    share_map (iter18 #6, m12b pattern): clip_key → (D,) fp32 IDENTITY-forward features from
+    probe_action's cache; when present, aot computes only the REVERSE forward and tov skips
+    the identity permutation."""
     if metric == "aot":
-        f_fwd, f_rev = et_aot.compute_features(encoder, batch, num_frames, args.tubelet_size)
-        feats = torch.cat([f_fwd, f_rev], dim=0)
-        labels = torch.cat([torch.zeros(f_fwd.shape[0], dtype=torch.long),
-                            torch.ones(f_rev.shape[0], dtype=torch.long)], dim=0)
+        B = batch.shape[0]
+        if share_map is not None:
+            f_fwd = torch.stack([share_map[k] for k in keys])                      # (B, D) cached
+            f_rev = et_aot.compute_features_rev(encoder, batch, num_frames, args.tubelet_size)
+        else:
+            f_fwd, f_rev = et_aot.compute_features(encoder, batch, num_frames, args.tubelet_size)
+        feats = torch.stack([f_fwd, f_rev], dim=1).reshape(2 * B, -1)              # clip-major
+        labels = torch.tensor([0, 1], dtype=torch.long).repeat(B)
         return feats, labels
     if metric == "tov":
         T = batch.shape[1]
         perms = _gen_permutations(args.tov_n_permutations, T, seed=args.seed)
-        stack = et_tov.compute_features(encoder, batch, num_frames, args.tubelet_size, perms)  # (n_perm,B,D)
+        if share_map is not None:
+            rest = et_tov.compute_features(encoder, batch, num_frames, args.tubelet_size,
+                                           perms, skip_first=True)                 # (K-1, B, D)
+            ident = torch.stack([share_map[k] for k in keys]).unsqueeze(0)          # (1, B, D)
+            stack = torch.cat([ident, rest], dim=0)
+        else:
+            stack = et_tov.compute_features(encoder, batch, num_frames, args.tubelet_size,
+                                            perms, skip_first=False)               # (K, B, D)
         n_perm, B, D = stack.shape
-        # clip-major flatten: (clip0_p0, clip0_p1, ..., clip0_p{n-1}, clip1_p0, ...)
-        feats = stack.permute(1, 0, 2).reshape(B * n_perm, D)
+        feats = stack.permute(1, 0, 2).reshape(B * n_perm, D)                       # clip-major
         labels = torch.arange(n_perm).repeat(B)
         return feats, labels
     if metric == "pace":
@@ -153,45 +170,169 @@ def _run_metric_forward(metric, encoder, batch, num_frames, args):
     raise SystemExit(f"FATAL: unknown metric {metric!r}")
 
 
-def _extract_split(args, encoder, metric, split_keys, split_name, out_dir):
-    """Stream the requested split through the encoder once for `metric`, dumping (feats, labels,
-    clip_ids) to disk. FAIL LOUD if the resulting feature N is 0."""
+_K_PER_CLIP = {"aot": lambda a: 2, "tov": lambda a: a.tov_n_permutations,
+               "pace": lambda a: len(a.pace_strides.split(",")), "tcc": lambda a: 1}
+
+
+def _resolve_tcc_pair_chunk(arg_val, t_eff, d, n_pairs):
+    """'auto' → pairs per batched-TCC chunk derived from FREE VRAM × the universal
+    gpu.gpu_memory_target cap (same source AdaptiveBatchSizer uses — scales itself across
+    24/48/96 GB boxes); an explicit int pins it. Per-pair device bytes = the 3 (T_eff, D)
+    pair tensors compute_pairs_batched holds (A, B, gathered sel_b) + 2 (T_eff, T_eff)
+    sim/softmax maps, fp32, ×2 safety for kernel temporaries."""
+    if str(arg_val).lower() != "auto":
+        return max(1, int(arg_val))
+    free_b, _total = torch.cuda.mem_get_info()
+    target = float(_PCFG["gpu"]["gpu_memory_target"])
+    per_pair = (3 * t_eff * d + 2 * t_eff * t_eff) * 4 * 2
+    chunk = max(1, min(int(n_pairs), int(free_b * target / per_pair)))
+    print(f"  [tcc] pair-chunk auto → {chunk}  "
+          f"(free={free_b / 1e9:.1f}G × target={target} ÷ {per_pair / 1e6:.2f}MB/pair, "
+          f"n_pairs={n_pairs})", flush=True)
+    return chunk
+
+
+def _forward_with_oom_backoff(metric, encoder, tensors, keys, num_frames, args, share_map):
+    """Run the metric forward on a clip list, HALVING on CUDA OOM down to 1 clip (iter18 #4 —
+    mirrors utils.predictor_eval.safe_metric's intent; replaces the legacy FATAL exit). The
+    clip-major layout makes the halves' (feats, labels) concatenate correctly.
+    The retry runs OUTSIDE the except block: an exception's __traceback__ pins the FAILED
+    forward's activations, so recursing inside `except` accumulates every failed attempt's
+    VRAM — observed 2026-06-12 smoke: aot's 40-sample forward fit, then tov OOM'd even at a
+    4-sample forward after 4 nested retries. Leaving the except scope (and cuda_cleanup'ing)
+    releases the pinned tensors before each retry."""
+    oom = False
+    try:
+        return _run_metric_forward(metric, encoder, torch.stack(tensors), keys,
+                                   num_frames, args, share_map)
+    except torch.cuda.OutOfMemoryError:
+        if len(tensors) == 1:
+            raise SystemExit(
+                f"FATAL: OOM at a SINGLE-clip batch for metric={metric} — the stacked variant "
+                f"forward does not fit this GPU even at B=1; lower --num-frames/--batch-size "
+                f"or run on a larger card") from None
+        oom = True
+    # ── out of the except scope: traceback freed → the failed attempt's VRAM is reclaimable ──
+    assert oom
+    cuda_cleanup()
+    mid = len(tensors) // 2
+    print(f"  [oom-backoff] {metric}: batch {len(tensors)} → {mid}+{len(tensors) - mid}",
+          flush=True)
+    f1, l1 = _forward_with_oom_backoff(metric, encoder, tensors[:mid], keys[:mid],
+                                       num_frames, args, share_map)
+    f2, l2 = _forward_with_oom_backoff(metric, encoder, tensors[mid:], keys[mid:],
+                                       num_frames, args, share_map)
+    return torch.cat([f1, f2], dim=0), torch.cat([l1, l2], dim=0)
+
+
+def _load_share_map(args, split_name, split_keys, embed_dim):
+    """iter18 #6 (m12b --share-features pattern): mean-pool probe_action's cached
+    features_{split}.npy → {clip_key: (D,) fp32} serving the IDENTITY forward (AoT-fwd /
+    TOV perm-0). Pooling parity: probe_action stores forward_per_frame's (N, T_eff, D)
+    spatial-means, so .mean(dim=1) here equals the .mean(dim=1) inside et_aot/et_tov.
+    Returns (map, "ok") or (None, reason) — caller prints the decision and falls back to
+    fresh identity forwards (explicit, never silent)."""
+    if not args.share_features:
+        return None, "disabled (--share-features 0)"
+    enc_dir = args.action_probe_root / args.variant
+    src, kf = enc_dir / f"features_{split_name}.npy", enc_dir / f"clip_keys_{split_name}.npy"
+    if not (src.exists() and kf.exists()):
+        return None, f"probe_action cache missing at {enc_dir}"
+    feats = np.load(src)
+    t_eff = args.num_frames // args.tubelet_size
+    if feats.ndim != 3 or feats.shape[2] != embed_dim or feats.shape[1] != t_eff:
+        return None, (f"cache shape {feats.shape} mismatches (N, T_eff={t_eff}, D={embed_dim}) "
+                      f"— pooling parity not guaranteed")
+    ckeys = [str(k) for k in np.load(kf, allow_pickle=True)]
+    pooled = torch.from_numpy(feats.astype(np.float32)).mean(dim=1)        # (N, D)
+    smap = {k: pooled[i] for i, k in enumerate(ckeys)}
+    missing = sum(1 for k in split_keys if k not in smap)
+    if missing:
+        return None, f"{missing}/{len(split_keys)} split keys absent from cache"
+    return smap, "ok"
+
+
+def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir, decode_T,
+                         share_map):
+    """Stream the split through the encoder ONCE for ALL `metrics` that share this decode
+    length (iter18 #7 — replaces per-metric streaming; pace runs its own OVERSAMPLE pass).
+    Returns {metric: (feats, labels, expanded_clip_ids)} and persists the legacy per-metric
+    npys. Crash-safe (iter18 #5): accumulated features checkpoint to .m12f_ckpt_{split}.npz
+    every CHECKPOINT_EVERY clips; on restart the processed clips are skipped via
+    iter_clips_parallel(processed_keys=...). FAIL LOUD if the resulting feature N is 0."""
     if not split_keys:
         raise SystemExit(f"FATAL: split={split_name} has 0 keys — pipeline failure")
-    tmp_root = out_dir / f"tmp_decode_{metric}_{split_name}"
+    tmp_root = out_dir / f"tmp_decode_{'-'.join(metrics)}_{split_name}"
     tmp_root.mkdir(parents=True, exist_ok=True)
     tmp_dir = tempfile.mkdtemp(dir=tmp_root)
-    # Pace decodes oversample frames; all other metrics use args.num_frames.
-    decode_T = args.pace_source_frames if metric == "pace" else args.num_frames
-    if metric == "pace":
+    if "pace" in metrics:
         max_stride = max(int(s) for s in args.pace_strides.split(","))
         if decode_T < args.num_frames * max_stride:
             print(f"  WARN: --pace-source-frames {decode_T} < num_frames * max_stride "
                   f"({args.num_frames * max_stride}); stride_indices will cyclic-wrap")
+
+    feats_all = {m: [] for m in metrics}
+    labels_all = {m: [] for m in metrics}
+    clip_ids_all = []
+    # ── iter18 #5: resume from the intra-run checkpoint (same metric GROUP only) ──
+    ckpt = out_dir / f".m12f_ckpt_{split_name}.npz"
+    if ckpt.exists():
+        z = np.load(ckpt, allow_pickle=True)
+        stored = [str(m) for m in z["metrics"]]
+        if stored == list(metrics):
+            clip_ids_all = [str(k) for k in z["clip_ids"]]
+            for m in metrics:
+                feats_all[m] = [torch.from_numpy(z[f"feats_{m}"])]
+                labels_all[m] = [torch.from_numpy(z[f"labels_{m}"])]
+            print(f"  [resume] {ckpt.name}: {len(clip_ids_all)} clips already extracted "
+                  f"({split_name}, metrics={stored})")
+        else:
+            print(f"  [resume] {ckpt.name} holds metrics={stored} ≠ current {list(metrics)} "
+                  f"— discarding (full re-extract)")
+    processed = set(clip_ids_all)
+
+    def _save_ckpt():
+        arrays = {"metrics": np.array(list(metrics), dtype=object),
+                  "clip_ids": np.array(clip_ids_all, dtype=object)}
+        for m in metrics:
+            arrays[f"feats_{m}"] = torch.cat(feats_all[m], dim=0).numpy()
+            arrays[f"labels_{m}"] = torch.cat(labels_all[m], dim=0).numpy()
+        tmp = out_dir / f".m12f_ckpt_{split_name}.tmp.npz"   # .npz suffix → np.savez keeps it
+        np.savez(tmp, **arrays)
+        os.replace(tmp, ckpt)                                # atomic publish
+
     clip_q, tar_stop, _r = iter_clips_parallel(
-        local_data=args.local_data, subset_keys=set(split_keys), processed_keys=set())
-    pend_t, pend_k, feats_all, labels_all, clip_ids_all = [], [], [], [], []
-    pbar = make_pbar(total=len(split_keys), desc=f"m12f[{metric}/{split_name}]", unit="clip")
+        local_data=args.local_data, subset_keys=set(split_keys), processed_keys=processed)
+    pend_t, pend_k = [], []
+    since_ckpt = 0
+    pbar = make_pbar(total=len(split_keys), desc=f"m12f[{'-'.join(metrics)}/{split_name}]",
+                     unit="clip")
+    pbar.update(len(processed))
 
     def _flush():
-        nonlocal pend_t, pend_k
+        nonlocal pend_t, pend_k, since_ckpt
         if not pend_t:
             return
-        batch = torch.stack(pend_t)
-        feats, labels = _run_metric_forward(metric, encoder, batch, args.num_frames, args)
-        k_per_clip = feats.shape[0] // batch.shape[0] if feats.ndim >= 2 else 1
-        feats_all.append(feats)
-        labels_all.append(labels)
-        clip_ids_all.extend([ck for ck in pend_k for _ in range(k_per_clip)])
+        for m in metrics:
+            feats, labels = _forward_with_oom_backoff(m, encoder, pend_t, pend_k,
+                                                      args.num_frames, args, share_map
+                                                      if m in ("aot", "tov") else None)
+            feats_all[m].append(feats)
+            labels_all[m].append(labels)
+        clip_ids_all.extend(pend_k)
+        since_ckpt += len(pend_k)
         pbar.update(len(pend_k))
         pend_t, pend_k = [], []
+        if since_ckpt >= CHECKPOINT_EVERY:
+            _save_ckpt()
+            since_ckpt = 0
 
     try:
         while True:
             try:
                 item = clip_q.get(timeout=300)
             except queue.Empty:
-                print(f"  WARN: clip queue timeout on {metric}/{split_name} — flushing")
+                print(f"  WARN: clip queue timeout on {metrics}/{split_name} — flushing")
                 break
             if item is None:
                 break
@@ -202,26 +343,26 @@ def _extract_split(args, encoder, metric, split_keys, split_name, out_dir):
             pend_t.append(t)
             pend_k.append(clip_key)
             if len(pend_t) >= args.batch_size:
-                try:
-                    _flush()
-                except torch.cuda.OutOfMemoryError:
-                    cuda_cleanup()
-                    raise SystemExit(
-                        f"FATAL: OOM at batch_size={args.batch_size} for metric={metric}; "
-                        "lower --batch-size and re-run")
+                _flush()
         _flush()
     finally:
         tar_stop.set()
         pbar.close()
-    if not feats_all:
-        raise SystemExit(f"FATAL: {metric}/{split_name} produced 0 features — pipeline failure")
-    feats_cat = torch.cat(feats_all, dim=0)
-    labels_cat = torch.cat(labels_all, dim=0)
-    np.save(out_dir / f"{metric}_{split_name}_feats.npy", feats_cat.cpu().numpy())
-    np.save(out_dir / f"{metric}_{split_name}_labels.npy", labels_cat.cpu().numpy())
-    np.save(out_dir / f"{metric}_{split_name}_clip_ids.npy",
-            np.array(clip_ids_all, dtype=object))
-    return feats_cat, labels_cat, clip_ids_all
+
+    out = {}
+    for m in metrics:
+        if not feats_all[m]:
+            raise SystemExit(f"FATAL: {m}/{split_name} produced 0 features — pipeline failure")
+        feats_cat = torch.cat(feats_all[m], dim=0)
+        labels_cat = torch.cat(labels_all[m], dim=0)
+        k = _K_PER_CLIP[m](args)
+        ids_expanded = [ck for ck in clip_ids_all for _ in range(k)]
+        np.save(out_dir / f"{m}_{split_name}_feats.npy", feats_cat.cpu().numpy())
+        np.save(out_dir / f"{m}_{split_name}_labels.npy", labels_cat.cpu().numpy())
+        np.save(out_dir / f"{m}_{split_name}_clip_ids.npy",
+                np.array(ids_expanded, dtype=object))
+        out[m] = (feats_cat, labels_cat, ids_expanded)
+    return out
 
 
 def _train_eval_classifier(metric, train_feats, train_labels, test_feats, test_labels, args, embed_dim):
@@ -251,41 +392,58 @@ def _train_eval_classifier(metric, train_feats, train_labels, test_feats, test_l
 
 def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
     """Training-free TCC scoring: pair test clips by action label, average cycle-back error
-    and Kendall's τ per clip across its pairs."""
+    and Kendall's τ per clip across its pairs.
+    iter18 #8: the per-pair python loop (O(P²) compute_pair calls) is replaced by
+    et_tcc.compute_pairs_batched — all pairs' T×T soft-NN chains run as chunked batched
+    matmuls on the GPU (--tcc-pair-chunk bounds the (chunk, T, D) gather memory); per-clip
+    accumulation is vectorized with np.add.at. Same math (parity-tested vs compute_pair,
+    scipy τ-b included); NaN-τ degenerate pairs excluded from the τ mean exactly as before."""
     labels_map = load_action_labels(args.action_probe_root / "action_labels.json")
     by_action = {}
     for i, ck in enumerate(test_clip_ids):
         a = labels_map[ck]["class_id"]  # action_labels schema: {class, class_id, split}
         by_action.setdefault(a, []).append(i)
-    per_clip_cycle = {i: [] for i in range(test_feats_per_frame.shape[0])}
-    per_clip_tau = {i: [] for i in range(test_feats_per_frame.shape[0])}
-    n_pairs = n_degenerate = 0
-    for a, idxs in by_action.items():
+    pairs_a, pairs_b = [], []
+    for _a, idxs in by_action.items():
         if len(idxs) < 2:
             continue
         for ii in range(len(idxs)):
             for jj in range(ii + 1, len(idxs)):
-                a_i, b_i = idxs[ii], idxs[jj]
-                cyc, tau = et_tcc.compute_pair(
-                    test_feats_per_frame[a_i], test_feats_per_frame[b_i],
-                    temperature=args.tcc_temperature)
-                per_clip_cycle[a_i].append(cyc); per_clip_cycle[b_i].append(cyc)
-                per_clip_tau[a_i].append(tau);   per_clip_tau[b_i].append(tau)
-                n_pairs += 1
-                if np.isnan(tau):                       # degenerate (collinear) → τ undefined
-                    n_degenerate += 1
+                pairs_a.append(idxs[ii])
+                pairs_b.append(idxs[jj])
+    n_pairs = len(pairs_a)
     if n_pairs == 0:
         raise SystemExit("FATAL: TCC produced 0 pairs — every action class has <2 test clips")
+    feats = (test_feats_per_frame if torch.is_tensor(test_feats_per_frame)
+             else torch.from_numpy(test_feats_per_frame)).float()
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    pa, pb = np.asarray(pairs_a), np.asarray(pairs_b)
+    cyc_all = np.empty(n_pairs, dtype=np.float64)
+    tau_all = np.empty(n_pairs, dtype=np.float64)
+    chunk = _resolve_tcc_pair_chunk(args.tcc_pair_chunk, feats.shape[1], feats.shape[2], n_pairs)
+    for s in range(0, n_pairs, chunk):
+        e = min(s + chunk, n_pairs)
+        c, t = et_tcc.compute_pairs_batched(feats[pa[s:e]].to(dev), feats[pb[s:e]].to(dev),
+                                            temperature=args.tcc_temperature)
+        cyc_all[s:e] = c.cpu().numpy()
+        tau_all[s:e] = t.cpu().numpy()
+    n_degenerate = int(np.isnan(tau_all).sum())
     # Kendall's τ is NaN for a degenerate pair (collinear per-frame features — expected for static
-    # clips, esp. frozen encoders). nanmean excludes those τ so one bad pair does not abort the eval;
-    # report the count so the degeneracy stays VISIBLE (FAIL-LOUD) rather than silently swallowed.
+    # clips, esp. frozen encoders). The τ mean excludes those pairs so one bad pair does not abort
+    # the eval; report the count so the degeneracy stays VISIBLE (FAIL-LOUD) rather than swallowed.
     if n_degenerate:
         print(f"  [tcc] {n_degenerate}/{n_pairs} pairs degenerate (collinear features) → τ=NaN, "
               f"excluded from per-clip τ mean (cycle-back kept).", flush=True)
-    cycle_arr = np.array([np.mean(v) if v else np.nan for v in per_clip_cycle.values()], dtype=np.float32)
-    tau_arr = np.array([float(np.mean([x for x in v if not np.isnan(x)]))
-                        if any(not np.isnan(x) for x in v) else np.nan
-                        for v in per_clip_tau.values()], dtype=np.float32)
+    n_clips = feats.shape[0]
+    cyc_sum, cyc_cnt = np.zeros(n_clips), np.zeros(n_clips)
+    np.add.at(cyc_sum, pa, cyc_all); np.add.at(cyc_sum, pb, cyc_all)
+    np.add.at(cyc_cnt, pa, 1);       np.add.at(cyc_cnt, pb, 1)
+    val = ~np.isnan(tau_all)
+    tau_sum, tau_cnt = np.zeros(n_clips), np.zeros(n_clips)
+    np.add.at(tau_sum, pa[val], tau_all[val]); np.add.at(tau_sum, pb[val], tau_all[val])
+    np.add.at(tau_cnt, pa[val], 1);            np.add.at(tau_cnt, pb[val], 1)
+    cycle_arr = np.where(cyc_cnt > 0, cyc_sum / np.maximum(cyc_cnt, 1), np.nan).astype(np.float32)
+    tau_arr = np.where(tau_cnt > 0, tau_sum / np.maximum(tau_cnt, 1), np.nan).astype(np.float32)
     keep = ~(np.isnan(cycle_arr) | np.isnan(tau_arr))
     if not keep.any():
         raise SystemExit("FATAL: TCC every test clip lacked a same-action pair")
@@ -325,6 +483,12 @@ def run_forward_stage(args, wb):
     if not todo:
         print("  all requested metrics cached — nothing to do")
         return
+    # iter18 #5: a full recompute must not RESUME from a prior run's intra-run checkpoint —
+    # clear the split-level ckpts under policy 2 (policy 1 keeps them = crash-resume).
+    if args.cache_policy == "2":
+        for sp in ("test", "train"):
+            guarded_delete(out_dir / f".m12f_ckpt_{sp}.npz", args.cache_policy,
+                           f".m12f_ckpt_{sp}.npz")
 
     labels_map = load_action_labels(args.action_probe_root / "action_labels.json")
     train_keys = sorted(k for k, info in labels_map.items() if info["split"] == "train")
@@ -339,13 +503,42 @@ def run_forward_stage(args, wb):
     del _ckpt  # encoder-temporal needs no predictor (iter16 §3.3 R2 — no predictor build)
     print(f"  encoder loaded (concat dim={embed_concat}; encoder-only — no predictor build)")
 
+    # ── iter18 #7: group metrics by decode length — aot/tov/tcc share the num_frames decode →
+    # ONE streaming pass per split runs ALL their forwards on the same decoded batch (was: one
+    # full decode+stream per metric). pace keeps its own OVERSAMPLE pass (different decode_T;
+    # slicing a longer decode down would NOT be bit-identical to decoding at num_frames —
+    # ACCURACY OVER SPEED). The frame cache (EVAL_FRAME_CACHE_DIR) additionally memoizes the
+    # decode across processes/runs per (clip, decode_T). ──
+    groups = []
+    std = [m for m in todo if m != "pace"]
+    if std:
+        groups.append((args.num_frames, std))
+    if "pace" in todo:
+        groups.append((args.pace_source_frames, ["pace"]))
+    by_metric = {}
+    for decode_T, ms in groups:
+        share_eligible = any(m in ("aot", "tov") for m in ms)
+        smap_test, why_t = (_load_share_map(args, "test", test_keys, embed_concat)
+                            if share_eligible else (None, "n/a (no aot/tov in group)"))
+        print(f"  [share-features] test: {'ON' if smap_test else f'off — {why_t}'}")
+        test_res = _extract_split_multi(args, encoder, ms, test_keys, "test", out_dir,
+                                        decode_T, smap_test)
+        head_ms = [m for m in ms if m in ("aot", "tov", "pace")]
+        train_res = {}
+        if head_ms:
+            smap_tr, why_tr = (_load_share_map(args, "train", train_keys, embed_concat)
+                               if share_eligible else (None, "n/a (no aot/tov in group)"))
+            print(f"  [share-features] train: {'ON' if smap_tr else f'off — {why_tr}'}")
+            train_res = _extract_split_multi(args, encoder, head_ms, train_keys, "train",
+                                             out_dir, decode_T, smap_tr)
+        for m in ms:
+            by_metric[m] = {"test": test_res[m], "train": train_res.get(m)}
+
     for m in todo:
         t0 = time.time()
-        # 1) extract test features (always)
-        test_feats, test_labels, test_ids = _extract_split(args, encoder, m, test_keys, "test", out_dir)
-        # 2) trainable-head metrics also need train split
+        test_feats, test_labels, test_ids = by_metric[m]["test"]
         if m in ("aot", "tov", "pace"):
-            tr_feats, tr_labels, _tr_ids = _extract_split(args, encoder, m, train_keys, "train", out_dir)
+            tr_feats, tr_labels, _tr_ids = by_metric[m]["train"]
             per_example = _train_eval_classifier(m, tr_feats, tr_labels, test_feats, test_labels,
                                                  args, embed_dim=embed_concat)
             # collapse per-example (K per clip) to per-clip mean
@@ -521,6 +714,17 @@ def build_parser():
                    help="REQUIRED if --metric pace|all : decode T_src; should be num_frames × max(strides)")
     p.add_argument("--tcc-temperature", type=float, required=False,
                    help="REQUIRED if --metric tcc|all : soft-NN temperature (Dwibedi eq.1)")
+    p.add_argument("--tcc-pair-chunk", type=str, required=False,
+                   help="REQUIRED if --metric tcc|all : pairs per batched TCC chunk — bounds the "
+                        "(chunk, T_eff, D) gather memory of compute_pairs_batched (iter18 #8). "
+                        "'auto' = derive from free VRAM × gpu.gpu_memory_target (scales across "
+                        "24/48/96 GB boxes); an explicit int pins it. "
+                        "yaml probe.encoder_temporal.tcc_pair_chunk")
+    p.add_argument("--share-features", type=int, choices=[0, 1], required=False,
+                   help="REQUIRED for --stage forward : 1 = serve the IDENTITY forward (AoT-fwd / "
+                        "TOV perm-0) from probe_action's features_{split}.npy cache (m12b pattern; "
+                        "iter18 #6) — explicit fallback to fresh forwards if the cache can't serve "
+                        "every key ; 0 = always compute. yaml probe.encoder_temporal.share_features")
     # — head training (trainable metrics) —
     p.add_argument("--head-lr", type=float, required=False,
                    help="REQUIRED for aot|tov|pace|all : tiny linear head AdamW LR")
@@ -545,10 +749,12 @@ def _check_required(args):
         return
     needs = {"tov": ["tov_n_permutations"],
              "pace": ["pace_strides", "pace_source_frames"],
-             "tcc": ["tcc_temperature"]}
+             "tcc": ["tcc_temperature", "tcc_pair_chunk"]}
     head_needs = ["head_lr", "head_epochs", "head_weight_decay", "head_batch_size"]
     metrics = _resolve_metrics(args.metric)
     missing = []
+    if args.share_features is None:
+        missing.append("--share-features (stage=forward; 0|1, yaml encoder_temporal.share_features)")
     for m in metrics:
         for k in needs.get(m, []):
             if getattr(args, k) is None:

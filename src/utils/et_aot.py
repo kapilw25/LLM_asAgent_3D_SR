@@ -30,10 +30,23 @@ _MIN_CLASSES = 2
 @torch.no_grad()
 def compute_features(encoder, batch, num_frames, tubelet_size):
     """Returns (feat_fwd, feat_rev) — each (B, D), mean-pooled across T_eff. Two examples per
-    input clip; orchestrator stacks them with labels {0=fwd, 1=rev} for head training/eval."""
-    feat_fwd = forward_per_frame(encoder, batch, num_frames, tubelet_size).mean(dim=1)
-    feat_rev = forward_per_frame(encoder, reverse_frames(batch), num_frames, tubelet_size).mean(dim=1)
-    return feat_fwd.float().cpu(), feat_rev.float().cpu()
+    input clip; orchestrator stacks them with labels {0=fwd, 1=rev} for head training/eval.
+    iter18 #2 (variant-batching): ONE stacked (2B) [fwd ‖ rev] encoder forward instead of two
+    sequential B-forwards — fills the GPU at small B; OOM safety = m12f's halving backoff."""
+    B = batch.shape[0]
+    x_all = torch.cat([batch, reverse_frames(batch)], dim=0)              # (2B, T, C, H, W)
+    f_all = forward_per_frame(encoder, x_all, num_frames, tubelet_size).mean(dim=1).float().cpu()
+    return f_all[:B], f_all[B:]
+
+
+@torch.no_grad()
+def compute_features_rev(encoder, batch, num_frames, tubelet_size):
+    """REVERSE-direction features only (B, D) — used when the FORWARD-direction features are
+    served from probe_action's cache (m12b --share-features pattern; m12f speedup #6): the
+    forward features of an un-transformed clip ARE the action-probe features, so only the
+    reversed clip needs an encoder pass (halves AoT's forwards)."""
+    return forward_per_frame(encoder, reverse_frames(batch), num_frames,
+                             tubelet_size).mean(dim=1).float().cpu()
 
 
 def train_head(train_feats, train_labels, *, embed_dim, lr, epochs, weight_decay, batch_size,
@@ -87,4 +100,4 @@ def eval_head(head, test_feats, test_labels, *, device, batch_size):
     return out
 
 
-__all__ = ["compute_features", "train_head", "eval_head"]
+__all__ = ["compute_features", "compute_features_rev", "train_head", "eval_head"]

@@ -136,9 +136,25 @@ OUTPUT_ACTION="${OUTPUT_ACTION:-${DEFAULT_OUTPUT_PREFIX}/probe_action}"
 OUTPUT_COS="${OUTPUT_COS:-${DEFAULT_OUTPUT_PREFIX}/probe_motion_cos}"
 OUTPUT_MSE="${OUTPUT_MSE:-${DEFAULT_OUTPUT_PREFIX}/probe_future_mse}"
 # iter16 §3.3: predictor-temporal metric suite (m12e, 6 metrics) — Stages 8b/9b.
-# (iter17: encoder-temporal suite RETIRED — encoder metrics dropped; archived in src/legacy/.)
 OUTPUT_PREDTEMP="${OUTPUT_PREDTEMP:-${DEFAULT_OUTPUT_PREFIX}/predictor_temporal}"
 PT_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.predictor_temporal.batch_size)"
+# iter18: encoder-temporal suite REVIVED (m12f, aot/tov/pace/tcc) — Stages 8c/9c, speedups #1-#8.
+# All knobs single-sourced from configs/pipeline.yaml probe.encoder_temporal (no inline values).
+OUTPUT_ENCTEMP="${OUTPUT_ENCTEMP:-${DEFAULT_OUTPUT_PREFIX}/encoder_temporal}"
+_ET_Y() { scripts/lib/yaml_extract.py configs/pipeline.yaml "probe.encoder_temporal.$1"; }
+ET_BATCH="$(_ET_Y batch_size)"
+ET_TUBELET="$(_ET_Y tubelet_size)"
+ET_TOV_NPERM="$(_ET_Y tov_n_permutations)"
+ET_PACE_STRIDES="$(_ET_Y pace_strides)"
+ET_PACE_SRC="$(_ET_Y pace_source_frames)"
+ET_TCC_TEMP="$(_ET_Y tcc_temperature)"
+ET_TCC_CHUNK="$(_ET_Y tcc_pair_chunk)"
+ET_SHARE="$(_ET_Y share_features)"
+ET_HEAD_LR="$(_ET_Y head_lr)"
+ET_HEAD_EPOCHS="$(_ET_Y head_epochs)"
+ET_HEAD_WD="$(_ET_Y head_weight_decay)"
+ET_HEAD_BS="$(_ET_Y head_batch_size)"
+ET_HEAD_CAP="$(_ET_Y head_train_cap)"
 OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${DEFAULT_OUTPUT_PREFIX}/probe_taxonomy}"
 OUTPUT_PLOTS="${OUTPUT_PLOTS:-${DEFAULT_OUTPUT_PREFIX}/probe_plot}"
 TAG_TAXONOMY="${TAG_TAXONOMY:-configs/tag_taxonomy.json}"
@@ -163,11 +179,19 @@ if [ -n "$_EXTRA_SKIP" ]; then
     echo "  [eval] RUNTIME extra skip-stages: +${_EXTRA_SKIP}  →  SKIP_STAGES=${SKIP_STAGES}"
 fi
 NUM_FRAMES="${NUM_FRAMES:-16}"
+# iter18 (2026-06-12): mandated fragmentation guard (src/CLAUDE.md GPU rules) — only the LEGACY
+# wrappers (scripts/legacy/train_*.sh) exported it; BOTH live wrappers dropped it in refactors
+# (run_train.sh restored in the same pass). The 24 GB smoke box hits allocator fragmentation
+# without it (variant-stacked m12f forwards allocate differently-shaped blocks metric-to-metric).
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 # iter18 2026-06-07: which predictor_temporal metric(s) Stage 8b runs. Default "all" (the 6-metric
 # suite in one process). The metric-parallel scheduler (iter18_poc_ngpu) fans Stage 8b into 6
 # concurrent jobs, each setting PT_METRIC=<single> so m12e runs ONE metric → wall = slowest metric,
 # not the sum of six. m12e cache-skips already-done metrics, so a re-run is cheap.
 PT_METRIC="${PT_METRIC:-all}"
+# iter18 m12f revival: which encoder_temporal metric(s) Stage 8c runs — same fan pattern as
+# PT_METRIC (the scheduler's F: jobs each set ET_METRIC=<single>; m12f cache-skips done metrics).
+ET_METRIC="${ET_METRIC:-all}"
 
 # ── iter17: shared decoded-frame cache ──────────────────────────────────
 # The scheduler runs ONE run_eval.sh per encoder, so 8 processes decode the same ~1.8k
@@ -731,9 +755,11 @@ PER_ENC_ANY=0
 # iter16 §3.3: list ALL per-encoder stages so the loop isn't skipped when only a
 # subset is requested. Was "2 3 5 6 8" — omitted 11 (taxonomy) AND the new 8b
 # (predictor temporal), so e.g. SKIP_STAGES=2,3,5,6,8 wrongly skipped them.
-for s in 2 3 11 5 6 8 8b; do should_skip "$s" || PER_ENC_ANY=1; done
+# iter18 (2026-06-12): SAME bug bit 8c — the m12f smoke (skip everything but 8c)
+# fell through to DONE in 0 min because 8c wasn't in this gate list.
+for s in 2 3 11 5 6 8 8b 8c; do should_skip "$s" || PER_ENC_ANY=1; done
 if [ "$PER_ENC_ANY" -eq 1 ]; then
-    stamp "PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
+    stamp "PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — ${ENCODERS//[^[:space:]]/x} encoders sequentially"
     # ── iter17: background aggregate-ETA heartbeat. Prints whole-pipeline progress
     # (tqdm-style bar + hh:mm ETA across ALL encoders) into THIS eval log every
     # ETA_HEARTBEAT_INTERVAL (default 120s), so no separate monitor script is needed —
@@ -1016,7 +1042,35 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             fi
         fi
 
-        # (Stage 8c encoder_temporal retired iter17 — encoder metrics dropped; see src/legacy/.)
+        # ── STAGE 8c — encoder_temporal (m12f, aot/tov/pace/tcc) ── (iter18 revival, speedups #1-#8:
+        # ET_METRIC fan · variant-batched forwards · OOM-halving · ckpt-resume · share-features ·
+        # same-T single-pass · batched TCC). vjepa-ckpt encoders only (m12f loads encoder-only).
+        if ! should_skip 8c && [ "$ENC_KIND" = vjepa ]; then
+            stamp "  STAGE 8c · encoder_temporal (metric=${ET_METRIC}) for $ENC"
+            python -u src/m12f_encoder_temporal.py "--$MODE" \
+                --stage forward --metric "$ET_METRIC" \
+                --variant "$ENC" \
+                $EXTRA_CKPT \
+                --model-config "$ENC_MCFG" \
+                --action-probe-root "$OUTPUT_ACTION" \
+                --local-data "$LOCAL_DATA" \
+                --output-root "$OUTPUT_ENCTEMP" \
+                --num-frames "$NUM_FRAMES" \
+                --tubelet-size "$ET_TUBELET" \
+                --batch-size "$ET_BATCH" \
+                --tov-n-permutations "$ET_TOV_NPERM" \
+                --pace-strides "$ET_PACE_STRIDES" \
+                --pace-source-frames "$ET_PACE_SRC" \
+                --tcc-temperature "$ET_TCC_TEMP" \
+                --tcc-pair-chunk "$ET_TCC_CHUNK" \
+                --share-features "$ET_SHARE" \
+                --head-lr "$ET_HEAD_LR" --head-epochs "$ET_HEAD_EPOCHS" \
+                --head-weight-decay "$ET_HEAD_WD" --head-batch-size "$ET_HEAD_BS" \
+                --head-train-cap "$ET_HEAD_CAP" \
+                --cache-policy "$P_MSE" \
+                --no-wandb \
+                2>&1 | tee "logs/m12f_encoder_temporal_forward_${ENC}_${ET_METRIC}.log"
+        fi
 
         # ─── End-of-per-encoder cleanup (iter15 Phase 5 V6, 2026-05-15) ──
         # Delete features_test.npy + clip_keys_test.npy + .probe_features_test_
@@ -1134,7 +1188,17 @@ if ! should_skip 9b; then
         2>&1 | tee logs/m12e_predictor_temporal_paired.log
 fi
 
-# (Stage 9c encoder_temporal paired retired iter17 — encoder metrics dropped; see src/legacy/.)
+# ── STAGE 9c — encoder_temporal paired (m12f, aot/tov/pace/tcc) ── (iter18 revival)
+if ! should_skip 9c; then
+    stamp "STAGE 9c · encoder_temporal paired_per_variant (CPU)"
+    python -u src/m12f_encoder_temporal.py "--$MODE" \
+        --stage paired_per_variant --metric all \
+        --output-root "$OUTPUT_ENCTEMP" \
+        --tubelet-size "$ET_TUBELET" \
+        --cache-policy "$P_MSE" \
+        --no-wandb \
+        2>&1 | tee logs/m12f_encoder_temporal_paired.log
+fi
 
 # ── STAGE 10 — plots (m08d, CPU, always-recompute) ─────────────────────
 # Pure visualization — no cache_policy. Wipes its own output_dir on entry
@@ -1147,6 +1211,7 @@ if ! should_skip 10; then
         --future-mse-root   "$OUTPUT_MSE" \
         --taxonomy-root     "$OUTPUT_TAXONOMY" \
         --predictor-temporal-root "$OUTPUT_PREDTEMP" \
+        --encoder-temporal-root   "$OUTPUT_ENCTEMP" \
         --output-dir        "$OUTPUT_PLOTS" \
         --no-wandb \
         2>&1 | tee logs/m13_eval_plot.log
@@ -1158,6 +1223,7 @@ echo "Artifacts:"
 echo "  🔥 P1 GATE     $OUTPUT_ACTION/probe_paired_delta.json"
 echo "  motion_cos     $OUTPUT_COS/probe_motion_cos_paired.json"
 echo "  future_mse     $OUTPUT_MSE/probe_future_mse_per_variant.json"
+echo "  enc_temporal   $OUTPUT_ENCTEMP/encoder_temporal_per_variant.json (aot/tov/pace/tcc)"
 echo "  taxonomy lbls  $OUTPUT_TAXONOMY/taxonomy_labels.json (consumed by run_train.sh multi-task path)"
 echo "  plots          $OUTPUT_PLOTS/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}"
 echo "Per-encoder probe ckpts:"

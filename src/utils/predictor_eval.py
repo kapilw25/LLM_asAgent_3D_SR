@@ -204,18 +204,25 @@ def to_pixel(batch: torch.Tensor) -> torch.Tensor:
 # SAME implementation — single source, no drift.
 def safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1):
     """Run a metric on `batch`, sub-batching with OOM backoff (mirrors AdaptiveBatchSizer
-    intent). Returns concatenated per-clip array."""
+    intent). Returns concatenated per-clip array.
+    The retry runs OUTSIDE the except block (iter18 2026-06-12, found via the m12f smoke):
+    an exception's __traceback__ pins the FAILED forward's activations, so recursing inside
+    `except` accumulates every failed attempt's VRAM — on a small card the halvings then OOM
+    all the way down to min_bs. Leaving the except scope releases the pinned tensors before
+    the retry; the 96 GB boxes never surfaced this only because of headroom."""
+    oom = False
     try:
         return fn(encoder, predictor, batch, num_frames)
     except torch.cuda.OutOfMemoryError:
-        cuda_cleanup()
-        b = batch.shape[0]
-        if b <= min_bs:
+        if batch.shape[0] <= min_bs:
             raise
-        mid = b // 2
-        lo = safe_metric(fn, encoder, predictor, batch[:mid], num_frames, min_bs)
-        hi = safe_metric(fn, encoder, predictor, batch[mid:], num_frames, min_bs)
-        return np.concatenate([lo, hi], axis=0)
+        oom = True
+    assert oom
+    cuda_cleanup()
+    mid = batch.shape[0] // 2
+    lo = safe_metric(fn, encoder, predictor, batch[:mid], num_frames, min_bs)
+    hi = safe_metric(fn, encoder, predictor, batch[mid:], num_frames, min_bs)
+    return np.concatenate([lo, hi], axis=0)
 
 
 # ── h-memoization helper (V-JEPA target amortization) ──────────────────

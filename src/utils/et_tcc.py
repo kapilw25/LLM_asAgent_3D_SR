@@ -97,6 +97,54 @@ def compute_pair(feats_a, feats_b, *, temperature):
            kendalls_tau_alignment(feats_a, feats_b)
 
 
+def _kendall_tau_b_vs_arange(x):
+    """Batched Kendall's τ-b of each ROW of x (M, T) against the identity ranking arange(T) —
+    torch-native replica of scipy.stats.kendalltau(arange(T), row) (iter18 #8):
+      τ_b = S / √((n0 − n1)·(n0 − n2)) ; S = Σ_{i<j} sign(x_j − x_i)·sign(j − i)
+      n0 = T(T−1)/2 ; n1 = tied pairs in x ; n2 = tied pairs in arange = 0
+    sign(j − i) = +1 for i<j, so S reduces to Σ sign(x_j − x_i). A constant row has n1 = n0 →
+    denominator 0 → NaN, exactly scipy's behaviour for a zero-variance ranking (and the
+    unique<2 guard in kendalls_tau_alignment)."""
+    if x.ndim != _FEATS_RANK:
+        raise RuntimeError(f"_kendall_tau_b_vs_arange expects (M, T); got {tuple(x.shape)}")
+    T = x.shape[1]
+    iu = torch.triu_indices(T, T, offset=1, device=x.device)
+    dij = x[:, iu[1]].float() - x[:, iu[0]].float()          # x_j − x_i for all i<j → (M, n0)
+    s = torch.sign(dij).sum(dim=1)
+    n1 = (dij == 0).sum(dim=1).float()
+    n0 = float(iu.shape[1])
+    denom = ((n0 - n1) * n0).sqrt()
+    return torch.where(denom > 0, s / denom, torch.full_like(denom, float("nan")))
+
+
+@torch.no_grad()
+def compute_pairs_batched(feats_a, feats_b, *, temperature):
+    """Batched compute_pair over M pairs: (M, T, D) × (M, T, D) → (cycle (M,), tau (M,)).
+    Identical math to the scalar path — the per-pair T×T similarity / softmax / gather chain is
+    stacked into ONE batched matmul sequence (iter18 #8; the reference TCC implementations
+    compute soft-NN alignment batched the same way — Dwibedi CVPR19 eq. 1,
+    github.com/google-research/google-research/tree/master/tcc). Degenerate (constant-ranking)
+    pairs → τ = NaN, matching kendalls_tau_alignment; cycle-back is never NaN.
+    Parity-tested against compute_pair (scipy τ-b included) in the m12f CPU suite."""
+    if feats_a.shape != feats_b.shape or feats_a.ndim != _FEATS_RANK + 1:
+        raise RuntimeError(
+            f"compute_pairs_batched expects matching (M,T,D); got {tuple(feats_a.shape)} vs "
+            f"{tuple(feats_b.shape)}")
+    if temperature <= 0:
+        raise RuntimeError(f"temperature must be > 0; got {temperature}")
+    M, T, D = feats_a.shape
+    j = torch.arange(T, dtype=feats_a.dtype, device=feats_a.device)
+    sim_ab = feats_a @ feats_b.transpose(1, 2)                            # (M,T,T) UNSCALED (τ uses raw)
+    soft_b = (F.softmax(sim_ab / temperature, dim=2) * j).sum(dim=2)      # (M,T) soft index into B
+    b_hard = soft_b.round().long().clamp_(0, T - 1)
+    sel_b = torch.gather(feats_b, 1, b_hard.unsqueeze(-1).expand(-1, -1, D))   # (M,T,D)
+    soft_a = (F.softmax(sel_b @ feats_a.transpose(1, 2) / temperature, dim=2) * j).sum(dim=2)
+    cycle = (soft_a - j).abs().mean(dim=1)                                # (M,)
+    tau = _kendall_tau_b_vs_arange(sim_ab.argmax(dim=2))                  # hard-NN, no temperature
+    return cycle, tau
+
+
 __all__ = [
     "compute_per_frame", "cycle_back_error", "kendalls_tau_alignment", "compute_pair",
+    "compute_pairs_batched",
 ]

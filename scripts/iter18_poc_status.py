@@ -41,7 +41,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "src"))
 import json  # noqa: E402
 from iter18_poc_ngpu import (  # noqa: E402  (canonical DAG — single source for naming + jobs)
-    ARM2DIR, ARM2ENC, BACKBONE, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name, enc_prefix)
+    ARM2DIR, ARM2ENC, BACKBONE, ET_METRICS, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name,
+    enc_prefix)
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
@@ -259,8 +260,8 @@ def _eval_calibrate(jobs, mtag, now_s):
       bar can never masquerade as the current one's)."""
     walls, projs, state, plans = {}, {}, {}, {}
     for jid, j in jobs.items():
-        if _arm_of(jid) != "eval" or jid.startswith("P:"):
-            continue                  # P: (Stage-8b metric) jobs use _pt_total, not the stage ledger
+        if _arm_of(jid) != "eval" or jid.startswith(("P:", "F:")):
+            continue                  # P:/F: (Stage-8b/8c metric) jobs use _pt_total, not the stage ledger
         plans[jid] = _eval_plan_for(jid, mtag)
         cands = sorted((p for p in REPO.glob(j["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
         for p in cands:
@@ -653,6 +654,10 @@ def main():
             enc_nm, metric = jid[2:].rsplit(":", 1)   # NOT 'enc_name' — that's the imported helper (shadowing it makes it a main()-local → UnboundLocalError)
             if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_nm}/aggregate_{metric}.json").exists():
                 done.setdefault(jid, "resume")
+        elif jid.startswith("F:"):    # Stage-8c (m12f encoder_temporal) — same done-marker pattern
+            enc_nm, metric = jid[2:].rsplit(":", 1)
+            if (REPO / f"outputs/{mtag}/encoder_temporal/{enc_nm}/aggregate_{metric}.json").exists():
+                done.setdefault(jid, "resume")
     # iter18 2026-06-08: drop any log-parsed jid NOT in THIS run's job set. A watch pane reading a
     # DIFFERENT-backbone or OLD (pre-banner) log carries foreign jids (e.g. T:vjepa_2_1_vitG:… while
     # this pane built vjepa_2_1_vitg jobs); feeding one into jobs[jid] downstream → KeyError. The
@@ -705,7 +710,8 @@ def main():
     # (metrics differ a lot in cost — teacher_free ≫ causal — so keep them per-metric).
     _pt_by = {}
     for jid in jobs:
-        if jid.startswith("P:") and classify(jid) == "done" and jid in consumed:
+        if jid.startswith(("P:", "F:")) and classify(jid) == "done" and jid in consumed:
+            # one shared per-metric dict: PT names (rollout/causal/…) and ET names (aot/tov/…) are disjoint
             _pt_by.setdefault(jid.rsplit(":", 1)[-1], []).append(consumed[jid])
     pt_med = {m: sorted(v)[len(v) // 2] for m, v in _pt_by.items()}
 
@@ -717,8 +723,8 @@ def main():
         prior = est.get(arm, est["eval"])
         if st in ("done", "failed"):
             remaining[jid] = 0.0
-        elif jid.startswith("P:"):
-            # Stage-8b single-metric job — estimated from its OWN m12e clip bar (running) or the
+        elif jid.startswith(("P:", "F:")):
+            # Stage-8b/8c single-metric job — estimated from its OWN clip bar (running) or the
             # per-metric median (pending), NOT the stage ledger. Cold prior is _PT_COLD_PRIOR
             # (per-metric), NOT est["eval"] (the whole-eval time, ~10× too big for one metric).
             el = elapsed(jid) if st == "running" else 0.0
@@ -821,7 +827,8 @@ def main():
         # metric each). They run in PARALLEL across the GPU pool, so the group's remaining is the
         # MAX finish, not the sum. `·8b D✓R▶/6` = D done, R running of the 6 metric jobs — so the
         # one rolled-up cell reconciles with the 🔄 job counter (3 parallel metrics here = 3▶).
-        group = [j for j in ([f"E:{enc}"] + [f"P:{enc}:{m}" for m in PT_METRICS]) if j in jobs]
+        group = [j for j in ([f"E:{enc}"] + [f"P:{enc}:{m}" for m in PT_METRICS]
+                             + [f"F:{enc}:{m}" for m in ET_METRICS]) if j in jobs]
         if not group:
             return "—"
         sts = [classify(j) for j in group]
@@ -832,9 +839,13 @@ def main():
         n8 = sum(1 for j in group if j.startswith("P:"))
         n8done = sum(1 for j in group if j.startswith("P:") and classify(j) == "done")
         n8run = sum(1 for j in group if j.startswith("P:") and classify(j) == "running")
+        nc = sum(1 for j in group if j.startswith("F:"))
+        ncdone = sum(1 for j in group if j.startswith("F:") and classify(j) == "done")
+        ncrun = sum(1 for j in group if j.startswith("F:") and classify(j) == "running")
         rem = max((finish.get(j, 0.0) for j in group), default=0.0)
         glyph = "🔄" if any(s == "running" for s in sts) else "⬚"
-        tag = (f"·8b {n8done}✓{n8run}▶/{n8}" if n8 else "")
+        tag = ((f"·8b {n8done}✓{n8run}▶/{n8}" if n8 else "")
+               + (f"·8c {ncdone}✓{ncrun}▶/{nc}" if nc else ""))
         return f"{glyph}{tag}·~{_dur(rem)}"
 
     def kemoji(arm):

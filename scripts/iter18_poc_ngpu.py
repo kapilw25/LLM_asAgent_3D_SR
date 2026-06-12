@@ -8,9 +8,9 @@ Adapted from scripts/legacy/iter17_poc_ngpu.py with the iter18 DAG:
     arm's --init-from-ckpt via run_train.sh SURGERY_INIT) — iter17 only gated surgery on it.
   - 13 train arms = §2 of iter/iter18_ablations_FTtechniues/runbook.md (novelty ×4 + control +
     8 FT-technique baselines + pretrain).
-  - per-encoder eval jobs run ONLY stages 2,3,11,5,6,8,8b (SKIP_STAGES drops the shared stages);
+  - per-encoder eval jobs run ONLY stages 2,3,11,5,6,8,8b,8c (SKIP_STAGES drops the shared stages);
     the §3 finale is ONE run_eval over ALL encoders with the per-encoder stages skipped → it runs
-    the shared paired-Δ/plot stages (1,4,12,13,7,9,9b,10) off the per-encoder caches.
+    the shared paired-Δ/plot stages (1,4,12,13,7,9,9b,9c,10) off the per-encoder caches.
 
 WALL-TIME at POC (7,724 clips, ~26.6 s/step ≈ 3.5-4.5 h per encoder arm, ~2-3 h per head arm):
   1 GPU ≈ 50 h  ·  2 GPU ≈ ~28 h  ·  4 GPU ≈ ~17 h  (pretrain is the serial 3.6 h prefix)
@@ -89,19 +89,23 @@ ARM2DIR = {
     "cassle_encoder":            "m09d_cassle_encoder",
     "ewc_encoder":               "m09d_ewc_encoder",
 }
-# Stage split (verified against scripts/run_eval.sh should_skip gates, 2026-06-04):
+# Stage split (verified against scripts/run_eval.sh should_skip gates, 2026-06-04; 8c/9c iter18):
 #   per-encoder stages: 2 features · 3 probe · 11 taxonomy-train · 5/6 motion_cos · 8 future_mse
-#                       · 8b predictor_temporal
+#                       · 8b predictor_temporal · 8c encoder_temporal (m12f aot/tov/pace/tcc)
 #   shared stages:      1 labels · 4 action-paired · 12 taxonomy-paired · 13 taxonomy-plot
-#                       · 7 motion-paired · 9 future-paired · 9b predictor-paired · 10 m13 plots
-EVAL_SKIP_SHARED = "1,4,12,13,7,9,9b,10"   # per-encoder jobs skip the shared stages
-S3_SKIP_PERENC = "2,3,11,5,6,8,8b"         # the §3 finale skips the per-encoder stages
+#                       · 7 motion-paired · 9 future-paired · 9b predictor-paired
+#                       · 9c encoder-temporal-paired · 10 m13 plots
+EVAL_SKIP_SHARED = "1,4,12,13,7,9,9b,9c,10"  # per-encoder jobs skip the shared stages (9c = m12f paired)
+S3_SKIP_PERENC = "2,3,11,5,6,8,8b,8c"        # the §3 finale skips the per-encoder stages
 # iter18 2026-06-07 (metric-parallel Stage 8b): Stage 8b (m12e predictor_temporal, ~2.2 h, the eval
 # bottleneck) is fanned into 6 independent single-metric jobs across the GPU pool → wall = slowest
 # metric (~teacher_free), not the sum of six. The per-encoder E: job then runs stages 2-8 only.
-EVAL_SKIP_PERENC_NO8B = EVAL_SKIP_SHARED + ",8b"          # E: job — every per-encoder stage EXCEPT 8b
-EVAL_SKIP_ONLY_8B = "2,3,11,5,6,8," + EVAL_SKIP_SHARED    # P: job — skip all but 8b
+# iter18 m12f revival: Stage 8c (encoder_temporal, 4 metrics) fans the same way into F: jobs.
+EVAL_SKIP_PERENC_NO8B = EVAL_SKIP_SHARED + ",8b,8c"          # E: job — per-encoder stages EXCEPT the fans
+EVAL_SKIP_ONLY_8B = "2,3,11,5,6,8,8c," + EVAL_SKIP_SHARED    # P: job — skip all but 8b
+EVAL_SKIP_ONLY_8C = "2,3,11,5,6,8,8b," + EVAL_SKIP_SHARED    # F: job — skip all but 8c
 PT_METRICS = ["rollout", "causal", "tdist", "teacher_free", "maskratio", "order"]  # mirrors m12e.METRICS keys
+ET_METRICS = ["aot", "tov", "pace", "tcc"]                   # mirrors m12f.METRICS keys
 
 
 def cpu_slots(n):
@@ -183,6 +187,18 @@ def build_jobs(mode):
                 cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8B} PT_METRIC={m} "
                      f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
                 log=f"logs/iter18_ngpu_{mtag}_pt_{encn}_{m}_{{ts}}.log")
+        # iter18 m12f revival (#1): Stage 8c fans into 4 F: jobs (one encoder_temporal metric
+        # each), gated on TRAIN like P: — runs concurrent with stages 2-8. If a F: job lands
+        # before this encoder's Stage-2 features exist, m12f's share-features falls back to
+        # fresh identity forwards with an explicit reason (correct either way; in practice the
+        # queue drains E: stage 2 long before F: slots open, so the share usually hits).
+        for m in ET_METRICS:
+            fjid = f"F:{encn}:{m}"
+            jobs[fjid] = dict(
+                id=fjid, kind="eval", deps=set(deps), needs_labels=True,
+                cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8C} ET_METRIC={m} "
+                     f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
+                log=f"logs/iter18_ngpu_{mtag}_et_{encn}_{m}_{{ts}}.log")
     return jobs, mtag
 
 
@@ -232,9 +248,10 @@ def main():
             sys.exit("FATAL: cannot skip pretrain_encoder — it is every arm's init dependency.")
         drop = ({f"T:{BACKBONE}:{a}" for a in args.skip_arms}
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}
-                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in PT_METRICS})
+                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in PT_METRICS}
+                | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in ET_METRICS})
         jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
-        print(f"  [--skip-arms] dropped {sorted(args.skip_arms)} (train+eval+8b-metrics) — §3 finale "
+        print(f"  [--skip-arms] dropped {sorted(args.skip_arms)} (train+eval+8b/8c-metrics) — §3 finale "
               f"will cover the remaining encoders only", flush=True)
 
     # disk-preflight: 13 arms × ~14G ckpts ≈ 185G + eval artifacts ≈ ~210G; require margin.
@@ -281,6 +298,19 @@ def main():
                 pt_done += 1
         if pt_done:
             print(f"  [resume --cache 1] skipping {pt_done} already-done Stage-8b metric jobs",
+                  flush=True)
+        # F: (Stage-8c encoder_temporal) jobs — same done-marker pattern (m12f writes
+        # aggregate_<metric>.json per metric; tcc's is aggregate_tcc.json).
+        et_done = 0
+        for jid in jobs:
+            if not jid.startswith("F:"):
+                continue
+            enc_nm, metric = jid[2:].rsplit(":", 1)
+            if (REPO / f"outputs/{mtag}/encoder_temporal/{enc_nm}/aggregate_{metric}.json").exists():
+                done.add(jid)
+                et_done += 1
+        if et_done:
+            print(f"  [resume --cache 1] skipping {et_done} already-done Stage-8c metric jobs",
                   flush=True)
 
     # CPU-set pinning (iter18 2026-06-07): one private core slice per GPU slot —
