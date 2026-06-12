@@ -17,7 +17,9 @@ live, never hardcoded):
         · predictor_temporal/<enc>/aggregate_{rollout,causal,tdist,maskratio,order,teacher_free}
 
 USAGE:
-  python -u scripts/iter18_poc_metrics.py                  # POC
+  python -u scripts/iter18_poc_metrics.py                  # POC — BOTH tables
+  python -u scripts/iter18_poc_metrics.py --training       # TRAIN table only
+  python -u scripts/iter18_poc_metrics.py --evaluation     # EVAL table only
   python -u scripts/iter18_poc_metrics.py --mode SANITY
   watch -n60 'python -u scripts/iter18_poc_metrics.py'     # live, refresh every 60s
 """
@@ -49,6 +51,9 @@ TRAIN_ORDER = [
 _HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
 # predictor_temporal aggregate families (aggregate_<name>.json each, headline key "mean").
 _PT_FAMILIES = ["rollout", "causal", "tdist", "maskratio", "order", "teacher_free"]
+# encoder_temporal (Stage 8c, m12f) families — aot/tov/pace are flat (headline "mean"+"ci");
+# tcc nests TWO headline metrics (cycle_back{}, kendalls_tau{}) inside ONE aggregate_tcc.json.
+_ET_FLAT = ["aot", "tov", "pace"]
 _LOG_HEAD_BYTES = 16000   # the split-count prints land in the first few KB of each arm log
 _FRESH_LOG_S = 1800       # a per-job log touched within this window = arm is live
                           # (the quietest phase — 451-clip probe ENCODE — writes nothing
@@ -178,6 +183,20 @@ def train_blocks(mtag):
     return blocks
 
 
+def _main_log_text(mtag):
+    """Text of the latest MAIN scheduler log. Excludes the per-job logs (_train_/_eval_/_pt_/
+    _et_/_s3_) — they are NEWER than the main tee and carry no banner/GPU markers; picking one
+    blanked the whole status table THREE times (_eval_ 06-06, _pt_ 06-07, _et_ 06-12)."""
+    cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
+             if p.exists() and not any(s in p.name for s in ("_train_", "_eval_", "_pt_", "_et_", "_s3_"))]
+    if not cands:
+        return ""
+    try:
+        return max(cands, key=lambda p: p.stat().st_mtime).read_text(errors="replace")
+    except OSError:
+        return ""
+
+
 def skip_arms(mtag):
     """Arms to HIDE from the printed TABLES + the 3 graphs (NOT the data files — those keep
     everything, user order 2026-06-08). Source: ITER18_SKIP_ARMS env (explicit, space-separated),
@@ -189,16 +208,35 @@ def skip_arms(mtag):
         # (correct inside watch "..."); pasted DIRECTLY at a prompt the \" become LITERAL quotes that
         # bash bakes into the value → tokens "cassle_encoder … surgery_noDI_head" never match the arms.
         return {tok.strip().strip("\"'") for tok in env.split() if tok.strip().strip("\"'")}
-    cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
-             if not any(s in p.name for s in ("_train_", "_eval_", "_pt_", "_s3_"))]
-    if not cands:
-        return set()
-    try:
-        txt = max(cands, key=lambda p: p.stat().st_mtime).read_text(errors="replace")
-    except OSError:
-        return set()
-    m = re.search(r"\[--skip-arms\] dropped \[(.*?)\]", txt)
+    m = re.search(r"\[--skip-arms\] dropped \[(.*?)\]", _main_log_text(mtag))
     return set(re.findall(r"'([^']+)'", m.group(1))) if m else set()
+
+
+# eval-table column(s) each RUNNING job lights up with 🔄 (jid metric → display-col keys).
+_JID_COLS = {**{m: [m] for m in _PT_FAMILIES}, **{m: [m] for m in _ET_FLAT},
+             "tcc": ["tcc_cycle", "tcc_tau"]}   # one tcc forward → two headline columns
+_E_COLS = ["act", "tax", "mcos", "fut"]         # the E: job's stages produce these four
+
+
+def running_cells(mtag):
+    """{enc_full: {col, …}} for jobs currently RUNNING in the main scheduler log (◀ launched,
+    no ✓/✗ yet). The eval table shows 🔄 in those cells instead of '—' (user order 06-12:
+    the 4 live GPU jobs must be VISIBLE in this table, not just in the status pane)."""
+    txt = _main_log_text(mtag)
+    settled = set(re.findall(r"GPU\d+ [✓✗] (\S+)", txt))
+    cells = {}
+    for jid in re.findall(r"GPU\d+ ◀ (\S+)", txt):
+        if jid in settled:
+            continue
+        if jid.startswith("E:"):
+            enc, cols = jid[2:], _E_COLS
+        elif jid.startswith(("P:", "F:")):
+            enc, metric = jid[2:].rsplit(":", 1)
+            cols = _JID_COLS.get(metric, [metric])
+        else:
+            continue
+        cells.setdefault(enc, set()).update(cols)
+    return cells
 
 
 def eval_rows(mtag):
@@ -212,6 +250,9 @@ def eval_rows(mtag):
         fm = _jload(base / artifact("probe_future_mse_dir") / enc / "aggregate_mse.json")
         pt = {fam: _jload(base / artifact("predictor_temporal_dir") / enc / f"aggregate_{fam}.json")
               for fam in _PT_FAMILIES}
+        et = {fam: _jload(base / artifact("encoder_temporal_dir") / enc / f"aggregate_{fam}.json")
+              for fam in _ET_FLAT}
+        tcc = _jload(base / artifact("encoder_temporal_dir") / enc / "aggregate_tcc.json") or {}
         tax_macro = None
         if tax and isinstance(tax.get("dims"), dict) and tax["dims"]:
             vals = [v["test_mean"] for v in tax["dims"].values() if "test_mean" in v]
@@ -233,6 +274,9 @@ def eval_rows(mtag):
             # 95% BCa CI (bootstrap_ci on the per-clip array) ships in aggregate_<fam>.json's
             # "ci" sub-dict — mean on top, ±ci_half on the line below (like the other metrics).
             **{fam: _ci2(pt[fam], "mean", "ci", 4) for fam in _PT_FAMILIES},
+            **{fam: _ci2(et[fam], "mean", "ci", 3) for fam in _ET_FLAT},
+            "tcc_cycle": _ci2(tcc.get("cycle_back"), "mean", "ci", 3),
+            "tcc_tau": _ci2(tcc.get("kendalls_tau"), "mean", "ci", 3),
             # iter18 graphs (2026-06-07): raw numerics alongside the display strings —
             # the table loop only reads the display keys, so its output is byte-identical.
             "_enc_full": enc,
@@ -243,6 +287,11 @@ def eval_rows(mtag):
                 "fut":  (fm["mse_mean"] if fm and "mse_mean" in fm else None, _half(fm, "mse_ci")),
                 **{fam: ((pt[fam]["mean"], _half(pt[fam], "ci")) if pt[fam] and "mean" in pt[fam] else (None, None))
                    for fam in _PT_FAMILIES},
+                **{fam: ((et[fam]["mean"], _half(et[fam], "ci")) if et[fam] and "mean" in et[fam] else (None, None))
+                   for fam in _ET_FLAT},
+                **{key: ((tcc[sub]["mean"], _half(tcc.get(sub), "ci"))
+                         if isinstance(tcc.get(sub), dict) and "mean" in tcc[sub] else (None, None))
+                   for key, sub in (("tcc_cycle", "cycle_back"), ("tcc_tau", "kendalls_tau"))},
             },
         })
     return rows
@@ -288,6 +337,10 @@ _EVAL_METRICS = [  # (_raw key, panel title, direction) — mirrors the EVAL tab
     ("rollout", "rollout drift", "lower"), ("causal", "causal L1", "lower"),
     ("tdist", "t-dist", "lower"), ("maskratio", "mask-ratio slope", "lower"),
     ("teacher_free", "teacher-free", "lower"),
+    # Stage-8c encoder-temporal (m12f) — order mirrors the table's new columns
+    ("aot", "arrow-of-time acc", "higher"), ("tov", "temporal-order acc", "higher"),
+    ("pace", "pace acc", "higher"), ("tcc_cycle", "TCC cycle-back", "lower"),
+    ("tcc_tau", "TCC Kendall τ", "higher"),
 ]
 
 
@@ -444,8 +497,10 @@ def render_metric_graphs(blocks, ev, out_dir):
         save_fig(fig, str(out_dir / "eval_scorecard"))
         plt.close(fig)
         return
-    fig, axes9 = plt.subplots(3, 3, figsize=(26, 17))
-    for ax, (k, title, direction) in zip(axes9.flat, _EVAL_METRICS):
+    fig, axes14 = plt.subplots(4, 4, figsize=(30, 22))
+    for ax in axes14.flat[len(_EVAL_METRICS):]:   # 14 panels on a 4×4 grid → blank the last 2
+        ax.axis("off")
+    for ax, (k, title, direction) in zip(axes14.flat, _EVAL_METRICS):
         encs = [r["_enc_full"] for r in ev]
         vals = [r["_raw"][k][0] for r in ev]
         errs = [(r["_raw"][k][1] or 0.0) for r in ev]
@@ -465,7 +520,8 @@ def render_metric_graphs(blocks, ev, out_dir):
 # Data behind the two tables/graphs → json + csv (iter18 2026-06-08, user order). Lands in the SAME
 # backbone-keyed metrics_watch/<backbone>/ folder so the plots and the numbers that produced them
 # travel together (self-contained per backbone).
-_EVAL_RAW_KEYS = ["act", "tax", "mcos", "fut", "rollout", "causal", "tdist", "maskratio", "order", "teacher_free"]
+_EVAL_RAW_KEYS = ["act", "tax", "mcos", "fut", "rollout", "causal", "tdist", "maskratio", "order", "teacher_free",
+                  "aot", "tov", "pace", "tcc_cycle", "tcc_tau"]
 _TRAIN_PROBE_KEYS = ["step", "probe_top1", "motion_cos", "future_l1", "causal_l1", "maskratio", "val_jepa_loss"]
 
 
@@ -507,8 +563,14 @@ def main():
     ap.add_argument("--mode", choices=["POC", "SANITY"], default="POC")
     ap.add_argument("--no-plots", action="store_true",
                     help="skip the matplotlib graphs (terminal tables only)")
+    # Table selector (user order 06-12): --training = TRAIN table only, --evaluation = EVAL
+    # table only, no flag = both. Graphs + data dump always cover both regardless.
+    ap.add_argument("--training", action="store_true", help="print only the TRAIN table")
+    ap.add_argument("--evaluation", action="store_true", help="print only the EVAL table")
     args = ap.parse_args()
     mtag = args.mode.lower()
+    show_train = args.training or not args.evaluation
+    show_eval = args.evaluation or not args.training
 
     # Arms to HIDE from the tables + graphs (data files below keep ALL of them). enc-name form too.
     skip = skip_arms(mtag)
@@ -516,65 +578,80 @@ def main():
                  | ({enc_name("frozen")} if "frozen" in skip else set()))
 
     bar = "─"
-    # ── TRAIN table: every probe checkpoint per arm ──
-    AW, C, SV = 29, 9, 7
-    hdr = ["st", "ckpt", "step", "top1↑", "m_cos↑", "fut_l1↓", "caus↓", "maskr", "vjepa↓"]
-    print(f"═══ iter18 {args.mode} TRAIN metrics · EVERY probe checkpoint (probe_history.jsonl) ═══")
-    print(f"  splits (counted live from {get_local_data_dir().name}): {split_sizes()}")
-    print("┌" + bar * AW + "┬" + "┬".join(bar * C for _ in hdr) + "┬" + bar * SV + "┐")
-    print("│" + " arm · n_train/n_val".ljust(AW) + "│" + "│".join(h.center(C) for h in hdr)
-          + "│" + "sel".center(SV) + "│")
-    print("├" + bar * AW + "┼" + "┼".join(bar * C for _ in hdr) + "┼" + bar * SV + "┤")
+    # blocks/ev are ALWAYS built (the json/csv dump + graphs need both even when one table is hidden)
     blocks = train_blocks(mtag)
-    for b in blocks:
-        if b["arm"] in skip:        # hidden from the TABLE (still in train_metrics.{json,csv})
-            continue
-        nt = "—" if b["n_tr"] is None else f"{b['n_tr']:,}"
-        nv = "—" if b["n_va"] is None else f"{b['n_va']:,}"
-        label = f"{b['arm']}"
-        sub = f"  └ {nt}/{nv}" + (f" · {b['head_best']}" if b["head_best"] else "")
-        if not b["rows"]:
-            print("│ " + label.ljust(AW - 1) + "│" + "│".join(("—" if h != "st" else b["st"]).center(C)
-                  for h in hdr) + "│" + "—".center(SV) + "│")
-            print("│ " + sub.ljust(AW - 1) + "│" + "│".join(" " * C for _ in hdr) + "│" + " " * SV + "│")
-            continue
-        for i, (r, verdict) in enumerate(b["rows"]):
-            sel = verdict + ("←KEPT" if i == b["kept_i"] else "")
-            cells = [(b["st"] if i == 0 else "").center(C - 1),
-                     f"{i + 1}/{len(b['rows'])}".center(C),
-                     str(r.get("step", "—")).center(C),
-                     _f(r.get("probe_top1")).center(C), _f(r.get("motion_cos")).center(C),
-                     _f(r.get("future_l1")).center(C), _f(r.get("causal_l1")).center(C),
-                     _f(r.get("maskratio")).center(C), _f(r.get("val_jepa_loss")).center(C)]
-            print("│ " + (label if i == 0 else (sub if i == 1 else "")).ljust(AW - 1)
-                  + "│" + "│".join(cells) + "│" + sel.center(SV - (1 if "🎯" in sel or "✋" in sel else 0)) + "│")
-        if len(b["rows"]) == 1:
-            print("│ " + sub.ljust(AW - 1) + "│" + "│".join(" " * C for _ in hdr) + "│" + " " * SV + "│")
-    print("└" + bar * AW + "┴" + "┴".join(bar * C for _ in hdr) + "┴" + bar * SV + "┘")
+    ev = eval_rows(mtag)
+    # 🔄 overlay: a cell whose producing job is RUNNING right now shows 🔄, not '—' —
+    # the 4 live GPU jobs are visible in this table itself (user order 06-12).
+    for enc, lit in running_cells(mtag).items():
+        r = next((x for x in ev if x["_enc_full"] == enc), None)
+        for col in (lit if r else ()):
+            if r.get(col, ("",))[0] == "—":
+                r[col] = ("🔄", "")
+
+    # ── TRAIN table: every probe checkpoint per arm ──
+    if show_train:
+        AW, C, SV = 29, 9, 7
+        hdr = ["st", "ckpt", "step", "top1↑", "m_cos↑", "fut_l1↓", "caus↓", "maskr", "vjepa↓"]
+        print(f"═══ iter18 {args.mode} TRAIN metrics · EVERY probe checkpoint (probe_history.jsonl) ═══")
+        print(f"  splits (counted live from {get_local_data_dir().name}): {split_sizes()}")
+        print("┌" + bar * AW + "┬" + "┬".join(bar * C for _ in hdr) + "┬" + bar * SV + "┐")
+        print("│" + " arm · n_train/n_val".ljust(AW) + "│" + "│".join(h.center(C) for h in hdr)
+              + "│" + "sel".center(SV) + "│")
+        print("├" + bar * AW + "┼" + "┼".join(bar * C for _ in hdr) + "┼" + bar * SV + "┤")
+        for b in blocks:
+            if b["arm"] in skip:        # hidden from the TABLE (still in train_metrics.{json,csv})
+                continue
+            nt = "—" if b["n_tr"] is None else f"{b['n_tr']:,}"
+            nv = "—" if b["n_va"] is None else f"{b['n_va']:,}"
+            label = f"{b['arm']}"
+            sub = f"  └ {nt}/{nv}" + (f" · {b['head_best']}" if b["head_best"] else "")
+            if not b["rows"]:
+                print("│ " + label.ljust(AW - 1) + "│" + "│".join(("—" if h != "st" else b["st"]).center(C)
+                      for h in hdr) + "│" + "—".center(SV) + "│")
+                print("│ " + sub.ljust(AW - 1) + "│" + "│".join(" " * C for _ in hdr) + "│" + " " * SV + "│")
+                continue
+            for i, (r, verdict) in enumerate(b["rows"]):
+                sel = verdict + ("←KEPT" if i == b["kept_i"] else "")
+                cells = [(b["st"] if i == 0 else "").center(C - 1),
+                         f"{i + 1}/{len(b['rows'])}".center(C),
+                         str(r.get("step", "—")).center(C),
+                         _f(r.get("probe_top1")).center(C), _f(r.get("motion_cos")).center(C),
+                         _f(r.get("future_l1")).center(C), _f(r.get("causal_l1")).center(C),
+                         _f(r.get("maskratio")).center(C), _f(r.get("val_jepa_loss")).center(C)]
+                print("│ " + (label if i == 0 else (sub if i == 1 else "")).ljust(AW - 1)
+                      + "│" + "│".join(cells) + "│" + sel.center(SV - (1 if "🎯" in sel or "✋" in sel else 0)) + "│")
+            if len(b["rows"]) == 1:
+                print("│ " + sub.ljust(AW - 1) + "│" + "│".join(" " * C for _ in hdr) + "│" + " " * SV + "│")
+        print("└" + bar * AW + "┴" + "┴".join(bar * C for _ in hdr) + "┴" + bar * SV + "┘")
 
     # ── EVAL table: headline number per metric family per encoder ──
-    ev = eval_rows(mtag)
     EW = 28
     # columns are narrow again — each row prints the mean on line 1 and the ±95%CI on line 2.
     cols = [("n_te", "n_te", 6), ("act_top1↑", "act", 11), ("tax_F1↑", "tax", 8),
             ("m_cos↑", "mcos", 10), ("fut_mse↓", "fut", 10), ("rollout↓", "rollout", 10),
             ("causal↓", "causal", 10), ("tdist↓", "tdist", 10), ("maskr↓", "maskratio", 10),
-            ("order", "order", 10), ("t_free↓", "teacher_free", 10)]
-    print(f"\n═══ iter18 {args.mode} EVAL metrics · per-encoder artifacts (mean / ±95%CI · — = not computed) ═══")
-    print("┌" + bar * EW + "┬" + "┬".join(bar * w for _, _, w in cols) + "┐")
-    print("│" + " encoder".ljust(EW) + "│" + "│".join(h.center(w) for h, _, w in cols) + "│")
-    print("├" + bar * EW + "┼" + "┼".join(bar * w for _, _, w in cols) + "┤")
-    for r in ev:
-        if r["_enc_full"] in skip_encs:   # hidden from the TABLE (still in eval_metrics.{json,csv})
-            continue
-        # line 1 = means; line 2 = ±95%CI (printed only when at least one CI exists for this row)
-        print("│ " + r["enc"].ljust(EW - 1) + "│"
-              + "│".join(str(r[k][0]).center(w) for _, k, w in cols) + "│")
-        bots = [str(r[k][1]).center(w) for _, k, w in cols]
-        if any(b.strip() for b in bots):
-            print("│ " + " " * (EW - 1) + "│" + "│".join(bots) + "│")
-    print("└" + bar * EW + "┴" + "┴".join(bar * w for _, _, w in cols) + "┘")
-    print("\n  legend: ↑ higher better · ↓ lower better · ✅ trained · 🔄 training · ⬚ not started"
+            ("order", "order", 10), ("t_free↓", "teacher_free", 10),
+            # Stage-8c encoder-temporal (m12f): aot/tov/pace flat; tcc = cycle↓ + τ↑ pair
+            ("aot↑", "aot", 8), ("tov↑", "tov", 8), ("pace↑", "pace", 8),
+            ("tcc_cy↓", "tcc_cycle", 8), ("tcc_τ↑", "tcc_tau", 8)]
+    if show_eval:
+        print(f"\n═══ iter18 {args.mode} EVAL metrics · per-encoder artifacts "
+              f"(mean / ±95%CI · 🔄 = computing NOW · — = not computed) ═══")
+        print("┌" + bar * EW + "┬" + "┬".join(bar * w for _, _, w in cols) + "┐")
+        print("│" + " encoder".ljust(EW) + "│" + "│".join(h.center(w) for h, _, w in cols) + "│")
+        print("├" + bar * EW + "┼" + "┼".join(bar * w for _, _, w in cols) + "┤")
+        for r in ev:
+            if r["_enc_full"] in skip_encs:   # hidden from the TABLE (still in eval_metrics.{json,csv})
+                continue
+            # line 1 = means; line 2 = ±95%CI (printed only when at least one CI exists for this row)
+            print("│ " + r["enc"].ljust(EW - 1) + "│"
+                  + "│".join(str(r[k][0]).center(w) for _, k, w in cols) + "│")
+            bots = [str(r[k][1]).center(w) for _, k, w in cols]
+            if any(b.strip() for b in bots):
+                print("│ " + " " * (EW - 1) + "│" + "│".join(bots) + "│")
+        print("└" + bar * EW + "┴" + "┴".join(bar * w for _, _, w in cols) + "┘")
+    print("\n  legend: ↑ higher better · ↓ lower better · ✅ trained · 🔄 running NOW · ⬚ not started"
           "\n  sel: 🎯 promoted · ✋ held (worse than best) · ←KEPT = the exported ckpt · "
           "head arms select on head-val_loss (· rows = diagnostics)")
 

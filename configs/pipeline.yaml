@@ -182,6 +182,7 @@ artifacts:
   probe_future_mse_dir: "probe_future_mse"
   probe_taxonomy_dir: "probe_taxonomy"
   predictor_temporal_dir: "predictor_temporal"
+  encoder_temporal_dir: "encoder_temporal"
   # m00 prep tools (single-writer but resume/reader pairs)
   clip_durations: "clip_durations.json"
   video_durations: "video_durations.json"

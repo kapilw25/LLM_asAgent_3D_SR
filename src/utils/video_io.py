@@ -17,19 +17,40 @@ import torch
 
 from utils.config import HF_DATASET_REPO
 
-# Video decoder: torchcodec (GPU NVDEC) segfaults on TAR-extracted mp4 bytes (SIGSEGV,
-# no Python traceback). Disabled until upstream fix. PyAV works reliably.
-# Incident: MEMORY.md "torchcodec can't read TAR files" — confirmed 2026-04-13.
-_USE_TORCHCODEC = False
+# Video decoder backend — env-selectable (iter18 2026-06-12, MEASURED on the 4×96GB box,
+# 64-frame decode of 10s 480p TAR-extracted clips, steady-state):
+#   VIDEO_DECODER=av               PyAV CPU — long-standing default          395 ms/clip
+#   VIDEO_DECODER=torchcodec       torchcodec CPU — BIT-IDENTICAL to PyAV    338 ms/clip (1.17×)
+#   VIDEO_DECODER=torchcodec_cuda  NVDEC — pixels DIFFER (mean 0.66/255, max 2/255) and it
+#                                  measured SLOWER here (415 ms/clip: per-clip decoder init
+#                                  dominates short 480p files). Only worth it for long/hi-res
+#                                  videos, and only applied UNIFORMLY from clip #1 of a run —
+#                                  the decoder is part of the pixel source; mixing backends
+#                                  across encoders mid-run manufactures a confound.
+# The 2026-04-13 "torchcodec segfaults on TAR-extracted mp4s" incident is FIXED in torchcodec
+# 0.14 (verified 2026-06-12 on a real subset-*.tar clip, CPU + CUDA, no SIGSEGV).
+# NOTE: the eval frame cache below outruns every decoder (55 ms/clip hit) — backend choice
+# only matters on cache MISSES.
+_DECODER = os.environ.get("VIDEO_DECODER", "av")
 VideoDecoder = None
-
-if not _USE_TORCHCODEC:
+if _DECODER in ("torchcodec", "torchcodec_cuda"):
     try:
-        import av
+        from torchcodec.decoders import VideoDecoder
     except ImportError:
-        print("FATAL: Neither torchcodec nor av available for video decoding")
+        print(f"FATAL: VIDEO_DECODER={_DECODER} requested but torchcodec is not importable")
+        sys.exit(1)
+    print(f"  [video_io] decoder backend: {_DECODER} (default av — pixel-parity notes in video_io.py)")
+elif _DECODER != "av":
+    print(f"FATAL: unknown VIDEO_DECODER={_DECODER!r} — choices: av | torchcodec | torchcodec_cuda")
+    sys.exit(1)
+try:
+    import av
+except ImportError:
+    if _DECODER == "av":
+        print("FATAL: PyAV not available for video decoding")
         print("Install with: pip install av")
         sys.exit(1)
+    av = None   # torchcodec backend selected — av genuinely unused
 
 
 def get_clip_key(example: dict) -> str:
@@ -72,12 +93,15 @@ def create_stream(skip_count: int = 0, local_data: str = None):
 
 
 def _load_torchcodec(video_path: str, num_frames: int) -> torch.Tensor:
-    """Load video using torchcodec (GPU NVDEC, 5-10x faster than PyAV CPU)."""
-    decoder = VideoDecoder(video_path)
+    """Load video via torchcodec — CPU (bit-identical to PyAV, measured 06-12) or NVDEC when
+    VIDEO_DECODER=torchcodec_cuda (different pixels — see the backend block above)."""
+    decoder = VideoDecoder(video_path, device="cuda" if _DECODER == "torchcodec_cuda" else "cpu")
     total_frames = decoder.metadata.num_frames if hasattr(decoder.metadata, "num_frames") else 200
     frame_indices = np.linspace(0, max(total_frames - 1, 0), num_frames, dtype=int)
     frames = decoder.get_frames_at(indices=frame_indices.tolist())
     video_tensor = frames.data  # (T, C, H, W)
+    if video_tensor.is_cuda:
+        video_tensor = video_tensor.cpu()   # downstream contract: CPU uint8 tensor
     del decoder
     if video_tensor.shape[0] < num_frames:
         pad_size = num_frames - video_tensor.shape[0]
@@ -87,7 +111,8 @@ def _load_torchcodec(video_path: str, num_frames: int) -> torch.Tensor:
 
 
 def _load_av(video_path: str, num_frames: int) -> torch.Tensor:
-    """Load video using PyAV (CPU fallback)."""
+    """Load video using PyAV — the DEFAULT backend (not a fallback; backend choice is
+    explicit via VIDEO_DECODER and never silently switches)."""
     container = av.open(video_path)
     stream = container.streams.video[0]
     stream.codec_context.thread_count = 1
@@ -223,7 +248,10 @@ def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
         os.makedirs(tmp_dir, exist_ok=True)
         with open(tmp_path, "wb") as f:
             f.write(mp4_bytes)
-        if _USE_TORCHCODEC:
+        # hard dispatch on VIDEO_DECODER — no silent fallback between backends (the decoder
+        # is part of the pixel source; a quiet swap mid-run would contaminate cross-encoder
+        # comparability). Unknown/unavailable backends already FATALed at import.
+        if _DECODER != "av":
             result = _load_torchcodec(tmp_path, num_frames)
         else:
             result = _load_av(tmp_path, num_frames)

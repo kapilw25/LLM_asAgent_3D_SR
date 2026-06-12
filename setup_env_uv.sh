@@ -664,8 +664,10 @@ print('SUCCESS: All GPU components verified')
     #   sam3.numpy          : SAM3 pin <2 obsolete; numpy 2.x works (m04-m11 ran weeks on it)
     #   sam3.ftfy           : 6.1.1 → 6.3.1 patch, fix_text() API unchanged
     #   torch.cuda-bindings : cuML/torch patch ping-pong, ABI-stable
+    #   torch.cuda-toolkit  : cuML downgrades cuda-toolkit 13.0.2→12.9.2.0; runtime imports +
+    #                         GPU verify passed on 24GB (06-12) and 4x96GB (06-12) boxes
     #   decord.platform     : dormant (m04 tags.json already produced, PyAV is active decoder)
-    EXPECTED='sam3.*numpy|sam3.*ftfy|torch.*cuda-bindings|decord.*platform'
+    EXPECTED='sam3.*numpy|sam3.*ftfy|torch.*cuda-bindings|torch.*cuda-toolkit|decord.*platform'
     UNEXPECTED=$(echo "$CHECK_OUT" | grep -E '^The package' | grep -vE "$EXPECTED" || echo "")
     if [ -n "$UNEXPECTED" ]; then
         echo "FATAL: uv pip check found UNEXPECTED incompatibilities:"
@@ -674,7 +676,7 @@ print('SUCCESS: All GPU components verified')
         exit 1
     fi
     EXPECTED_COUNT=$(echo "$CHECK_OUT" | grep -cE '^The package' || echo 0)
-    echo "OK — ${EXPECTED_COUNT} known-OK incompatibilities (allowlist: numpy/ftfy/cuda-bindings/decord), 0 unexpected"
+    echo "OK — ${EXPECTED_COUNT} known-OK incompatibilities (allowlist: numpy/ftfy/cuda-bindings/cuda-toolkit/decord), 0 unexpected"
 
     # vLLM setup SKIPPED — transformers is 2.5x faster for offline batch tagging.
     # See iter/utils/vLLM_plan_Blackwell.md for 14 root causes found + fixed.

@@ -306,6 +306,13 @@ PRIOR_SANITY = {k: 7 * 60 for k in PRIOR}
 # per-metric prior, so use a dedicated one: at bs=16 the 6 metrics run ~10-25 min each (teacher_free
 # longest). 20 min is conservative (safe-high) and self-corrects within ~1 metric completion.
 _PT_COLD_PRIOR = {"poc": 20 * 60, "sanity": 60}
+# COLD prior for ONE Stage-8c metric job (F:, m12f) — F: jobs are MUCH heavier than P: ones
+# (they decode pixels + extract features for test AND train; aot/tov/pace train a probe head).
+# Measured 06-12: 24GB box 1h30-2h15/job; 4×96GB box tcc 14m (test-only) but aot 47m+ still
+# running at first render — the 20m P: prior under-read the 35 pending F: jobs ~3× and the run
+# ETA showed 3h for ~8h of work. Self-corrects per metric on the first completion, and pending
+# jobs borrow a RUNNING sibling's live projection (see the _proj seeding below) even sooner.
+_ET_COLD_PRIOR = {"poc": 75 * 60, "sanity": 3 * 60}
 
 # Back up outputs/poc to HF this often (minutes) WHILE the run goes, so the final backup at the end
 # is tiny and the paid node can be killed right away. Driven by the 60s `watch` refresh + a stamp file.
@@ -327,9 +334,11 @@ def _latest_log(mtag):
     (iter18_ngpu_poc_<ts>.log) and variants like _regate_/_only_pretrain_.
     iter18 2026-06-07: _pt_ (the metric-parallel P: job logs) MUST be excluded too — they are
     NEWER than the main tee and carry no GPU ◀/✓ markers, so picking one made every job read as
-    pending (all train cells showed ⬚ despite the resume-skip of 10 trained arms)."""
+    pending (all train cells showed ⬚ despite the resume-skip of 10 trained arms).
+    iter18 2026-06-12: same bug, third strike — _et_ (the Stage-8c F: job logs) joined the
+    family with m12f and made the whole table read ⬚/0🔄 on the 4×96GB POC restart."""
     cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
-             if p.exists() and not any(seg in p.name for seg in ("_train_", "_eval_", "_pt_", "_s3_"))]
+             if p.exists() and not any(seg in p.name for seg in ("_train_", "_eval_", "_pt_", "_et_", "_s3_"))]
     return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
 
 
@@ -635,7 +644,8 @@ def main():
         skip = set(re.findall(r"'([^']+)'", sm.group(1)))
         drop = ({f"T:{BACKBONE}:{a}" for a in skip}
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}
-                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS})
+                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS}
+                | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in ET_METRICS})
         jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
 
     launched = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ◀ (\S+)", text)}
@@ -714,6 +724,25 @@ def main():
             # one shared per-metric dict: PT names (rollout/causal/…) and ET names (aot/tov/…) are disjoint
             _pt_by.setdefault(jid.rsplit(":", 1)[-1], []).append(consumed[jid])
     pt_med = {m: sorted(v)[len(v) // 2] for m, v in _pt_by.items()}
+    # LIVE projection seeding (iter18 2026-06-12): a RUNNING P:/F: job's own clip bar projects
+    # its full wall (elapsed + remaining×rate) — PENDING siblings of the SAME metric inherit
+    # the median of those projections until a real completion lands in pt_med. Without this,
+    # pending F: jobs sat on the cold prior while their running siblings were measurably 3×
+    # slower → the bottom-line run ETA read ~3h for ~8h of queued work.
+    _proj = {}
+    for jid in jobs:
+        if not jid.startswith(("P:", "F:")) or classify(jid) != "running":
+            continue
+        cands = sorted((p for p in REPO.glob(jobs[jid]["log"].format(ts="*")) if p.exists()),
+                       key=lambda p: p.stat().st_mtime)
+        txt_ = _tail(cands[-1]) if cands else ""
+        cp = re.findall(r"(\d+)\s*/\s*(\d+)\s*\[", txt_)
+        rr = re.findall(r"recent=([\d.]+)s/clip", txt_)
+        if cp and rr and int(cp[-1][1]) and int(cp[-1][0]) >= _MIN_EVAL_POINTS:
+            cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
+            _proj.setdefault(jid.rsplit(":", 1)[-1], []).append(elapsed(jid) + (tot - cur) * rate)
+    for _m, _v in _proj.items():
+        pt_med.setdefault(_m, sorted(_v)[len(_v) // 2])
 
     # ── per-job remaining time ──
     remaining = {}
@@ -725,10 +754,11 @@ def main():
             remaining[jid] = 0.0
         elif jid.startswith(("P:", "F:")):
             # Stage-8b/8c single-metric job — estimated from its OWN clip bar (running) or the
-            # per-metric median (pending), NOT the stage ledger. Cold prior is _PT_COLD_PRIOR
-            # (per-metric), NOT est["eval"] (the whole-eval time, ~10× too big for one metric).
+            # per-metric median (pending), NOT the stage ledger. Cold prior is per-FAMILY
+            # (_ET_COLD_PRIOR for the heavier F: 8c jobs), NOT est["eval"] (whole-eval, ~10× off).
             el = elapsed(jid) if st == "running" else 0.0
-            tot = _pt_total(jobs, jid, el, _PT_COLD_PRIOR.get(mtag, 20 * 60), pt_med)
+            cold = (_ET_COLD_PRIOR if jid.startswith("F:") else _PT_COLD_PRIOR).get(mtag, 20 * 60)
+            tot = _pt_total(jobs, jid, el, cold, pt_med)
             remaining[jid] = max(tot - el, 60) if st == "running" else tot
         elif st == "running":
             remaining[jid] = max(_running_total(jobs, jid, elapsed(jid), prior, calib, ecalib)
@@ -844,8 +874,10 @@ def main():
         ncrun = sum(1 for j in group if j.startswith("F:") and classify(j) == "running")
         rem = max((finish.get(j, 0.0) for j in group), default=0.0)
         glyph = "🔄" if any(s == "running" for s in sts) else "⬚"
-        tag = ((f"·8b {n8done}✓{n8run}▶/{n8}" if n8 else "")
-               + (f"·8c {ncdone}✓{ncrun}▶/{nc}" if nc else ""))
+        # compact counters: "6✓/6" when nothing runs, "1✓3▶/4" while 3 jobs are live —
+        # the zero-count "0🔄" tokens read as noise (user 06-12), so zero is simply omitted.
+        tag = ((f"·8b {n8done}✓{f'{n8run}▶' if n8run else ''}/{n8}" if n8 else "")
+               + (f"·8c {ncdone}✓{f'{ncrun}▶' if ncrun else ''}/{nc}" if nc else ""))
         return f"{glyph}{tag}·~{_dur(rem)}"
 
     def kemoji(arm):
@@ -899,9 +931,13 @@ def main():
     # ── Stage-8b metric fan: encoder × 6 predictor-temporal metrics, LIVE grid (iter18 2026-06-07) ──
     # Makes the metric-parallel fan-out visible — each cell = the P:<enc>:<metric> job's state.
     # "2-8" = the encoder's E: job (the non-8b eval stages: features/probe/taxonomy/motion/future).
-    _GLYPH = {"done": "✓", "running": "▶", "pending": "·", "failed": "✗"}
+    _GLYPH = {"done": "✓", "running": "🔄", "pending": "·", "failed": "✗"}   # 🔄 not ▶ (user order 06-12: the running marker must be the same emoji everywhere)
     _ABBR = {"rollout": "roll", "causal": "caus", "tdist": "tdis",
-             "teacher_free": "t-fr", "maskratio": "mask", "order": "ordr"}
+             "teacher_free": "t-fr", "maskratio": "mask", "order": "ordr",
+             "aot": "aot", "tov": "tov", "pace": "pace", "tcc": "tcc"}
+    # 8b (P:, predictor) + 8c (F:, encoder-temporal m12f) columns in ONE fan grid —
+    # the tcc job carries BOTH tcc_cycle and tcc_tau (one forward, two headline numbers).
+    _FAN = [("P", m) for m in PT_METRICS] + [("F", m) for m in ET_METRICS]
     enc_rows = ([("frozen", enc_name("frozen"))]
                 + [(a, enc_name(ARM2ENC[a])) for a in TRAIN_ORDER
                    if f"E:{enc_name(ARM2ENC[a])}" in jobs])
@@ -909,22 +945,22 @@ def main():
 
     def _gl(jid):
         return _GLYPH[classify(jid)] if jid in jobs else " "
-    g_top = "┌" + bar * EW + "┬" + bar * 5 + ("┬" + bar * PW) * len(PT_METRICS) + "┐"
-    g_mid = "├" + bar * EW + "┼" + bar * 5 + ("┼" + bar * PW) * len(PT_METRICS) + "┤"
-    g_bot = "└" + bar * EW + "┴" + bar * 5 + ("┴" + bar * PW) * len(PT_METRICS) + "┘"
-    print(f"\n  Stage-8b metric fan (encoder × {len(PT_METRICS)} metrics · ✓ done · ▶ run · · pend)")
+    g_top = "┌" + bar * EW + "┬" + bar * 5 + ("┬" + bar * PW) * len(_FAN) + "┐"
+    g_mid = "├" + bar * EW + "┼" + bar * 5 + ("┼" + bar * PW) * len(_FAN) + "┤"
+    g_bot = "└" + bar * EW + "┴" + bar * 5 + ("┴" + bar * PW) * len(_FAN) + "┘"
+    print(f"\n  Stage-8b+8c metric fan (encoder × {len(_FAN)} metric jobs · ✓ done · 🔄 run · · pend)")
     print("  " + g_top)
     print("  │" + " encoder".ljust(EW) + "│" + "2-8".center(5)
-          + "│" + "│".join(_ABBR[m].center(PW) for m in PT_METRICS) + "│")
+          + "│" + "│".join(_ABBR[m].center(PW) for _, m in _FAN) + "│")
     print("  " + g_mid)
     for label, enc in enc_rows:
-        cells = "│".join(_gl(f"P:{enc}:{m}").center(PW) for m in PT_METRICS)
+        cells = "│".join(_gl(f"{p}:{enc}:{m}").center(PW) for p, m in _FAN)
         print("  │ " + label.ljust(EW - 1) + "│" + _gl(f"E:{enc}").center(5) + "│" + cells + "│")
     print("  " + g_bot)
-    _pall = [j for j in jobs if j.startswith("P:")]
+    _pall = [j for j in jobs if j.startswith(("P:", "F:"))]
     _pc = {k: sum(1 for j in _pall if classify(j) == k) for k in ("done", "running", "pending")}
-    print(f"  {_pc['done']}✓ done · {_pc['running']}▶ running · {_pc['pending']}· pending"
-          f"  of {len(_pall)} metric jobs")
+    print(f"  {_pc['done']}✓ done · {_pc['running']}🔄 running · {_pc['pending']}· pending"
+          f"  of {len(_pall)} metric jobs (8b + 8c)")
 
     # ── summary + run ETA ──
     end_utc = datetime.now(timezone.utc) + timedelta(seconds=eta_secs)

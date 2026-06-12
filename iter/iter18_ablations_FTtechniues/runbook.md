@@ -19,8 +19,8 @@ ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode POC 
 # banner MUST show: backbone=$BB · [resume --cache 1] skipping 9 already-trained arms + ~60 Stage-8b jobs
 
 # watch panes (8c shows as ·8c d✓r▶/4 in the eval cells)
-watch -n60  "ITER18_BACKBONE=$BB ITER18_SKIP_ARMS=\"$SKIP\" python -u scripts/iter18_poc_status.py"
-watch -n300 "ITER18_BACKBONE=$BB ITER18_SKIP_ARMS=\"$SKIP\" python -u scripts/iter18_poc_metrics.py"
+watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_status.py'
+ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_metrics.py
 ```
 
 ## 2 · m12f (8c) SANITY smoke — run once per fresh box, BEFORE the POC
@@ -33,10 +33,16 @@ bash scripts/run_eval.sh --sanity --encoders vjepa_2_1_frozen \
 # crash → re-run same command (.m12f_ckpt resumes)
 ```
 
-## 3 · after the finale — upload to HF
+## 3 · upload to HF — light mirror (run it DURING the POC, then once more after the finale)
 
 ```bash
-python -u src/utils/hf_outputs.py upload-full outputs/ 2>&1 | tee logs/upload_full_outputs_$(date +%Y%m%d_%H%M%S).log
+HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+# light mirror: every file incl. resume anchors · no tars · xet dedups against the tar
+# shards already on HF, so much less than 338G actually transfers
+# run #1 mid-POC (overlaps the run = $0 extra) · run #2 after the finale = delta only,
+# minutes → kill the box right after
+# NOT upload-full here: it packs ~330G of shards BEFORE uploading (252G free → disk-full
+# crashes the live run) and the 08:58 tar snapshot already covers the final train arms
 ```
 
 ## 4 · ⏱️ measured durations (2026-06-12 unless noted)
