@@ -37,8 +37,10 @@ USAGE:
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -1397,6 +1399,448 @@ def _skip_encoders_from_env(encoders):
     return out
 
 
+# ═══ metrics_watch regeneration (iter18 2026-06-12, user order) ═══════════════════════════
+# SELF-CONTAINED copy of scripts/iter18_poc_metrics.py's figure + data-dump generation, so the
+# probe_plot/metrics_watch/<BACKBONE>/ artifacts (train_trajectories / kept_scorecard /
+# eval_scorecard .png+.pdf + train_metrics/eval_metrics .json+.csv) stay reproducible from
+# src/ ALONE after the iter18 scheduler scripts move to scripts/legacy/. No import from
+# scripts/ — the needed DAG constants are duplicated below (they are FROZEN once iter18 ends;
+# this copy is the durable record). Invoke:
+#   python src/m13_eval_plot.py --POC --output-dir outputs/poc/probe_plot \
+#       --outputs-root outputs/poc --metrics-watch-out outputs/poc/probe_plot/metrics_watch \
+#       --metrics-watch-only
+# Backbone via ITER18_BACKBONE env, hidden arms via ITER18_SKIP_ARMS env (same contract as
+# the watch scripts; the scheduler-log fallback is dropped — env is the durable source).
+_MW_BACKBONE = os.environ.get("ITER18_BACKBONE", "vjepa_2_1_vitG")
+_MW_TRAIN_ORDER = [
+    "pretrain_encoder",
+    "surgery_3stage_DI_encoder", "surgery_noDI_encoder",
+    "surgery_3stage_DI_head", "surgery_noDI_head",
+    "surgical_autorgn_encoder", "surgery_raw_encoder",
+    "full_ft_encoder", "lpft_encoder",
+    "peft_lora_encoder", "peft_dora_encoder",
+    "cassle_encoder", "ewc_encoder",
+]
+_MW_HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
+_MW_ARM2ENC = {
+    "pretrain_encoder":          "pretrain_encoder",
+    "surgery_3stage_DI_encoder": "surgical_3stage_DI_encoder",
+    "surgery_noDI_encoder":      "surgical_noDI_encoder",
+    "surgery_3stage_DI_head":    "surgical_3stage_DI_head",
+    "surgery_noDI_head":         "surgical_noDI_head",
+    "surgical_autorgn_encoder":  "surgical_autorgn_encoder",
+    "surgery_raw_encoder":       "surgery_raw_encoder",
+    "full_ft_encoder":           "full_ft_encoder",
+    "lpft_encoder":              "lpft_encoder",
+    "peft_lora_encoder":         "peft_lora_encoder",
+    "peft_dora_encoder":         "peft_dora_encoder",
+    "cassle_encoder":            "cassle_encoder",
+    "ewc_encoder":               "ewc_encoder",
+}
+_MW_ARM2DIR = {
+    "pretrain_encoder":          "m09a_pretrain_encoder",
+    "surgery_3stage_DI_encoder": "m09c_surgery_3stage_DI_encoder",
+    "surgery_noDI_encoder":      "m09c_surgery_noDI_encoder",
+    "surgery_3stage_DI_head":    "m09c_surgery_3stage_DI_head",
+    "surgery_noDI_head":         "m09c_surgery_noDI_head",
+    "surgical_autorgn_encoder":  "m09e_autorgn_encoder",
+    "surgery_raw_encoder":       "m09c_surgery_raw_encoder",
+    "full_ft_encoder":           "m09f_full_ft_encoder",
+    "lpft_encoder":              "m09f_lpft_encoder",
+    "peft_lora_encoder":         "m09b_peft_lora_encoder",
+    "peft_dora_encoder":         "m09b_peft_dora_encoder",
+    "cassle_encoder":            "m09d_cassle_encoder",
+    "ewc_encoder":               "m09d_ewc_encoder",
+}
+_MW_PT_FAMILIES = ["rollout", "causal", "tdist", "maskratio", "order", "teacher_free"]
+_MW_ET_FLAT = ["aot", "tov", "pace"]
+_MW_FRESH_LOG_S = 1800
+
+
+def _mw_enc_name(arm_enc):
+    """Champion 2B vitG drops its size tag; other backbones keep the full name (iter17 rule)."""
+    prefix = "vjepa_2_1" if _MW_BACKBONE == "vjepa_2_1_vitG" else _MW_BACKBONE
+    return f"{prefix}_{arm_enc}"
+
+
+def _mw_jload(p: Path):
+    try:
+        return json.loads(p.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _mw_jsonl(p: Path) -> list:
+    try:
+        text = p.read_text()
+    except OSError:
+        return []
+    rows = []
+    for line in text.splitlines():
+        if line.strip():
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                return rows     # record mid-write under a live run — show what's complete
+    return rows
+
+
+def _mw_skip_arms():
+    """Arms hidden from the GRAPHS (data files keep everything) — ITER18_SKIP_ARMS env only."""
+    env = os.environ.get("ITER18_SKIP_ARMS", "").strip()
+    return {tok.strip().strip("\"'") for tok in env.split() if tok.strip().strip("\"'")}
+
+
+def _mw_arm_train_val_n(outputs_root: Path, mtag: str, arm: str):
+    """(n_train, n_val) parsed from the arm's newest scheduler log when logs/ still exists —
+    graceful (None, None) once the iter18 logs are archived; the json then records null."""
+    logs = sorted((q for q in Path("logs").glob(f"iter18_ngpu_{mtag}_train_{arm}_*.log")
+                   if q.exists()), key=lambda q: q.stat().st_mtime)
+    if not logs:
+        return None, None
+    try:
+        head = logs[-1].read_text(errors="replace")[:16000]
+    except OSError:
+        return None, None
+    m = re.search(r"train/val split: ([\d,]+) train / ([\d,]+) val", head)
+    if m:
+        return int(m.group(1).replace(",", "")), int(m.group(2).replace(",", ""))
+    m = re.search(r"Train clips: ([\d,]+) \| Val clips: ([\d,]+)", head)
+    if m:
+        return int(m.group(1).replace(",", "")), int(m.group(2).replace(",", ""))
+    tr = re.search(r"Loaded subset: ([\d,]+) clip keys from train_pool", head)
+    va = (re.search(r"Loaded subset: ([\d,]+) clip keys from val_split", head)
+          or re.search(r"Loaded val subset: ([\d,]+) clips", head))
+    return (int(tr.group(1).replace(",", "")) if tr else None,
+            int(va.group(1).replace(",", "")) if va else None)
+
+
+def _mw_train_blocks(outputs_root: Path, mtag: str):
+    """One block per arm: every probe checkpoint + the selector-replay verdicts (🎯/✋/·)."""
+    blocks = []
+    for arm in _MW_TRAIN_ORDER:
+        d = outputs_root / _MW_BACKBONE / _MW_ARM2DIR[arm]
+        hist = _mw_jsonl(d / "probe_history.jsonl")
+        summ = _mw_jload(d / artifact("training_summary"))
+        logs = sorted((q for q in Path("logs").glob(f"iter18_ngpu_{mtag}_train_{arm}_*.log")
+                       if q.exists()), key=lambda q: q.stat().st_mtime)
+        log_fresh = bool(logs) and (time.time() - logs[-1].stat().st_mtime) < _MW_FRESH_LOG_S
+        status = "✅" if summ else ("🔄" if (hist or log_fresh) else "⬚")
+        n_tr, n_va = _mw_arm_train_val_n(outputs_root, mtag, arm)
+        rows, kept_i = [], None
+        best = float("inf")
+        for i, r in enumerate(hist):
+            if arm in _MW_HEAD_ARMS:
+                verdict = "·"
+            elif r.get("future_l1") is not None and r["future_l1"] < best:
+                best, kept_i, verdict = r["future_l1"], i, "🎯"
+            else:
+                verdict = "✋"
+            rows.append((r, verdict))
+        head_best = ""
+        if arm in _MW_HEAD_ARMS and summ and "best_val_loss" in summ:
+            head_best = f"sel=head-vloss {summ['best_val_loss']:.3f}@ep{summ.get('best_epoch', '?')}"
+        blocks.append({"arm": arm, "st": status, "n_tr": n_tr, "n_va": n_va,
+                       "rows": rows, "kept_i": kept_i, "head_best": head_best})
+    return blocks
+
+
+def _mw_eval_rows(outputs_root: Path):
+    """Per-encoder (mean, ci_half) per metric from the eval artifacts — the _raw payload the
+    figures + json/csv consume (the watch script's terminal display strings are not files)."""
+    encs = [_mw_enc_name("frozen")] + [_mw_enc_name(e) for e in _MW_ARM2ENC.values()]
+    rows = []
+    for enc in encs:
+        act = _mw_jload(outputs_root / artifact("probe_action_dir") / enc / artifact("test_metrics"))
+        tax = _mw_jload(outputs_root / artifact("probe_taxonomy_dir") / enc / artifact("test_metrics"))
+        mc = _mw_jload(outputs_root / artifact("probe_motion_cos_dir") / enc / "intra_inter_ratio.json")
+        fm = _mw_jload(outputs_root / artifact("probe_future_mse_dir") / enc / "aggregate_mse.json")
+        pt = {fam: _mw_jload(outputs_root / artifact("predictor_temporal_dir") / enc / f"aggregate_{fam}.json")
+              for fam in _MW_PT_FAMILIES}
+        et = {fam: _mw_jload(outputs_root / artifact("encoder_temporal_dir") / enc / f"aggregate_{fam}.json")
+              for fam in _MW_ET_FLAT}
+        tcc = _mw_jload(outputs_root / artifact("encoder_temporal_dir") / enc / "aggregate_tcc.json") or {}
+        tax_macro = None
+        if tax and isinstance(tax.get("dims"), dict) and tax["dims"]:
+            vals = [v["test_mean"] for v in tax["dims"].values() if "test_mean" in v]
+            tax_macro = sum(vals) / len(vals) if vals else None
+        n_test = next((src["n_test"] for src in (act, fm, mc) if src and "n_test" in src), None)
+
+        def _half(d, ci_key):
+            return d.get(ci_key, {}).get("ci_half") if (d and isinstance(d.get(ci_key), dict)) else None
+
+        rows.append({
+            "_enc_full": enc,
+            "n_te": ("—" if n_test is None else str(n_test), ""),
+            "_raw": {
+                "act":  (act["top1_acc"] if act and "top1_acc" in act else None, _half(act, "top1_ci")),
+                "tax":  (tax_macro, None),
+                "mcos": (mc["score_mean"] if mc and "score_mean" in mc else None, _half(mc, "score_ci")),
+                "fut":  (fm["mse_mean"] if fm and "mse_mean" in fm else None, _half(fm, "mse_ci")),
+                **{fam: ((pt[fam]["mean"], _half(pt[fam], "ci")) if pt[fam] and "mean" in pt[fam] else (None, None))
+                   for fam in _MW_PT_FAMILIES},
+                **{fam: ((et[fam]["mean"], _half(et[fam], "ci")) if et[fam] and "mean" in et[fam] else (None, None))
+                   for fam in _MW_ET_FLAT},
+                **{key: ((tcc[sub]["mean"], _half(tcc.get(sub), "ci"))
+                         if isinstance(tcc.get(sub), dict) and "mean" in tcc[sub] else (None, None))
+                   for key, sub in (("tcc_cycle", "cycle_back"), ("tcc_tau", "kendalls_tau"))},
+            },
+        })
+    return rows
+
+
+_MW_FAM_OURS = {"surgery_3stage_DI_encoder", "surgery_noDI_encoder",
+                "surgery_3stage_DI_head", "surgery_noDI_head"}
+_MW_TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = greens
+    "pretrain_encoder":          ("vCSSL",     "#1565C0", "-",  1.8),
+    "surgery_3stage_DI_encoder": ("s3DI-enc",  "#1B5E20", "-",  2.6),
+    "surgery_noDI_encoder":      ("sNoDI-enc", "#43A047", "-",  2.6),
+    "surgery_3stage_DI_head":    ("s3DI-hd",   "#81C784", ":",  1.8),
+    "surgery_noDI_head":         ("sNoDI-hd",  "#A5D6A7", ":",  1.8),
+    "surgical_autorgn_encoder":  ("autoRGN",   "#E65100", "--", 1.4),
+    "surgery_raw_encoder":       ("s-RAW",     "#827717", "-.", 1.8),
+    "full_ft_encoder":           ("fullFT",    "#F57C00", "--", 1.4),
+    "lpft_encoder":              ("LP-FT",     "#8D6E63", "--", 1.4),
+    "peft_lora_encoder":         ("LoRA",      "#78909C", "--", 1.4),
+    "peft_dora_encoder":         ("DoRA",      "#546E7A", "--", 1.4),
+    "cassle_encoder":            ("CaSSLe",    "#9E9D24", "--", 1.4),
+    "ewc_encoder":               ("EWC",       "#6D4C41", "--", 1.4),
+}
+_MW_TRAIN_METRICS = [
+    ("probe_top1",    "action top-1",  "higher"),
+    ("motion_cos",    "motion-cos",    "higher"),
+    ("future_l1",     "future L1",     "lower"),
+    ("causal_l1",     "causal L1",     "lower"),
+    ("maskratio",     "mask-ratio",    "lower"),
+    ("val_jepa_loss", "val JEPA loss", "lower"),
+]
+_MW_EVAL_METRICS = [
+    ("act", "action top-1", "higher"), ("tax", "taxonomy F1", "higher"),
+    ("mcos", "motion-cos", "higher"), ("fut", "future MSE", "lower"),
+    ("rollout", "rollout drift", "lower"), ("causal", "causal L1", "lower"),
+    ("tdist", "t-dist", "lower"), ("maskratio", "mask-ratio slope", "lower"),
+    ("teacher_free", "teacher-free", "lower"),
+    ("aot", "arrow-of-time acc", "higher"), ("tov", "temporal-order acc", "higher"),
+    ("pace", "pace acc", "higher"), ("tcc_cycle", "TCC cycle-back", "lower"),
+    ("tcc_tau", "TCC Kendall τ", "higher"),
+]
+_MW_EVAL_RAW_KEYS = ["act", "tax", "mcos", "fut", "rollout", "causal", "tdist", "maskratio",
+                     "order", "teacher_free", "aot", "tov", "pace", "tcc_cycle", "tcc_tau"]
+_MW_TRAIN_PROBE_KEYS = ["step", "probe_top1", "motion_cos", "future_l1", "causal_l1",
+                        "maskratio", "val_jepa_loss"]
+
+
+def _mw_render_graphs(blocks, ev, out_dir: Path):
+    """The 3 metrics_watch figures (verbatim recipe of the watch script — uses this module's
+    own _bar_with_ci/_sort_by_metric, which the watch script itself imported from here)."""
+    def _kept_row(b):
+        if b["kept_i"] is not None:
+            return b["rows"][b["kept_i"]][0]
+        return b["rows"][-1][0] if b["rows"] else None
+
+    # ── F1: train trajectories ──
+    fig, axes = plt.subplots(2, 3, figsize=(20, 11))
+    arms_drawn = []
+    for ax, (key, title, direction) in zip(axes.flat, _MW_TRAIN_METRICS):
+        for b in blocks:
+            sty = _MW_TRAIN_STYLE[b["arm"]]
+            pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
+                         if r.get(key) is not None and r.get("step") is not None)
+            if not pts:
+                continue
+            if b["arm"] not in arms_drawn:
+                arms_drawn.append(b["arm"])
+            xs, ys = zip(*pts)
+            ax.plot(xs, ys, sty[2], color=sty[1], lw=sty[3], marker="o", ms=3.5)
+            kr = _kept_row(b)
+            if b["kept_i"] is not None and kr.get(key) is not None:
+                ax.plot(kr["step"], kr[key], marker="*", ms=15, color=sty[1],
+                        mec="black", mew=0.8, ls="none", zorder=5)
+        arrow = "↑ better" if direction == "higher" else "↓ better"
+        ax.set_title(f"{title}  ({arrow})", fontweight="bold", fontsize=13)
+        ax.set_xlabel("global step", fontsize=10)
+        ax.grid(alpha=0.25)
+    handles = [plt.Line2D([], [], color=_MW_TRAIN_STYLE[a][1], ls=_MW_TRAIN_STYLE[a][2],
+                          lw=_MW_TRAIN_STYLE[a][3], marker="o", ms=4, label=_MW_TRAIN_STYLE[a][0])
+               for a in _MW_TRAIN_STYLE if a in arms_drawn]
+    if handles:
+        fig.legend(handles=handles, loc="lower center", ncol=min(len(handles), 7),
+                   frameon=True, fontsize=11)
+    fig.suptitle("iter18 TRAIN probe checkpoints — every arm, every probe · star marker = KEPT ckpt"
+                 " · OURS = greens (solid enc / dotted head)", fontsize=15, fontweight="bold")
+    fig.subplots_adjust(top=0.91, bottom=0.13, hspace=0.35, wspace=0.25)
+    save_fig(fig, str(out_dir / "train_trajectories"))
+    plt.close(fig)
+
+    # ── F2: KEPT-checkpoint scorecard + verdict strip ──
+    _CI_KEY = {"probe_top1": "top1_ci_half", "motion_cos": "motion_cos_ci_half",
+               "future_l1": "future_l1_ci_half"}
+    _Z95 = 1.96
+
+    def _row_ci(row, key):
+        ck = _CI_KEY.get(key)
+        if ck and row.get(ck) is not None:
+            return float(row[ck])
+        if key == "probe_top1" and row.get("n_probe_clips"):
+            p_, n_ = float(row["probe_top1"]), int(row["n_probe_clips"])
+            return _Z95 * (p_ * (1 - p_) / n_) ** 0.5
+        return None
+
+    fig = plt.figure(figsize=(20, 14))
+    gs = fig.add_gridspec(3, 3, height_ratios=[1.0, 1.0, 0.38], hspace=0.5, wspace=0.45)
+    axes6 = [fig.add_subplot(gs[i // 3, i % 3]) for i in range(6)]
+    verdicts = []
+    for ax, (key, title, direction) in zip(axes6, _MW_TRAIN_METRICS):
+        entries = []
+        for b in blocks:
+            row = _kept_row(b)
+            if row is not None and row.get(key) is not None:
+                entries.append((b["arm"], float(row[key]), _row_ci(row, key)))
+        if not entries:
+            ax.axis("off")
+            ax.set_title(f"{title} — no data yet", fontsize=12)
+            verdicts.append((title, None, None, None, None, None))
+            continue
+        entries.sort(key=lambda t: t[1], reverse=(direction == "higher"))
+        labels = [_MW_TRAIN_STYLE[a][0] + (" (hd)" if a.endswith("_head") else "")
+                  for a, _, _ in entries]
+        colors = [_MW_TRAIN_STYLE[a][1] for a, _, _ in entries]
+        vals = [v for _, v, _ in entries]
+        errs = [(e or 0.0) for _, _, e in entries]
+        ys = np.arange(len(entries))[::-1]
+        bars = ax.barh(ys, vals, color=colors, alpha=0.9, height=0.65,
+                       xerr=errs, capsize=3, error_kw={"lw": 1.1, "ecolor": "#222"})
+        for y, (arm, v, e), b_ in zip(ys, entries, bars):
+            if arm in _MW_FAM_OURS:
+                b_.set_edgecolor("black")
+                b_.set_linewidth(1.8)
+            ax.text(v + (e or 0.0), y, f" {v:.4f}" + (f"±{e:.3f}" if e else ""),
+                    va="center", fontsize=8)
+        ax.set_yticks(ys)
+        ax.set_yticklabels(labels, fontsize=9)
+        lo = min(v - (e or 0.0) for _, v, e in entries)
+        hi = max(v + (e or 0.0) for _, v, e in entries)
+        pad = (hi - lo) * 0.15 or abs(hi) * 0.05 or 0.01
+        ax.set_xlim(lo - pad, hi + pad * 4.0)
+        arrow = "↑" if direction == "higher" else "↓"
+        ax.set_title(f"{title} {arrow} · best: {labels[0]}", fontweight="bold", fontsize=12)
+        ours = [(v, e) for a, v, e in entries if a in _MW_FAM_OURS]
+        other = [(v, e) for a, v, e in entries if a not in _MW_FAM_OURS]
+        if ours and other:
+            pick = max if direction == "higher" else min
+            (bo, eo), (bx, ex) = pick(ours), pick(other)
+            win = bo > bx if direction == "higher" else bo < bx
+            verdicts.append((title, win, bo, bx, eo, ex))
+        else:
+            verdicts.append((title, None, None, None, None, None))
+    axv = fig.add_subplot(gs[2, :])
+    axv.axis("off")
+    n = len(verdicts)
+    for i, (title, win, bo, bx, eo, ex) in enumerate(verdicts):
+        x0 = i / n
+        if win is None:
+            col, txt = "#ECEFF1", f"{title}\n(awaiting data)"
+        else:
+            tie = (eo is not None and ex is not None and abs(bo - bx) <= (eo + ex))
+            col = "#FFF9C4" if tie else ("#C8E6C9" if win else "#FFCDD2")
+            tag = "≈ TIE (CIs overlap)" if tie else ("OURS LEAD" if win else "OTHERS LEAD")
+            txt = f"{title}\nOURS {bo:.4f} · other {bx:.4f}\n{tag}"
+        axv.add_patch(plt.Rectangle((x0 + 0.004, 0.08), 1 / n - 0.008, 0.84,
+                                    facecolor=col, edgecolor="#555",
+                                    transform=axv.transAxes))
+        axv.text(x0 + 1 / (2 * n), 0.5, txt, transform=axv.transAxes,
+                 ha="center", va="center", fontsize=10, fontweight="bold")
+    axv.text(0.0, 1.06, "VERDICT — best OURS (surgery; black-edged bars) vs best OTHER · "
+                        "whiskers = 95% CI (per-clip BCa; legacy top-1 rows: binomial approx; "
+                        "causal/mask-ratio/val-loss have no per-clip data → no whisker)",
+             transform=axv.transAxes, fontsize=11, fontweight="bold", va="bottom")
+    fig.suptitle("iter18 KEPT-checkpoint scorecard — the encoder each arm EXPORTS to eval",
+                 fontsize=15, fontweight="bold")
+    save_fig(fig, str(out_dir / "kept_scorecard"))
+    plt.close(fig)
+
+    # ── F3: EVAL scorecard (14 panels on a 4×4 grid) ──
+    have_any = any(r["_raw"][k][0] is not None for r in ev for k, _, _ in _MW_EVAL_METRICS)
+    if not have_any:
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax.axis("off")
+        ax.text(0.5, 0.5, "no EVAL artifacts yet —\nper-encoder evals launch as each arm finishes training",
+                ha="center", va="center", fontsize=16, fontweight="bold", color="#666")
+        save_fig(fig, str(out_dir / "eval_scorecard"))
+        plt.close(fig)
+        return
+    fig, axes14 = plt.subplots(4, 4, figsize=(30, 22))
+    for ax in axes14.flat[len(_MW_EVAL_METRICS):]:
+        ax.axis("off")
+    for ax, (k, title, direction) in zip(axes14.flat, _MW_EVAL_METRICS):
+        encs = [r["_enc_full"] for r in ev]
+        vals = [r["_raw"][k][0] for r in ev]
+        errs = [(r["_raw"][k][1] or 0.0) for r in ev]
+        na = {e for e, v in zip(encs, vals) if v is None}
+        vals = [0.0 if v is None else v for v in vals]
+        s_enc, s_val, s_err = _sort_by_metric(encs, vals, errs, na,
+                                              "desc" if direction == "higher" else "asc")
+        _bar_with_ci(ax, s_enc, s_val, s_err, ylabel=title,
+                     title=title, na_set=na, direction=direction)
+    fig.suptitle("iter18 EVAL scorecard — per-encoder TEST artifacts · 95% BCa CI where available",
+                 fontsize=16, fontweight="bold")
+    fig.subplots_adjust(hspace=0.6, wspace=0.3, top=0.94)
+    save_fig(fig, str(out_dir / "eval_scorecard"))
+    plt.close(fig)
+
+
+def _mw_dump(blocks, ev, out_dir: Path):
+    """train_metrics.{json,csv} + eval_metrics.{json,csv} — same schema as the watch script."""
+    import csv
+    train = [{"arm": b["arm"], "status": b["st"], "n_train": b["n_tr"], "n_val": b["n_va"],
+              "head_best": b["head_best"], "kept_idx": b["kept_i"],
+              "probes": [{**{k: r.get(k) for k in _MW_TRAIN_PROBE_KEYS},
+                          "verdict": v, "kept": (i == b["kept_i"])}
+                         for i, (r, v) in enumerate(b["rows"])]}
+             for b in blocks]
+    (out_dir / "train_metrics.json").write_text(json.dumps(train, indent=1))
+    with open(out_dir / "train_metrics.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["arm", "ckpt", *_MW_TRAIN_PROBE_KEYS, "verdict", "kept"])
+        for t in train:
+            for i, pr in enumerate(t["probes"]):
+                w.writerow([t["arm"], i + 1, *[pr.get(k) for k in _MW_TRAIN_PROBE_KEYS],
+                            pr["verdict"], pr["kept"]])
+    ev_json = [{"encoder": r["_enc_full"], "n_test": r["n_te"][0],
+                **{k: {"mean": r["_raw"][k][0], "ci_half": r["_raw"][k][1]}
+                   for k in _MW_EVAL_RAW_KEYS if k in r["_raw"]}}
+               for r in ev]
+    (out_dir / "eval_metrics.json").write_text(json.dumps(ev_json, indent=1))
+    with open(out_dir / "eval_metrics.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["encoder", "n_test", *[c for k in _MW_EVAL_RAW_KEYS for c in (k, k + "_ci")]])
+        for r in ev:
+            raw = r["_raw"]
+            cells = [c for k in _MW_EVAL_RAW_KEYS for c in raw.get(k, (None, None))]
+            w.writerow([r["_enc_full"], r["n_te"][0], *cells])
+
+
+def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
+    """Regenerate ALL metrics_watch artifacts into out_base/<BACKBONE>/ from the eval + train
+    artifacts under outputs_root — no scripts/ dependency. Data files keep EVERY arm;
+    graphs hide ITER18_SKIP_ARMS (same contract as the watch script)."""
+    out_dir = out_base / _MW_BACKBONE
+    out_dir.mkdir(parents=True, exist_ok=True)
+    skip = _mw_skip_arms()
+    skip_encs = {_mw_enc_name(_MW_ARM2ENC[a]) for a in skip if a in _MW_ARM2ENC}
+    blocks = _mw_train_blocks(outputs_root, mtag)
+    ev = _mw_eval_rows(outputs_root)
+    _mw_dump(blocks, ev, out_dir)            # FULL — every arm, incl. skipped
+    vis_blocks = [b for b in blocks if b["arm"] not in skip]
+    vis_ev = [r for r in ev if r["_enc_full"] not in skip_encs]
+    _mw_render_graphs(vis_blocks, vis_ev, out_dir)
+    if skip:
+        print(f"  [metrics-watch] ⏷ {sorted(skip)} hidden from graphs · still in the json/csv")
+    print(f"  [metrics-watch] regenerated → {out_dir}/ · "
+          f"{{train_trajectories,kept_scorecard,eval_scorecard}}.{{png,pdf}} + "
+          f"{{train,eval}}_metrics.{{json,csv}}")
+
+
 def main():
     p = argparse.ArgumentParser(
         description="m13 — 14-metric bar-with-CI viz for the probe eval suite (hero: §3.3c).")
@@ -1417,11 +1861,31 @@ def main():
                    help="Paste a pre-made per-backbone Δ-vs-frozen hero into eval/<BACKBONE>/ verbatim "
                         "(e.g. a prior-iter champion whose data isn't in THIS run) and include it in the "
                         "combined vertical stack. Repeatable. Path supplied via CLI — never hardcoded.")
+    p.add_argument("--metrics-watch-out", type=Path, default=None,
+                   help="Regenerate the metrics_watch artifacts (3 figures + train/eval_metrics "
+                        "json/csv) into <this dir>/<ITER18_BACKBONE>/ — self-contained, no "
+                        "scripts/iter18_* dependency. Requires --outputs-root.")
+    p.add_argument("--outputs-root", type=Path, default=None,
+                   help="Run outputs root (e.g. outputs/poc) — m09 train dirs + eval artifact "
+                        "subdirs live under it. Required by --metrics-watch-out.")
+    p.add_argument("--metrics-watch-only", action="store_true",
+                   help="Exit after the metrics_watch regeneration (skip the m13 eval/ plots).")
     add_wandb_args(p)
     args = p.parse_args()
     if not (args.SANITY or args.POC or args.FULL):
         sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
     mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
+
+    # ── metrics_watch regeneration (self-contained; see the _mw_* section above) ──
+    if args.metrics_watch_out is not None:
+        if args.outputs_root is None:
+            sys.exit("ERROR: --metrics-watch-out requires --outputs-root (e.g. outputs/poc)")
+        init_style()
+        regen_metrics_watch(args.outputs_root, args.metrics_watch_out, mode.lower())
+        if args.metrics_watch_only:
+            return
+    elif args.metrics_watch_only:
+        sys.exit("ERROR: --metrics-watch-only requires --metrics-watch-out")
 
     sub_dir = args.output_dir / "eval"
     if sub_dir.exists():
