@@ -43,6 +43,11 @@ HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 |
 # minutes → kill the box right after
 # NOT upload-full here: it packs ~330G of shards BEFORE uploading (252G free → disk-full
 # crashes the live run) and the 08:58 tar snapshot already covers the final train arms
+
+# before killing: one last delta pass (~3-5 min, mostly dedup) for the finale's last files
+HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 | tail -5
+# prints "Upload complete" → kill the box (verify-full FAIL vs the tar manifest = expected;
+# the light mirror uploads loose files it doesn't count)
 ```
 
 ## 4 · ⏱️ measured durations (2026-06-12 unless noted)
