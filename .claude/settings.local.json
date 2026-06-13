@@ -293,7 +293,8 @@
       "Bash(awk '/^  encoder_temporal:/{f=1;print;next} f&&/^  [a-z]/{f=0} f' configs/pipeline.yaml)",
       "Bash(bash -c ' *)",
       "Bash(grep -vE \"^\\\\s*$\")",
-      "Bash(awk 'NR==1||/workspace|\\\\/$/')"
+      "Bash(awk 'NR==1||/workspace|\\\\/$/')",
+      "WebFetch(domain:arxiv.org)"
     ]
   }
 }

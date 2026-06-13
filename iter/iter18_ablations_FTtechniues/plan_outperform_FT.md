@@ -75,6 +75,25 @@ You thought OURS loses 3 subjects. Below are the **EXACT panel names** + **bar n
 | ⚡ The **interaction** clips (the juicy part) get the **least** practice | ⏫ Give interactions **more** practice time | 🟢 easy |
 | 🃏 We **showed** special clips but never **tested** on what makes them special → they became wallpaper | ➕ Add a goal that **forces** using the structure | 🔴 hard *(but the real win)* |
 
+### ✅ So what's the actual plan for Q1? (the whole thing in 1 table)
+
+| 📋 Metric | 🔍 Truth vs 🟡 raw | 🔧 Plan |
+|:--|:--|:--|
+| 🔮 **future MSE** | 🤝 TIE — raw **497** vs OURS **498** | 1️⃣ cut normal-video replay **50% → 25%** · 2️⃣ give **interaction** clips more practice |
+| 🧩 **causal L1** | 🤝 TIE — raw **528** vs OURS **530** | ⬆️ same 2 knobs — together = **1 config change + 1 GPU run** |
+
+> 🏆 **Why this beats raw:** less "normal video" dilution + more interaction practice forces OURS to lean on the **factor structure that raw never sees** → it should pull ahead on prediction. *(The deepest win — 🏗️ #5 "force-the-structure" goal — is the real novelty, but these 2 quick knobs come first.)*
+
+### 📚 Reality check from the literature (read before spending GPU)
+
+| 🎯 Metric | 📚 What the research actually says | 🔧 So what |
+|:--|:--|:--|
+| 🔮 **future MSE** | Big video models (V-JEPA-class) store structure as **distributed** representations that are *"sufficient for prediction"* → explicit factoring adds little on **plain** prediction. | ✅ Good news: OURS **already SIG-beats** the FT toolbox (full-FT / LoRA / DoRA) here · ⚠️ but the quick replay knob will likely **NOT** beat its own 🟡 raw twin — **lower expectations**. |
+| 🧩 **causal L1** | **Object-level interventions** (Causal-JEPA) give **+20%** on *causal / counterfactual* reasoning — but ONLY via an **intervention OBJECTIVE**, not factored inputs alone. | 🏗️ **THIS is where factoring genuinely wins** — aim here with **lever #5** (force-structure / intervention loss), **NOT** the replay tweak. |
+
+> 📖 *Sources:* “Interpreting Physics in Video World Models” (2026) — distributed reps are *sufficient* · **Causal-JEPA** (2026) — object-level interventions, **+20%** counterfactual.
+> 🔎 *Honest caveat:* that first paper studies “modern video world models” in general (it does **not** name V-JEPA); the “V-JEPA specifically” bit is our extrapolation. The hard proof that factoring adds ~0 on plain prediction **for our model** is our own **tie-vs-raw** result.
+
 ## 🎯 Q2 — Stop forgetting frame-order (**TCC Kendall τ** + **TCC cycle-back**)
 
 📊 **Eyeball it:** ⚪ Frozen wins both · every fine-tuner drops below it · 🟢 OURS beats 🟡 raw and is the *best* fine-tuner on TCC cycle-back (numbers = exact decimals from `eval_metrics.csv`).
