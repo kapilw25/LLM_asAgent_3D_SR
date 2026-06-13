@@ -349,9 +349,10 @@ def render_metric_graphs(blocks, ev, out_dir):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
     import numpy as np
     from m13_eval_plot import _bar_with_ci, _sort_by_metric
-    from utils.plots import init_style, save_fig
+    from utils.plots import init_style, save_fig, common_exponent, exp_axis_tag, fmt_mantissa
     init_style()
 
     def _kept_row(b):
@@ -364,6 +365,7 @@ def render_metric_graphs(blocks, ev, out_dir):
     fig, axes = plt.subplots(2, 3, figsize=(20, 11))
     arms_drawn = []
     for ax, (key, title, direction) in zip(axes.flat, _TRAIN_METRICS):
+        panel_ys = []
         for b in blocks:
             sty = _TRAIN_STYLE[b["arm"]]
             pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
@@ -373,13 +375,18 @@ def render_metric_graphs(blocks, ev, out_dir):
             if b["arm"] not in arms_drawn:
                 arms_drawn.append(b["arm"])
             xs, ys = zip(*pts)
+            panel_ys.extend(ys)
             ax.plot(xs, ys, sty[2], color=sty[1], lw=sty[3], marker="o", ms=3.5)
             kr = _kept_row(b)
             if b["kept_i"] is not None and kr.get(key) is not None:
                 ax.plot(kr["step"], kr[key], marker="*", ms=15, color=sty[1],
                         mec="black", mew=0.8, ls="none", zorder=5)
+        # iter18 (2026-06-13): common-exponent on the y-axis (data untouched, ticks relabelled).
+        scale, exp = common_exponent(panel_ys)
+        if exp != 0:
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _, s=scale: fmt_mantissa(v * s)))
         arrow = "↑ better" if direction == "higher" else "↓ better"
-        ax.set_title(f"{title}  ({arrow})", fontweight="bold", fontsize=13)
+        ax.set_title(f"{title}  ({arrow}){exp_axis_tag(exp)}", fontweight="bold", fontsize=13)
         ax.set_xlabel("global step", fontsize=10)
         ax.grid(alpha=0.25)
     handles = [plt.Line2D([], [], color=_TRAIN_STYLE[a][1], ls=_TRAIN_STYLE[a][2],
@@ -433,23 +440,26 @@ def render_metric_graphs(blocks, ev, out_dir):
         colors = [_TRAIN_STYLE[a][1] for a, _, _ in entries]
         vals = [v for _, v, _ in entries]
         errs = [(e or 0.0) for _, _, e in entries]
+        scale, exp = common_exponent(vals, errs)     # iter18 (2026-06-13): rescale value axis
+        sv = [v * scale for v in vals]
+        se = [e * scale for e in errs]
         ys = np.arange(len(entries))[::-1]
-        bars = ax.barh(ys, vals, color=colors, alpha=0.9, height=0.65,
-                       xerr=errs, capsize=3, error_kw={"lw": 1.1, "ecolor": "#222"})
-        for y, (arm, v, e), b_ in zip(ys, entries, bars):
+        bars = ax.barh(ys, sv, color=colors, alpha=0.9, height=0.65,
+                       xerr=se, capsize=3, error_kw={"lw": 1.1, "ecolor": "#222"})
+        for y, (arm, _, _), v_s, e_s, b_ in zip(ys, entries, sv, se, bars):
             if arm in _FAM_OURS:
                 b_.set_edgecolor("black")
                 b_.set_linewidth(1.8)
-            ax.text(v + (e or 0.0), y, f" {v:.4f}" + (f"±{e:.3f}" if e else ""),
+            ax.text(v_s + e_s, y, f" {fmt_mantissa(v_s)}" + (f"±{fmt_mantissa(e_s)}" if e_s else ""),
                     va="center", fontsize=8)
         ax.set_yticks(ys)
         ax.set_yticklabels(labels, fontsize=9)
-        lo = min(v - (e or 0.0) for _, v, e in entries)
-        hi = max(v + (e or 0.0) for _, v, e in entries)
+        lo = min(v - e for v, e in zip(sv, se))
+        hi = max(v + e for v, e in zip(sv, se))
         pad = (hi - lo) * 0.15 or abs(hi) * 0.05 or 0.01
         ax.set_xlim(lo - pad, hi + pad * 4.0)
         arrow = "↑" if direction == "higher" else "↓"
-        ax.set_title(f"{title} {arrow} · best: {labels[0]}", fontweight="bold", fontsize=12)
+        ax.set_title(f"{title} {arrow} · best: {labels[0]}{exp_axis_tag(exp)}", fontweight="bold", fontsize=12)
         ours = [(v, e) for a, v, e in entries if a in _FAM_OURS]
         other = [(v, e) for a, v, e in entries if a not in _FAM_OURS]
         if ours and other:

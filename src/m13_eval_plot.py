@@ -46,11 +46,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils.plots import COLORS, ENCODER_COLORS, init_style, save_fig
+from utils.plots import (COLORS, ENCODER_COLORS, init_style, save_fig,
+                         common_exponent, exp_axis_tag, fmt_mantissa)
 from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 from utils.bootstrap import N_BOOTSTRAP
@@ -186,6 +188,15 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
     colors = [_color_for(e, i) for i, e in enumerate(encoders)]
     plot_vals = [0.0 if e in na_set else v for e, v in zip(encoders, vals)]
     plot_errs = [0.0 if e in na_set else er for e, er in zip(encoders, errs)]
+    # iter18 (2026-06-13, user order): auto common-exponent so clustered small decimals
+    # (e.g. teacher-free raw/lora/ours all "0.045") separate — rescale bars + value labels
+    # and carry a "(×10⁻ⁿ)" tag on the y-axis label. Real (non-N/A) values set the exponent.
+    scale, exp = common_exponent(
+        [v for e, v in zip(encoders, plot_vals) if e not in na_set],
+        [er for e, er in zip(encoders, plot_errs) if e not in na_set])
+    plot_vals = [v * scale for v in plot_vals]
+    plot_errs = [(er if (isinstance(er, float) and np.isnan(er)) else er * scale)
+                 for er in plot_errs]
     bars = ax.bar(x, plot_vals, 0.6, color=colors, alpha=0.85,
                   yerr=plot_errs, capsize=4, error_kw={"lw": 1.2, "ecolor": "#222"})
     for i, e in enumerate(encoders):
@@ -210,11 +221,11 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
                     fontsize=12, color="#555", fontweight="bold")
         else:
             er_safe = 0.0 if (isinstance(er, float) and np.isnan(er)) else er
-            ax.text(xi, v + er_safe + (y_hi - y_lo) * 0.01, f"{v:.3f}",
+            ax.text(xi, v + er_safe + (y_hi - y_lo) * 0.01, fmt_mantissa(v),
                     ha="center", va="bottom", fontsize=9, color="#222")
     ax.set_xticks(x)
     ax.set_xticklabels([_display_label(e) for e in encoders], fontsize=9, rotation=25, ha="right")
-    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_ylabel(ylabel + exp_axis_tag(exp), fontsize=11)
     ax.set_title(title, fontsize=12, fontweight="bold")
     if direction == "higher":
         ax.text(0.02, 0.97, "↑ higher = better", transform=ax.transAxes, fontsize=10,
@@ -1642,6 +1653,7 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
     fig, axes = plt.subplots(2, 3, figsize=(20, 11))
     arms_drawn = []
     for ax, (key, title, direction) in zip(axes.flat, _MW_TRAIN_METRICS):
+        panel_ys = []
         for b in blocks:
             sty = _MW_TRAIN_STYLE[b["arm"]]
             pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
@@ -1651,13 +1663,18 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
             if b["arm"] not in arms_drawn:
                 arms_drawn.append(b["arm"])
             xs, ys = zip(*pts)
+            panel_ys.extend(ys)
             ax.plot(xs, ys, sty[2], color=sty[1], lw=sty[3], marker="o", ms=3.5)
             kr = _kept_row(b)
             if b["kept_i"] is not None and kr.get(key) is not None:
                 ax.plot(kr["step"], kr[key], marker="*", ms=15, color=sty[1],
                         mec="black", mew=0.8, ls="none", zorder=5)
+        # iter18 (2026-06-13): common-exponent on the y-axis (data untouched, ticks relabelled).
+        scale, exp = common_exponent(panel_ys)
+        if exp != 0:
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _, s=scale: fmt_mantissa(v * s)))
         arrow = "↑ better" if direction == "higher" else "↓ better"
-        ax.set_title(f"{title}  ({arrow})", fontweight="bold", fontsize=13)
+        ax.set_title(f"{title}  ({arrow}){exp_axis_tag(exp)}", fontweight="bold", fontsize=13)
         ax.set_xlabel("global step", fontsize=10)
         ax.grid(alpha=0.25)
     handles = [plt.Line2D([], [], color=_MW_TRAIN_STYLE[a][1], ls=_MW_TRAIN_STYLE[a][2],
@@ -1707,23 +1724,26 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
         colors = [_MW_TRAIN_STYLE[a][1] for a, _, _ in entries]
         vals = [v for _, v, _ in entries]
         errs = [(e or 0.0) for _, _, e in entries]
+        scale, exp = common_exponent(vals, errs)     # iter18 (2026-06-13): rescale value axis
+        sv = [v * scale for v in vals]
+        se = [e * scale for e in errs]
         ys = np.arange(len(entries))[::-1]
-        bars = ax.barh(ys, vals, color=colors, alpha=0.9, height=0.65,
-                       xerr=errs, capsize=3, error_kw={"lw": 1.1, "ecolor": "#222"})
-        for y, (arm, v, e), b_ in zip(ys, entries, bars):
+        bars = ax.barh(ys, sv, color=colors, alpha=0.9, height=0.65,
+                       xerr=se, capsize=3, error_kw={"lw": 1.1, "ecolor": "#222"})
+        for y, (arm, _, _), v_s, e_s, b_ in zip(ys, entries, sv, se, bars):
             if arm in _MW_FAM_OURS:
                 b_.set_edgecolor("black")
                 b_.set_linewidth(1.8)
-            ax.text(v + (e or 0.0), y, f" {v:.4f}" + (f"±{e:.3f}" if e else ""),
+            ax.text(v_s + e_s, y, f" {fmt_mantissa(v_s)}" + (f"±{fmt_mantissa(e_s)}" if e_s else ""),
                     va="center", fontsize=8)
         ax.set_yticks(ys)
         ax.set_yticklabels(labels, fontsize=9)
-        lo = min(v - (e or 0.0) for _, v, e in entries)
-        hi = max(v + (e or 0.0) for _, v, e in entries)
+        lo = min(v - e for v, e in zip(sv, se))
+        hi = max(v + e for v, e in zip(sv, se))
         pad = (hi - lo) * 0.15 or abs(hi) * 0.05 or 0.01
         ax.set_xlim(lo - pad, hi + pad * 4.0)
         arrow = "↑" if direction == "higher" else "↓"
-        ax.set_title(f"{title} {arrow} · best: {labels[0]}", fontweight="bold", fontsize=12)
+        ax.set_title(f"{title} {arrow} · best: {labels[0]}{exp_axis_tag(exp)}", fontweight="bold", fontsize=12)
         ours = [(v, e) for a, v, e in entries if a in _MW_FAM_OURS]
         other = [(v, e) for a, v, e in entries if a not in _MW_FAM_OURS]
         if ours and other:

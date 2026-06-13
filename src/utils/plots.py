@@ -12,6 +12,7 @@ USAGE:
 """
 import csv
 import json
+import math
 
 import matplotlib
 matplotlib.use("Agg")
@@ -25,6 +26,41 @@ from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pi
 _K = 1000                # axis tick K-unit
 _LOSS_CSV_MIN_COLS = 8   # m09 loss_log.csv legacy column floor (col 8 = val_loss)
 _MIN_TREND_POINTS = 2    # can't draw a trajectory from fewer points
+
+
+# ── Auto common-exponent for clustered small-value axes (iter18 2026-06-13, user order) ──
+# When a panel's values cluster at small decimals (e.g. teacher-free raw/lora/ours all
+# ≈ 0.045), a 3-decimal label collapses them to ONE number. These helpers pick ONE power
+# of 10 per panel so the mantissa is a clean 2-3 digit number, shown as a "(×10⁻ⁿ)" tag
+# on the axis label/title. Single source of the rule — used by m13 _bar_with_ci, the
+# metrics_watch scorecards (iter18_poc_metrics + m13's regen copy), and the paper scorecard.
+def common_exponent(values, errs=None):
+    """Pick scale=10^p so the largest |value|+err lands in [100, 1000) (≈3-digit mantissa).
+    Returns (scale, exp): plot/label value*scale; axis tag is ×10^exp with exp = -p (≤0 here).
+    No real positive value → (1.0, 0) = leave the axis untouched."""
+    errs = errs if errs is not None else [0.0] * len(values)
+    mags = [abs(v) + (e or 0.0) for v, e in zip(values, errs)
+            if v is not None and not (isinstance(v, float) and math.isnan(v))]
+    mags = [m for m in mags if m > 0]
+    if not mags:
+        return 1.0, 0
+    p = 2 - math.floor(math.log10(max(mags)))      # max*10^p ∈ [100, 1000)
+    return 10.0 ** p, -p
+
+
+def exp_axis_tag(exp):
+    """Mathtext ' (×10^exp)' suffix for an axis label/title; '' when exp == 0 (no rescale)."""
+    return "" if exp == 0 else rf" ($\times 10^{{{exp}}}$)"
+
+
+def fmt_mantissa(x):
+    """Compact rescaled-mantissa label: 446 / 45.4 / 4.54 (≈3 significant figures)."""
+    a = abs(x)
+    if a >= 100 or a == 0:
+        return f"{x:.0f}"
+    if a >= 10:
+        return f"{x:.1f}"
+    return f"{x:.2f}"
 
 
 # ── Publication color palette (high contrast, colorblind-safe) ────────

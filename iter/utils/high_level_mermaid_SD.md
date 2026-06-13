@@ -408,3 +408,68 @@ flowchart LR
     style WIN fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
     style LOSE fill:#5e35b1,color:#fff,font-weight:bold,font-size:28px
 ```
+
+
+---
+
+## 0.6 · 🗺️ Data + model pipeline (all baselines at a glance)
+
+> Every node is `abbrev (FULL FORM)`. Solid green = surgery on FACTOR (OURS). Dashed green = SURGERY-RAW
+> (the SAME method on RAW = the causal CONTROL: surgery − surgery_raw = the factor-curriculum effect, Figure-1).
+> Red = B2 Auto-RGN (Automatic Relative Gradient Norm) = the must-beat namesake. Thick arrow ⇒ FACTOR data.
+
+```mermaid
+flowchart LR
+    RAW["🎬 RAW clips ·<br>pretrain pool"]
+    FAC["🧩 FACTOR clips ·<br>D_L→D_A→D_I<br>m10 SAM masks →<br>m11 factor sets"]
+    INIT["⚓ vanilla continual<br>SSL (m09a1)<br>Self-Supervised<br>Learning on RAW<br>= shared student init"]
+    RAW --> INIT
+
+    INIT --> B4F["B4(a) Full-FT<br>(Full Fine-Tuning)<br>🔓 ALL blocks · RAW"]
+    INIT --> B4L["B4(b) LP-FT<br>(Linear-Probing then<br>Fine-Tuning)<br>🧠 head warmup →<br>🔓 unfreeze · RAW"]
+    INIT --> B1["LoRA<br>(Low-Rank Adaptation)<br>→ DoRA<br>(Weight-Decomposed<br>Low-Rank Adaptation)<br>🔌 tiny adapters · RAW"]
+    INIT --> B2["Auto-RGN<br>(Automatic Relative<br>Gradient Norm)<br>✂️ gradient-picked<br>blocks · RAW"]
+    INIT --> B3["CaSSLe + EWC<br>(Elastic Weight<br>Consolidation)<br>🧊 distill old +<br>🔒 anchor weights · RAW"]
+    INIT --> SURG["⭐ SURGERY (ours)<br>🔧 staged 4/8/8 blocks<br>· FACTOR"]
+    INIT --> SURGR["⭐ SURGERY-RAW<br>(control)<br>🔧 SAME 4/8/8 blocks<br>· RAW (factors OFF)"]
+
+    FAC ==> SURG
+
+    B4F --> EXP["📦 student_encoder.pt"]
+    B4L --> EXP
+    B1 --> EXP
+    B2 --> EXP
+    B3 --> EXP
+    SURG --> EXP
+    SURGR --> EXP
+    EXP --> EVAL["📊 eval m12a–m12e ·<br>9 metrics<br>N=1825 · paired<br>surgery − vanilla<br>cont-SSL · BCa 95% CI"]
+
+    style SURG fill:#cfc,stroke:#080,stroke-width:3px,color:#000
+    style SURGR fill:#dfd,stroke:#080,stroke-dasharray:6 4,color:#000
+    style B2 fill:#fdd,stroke:#a00,stroke-width:2px,color:#000
+```
+
+---
+
+## 1 · Architecture: where each baseline plugs in
+
+```mermaid
+flowchart TD
+    CKPT["V-JEPA 2.1<br>ViT-G (2B)<br>= BIGGEST avail.<br>checkpoints/<br>vjepa2_1_vitG_384.pt"] --> SEL{adaptation family}
+
+    SEL -->|"B1 PEFT<br>(Parameter-Efficient<br>Fine-Tuning)"| B1["m09b_peft.py<br>LoRA<br>(Low-Rank Adaptation)<br>→ DoRA<br>(Weight-Decomposed<br>Low-Rank Adaptation)<br>adapters on<br>attn.qkv + mlp (r=16)"]
+    SEL -->|"B2 Surgical-FT"| B2["m09c1 + auto_rgn<br>freeze<br>RGN = ||g_block|| /<br>||θ_block||<br>top-k blocks,<br>RAW clips"]
+    SEL -->|"B3 Cont-SSL"| B3["m09a1 + CaSSLe<br>distill<br>(FROZEN teacher) +<br>EWC (Elastic Weight<br>Consolidation)<br>Fisher anchor,<br>RAW clips"]
+    SEL -->|"B4(a) Full-FT<br>(Full Fine-Tuning) /<br>B4(b) LP-FT<br>(Linear-Probing<br>then Fine-Tuning)"| B4["m09a1<br>B4(a):<br>unfreeze_below=1.0<br>(full)<br>B4(b): lp-ft-stage0<br>then unfreeze"]
+    SEL -->|"PROPOSED"| S["m09c1 surgery<br>factor curriculum<br>D_L→D_A→D_I<br>SALT + SPD +<br>saliency + replay"]
+    SEL -->|"CONTROL"| SR["m09c1 surgery<br>factors OFF · RAW<br>= surgery_raw<br>(the ablation)"]
+
+    B1 & B2 & B3 & B4 & S & SR --> EXP["student_encoder.pt<br>(+ predictor)<br>export_student_<br>for_eval()"]
+    EXP --> REG["configs/eval/<br>probe_encoders.yaml<br>(one row per<br>baseline×arm)"]
+    REG --> EVAL["run_eval.sh →<br>m12a..f<br>14 metrics +<br>BCa 95% CI"]
+    EVAL --> HERO["m13 §G hero table<br>surgery vs 4<br>baselines vs anchors"]
+
+    style S fill:#cfc,stroke:#080,color:#000
+    style SR fill:#dfd,stroke:#080,stroke-dasharray:6 4,color:#000
+    style B2 fill:#fdd,stroke:#a00,color:#000
+```
