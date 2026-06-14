@@ -309,6 +309,11 @@ def eval_rows(mtag):
 # mislabels as "OTHERS LEAD". Ablation/baseline groups (surgery_raw, autorgn, FT/PEFT, pretrain) stay NOT-ours.
 _OURS_GROUPS = {"ours_flagship", "ours_head", "improvement"}
 _FAM_OURS = {a for a, _e, _g, _k in display_arms(include_merge=True) if _g in _OURS_GROUPS}
+# user goal (2026-06-14): the WHOLE ours family (4 surgery + 5 improvement arms) reads as ONE colour — a single
+# dark green — in all 3 figures, so it groups visually vs the distinctly-coloured baselines. #2E7D32 == the green
+# m13's _color_for already returns for OURS, so F3 stays consistent with no colour-value edit there.
+_OURS_DARK_GREEN = "#2E7D32"
+_OURS_ENCODERS = {_e for _a, _e, _g, _k in display_arms(include_merge=True) if _g in _OURS_GROUPS}  # encoder tokens (F3)
 _TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = greens
     "pretrain_encoder":          ("vCSSL",     "#1565C0", "-",  1.8),
     "surgery_3stage_DI_encoder": ("s3DI-enc",  "#1B5E20", "-",  2.6),
@@ -330,6 +335,11 @@ _TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = g
     "surgery_3stage_DI_intervene_encoder": ("interv",   "#C0CA33", "-", 2.2),
 }
 _DEF_TRAIN_STYLE = ("?", "#BDBDBD", ":", 1.2)   # unregistered arm → grey (a new arm never KeyErrors the graph)
+# Recolour the whole ours family to the SINGLE dark green (label/linestyle/width kept, so F1 trajectories stay
+# distinguishable by line pattern + value, and F2 kept-scorecard bars — which read _TRAIN_STYLE[..][1] — go green).
+# Single-source via _FAM_OURS, so a new improvement arm auto-greens with no edit here. Baselines keep their colours.
+_TRAIN_STYLE = {a: ((s[0], _OURS_DARK_GREEN, s[2], s[3]) if a in _FAM_OURS else s)
+                for a, s in _TRAIN_STYLE.items()}
 _TRAIN_METRICS = [  # (probe-row key, panel title, direction) — mirrors the TRAIN table columns
     ("probe_top1",    "action top-1",  "higher"),
     ("motion_cos",    "motion-cos",    "higher"),
@@ -359,6 +369,8 @@ def render_metric_graphs(blocks, ev, out_dir):
     from matplotlib.ticker import FuncFormatter
     import numpy as np
     from m13_eval_plot import _bar_with_ci, _sort_by_metric
+    import m13_eval_plot as _m13            # F3 bar colours come from m13._color_for (its _OURS_GREEN set) — extend
+    _m13._OURS_GREEN |= _OURS_ENCODERS      # it with OUR improvement-arm encoders so the WHOLE ours family is one green
     from utils.plots import init_style, save_fig, common_exponent, exp_axis_tag, fmt_mantissa
     init_style()
     # Silence matplotlib's cosmetic "findfont: Failed to find font weight bold" noise (~10/run): our BOLD
