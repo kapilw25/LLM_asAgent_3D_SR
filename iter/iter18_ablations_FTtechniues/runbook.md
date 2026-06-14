@@ -20,6 +20,7 @@ find outputs/poc -name student_encoder.pt | wc -l    # expect 12
 for a in full_ft lpft peft_dora peft_lora pretrain surgery_3stage_DI surgery_noDI surgery_raw autorgn; do
   printf "%-22s " "$a"; find outputs/poc -path "*${a}*" -name student_encoder.pt | head -1 || echo MISSING
 done
+rm -rf outputs/sanity
 # If all 9 print a path, you're clear to start POC the moment SANITY goes green.
 
 

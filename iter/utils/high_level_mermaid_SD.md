@@ -273,8 +273,9 @@ flowchart LR
 | 🔗 **tcc_tau** (m12f/et · ↑) | When we match moments across two videos of the same action, do they stay in story order? | Rank correlation of the cross-clip frame alignment with monotonic time order (NaN for degenerate/static pairs, excluded + reported) | Kendall $\tau_b=\frac{P-Q}{\sqrt{(n_0-n_1)(n_0-n_2)}}$ between $\mathrm{arange}(T)$ and hard-NN alignment indices | `src/m12f_encoder_temporal.py` + `src/utils/et_tcc.py` |
 
 > 🗂️ Column key: `pt#` = `src/utils/pt_*.py` (predictor-temporal, Stage 8b) · `et` = `src/utils/et_*.py` (encoder-temporal, Stage 8c) · ↑ higher better · ↓ lower better.
-
 ---
+
+
 
 ## § 8 — 🧠 motion_aux head (auxiliary supervision)
 
@@ -508,3 +509,34 @@ flowchart TD
     style V4 fill:#e8f5e9,stroke:#2e7d32,color:#000
     style V5 fill:#fff3e0,stroke:#ef6c00,color:#000
 ```
+
+## § 14 — 📚 Metric reference · all 15 eval metrics (9 suite + signed `order` + 5 iter18 m12f encoder-temporal)
+
+> Sources: per-module docstrings (`src/m12{a-f}_*.py`, `src/utils/pt_*.py`, `src/utils/et_*.py`) + gold-standard papers:
+> [Arrow of Time — Wei et al. CVPR'18](https://openaccess.thecvf.com/content_cvpr_2018/html/Wei_Learning_and_Using_CVPR_2018_paper.html) ·
+> [Shuffle & Learn — Misra et al. ECCV'16](https://www.researchgate.net/publication/308277657_Shuffle_and_Learn_Unsupervised_Learning_Using_Temporal_Order_Verification) ·
+> [Pace Prediction — Wang et al. ECCV'20](https://jianbojiao.com/pdfs/ECCV_pace.pdf) ·
+> [TCC — Dwibedi et al. CVPR'19](https://arxiv.org/abs/1904.07846). Every value ships with a 95% BCa bootstrap CI (N=1825 held-out test clips).
+
+| 📐 Metric (module · ↑/↓) | 🧒 Explain like I'm 5 | 📖 Official definition | 🧮 Mathematical formula | 💻 Source code |
+|---|---|---|---|---|
+| 🎯 **action_top1** (m12a · ↑) | The robot watches a clip and picks 1 of 11 answers for "which way is stuff moving, and how fast?" — score = how often it's right | Top-1 accuracy of an attentive probe trained on frozen encoder features to classify each clip's dominant motion (speed × direction) | $\mathrm{Acc}=\frac{1}{N}\sum_q \mathbb{1}[\arg\max_c f_\theta(z_q)=y_q]$ over 11 optical-flow motion classes | `src/m12a_action_top1.py` |
+| 🏷️ **taxonomy_f1** (m12c · ↑) | 15 little quizzes about the scene ("rainy? market? night?") — take the average grade | Macro average over 15 scene-taxonomy dimensions (weather, road type, crowding, …) of per-dimension probe test scores | $\frac{1}{15}\sum_{d=1}^{15}s_d$, $s_d$ = top-1 acc (single-label dims) or sample-F1 (multi-label dims) | `src/m12c_taxonomy_f1.py` |
+| 🧭 **motion_cos** (m12b · ↑) | Clips that move the same way should "look alike" to the robot — score = how much more alike friends are than strangers | Intra-minus-inter class cosine margin: mean similarity to same-motion-class clips minus different-class clips | $\frac{1}{N}\sum_q[\overline{\cos}(z_q,z_{same})-\overline{\cos}(z_q,z_{diff})]$ | `src/m12b_motion_cos.py` |
+| 🔮 **future_mse** (m12d · ↓) | Cover the next picture in the flip-book and ask the robot to draw it — score = how wrong the drawing is | Mean squared error of the predictor reconstructing held-out future latent tokens from visible context | $\frac{1}{N}\sum_q\|\hat z_{t+\Delta}-z_{t+\Delta}\|_2^2$ (predictor vs teacher latents, masked future block) | `src/m12d_future_mse.py` |
+| 📉 **rollout** (pt#1 · ↓) | A whisper game the robot plays with itself — how fast does the story get garbled? | Free-running iterated rollout drift: error growth rate when the predictor consumes its own outputs (V-JEPA-2-AC rollout) | per-clip OLS slope of $L_1(\hat h_k,h_k)$ vs horizon $k$, predictions fed back as context | `src/m12e_predictor_temporal.py` + `src/utils/pt_rollout.py` |
+| ⏪ **causal** (pt#2 · ↓) | Hide the whole second half of the movie — can the robot guess it from the first half? | Strictly causal future-half prediction error (past→future masking, no bidirectional leak) | $\overline{L_1}$ predicting temporal slots $[T_p/2,T_p)$ from $[0,T_p/2)$ only | `src/m12e_predictor_temporal.py` + `src/utils/pt_causal.py` |
+| 📏 **tdist** (pt#3 · ↓) | Guessing 1 second ahead is easy, 8 seconds is hard — how quickly does the robot's guessing get worse? | Predictability-horizon scaling: how fast single-shot prediction degrades with temporal distance (CPC-style long-horizon test) | per-clip OLS slope of single-shot $L_1$ vs $\Delta t\in\{1,2,4,8\}$ from a 1-slot context | `src/m12e_predictor_temporal.py` + `src/utils/pt_tdist.py` |
+| 🧩 **maskratio** (pt#5 · ↓) | A jigsaw with more and more pieces missing — how fast does the robot's picture fall apart? | Graceful degradation under sparse context (VideoMAE high-masking robustness) — error growth as more tokens are hidden | per-clip OLS slope of $L_1$ vs mask ratio $r\in\{0.3,0.5,0.7,0.9\}$ | `src/m12e_predictor_temporal.py` + `src/utils/pt_maskratio.py` |
+| 🔀 **order** (pt#6 · signed) | Mix up the comic panels — does the robot even notice? | Temporal-order reliance: extra error when context frames are shuffled (>0 = order-dependent; ≈0 = order-blind). Diagnostic, not win/loss | $\Delta L_1 = L_1^{shuffled}-L_1^{ordered}$ (last-slot prediction, same mask) | `src/m12e_predictor_temporal.py` + `src/utils/pt_order.py` |
+| 🎓 **teacher_free** (pt#4 · ↓) | Riding without training wheels vs with — how much wobblier? | Exposure bias: error inflation when the predictor consumes its own mistakes vs re-grounded real context (Scheduled Sampling) | $\overline{L_1^{free}-L_1^{teacher}}$ over horizons (free-run minus teacher-forced rollout) | `src/m12e_predictor_temporal.py` + `src/utils/pt_teacher_free.py` |
+| ⏩ **aot** (m12f/et · ↑) | Is the movie playing forwards or backwards? (Spilled milk doesn't jump back into the glass) | [Arrow-of-Time (Wei CVPR'18)]: classify temporal direction from encoder features — does the representation preserve time's arrow? | binary head acc on $\bar z$: forward vs time-reversed clip, $\frac{1}{2}$(fwd ✓ + rev ✓) per clip | `src/m12f_encoder_temporal.py` + `src/utils/et_aot.py` |
+| 🔢 **tov** (m12f/et · ↑) | We scramble the photo album 4 different ways — can the robot tell which scramble it got? | [Temporal Order Verification / VCOP (Misra ECCV'16, Xu CVPR'19)]: identify WHICH frame ordering the clip has | $n$-way head top-1 over frame-permutation classes {identity + 3 shuffles}, avg over $n$ variants per clip | `src/m12f_encoder_temporal.py` + `src/utils/et_tov.py` |
+| 🏃 **pace** (m12f/et · ↑) | Is the video normal speed, fast-forward, or super-fast? | [Pace Prediction (Wang ECCV'20)]: classify the playback speed — rate-sensitive representations beat appearance-only ones | 3-way head top-1 over playback strides $\{1,2,4\}$ (oversampled source decode) | `src/m12f_encoder_temporal.py` + `src/utils/et_pace.py` |
+| 🔁 **tcc_cycle** (m12f/et · ↓) | Walk from your frame to the matching frame in a friend's video and back — do you land where you started? | [TCC (Dwibedi CVPR'19) eq.1]: cycle-back alignment error between same-action clip pairs — training-free temporal correspondence | $\frac{1}{T}\sum_i\|i-\mathrm{cyc}(i)\|$, $\mathrm{cyc}$ = soft-NN $A\!\to\!B\!\to\!A$, $\mathrm{soft}_i=\sum_j\mathrm{softmax}_j(\langle a_i,b_j\rangle/\tau)\cdot j$ | `src/m12f_encoder_temporal.py` + `src/utils/et_tcc.py` |
+| 🔗 **tcc_tau** (m12f/et · ↑) | When we match moments across two videos of the same action, do they stay in story order? | Rank correlation of the cross-clip frame alignment with monotonic time order (NaN for degenerate/static pairs, excluded + reported) | Kendall $\tau_b=\frac{P-Q}{\sqrt{(n_0-n_1)(n_0-n_2)}}$ between $\mathrm{arange}(T)$ and hard-NN alignment indices | `src/m12f_encoder_temporal.py` + `src/utils/et_tcc.py` |
+
+> 🗂️ Column key: `pt#` = `src/utils/pt_*.py` (predictor-temporal, Stage 8b) · `et` = `src/utils/et_*.py` (encoder-temporal, Stage 8c) · ↑ higher better · ↓ lower better.
+---
+
+

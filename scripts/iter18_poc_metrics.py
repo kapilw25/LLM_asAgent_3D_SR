@@ -37,17 +37,11 @@ sys.path.insert(0, str(REPO / "src"))
 from iter18_poc_ngpu import ARM2DIR, ARM2ENC, BACKBONE, enc_name, enc_prefix  # noqa: E402  (canonical DAG names + backbone-aware encoder naming)
 from utils.config import get_local_data_dir              # noqa: E402  (yaml-driven data dir)
 from utils.data_paths import artifact                    # noqa: E402  (canonical artifact names)
+from utils.arm_registry import display_arms              # noqa: E402  (single-source arm roster)
 
-# Runbook §2 arm order (same as iter18_poc_status.py).
-TRAIN_ORDER = [
-    "pretrain_encoder",
-    "surgery_3stage_DI_encoder", "surgery_noDI_encoder",
-    "surgery_3stage_DI_head", "surgery_noDI_head",
-    "surgical_autorgn_encoder", "surgery_raw_encoder",
-    "full_ft_encoder", "lpft_encoder",
-    "peft_lora_encoder", "peft_dora_encoder",
-    "cassle_encoder", "ewc_encoder",
-]
+# iter18 (2026-06-14): roster from the SINGLE source (configs/arm_registry.yaml) — scheduler train arms
+# (kind!=merge; wiseft is a post-hoc merge with no probe history). A new arm auto-appears here, no edit.
+TRAIN_ORDER = [a for a, _e, _g, _k in display_arms(include_merge=False)]
 _HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
 # predictor_temporal aggregate families (aggregate_<name>.json each, headline key "mean").
 _PT_FAMILIES = ["rollout", "causal", "tdist", "maskratio", "order", "teacher_free"]
@@ -185,10 +179,13 @@ def train_blocks(mtag):
 
 def _main_log_text(mtag):
     """Text of the latest MAIN scheduler log. Excludes the per-job logs (_train_/_eval_/_pt_/
-    _et_/_s3_) — they are NEWER than the main tee and carry no banner/GPU markers; picking one
-    blanked the whole status table THREE times (_eval_ 06-06, _pt_ 06-07, _et_ 06-12)."""
+    _et_/_s3_/_wiseft_) — they are NEWER than the main tee and carry no banner/GPU markers; picking one
+    blanked the whole status table THREE times (_eval_ 06-06, _pt_ 06-07, _et_ 06-12). _wiseft_ (the
+    post-hoc merge job log, 06-14) is the SAME family — markerless, and the newest iter18_ngpu_poc*.log
+    for the ~3 min the merge runs, so it would drop the EVAL table's 🔄 overlay until the merge ends."""
     cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
-             if p.exists() and not any(s in p.name for s in ("_train_", "_eval_", "_pt_", "_et_", "_s3_"))]
+             if p.exists() and not any(s in p.name
+                                       for s in ("_train_", "_eval_", "_pt_", "_et_", "_s3_", "_wiseft_"))]
     if not cands:
         return ""
     try:
@@ -306,8 +303,12 @@ def eval_rows(mtag):
 #   kept_scorecard     — each arm's KEPT-checkpoint value per metric, sorted, with an
 #                        OURS-vs-BEST-OTHER verdict strip (the paper question, per metric)
 #   eval_scorecard     — per-encoder eval artifacts with 95% CIs (graceful before evals)
-_FAM_OURS = {"surgery_3stage_DI_encoder", "surgery_noDI_encoder",
-             "surgery_3stage_DI_head", "surgery_noDI_head"}
+# "OURS" = the surgery NOVELTY family from the SINGLE source: flagship + head + the 5 iter18 improvement
+# arms (each = OURS + one change). Derived from the registry GROUPS so a new improvement arm auto-counts as
+# OURS in the kept-scorecard verdict — a winning tccaux (causal L1) / intervene (val JEPA loss) no longer
+# mislabels as "OTHERS LEAD". Ablation/baseline groups (surgery_raw, autorgn, FT/PEFT, pretrain) stay NOT-ours.
+_OURS_GROUPS = {"ours_flagship", "ours_head", "improvement"}
+_FAM_OURS = {a for a, _e, _g, _k in display_arms(include_merge=True) if _g in _OURS_GROUPS}
 _TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = greens
     "pretrain_encoder":          ("vCSSL",     "#1565C0", "-",  1.8),
     "surgery_3stage_DI_encoder": ("s3DI-enc",  "#1B5E20", "-",  2.6),
@@ -322,7 +323,13 @@ _TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = g
     "peft_dora_encoder":         ("DoRA",      "#546E7A", "--", 1.4),
     "cassle_encoder":            ("CaSSLe",    "#9E9D24", "--", 1.4),
     "ewc_encoder":               ("EWC",       "#6D4C41", "--", 1.4),
+    # iter18 (2026-06-14) improvement arms — distinct hues; any FUTURE arm falls back to _DEF_TRAIN_STYLE.
+    "surgery_3stage_DI_replay25_encoder":  ("replay25", "#00897B", "-", 2.2),
+    "surgery_3stage_DI_diheavy_encoder":   ("diheavy",  "#00ACC1", "-", 2.2),
+    "surgery_3stage_DI_tccaux_encoder":    ("tccaux",   "#7CB342", "-", 2.2),
+    "surgery_3stage_DI_intervene_encoder": ("interv",   "#C0CA33", "-", 2.2),
 }
+_DEF_TRAIN_STYLE = ("?", "#BDBDBD", ":", 1.2)   # unregistered arm → grey (a new arm never KeyErrors the graph)
 _TRAIN_METRICS = [  # (probe-row key, panel title, direction) — mirrors the TRAIN table columns
     ("probe_top1",    "action top-1",  "higher"),
     ("motion_cos",    "motion-cos",    "higher"),
@@ -354,6 +361,13 @@ def render_metric_graphs(blocks, ev, out_dir):
     from m13_eval_plot import _bar_with_ci, _sort_by_metric
     from utils.plots import init_style, save_fig, common_exponent, exp_axis_tag, fmt_mantissa
     init_style()
+    # Silence matplotlib's cosmetic "findfont: Failed to find font weight bold" noise (~10/run): our BOLD
+    # panel titles carry a mathtext ×10ⁿ rescale tag (exp_axis_tag), and matplotlib ships NO bold variant of
+    # its mathtext font — so it correctly renders the tag at normal weight but logs one warning per math
+    # glyph. The figure is right; only the log is junk. Drop just that message, keep every other font warning.
+    import logging
+    logging.getLogger("matplotlib.font_manager").addFilter(
+        lambda _r: "Failed to find font weight" not in _r.getMessage())
 
     def _kept_row(b):
         """The row eval inherits: enc arms → KEPT ckpt; head arms → last probe (diagnostic)."""
@@ -367,7 +381,7 @@ def render_metric_graphs(blocks, ev, out_dir):
     for ax, (key, title, direction) in zip(axes.flat, _TRAIN_METRICS):
         panel_ys = []
         for b in blocks:
-            sty = _TRAIN_STYLE[b["arm"]]
+            sty = _TRAIN_STYLE.get(b["arm"], _DEF_TRAIN_STYLE)
             pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
                          if r.get(key) is not None and r.get("step") is not None)
             if not pts:
@@ -389,9 +403,10 @@ def render_metric_graphs(blocks, ev, out_dir):
         ax.set_title(f"{title}  ({arrow}){exp_axis_tag(exp)}", fontweight="bold", fontsize=13)
         ax.set_xlabel("global step", fontsize=10)
         ax.grid(alpha=0.25)
-    handles = [plt.Line2D([], [], color=_TRAIN_STYLE[a][1], ls=_TRAIN_STYLE[a][2],
-                          lw=_TRAIN_STYLE[a][3], marker="o", ms=4, label=_TRAIN_STYLE[a][0])
-               for a in _TRAIN_STYLE if a in arms_drawn]
+    handles = [plt.Line2D([], [], color=_TRAIN_STYLE.get(a, _DEF_TRAIN_STYLE)[1],
+                          ls=_TRAIN_STYLE.get(a, _DEF_TRAIN_STYLE)[2], lw=_TRAIN_STYLE.get(a, _DEF_TRAIN_STYLE)[3],
+                          marker="o", ms=4, label=_TRAIN_STYLE.get(a, _DEF_TRAIN_STYLE)[0])
+               for a in arms_drawn]
     if handles:   # at run START no arm has a probe checkpoint yet → handles=[] → fig.legend(ncol=0) CRASHES
         fig.legend(handles=handles, loc="lower center", ncol=min(len(handles), 7),
                    frameon=True, fontsize=11)

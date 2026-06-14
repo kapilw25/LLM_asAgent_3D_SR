@@ -36,6 +36,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "src"))   # iter18 (2026-06-14): arm roster single-source (configs/arm_registry.yaml)
+from utils.arm_registry import arm2enc as _arm2enc, arm2dir as _arm2dir  # noqa: E402
 # iter18 2026-06-08: BACKBONE is the run's encoder family, switchable via env so the SAME scheduler
 # runs the 2B champion (vjepa_2_1_vitG, default) or the 1B scale-axis backbone (vjepa_2_1_vitg). The
 # status tool reads it back from the run banner (or this same env) so its job-ids match. Set it once
@@ -57,50 +59,12 @@ def enc_name(arm_enc):
 
 # (run_train arm → eval-encoder suffix). NOTE the surgery_→surgical_ rename for the factor arms +
 # autorgn; the iter18 baselines keep their arm name verbatim (registry rows added 2026-06-04).
-ARM2ENC = {
-    "pretrain_encoder":          "pretrain_encoder",
-    "surgery_3stage_DI_encoder": "surgical_3stage_DI_encoder",
-    "surgery_noDI_encoder":      "surgical_noDI_encoder",
-    "surgery_3stage_DI_head":    "surgical_3stage_DI_head",
-    "surgery_noDI_head":         "surgical_noDI_head",
-    "surgical_autorgn_encoder":  "surgical_autorgn_encoder",
-    "surgery_raw_encoder":       "surgery_raw_encoder",
-    "full_ft_encoder":           "full_ft_encoder",
-    "lpft_encoder":              "lpft_encoder",
-    "peft_lora_encoder":         "peft_lora_encoder",
-    "peft_dora_encoder":         "peft_dora_encoder",
-    "cassle_encoder":            "cassle_encoder",
-    "ewc_encoder":               "ewc_encoder",
-    # iter18 (2026-06-13) improvement arms (plan_outperform_FT.md) — ADDITIVE: old endpoints keep
-    # their student_encoder.pt → train SKIPPED (resume-guard) → eval enumerates OLD + NEW together.
-    "surgery_3stage_DI_replay25_encoder":  "surgical_3stage_DI_replay25_encoder",   # lever #2 (less raw replay)
-    "surgery_3stage_DI_diheavy_encoder":   "surgical_3stage_DI_diheavy_encoder",    # lever #3 (more interaction)
-    "surgery_3stage_DI_tccaux_encoder":    "surgical_3stage_DI_tccaux_encoder",     # lever #4 (TCC aux — FAIL-LOUD stub)
-    "surgery_3stage_DI_intervene_encoder": "surgical_3stage_DI_intervene_encoder",  # lever #5 (intervention — FAIL-LOUD stub)
-    "surgical_3stage_DI_wiseft_encoder":   "surgical_3stage_DI_wiseft_encoder",     # lever #1 (post-hoc WiSE-FT merge)
-}
-# run_train arm → on-disk m09 output dir (resume done-marker: student_encoder.pt). Verified against
-# the 2026-06-04 SANITY outputs (outputs/sanity/vjepa_2_1_vitG/<dir>/).
-ARM2DIR = {
-    "pretrain_encoder":          "m09a_pretrain_encoder",
-    "surgery_3stage_DI_encoder": "m09c_surgery_3stage_DI_encoder",
-    "surgery_noDI_encoder":      "m09c_surgery_noDI_encoder",
-    "surgery_3stage_DI_head":    "m09c_surgery_3stage_DI_head",
-    "surgery_noDI_head":         "m09c_surgery_noDI_head",
-    "surgical_autorgn_encoder":  "m09e_autorgn_encoder",
-    "surgery_raw_encoder":       "m09c_surgery_raw_encoder",
-    "full_ft_encoder":           "m09f_full_ft_encoder",
-    "lpft_encoder":              "m09f_lpft_encoder",
-    "peft_lora_encoder":         "m09b_peft_lora_encoder",
-    "peft_dora_encoder":         "m09b_peft_dora_encoder",
-    "cassle_encoder":            "m09d_cassle_encoder",
-    "ewc_encoder":               "m09d_ewc_encoder",
-    "surgery_3stage_DI_replay25_encoder":  "m09c_surgery_3stage_DI_replay25_encoder",
-    "surgery_3stage_DI_diheavy_encoder":   "m09c_surgery_3stage_DI_diheavy_encoder",
-    "surgery_3stage_DI_tccaux_encoder":    "m09c_surgery_3stage_DI_tccaux_encoder",
-    "surgery_3stage_DI_intervene_encoder": "m09c_surgery_3stage_DI_intervene_encoder",
-    "surgical_3stage_DI_wiseft_encoder":   "m09c_surgical_3stage_DI_wiseft_encoder",
-}
+# iter18 (2026-06-14): the arm roster + arm→encoder→dir mapping moved to configs/arm_registry.yaml
+# (SINGLE SOURCE — was re-typed here AND in run_train.sh/run_eval.sh/the plot scripts; that scatter
+# caused 6 whack-a-mole FATALs in one session). arm2enc()/arm2dir() return the scheduler==true arms,
+# byte-equal to the former literals (parity-tested). Add a new arm = ONE entry in the yaml.
+ARM2ENC = _arm2enc()   # run_train arm → eval encoder-token  (surgery_* → surgical_* swap lives in the yaml)
+ARM2DIR = _arm2dir()   # run_train arm → on-disk m09 output dir (resume done-marker: student_encoder.pt)
 # Stage split (verified against scripts/run_eval.sh should_skip gates, 2026-06-04; 8c/9c iter18):
 #   per-encoder stages: 2 features · 3 probe · 11 taxonomy-train · 5/6 motion_cos · 8 future_mse
 #                       · 8b predictor_temporal · 8c encoder_temporal (m12f aot/tov/pace/tcc)

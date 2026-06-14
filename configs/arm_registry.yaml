@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SINGLE SOURCE OF TRUTH for the iter18 arm roster + path mappings.
+# Add a new arm = ONE entry here. No more editing the same list in run_train.sh,
+# run_eval.sh, iter18_poc_ngpu.py and the plot scripts (that scatter caused 6
+# whack-a-mole FATALs on 2026-06-14).
+#
+# Consumed by (all via src/utils/arm_registry.py — import for python, CLI for bash):
+#   · scripts/iter18_poc_ngpu.py   → ARM2ENC / ARM2DIR  (scheduler==true arms)
+#   · scripts/run_eval.sh          → _arm_dir / _split_enc / preflight recognition
+#   · scripts/run_train.sh         → SUBCMD allowlist (kind!=merge)
+#   · scripts/iter18_*  + src/m13  → roster + group (per-figure palettes stay local)
+#
+# Keyed by the run_train SUBCMD (train-name). Fields:
+#   encoder    eval encoder-token; full eval name = "<backbone-prefix>_<encoder>"
+#              (NB the surgery family's train-name uses 'surgery_*' but its encoder
+#               uses 'surgical_*' — this map is the ONLY place that swap lives)
+#   dir        outputs/<mode>/<backbone>/<dir>/  (resume done-marker: student_encoder.pt)
+#   kind       pretrain | surgery | baseline | surgery_head | pretrain_head | merge
+#                · surgery   → run_train m09c1 generic dispatch (VARIANT_TAG = name minus 'surgery_')
+#                · baseline  → run_train bespoke per-arm runner (m09b/d/e/f)
+#                · merge     → NOT a run_train arm (scheduler builds it post-hoc, e.g. WiSE-FT)
+#   scheduler  true → present in the iter18 ARM2ENC/ARM2DIR DAG; false → legacy (run_eval/run_train only)
+#   group      display grouping for the plot scripts
+# ─────────────────────────────────────────────────────────────────────────────
+arms:
+  pretrain_encoder:                    {encoder: pretrain_encoder,                     dir: m09a_pretrain_encoder,                     kind: pretrain,      scheduler: true,  group: anchor}
+  pretrain_2X_encoder:                 {encoder: pretrain_2X_encoder,                  dir: m09a_pretrain_2X_encoder,                  kind: pretrain,      scheduler: false, group: anchor}
+  pretrain_head:                       {encoder: pretrain_head,                        dir: m09a_pretrain_head,                        kind: pretrain_head, scheduler: false, group: head}
+  surgery_3stage_DI_encoder:           {encoder: surgical_3stage_DI_encoder,           dir: m09c_surgery_3stage_DI_encoder,            kind: surgery,       scheduler: true,  group: ours_flagship}
+  surgery_noDI_encoder:                {encoder: surgical_noDI_encoder,                dir: m09c_surgery_noDI_encoder,                 kind: surgery,       scheduler: true,  group: ours_flagship}
+  surgery_3stage_DI_head:              {encoder: surgical_3stage_DI_head,              dir: m09c_surgery_3stage_DI_head,               kind: surgery_head,  scheduler: true,  group: ours_head}
+  surgery_noDI_head:                   {encoder: surgical_noDI_head,                   dir: m09c_surgery_noDI_head,                    kind: surgery_head,  scheduler: true,  group: ours_head}
+  surgical_autorgn_encoder:            {encoder: surgical_autorgn_encoder,             dir: m09e_autorgn_encoder,                      kind: baseline,      scheduler: true,  group: surgery_ablation}
+  surgery_raw_encoder:                 {encoder: surgery_raw_encoder,                  dir: m09c_surgery_raw_encoder,                  kind: surgery,       scheduler: true,  group: surgery_ablation}
+  full_ft_encoder:                     {encoder: full_ft_encoder,                      dir: m09f_full_ft_encoder,                      kind: baseline,      scheduler: true,  group: ft_baseline}
+  lpft_encoder:                        {encoder: lpft_encoder,                         dir: m09f_lpft_encoder,                         kind: baseline,      scheduler: true,  group: ft_baseline}
+  peft_lora_encoder:                   {encoder: peft_lora_encoder,                    dir: m09b_peft_lora_encoder,                    kind: baseline,      scheduler: true,  group: ft_baseline}
+  peft_dora_encoder:                   {encoder: peft_dora_encoder,                    dir: m09b_peft_dora_encoder,                    kind: baseline,      scheduler: true,  group: ft_baseline}
+  cassle_encoder:                      {encoder: cassle_encoder,                       dir: m09d_cassle_encoder,                       kind: baseline,      scheduler: true,  group: ft_baseline}
+  ewc_encoder:                         {encoder: ewc_encoder,                          dir: m09d_ewc_encoder,                          kind: baseline,      scheduler: true,  group: ft_baseline}
+  # iter18 (2026-06-13) improvement arms (plan_outperform_FT.md) — each = OURS + ONE change.
+  surgery_3stage_DI_replay25_encoder:  {encoder: surgical_3stage_DI_replay25_encoder,  dir: m09c_surgery_3stage_DI_replay25_encoder,   kind: surgery,       scheduler: true,  group: improvement}
+  surgery_3stage_DI_diheavy_encoder:   {encoder: surgical_3stage_DI_diheavy_encoder,   dir: m09c_surgery_3stage_DI_diheavy_encoder,    kind: surgery,       scheduler: true,  group: improvement}
+  surgery_3stage_DI_tccaux_encoder:    {encoder: surgical_3stage_DI_tccaux_encoder,    dir: m09c_surgery_3stage_DI_tccaux_encoder,     kind: surgery,       scheduler: true,  group: improvement}
+  surgery_3stage_DI_intervene_encoder: {encoder: surgical_3stage_DI_intervene_encoder, dir: m09c_surgery_3stage_DI_intervene_encoder,  kind: surgery,       scheduler: true,  group: improvement}
+  surgical_3stage_DI_wiseft_encoder:   {encoder: surgical_3stage_DI_wiseft_encoder,    dir: m09c_surgical_3stage_DI_wiseft_encoder,    kind: merge,         scheduler: true,  group: improvement}

@@ -32,6 +32,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -167,9 +168,12 @@ def _eval_table(eval_csv: Path, encoder: str) -> str:
 
 
 def _fmt_size(nbytes: int) -> str:
-    if nbytes >= _GB: return f"{nbytes/_GB:.1f} GB"
-    if nbytes >= _MB: return f"{nbytes/_MB:.1f} MB"
-    if nbytes >= _KB: return f"{nbytes/_KB:.0f} KB"
+    if nbytes >= _GB:
+        return f"{nbytes/_GB:.1f} GB"
+    if nbytes >= _MB:
+        return f"{nbytes/_MB:.1f} MB"
+    if nbytes >= _KB:
+        return f"{nbytes/_KB:.0f} KB"
     return f"{nbytes} B"
 
 
@@ -202,6 +206,78 @@ def _format_lift_row(key: str, label: str, fmt: str, initial: dict, final: dict)
     return f"| `{key}` | {label} | {i:{fmt}} | {f:{fmt}} | {delta_pct:+.1f}% {arrow} |"
 
 
+# Static card sections shared by the generator (below) AND the retrofit patcher for already-pushed repos, so
+# the two never diverge. No {…} placeholders → safe to embed verbatim in the f-string and to inject into old cards.
+_ARCH_BLOCK = """## 🏗️ Architecture
+
+| | |
+|---|---|
+| Encoder | V-JEPA 2.1 ViT-G — `embed_dim=1664`, `depth=48`, `num_heads=26`, RoPE, 2B params (1.84B exact) |
+| Input | `(B, 3, T=16, 384, 384)` — 16 frames, 384² center-crop, ImageNet-normalized; patch 16, tubelet 2 |
+| Tokens | `8 × 24 × 24 = 4608` tokens × 1664-dim (final layer); deep-supervision concat = 4608 × **6656** |
+| Predictor | 2.1 predictor — `predictor_embed_dim=384`, `depth=24`, `num_heads=12`, dense-loss (`return_all_tokens`) |
+| Attention | `scaled_dot_product_attention` (SDPA) — **no xformers** |
+
+The exact constructor kwargs are in `load_factorjepa.py` (verified against the eval pipeline that produced these
+weights). `student_encoder.pt` wraps the weights under the key `student_state_dict` — the loader unwraps it, strips
+`module.`/`backbone.` prefixes, and asserts ≥90% of params load (fail-loud)."""
+
+_ATTRIB_BLOCK = """## 📜 Attribution & license  —  *the links below are provenance/credit only, NOT a setup step*
+
+> ✅ **100% self-contained.** Everything needed to load this model is already in THIS repo
+> (`vjepa2_src/` + `load_factorjepa.py` + the weights). You do **not** need to visit, clone, `pip install`,
+> or download anything from the two links below — they are license/credit only. Loading touches no other repo.
+
+- **Adapted weights** (`student_encoder.pt`, `m09*_ckpt_best.pt`, `motion_aux_head.pt`) — **Apache-2.0** (this repo).
+  Derived from `facebook/v-jepa-2-vitg` *(provenance only — not needed to load)*.
+- **Vendored architecture** (`vjepa2_src/`) — Meta Platforms' **V-JEPA 2**, **MIT**, copied **unmodified** from
+  `github.com/facebookresearch/vjepa2` @ `204698b` *(credit only — the code is already in `vjepa2_src/`; its MIT
+  license is at `vjepa2_src/LICENSE`)*. © Meta Platforms, Inc. and affiliates."""
+
+
+def _quickstart_block(repo_id: str, ckpt: str = "m09*_ckpt_best.pt") -> str:
+    """The '⚡ Quick start' load section — shared by the generator (new pushes) AND the retrofit
+    (already-pushed repos, src/utils/hf_retrofit_cards.py) so the load instructions never diverge."""
+    return f"""## ⚡ Quick start — self-contained, no other code needed
+
+This repo ships **everything**: the weights, the architecture (`vjepa2_src/`, vendored Meta V-JEPA 2 source, MIT), and a loader. Download it and run — no private package, no separate clone.
+
+```bash
+huggingface-cli download {repo_id} --local-dir factorjepa-model
+cd factorjepa-model && pip install -r requirements.txt
+python load_factorjepa.py --encoder student_encoder.pt    # builds 2B ViT-G, loads, forwards (no video needed)
+```
+
+```python
+from load_factorjepa import load_encoder, preprocess_frames, extract_features
+encoder = load_encoder("student_encoder.pt", device="cuda")   # bf16 on cuda, fp32 on cpu
+clip = preprocess_frames(frames_uint8)[None]                  # (T,H,W,3) uint8 -> (1, 16, 3, 384, 384)
+feats = extract_features(encoder, clip)                       # (1, 4608, 1664) token features
+```
+
+> **NATIVE V-JEPA 2.1 ViT weights — NOT `transformers.VJEPA2Model`** (`AutoModel.from_pretrained` fails: different
+> keys + no 2.1 deep-supervision head). **No `xformers`** (SDPA attention). `student_encoder.pt` is encoder-only —
+> for an actual **next-frame prediction** heatmap also load the predictor from `{ckpt}` (key `predictor`):
+> `from load_factorjepa import load_predictor; predictor = load_predictor("{ckpt}", device="cuda")`."""
+
+
+def _files_table_md(ckpt: str = "m09*_ckpt_best.pt") -> str:
+    """The '📦 Files in this repo' table — shared by the generator and the retrofit (same as above)."""
+    rows = [
+        "| `student_encoder.pt` | ~7 GB | Inference-ready ViT-G encoder weights (key `student_state_dict`) — **load this for features** |",
+        f"| `{ckpt}` | ~8-14 GB | Best-selected ckpt incl. **predictor** (key `predictor`) — for next-frame / JEPA prediction |",
+        "| `load_factorjepa.py` | ~8 KB | **Self-contained loader** — build model + load weights + preprocess + forward |",
+        "| `vjepa2_src/` | ~100 KB | Vendored V-JEPA 2 architecture (Meta, MIT) — the encoder/predictor classes |",
+        "| `requirements.txt` | <1 KB | Pinned deps (exact versions that load these weights; **no xformers**) |",
+        "| `motion_aux_head.pt` | ~2 MB | Motion auxiliary head (paired with student_encoder) |",
+        "| `training_summary.json` | ~2 KB | Final-step metrics |",
+        "| `probe_history.jsonl` | ~few KB/step | Per-checkpoint probe + drift metrics |",
+        "| `loss_log.{jsonl,csv}` | ~several KB | Per-step JEPA loss trajectory |",
+        "| `*.png` / `*.pdf` | ~few MB | Training trajectory plots (loss, drift, probe trio) |",
+    ]
+    return "## 📦 Files in this repo\n\n| File | Size | Purpose |\n|---|---:|---|\n" + "\n".join(rows)
+
+
 def _generate_model_card(repo_id: str, base_model: str, stage: str,
                          metrics: dict, paired_results: dict = None,
                          eval_block: str = "") -> str:
@@ -227,16 +303,6 @@ def _generate_model_card(repo_id: str, base_model: str, stage: str,
         if row:
             lift_rows.append(row)
     lift_block = "\n".join(lift_rows) if lift_rows else "_(no probe_history.jsonl found)_"
-
-    files_table = [
-        "| `student_encoder.pt` | ~7 GB | Inference-ready ViT-G encoder weights — **load this for feature extraction / inference** |",
-        "| `m09*_ckpt_best.pt` | ~8-14 GB | Best-selected ckpt incl. **predictor** — required for predictor-temporal evals (Stage 8/8b) |",
-        "| `motion_aux_head.pt` | ~2 MB | Motion auxiliary head (paired with student_encoder) |",
-        "| `training_summary.json` | ~2 KB | Final-step metrics |",
-        "| `probe_history.jsonl` | ~few KB/step | Per-checkpoint probe + drift metrics |",
-        "| `loss_log.{jsonl,csv}` | ~several KB | Per-step JEPA loss trajectory |",
-        "| `*.png` / `*.pdf` | ~few MB | Training trajectory plots (loss, drift, probe trio) |",
-    ]
 
     paired_block = ""
     if paired_results:
@@ -306,42 +372,11 @@ data, identical starting weights).
 {eval_block}
 {paired_block}
 
-## 🚀 Usage
+{_quickstart_block(repo_id)}
 
-### Download the encoder weights
-```python
-from huggingface_hub import hf_hub_download
-ckpt_path = hf_hub_download(
-    repo_id="{repo_id}",
-    filename="student_encoder.pt",
-)
-print("Downloaded to:", ckpt_path)
-```
+{_ARCH_BLOCK}
 
-### Load weights into V-JEPA 2.1 ViT-G
-```python
-import torch
-from utils.vjepa2_imports import get_vit_by_arch
-
-state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-encoder = get_vit_by_arch("vit_giant_xformers_rope")
-encoder.load_state_dict(state, strict=False)
-encoder.eval().to("cuda")
-```
-
-### Use as init for downstream surgery / probe training
-```bash
-python -u src/m09c1_surgery_encoder.py --FULL \\
-    --train-config configs/train/surgery_3stage_DI_iter14.yaml \\
-    --init-from-ckpt $(python -c "from huggingface_hub import hf_hub_download; print(hf_hub_download('{repo_id}', 'student_encoder.pt'))") \\
-    --no-wandb
-```
-
-## 📦 Files in this repo
-
-| File | Size | Purpose |
-|---|---:|---|
-{chr(10).join(files_table)}
+{_files_table_md()}
 
 ## 🧪 Reproducibility
 
@@ -352,6 +387,8 @@ CACHE_POLICY_ALL=2 ./scripts/run_train.sh {stage} --FULL \\
 ```
 
 Pipeline source: `iter/iter14_surgery_on_pretrain/plan_HIGH_LEVEL.md`
+
+{_ATTRIB_BLOCK}
 
 ## 📝 Citation
 
@@ -368,6 +405,47 @@ Pipeline source: `iter/iter14_surgery_on_pretrain/plan_HIGH_LEVEL.md`
 
 *Model card auto-generated by `src/utils/hf_finetuned_push.py` at {timestamp}.*
 """
+
+
+# Verified transitive import-closure of the V-JEPA 2.1 ViT-G encoder + 2.1 predictor + attentive-probe
+# head, vendored from deps/vjepa2 (Meta, MIT) so each pushed repo loads with NO external code. Validated:
+# this set builds the 2B ViT-G (588/588 params) + 24-layer predictor (300/300) and runs a forward pass.
+_ARCH_VENDOR_FILES = (
+    "app/vjepa_2_1/models/predictor.py",
+    "app/vjepa_2_1/models/utils/modules.py",
+    "app/vjepa_2_1/models/utils/patch_embed.py",
+    "app/vjepa_2_1/models/vision_transformer.py",
+    "src/masks/utils.py",
+    "src/models/attentive_pooler.py",
+    "src/models/utils/modules.py",
+    "src/utils/tensors.py",
+)
+
+
+def _stage_inference_bundle(source_dir: Path) -> list:
+    """Copy the self-contained loader (`load_factorjepa.py` + `requirements.txt`) and the vendored
+    V-JEPA 2 architecture (`vjepa2_src/`, Meta MIT + LICENSE) into source_dir, so the uploaded repo is
+    INDEPENDENT — loadable with no private package, exactly like the verified surgery-3stage-DI repo.
+    Idempotent (overwrites). Returns the staged top-level names for the upload log."""
+    repo_root = Path(__file__).resolve().parents[2]
+    assets = Path(__file__).resolve().parent / "hf_assets"
+    for f in ("load_factorjepa.py", "requirements.txt"):
+        shutil.copy2(assets / f, source_dir / f)
+    vj = repo_root / "deps" / "vjepa2"
+    dst = source_dir / "vjepa2_src"
+    pkg_dirs = set()
+    for rel in _ARCH_VENDOR_FILES:
+        out = dst / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(vj / rel, out)
+        d = out.parent
+        while d != dst:                       # every package dir under vjepa2_src/ (not the root)
+            pkg_dirs.add(d)
+            d = d.parent
+    for d in pkg_dirs:
+        (d / "__init__.py").touch()           # make `src.*` / `app.*` importable
+    shutil.copy2(vj / "LICENSE", dst / "LICENSE")   # MIT attribution travels with the code
+    return ["load_factorjepa.py", "requirements.txt", "vjepa2_src/"]
 
 
 def push_to_huggingface(
@@ -429,6 +507,11 @@ def push_to_huggingface(
     else:
         card_path.write_text(card)
         print(f"Wrote {card_path}  ({len(card):,} chars)")
+
+    # 2b. Stage the self-contained inference bundle (loader + vendored V-JEPA2 arch) into source_dir so
+    # the uploaded repo loads with NO external code — the card's load snippet then actually works.
+    if not dry_run:
+        print(f"  staged self-contained bundle: {_stage_inference_bundle(source_dir)}")
 
     # 3. Inventory the upload.
     all_files = sorted(f for f in source_dir.rglob("*") if f.is_file())

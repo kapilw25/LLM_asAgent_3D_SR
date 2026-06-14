@@ -54,6 +54,34 @@ encoders:
     crop: 384
     embed_dim: 1664
 
+  # iter18 (2026-06-14): the 5 improvement arms = OURS + ONE change. Same 2B ViT-G arch as
+  # surgical_3stage_DI above (only the trained weights differ; wiseft is a post-hoc merge).
+  vjepa_2_1_surgical_3stage_DI_replay25_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_diheavy_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_tccaux_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_intervene_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_wiseft_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
   # P3 variant B — m09c 2-stage surgery (D_L → D_A only, 50/50 epoch split, NO D_I).
   # Tests skepticism that D_I worsens learning; same encoder arch, different yaml.
   vjepa_2_1_surgical_noDI_encoder:

@@ -107,6 +107,12 @@ esac
 # joined into a normal LR_SWEEP string for the for-loop below.
 PIPELINE_YAML="configs/pipeline.yaml"   # audit-ok: bootstrap — the one literal that makes yaml reachable
 EX="scripts/lib/yaml_extract.py"
+# iter18 (2026-06-14): arm roster from the SINGLE source (configs/arm_registry.yaml) — loaded ONCE into
+# assoc-arrays so _arm_dir / _split_enc / the pre-flight all read the SAME map (no more re-typed lists).
+_AREG="src/utils/arm_registry.py"
+_EVAL_TOKENS="$(python "$_AREG" eval-tokens)"
+declare -A _ARM_DIR _ARM_TRAIN
+while IFS=$'\t' read -r _t _d _n; do _ARM_DIR["$_t"]="$_d"; _ARM_TRAIN["$_t"]="$_n"; done < <(python "$_AREG" token-table)
 mode_key=$(echo "$MODE" | tr '[:upper:]' '[:lower:]')
 DEFAULT_EPOCHS=$(python "$EX" "$PIPELINE_YAML" "probe_head_train.${mode_key}.epochs")
 DEFAULT_WARMUP_PCT=$(python "$EX" "$PIPELINE_YAML" "probe_head_train.${mode_key}.warmup_pct")
@@ -280,34 +286,12 @@ _model_cfg_for() {                              # encoder name → model config 
     _m=$(python "$EX" "$PIPELINE_YAML" "backbone_model_configs.${bb}" 2>/dev/null) || _m=""
     if [ -n "$_m" ]; then echo "$_m"; else echo "configs/model/${bb}.yaml"; fi
 }
-_arm_dir() {                                    # arm suffix → m09 output dir name
-    case "$1" in
-        pretrain_encoder)            echo m09a_pretrain_encoder ;;
-        pretrain_2X_encoder)         echo m09a_pretrain_2X_encoder ;;
-        pretrain_head)               echo m09a_pretrain_head ;;
-        surgical_3stage_DI_encoder)  echo m09c_surgery_3stage_DI_encoder ;;
-        surgical_noDI_encoder)       echo m09c_surgery_noDI_encoder ;;
-        surgical_3stage_DI_head)     echo m09c_surgery_3stage_DI_head ;;
-        surgical_noDI_head)          echo m09c_surgery_noDI_head ;;
-        # iter18 FT-technique baselines (2026-06-04) — dirs match each trainer's MODULE_PREFIX in run_train.sh.
-        surgical_autorgn_encoder)    echo m09e_autorgn_encoder ;;
-        surgery_raw_encoder)         echo m09c_surgery_raw_encoder ;;
-        full_ft_encoder)             echo m09f_full_ft_encoder ;;
-        lpft_encoder)                echo m09f_lpft_encoder ;;
-        peft_lora_encoder)           echo m09b_peft_lora_encoder ;;
-        peft_dora_encoder)           echo m09b_peft_dora_encoder ;;
-        cassle_encoder)              echo m09d_cassle_encoder ;;
-        ewc_encoder)                 echo m09d_ewc_encoder ;;
-        *) echo "" ;;
-    esac
+_arm_dir() {                                    # arm token → m09 output dir (single source: configs/arm_registry.yaml)
+    echo "${_ARM_DIR[$1]:-}"
 }
 _split_enc() {                                  # "<bb>_<arm>" → echoes "BACKBONE ARM" (longest arm match)
     local n="$1" arm bb
-    for arm in pretrain_2X_encoder surgical_3stage_DI_encoder surgical_noDI_encoder \
-               surgical_3stage_DI_head surgical_noDI_head \
-               surgical_autorgn_encoder surgery_raw_encoder full_ft_encoder lpft_encoder \
-               peft_lora_encoder peft_dora_encoder cassle_encoder ewc_encoder \
-               pretrain_encoder pretrain_head frozen; do
+    for arm in $_EVAL_TOKENS frozen; do        # roster from configs/arm_registry.yaml (single source)
         if [[ "$n" == *"_$arm" ]]; then
             bb="${n%_$arm}"
             [ "$bb" = vjepa_2_1 ] && bb=vjepa_2_1_vitG   # legacy vitG names (vjepa_2_1_<arm>) → uniform dir
@@ -477,31 +461,22 @@ for ENC in $ENCODERS; do
         frozen|"")
             echo "  ✓ $ENC: external/HF frozen (no trainer needed)"
             ;;
-        pretrain_encoder|pretrain_2X_encoder|surgical_3stage_DI_encoder|surgical_noDI_encoder|pretrain_head|surgical_3stage_DI_head|surgical_noDI_head)
-            CKPT="$(encoder_ckpt_for "$ENC")"
-            if [ ! -e "$CKPT" ]; then
-                echo "  ⚠️  $ENC: $CKPT not found — train via:"
-                echo "       BACKBONE=$_bb ./scripts/run_train.sh ${_arm/surgical_/surgery_} --$MODE"
-                echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
-                continue
-            fi
-            echo "  ✓ $ENC: $CKPT"
-            ;;
-        # iter18 baselines: arm name == run_train subcommand (NO surgical_→surgery_ rename here —
-        # that substitution would corrupt e.g. surgical_autorgn_encoder, whose run_train name keeps 'surgical_').
-        surgical_autorgn_encoder|surgery_raw_encoder|full_ft_encoder|lpft_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
-            CKPT="$(encoder_ckpt_for "$ENC")"
-            if [ ! -e "$CKPT" ]; then
-                echo "  ⚠️  $ENC: $CKPT not found — train via:"
-                echo "       BACKBONE=$_bb ./scripts/run_train.sh ${_arm} --$MODE"
-                echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
-                continue
-            fi
-            echo "  ✓ $ENC: $CKPT"
-            ;;
         *)
-            echo "  ⚠️  $ENC: unrecognized arm '$_arm' — dropping (check encoder name / registry)"
-            continue
+            # iter18 (2026-06-14): recognized iff the token is in configs/arm_registry.yaml (single source).
+            # Merges the former pretrain/surgery + baseline branches; the run_train hint name comes straight
+            # from the registry (_ARM_TRAIN), so the old ${_arm/surgical_/surgery_} rename heuristic is gone.
+            if [ -z "${_ARM_DIR[$_arm]:-}" ]; then
+                echo "  ⚠️  $ENC: unrecognized arm '$_arm' — dropping (add it to configs/arm_registry.yaml)"
+                continue
+            fi
+            CKPT="$(encoder_ckpt_for "$ENC")"
+            if [ ! -e "$CKPT" ]; then
+                echo "  ⚠️  $ENC: $CKPT not found — train via:"
+                echo "       BACKBONE=$_bb ./scripts/run_train.sh ${_ARM_TRAIN[$_arm]:-$_arm} --$MODE"
+                echo "  → dropping $ENC from this run; pipeline continues with remaining encoders"
+                continue
+            fi
+            echo "  ✓ $ENC: $CKPT"
             ;;
     esac
     NEW_ENCODERS="$NEW_ENCODERS $ENC"

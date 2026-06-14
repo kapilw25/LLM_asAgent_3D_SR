@@ -39,6 +39,16 @@ ARMS = {
     "vjepa_2_1_peft_lora_encoder":          ("LoRA",                  "#9E9E9E", False),
     "vjepa_2_1_peft_dora_encoder":          ("DoRA",                  "#9E9E9E", False),
 }
+# iter18 (2026-06-14): any scheduler encoder NOT explicitly styled above → grey default (same treatment as
+# the other fine-tuners), so a NEW arm auto-appears in this chart with no edit here. Roster comes from the
+# single source (configs/arm_registry.yaml); the 4 named players above keep their bold custom colours.
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from utils.arm_registry import display_arms as _display_arms  # noqa: E402
+for _a, _enc, _grp, _kind in _display_arms():
+    _full = f"vjepa_2_1_{_enc}"
+    if _full not in ARMS:
+        ARMS[_full] = (_enc.replace("_encoder", "").replace("_", " "), "#9E9E9E", False)
 PANELS = [
     ("tcc_tau",   "TCC Kendall τ   (↑ higher = better)", "higher",
      "frame-order rank correlation"),

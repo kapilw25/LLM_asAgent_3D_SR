@@ -298,7 +298,12 @@
       "Bash(ITER18_BACKBONE=vjepa_2_1_vitG timeout 120 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms 'cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head' --dry-run)",
       "Bash(ITER18_BACKBONE=vjepa_2_1_vitG timeout 120 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head --dry-run)",
       "Bash(awk 'NR>=1640 && NR<=1660 && /cfg\\\\[|cfg\\\\\\)/' src/m09c1_surgery_encoder.py)",
-      "Bash(sort -t'#' -k2 -n)"
+      "Bash(sort -t'#' -k2 -n)",
+      "Bash(awk '/surgical_3stage_DI_encoder:/{f=1} f{print; n++} n>=8{exit}' configs/eval/probe_encoders.yaml)",
+      "Bash(grep -nA3 \"def vit_giant_xformers_rope\" deps/vjepa2/app/vjepa_2_1/models/vision_transformer.py)",
+      "Bash(grep -nA3 \"def vit_gigantic_xformers\" deps/vjepa2/app/vjepa_2_1/models/vision_transformer.py)",
+      "Bash(grep -E \"\\\\.\\(png|pdf|csv|json\\)$\")",
+      "Bash(grep -E \"\\\\.\\(png|pdf\\)$\")"
     ]
   }
 }

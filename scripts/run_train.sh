@@ -55,12 +55,12 @@ MODE_FLAG="$1"; shift
 # surgery_3stage_DI_head, surgery_noDI_head) wrapping m09a2_pretrain_head.py
 # + m09c2_surgery_head.py. The *_head variants run on 24 GB Pro 4000 (no
 # encoder backward → no activation storage); _encoder variants need 96 GB.
-case "$SUBCMD" in
-    pretrain_encoder|pretrain_2X_encoder|pretrain_head| \
-    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder| \
-    surgery_3stage_DI_replay25_encoder|surgery_3stage_DI_diheavy_encoder|surgery_3stage_DI_tccaux_encoder|surgery_3stage_DI_intervene_encoder| \
-    surgery_3stage_DI_head|surgery_noDI_head) ;;
-    *) echo "FATAL: subcommand must be {pretrain_encoder|pretrain_2X_encoder|pretrain_head|surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head} (got: $SUBCMD)" >&2; exit 2 ;;
+# iter18 (2026-06-14): valid SUBCMDs from the SINGLE source (configs/arm_registry.yaml, kind!=merge).
+# Adding a surgery arm = ONE yaml entry; run_train needs no edit here (membership) NOR below (kind-dispatch).
+_VALID_ARMS="$(python src/utils/arm_registry.py train-names)"
+case " $_VALID_ARMS " in
+    *" $SUBCMD "*) ;;
+    *) echo "FATAL: subcommand '$SUBCMD' not a valid arm (configs/arm_registry.yaml). Valid: $_VALID_ARMS" >&2; exit 2 ;;
 esac
 
 case "$MODE_FLAG" in
@@ -261,9 +261,10 @@ if [ -f "$TAXONOMY_LABELS" ]; then
     echo "  [multi-task] Using taxonomy labels: $TAXONOMY_LABELS"
 fi
 
-# ── Dispatch ──────────────────────────────────────────────────────────────
-case "$SUBCMD" in
-    pretrain_encoder|pretrain_2X_encoder)
+# ── Dispatch (iter18 2026-06-14: by KIND from configs/arm_registry.yaml, not a per-arm SUBCMD list) ──
+_KIND="$(python src/utils/arm_registry.py kind-for "$SUBCMD")"
+case "$_KIND" in
+    pretrain)
         # iter13 v12+ (2026-05-06): renamed probe_pretrain → m09a_pretrain_encoder to
         # match the source module's name (CLAUDE.md "m*.py = each module is
         # independent"). Mirror rename in run_eval.sh + yaml output_dir.
@@ -323,40 +324,12 @@ case "$SUBCMD" in
             --no-wandb \
             2>&1 | tee "logs/m09a_${SUBCMD}_${mode_dir}.log"
         ;;
-    surgery_3stage_DI_encoder|surgery_3stage_DI_replay25_encoder|surgery_3stage_DI_diheavy_encoder|surgery_3stage_DI_tccaux_encoder|surgery_3stage_DI_intervene_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
+    surgery|baseline)
         # Map subcommand → yaml + variant tag (used in output dir + log name).
         # RUNNER + MODULE_PREFIX default to the surgery novelty; surgical_autorgn (iter18 B2 baseline)
         # overrides both → its OWN script m09e_autorgn_encoder.py, keeping the m09c1 novelty un-polluted.
         RUNNER="src/m09c1_surgery_encoder.py"; MODULE_PREFIX="m09c_surgery"
         case "$SUBCMD" in
-            surgery_3stage_DI_encoder)
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_encoder)
-                VARIANT_TAG="3stage_DI_encoder"
-                ;;
-            surgery_3stage_DI_replay25_encoder)
-                # iter18 improvement #2 (less raw replay) — m09c1 novelty, default RUNNER/MODULE_PREFIX.
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_replay25_encoder)
-                VARIANT_TAG="3stage_DI_replay25_encoder"
-                ;;
-            surgery_3stage_DI_diheavy_encoder)
-                # iter18 improvement #3 (more interaction practice).
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_diheavy_encoder)
-                VARIANT_TAG="3stage_DI_diheavy_encoder"
-                ;;
-            surgery_3stage_DI_tccaux_encoder)
-                # iter18 improvement #4 (TCC aux loss — FAIL-LOUD stub until implemented + GPU-validated).
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_tccaux_encoder)
-                VARIANT_TAG="3stage_DI_tccaux_encoder"
-                ;;
-            surgery_3stage_DI_intervene_encoder)
-                # iter18 improvement #5 (intervention objective — FAIL-LOUD stub until implemented + GPU-validated).
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_intervene_encoder)
-                VARIANT_TAG="3stage_DI_intervene_encoder"
-                ;;
-            surgery_noDI_encoder)
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_noDI_encoder)
-                VARIANT_TAG="noDI_encoder"
-                ;;
             surgical_autorgn_encoder)
                 # iter18 B2 baseline: Auto-RGN — OWN script (separated from the m09c1 surgery novelty).
                 TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgical_autorgn_encoder)
@@ -374,11 +347,6 @@ case "$SUBCMD" in
                 TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.lpft_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09f_naiveft_encoder.py"; MODULE_PREFIX="m09f_lpft"
-                ;;
-            surgery_raw_encoder)
-                # iter18 RAW control: surgery method on RAW clips (causal control) — IS surgery → m09c1 (default RUNNER).
-                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_raw_encoder)
-                VARIANT_TAG="raw_encoder"
                 ;;
             peft_lora_encoder)
                 # iter18 B1 baseline: PEFT LoRA — OWN script m09b (cp m09c1 + HuggingFace peft).
@@ -403,6 +371,14 @@ case "$SUBCMD" in
                 TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.ewc_encoder)
                 VARIANT_TAG="encoder"
                 RUNNER="src/m09d_contssl_encoder.py"; MODULE_PREFIX="m09d_ewc"
+                ;;
+            *)
+                # iter18 (2026-06-14): m09c1 surgery FAMILY (kind=surgery: 3stage_DI*, noDI, raw + future
+                # improvement arms). Default RUNNER/MODULE_PREFIX (set above); VARIANT_TAG derived from the
+                # name (surgery_3stage_DI_encoder→3stage_DI_encoder · surgery_noDI_encoder→noDI_encoder ·
+                # surgery_raw_encoder→raw_encoder). A new surgery arm needs NO case here — just the yaml entry.
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "arm_train_configs.$SUBCMD")
+                VARIANT_TAG="${SUBCMD#surgery_}"
                 ;;
         esac
         # iter13 v12+ (2026-05-06): renamed probe_surgery_* → m09c_surgery_* to
@@ -508,7 +484,7 @@ case "$SUBCMD" in
             --no-wandb \
             2>&1 | tee "logs/m09a2_pretrain_head_${mode_dir}.log"
         ;;
-    surgery_3stage_DI_head|surgery_noDI_head)
+    surgery_head)
         # iter15 Phase 4 (2026-05-14): head-only m09c2. Same freeze contract as
         # pretrain_head + StreamingFactorDataset for factor-aug clips. Single
         # head-only stage (no progressive unfreeze).
@@ -568,13 +544,11 @@ if [ -f "${OUT_DIR}/student_encoder.pt" ]; then
 else
     echo "  ⚠️  ${OUT_DIR}/student_encoder.pt NOT produced (check logs/probe_${SUBCMD}_${mode_dir}.log)"
 fi
-case "$SUBCMD" in
-    pretrain_encoder|pretrain_2X_encoder|pretrain_head)
-        FULL_CKPT="${OUT_DIR}/m09a_ckpt_best.pt"
-        ;;
-    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder|surgery_3stage_DI_replay25_encoder|surgery_3stage_DI_diheavy_encoder|surgery_3stage_DI_tccaux_encoder|surgery_3stage_DI_intervene_encoder)
-        FULL_CKPT="${OUT_DIR}/m09c_ckpt_best.pt"   # autorgn (m09e) + naive-FT (m09f) + contssl (m09d) inherit m09c1's m09c_ ckpt prefix
-        ;;
+# iter18 (2026-06-14): predictor-bearing ckpt name DERIVED from OUT_DIR (no per-arm list) — the m09a
+# pretrain family writes m09a_ckpt_best.pt; every surgery/baseline (m09b/c/d/e/f) inherits m09c1's m09c_ prefix.
+case "$OUT_DIR" in
+    */m09a_*) FULL_CKPT="${OUT_DIR}/m09a_ckpt_best.pt" ;;
+    *)        FULL_CKPT="${OUT_DIR}/m09c_ckpt_best.pt" ;;
 esac
 if [ -f "$FULL_CKPT" ]; then
     ls -lh "$FULL_CKPT"

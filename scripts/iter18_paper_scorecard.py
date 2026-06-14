@@ -58,7 +58,18 @@ GROUP_STYLE = {
     "surgery_ablation": dict(color="#66BB6A", edge="#2E7D32", lw=0.8, label="Surgery — ablations (raw, auto-RGN)"),
     "ft_baseline":      dict(color="#90A4AE", edge="#546E7A", lw=0.8, label="Fine-tune / PEFT / continual-SSL baselines"),
     "frozen":           dict(color="#E53935", edge="#B71C1C", lw=1.2, label="Frozen V-JEPA (the baseline to beat)"),
+    "improvement":      dict(color="#00897B", edge="#00695C", lw=1.4, label="Surgery — iter18 improvement arms"),
 }
+# iter18 (2026-06-14): complete ARMS from the single source (configs/arm_registry.yaml) — any scheduler
+# encoder not explicitly styled above is added with its registry group, so a NEW arm auto-appears (heads
+# excluded as before; they duplicate the pretrain encoder on encoder-side metrics).
+from utils.arm_registry import display_arms as _display_arms  # noqa: E402
+_GRP2PS = {"ours_flagship": "ours_flagship", "improvement": "improvement", "surgery_ablation": "surgery_ablation",
+           "ft_baseline": "ft_baseline", "anchor": "ft_baseline"}
+for _a, _enc, _grp, _kind in _display_arms(include_heads=False):
+    _full = f"vjepa_2_1_{_enc}"
+    if _full not in ARMS:
+        ARMS[_full] = (_enc.replace("_encoder", "").replace("_", " "), _GRP2PS.get(_grp, "ft_baseline"))
 
 # (json-key, pretty title, direction)  — higher='hi', lower='lo'
 HERO = [

@@ -116,6 +116,7 @@ Shared `utils/wandb_utils.py`. `--no-wandb` on every module. All functions no-op
 
 # CONFIGS
 - `configs/pipeline.yaml` — clip limits, streaming, GPU defaults, eval params, encoder registry
+- `configs/arm_registry.yaml` — **SINGLE SOURCE for the arm roster** (arm→encoder→m09-dir + kind/group). Add a new arm = ONE entry here. Read by `run_train.sh`/`run_eval.sh`/`iter18_poc_ngpu.py` + the plot scripts via `src/utils/arm_registry.py` (python import + bash CLI). Replaced 8 re-typed lists that caused 6 whack-a-mole FATALs on 2026-06-14.
 - `configs/model/vjepa2_1.yaml` — PRIMARY (V-JEPA 2.1 ViT-G 2B, 1664-dim)
 - `configs/model/vjepa2_0.yaml` — legacy (V-JEPA 2.0 ViT-g 1B, 1408-dim)
 - `configs/train/base_optimization.yaml` — shared: masking, augmentation, AdamW, EMA, mixed precision

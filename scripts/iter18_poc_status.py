@@ -44,20 +44,22 @@ from iter18_poc_ngpu import (  # noqa: E402  (canonical DAG — single source fo
     ARM2DIR, ARM2ENC, BACKBONE, ET_METRICS, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name,
     enc_prefix)
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
+from utils.arm_registry import display_arms              # noqa: E402  (single-source arm roster)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
 _MIN_EVAL_POINTS = 5     # eval rate needs a few clips before extrapolating
+_MIN_RATE_STEPS = 3      # a live TRAIN step-rate needs ≥ this many spanned steps to be trusted
+                         # (1-2 steps still carry the one-time stage startup → wild rate; 06-14)
 _SIM_GUARD = 10000       # DAG-sim infinite-loop backstop
-# Runbook §2 order: novelty ×4 + control + baselines + pretrain root first.
-TRAIN_ORDER = [
-    "pretrain_encoder",
-    "surgery_3stage_DI_encoder", "surgery_noDI_encoder",
-    "surgery_3stage_DI_head", "surgery_noDI_head",
-    "surgical_autorgn_encoder", "surgery_raw_encoder",
-    "full_ft_encoder", "lpft_encoder",
-    "peft_lora_encoder", "peft_dora_encoder",
-    "cassle_encoder", "ewc_encoder",
-]
+# iter18 (2026-06-14): roster from the SINGLE source (configs/arm_registry.yaml).
+# TRAIN_ORDER  = arms with a real step plan (kind != merge) — drives the workload ledger, the priors and
+#   the calibration. A kind=merge arm has NO arm_train_configs entry, so it MUST stay out of the ledger.
+# DISPLAY_ORDER = EVERY roster arm incl. the post-hoc merge (wiseft) — drives the two rendered tables, so
+#   wiseft's merge + its E:/P:/F: eval jobs show up (they were always in the DAG, just hidden here).
+# MERGE_ARMS   = the kind=merge rows (wiseft) — priced by a small prior, not the step ledger.
+TRAIN_ORDER = [a for a, _e, _g, _k in display_arms(include_merge=False)]
+DISPLAY_ORDER = [a for a, _e, _g, _k in display_arms(include_merge=True)]
+MERGE_ARMS = {a for a, _e, _g, _k in display_arms(include_merge=True) if _k == "merge"}
 _HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
 # ── REAL-ETA WORKLOAD LEDGER (iter18 2026-06-07) ──────────────────────────
 # The total work of every arm is DETERMINED by yaml + split artifacts — guessing it
@@ -142,6 +144,8 @@ def _calibrate(jobs, done, launched, mtag, ledger):
         if t == "resume" or not jid.startswith("T:") or jid not in launched:
             continue
         arm = _arm_of(jid)
+        if arm not in ledger:        # kind=merge (wiseft) completes with a log but has NO step ledger —
+            continue                 # indexing ledger[arm]["total"] below would KeyError the whole watch
         cands = sorted((p for p in REPO.glob(jobs[jid]["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
         if not cands:
             continue
@@ -301,6 +305,11 @@ PRIOR["eval"] = int(0.75 * 3600)
 # priors above are ~50× too big there and made the first SANITY ETA read 10h46m. Mode-scaled
 # priors fix the cold start; live measurements still override both the moment they exist.
 PRIOR_SANITY = {k: 7 * 60 for k in PRIOR}
+# A kind=merge arm (WiSE-FT) is a post-hoc weight interpolation, NOT a training run: it has no step
+# ledger, so the REAL-ETA path can't price it. It's a ~1-3 min ckpt load+lerp+save — give it a small
+# dedicated prior so its "train" cell reads ~3m (not the 45m whole-eval prior). Self-corrects once its
+# own log is measured; mode-scaled like the others.
+_MERGE_PRIOR = {"poc": 3 * 60, "sanity": 60}
 # COLD prior for ONE Stage-8b metric job (P:) — used ONLY until that metric's first completion
 # populates pt_med (per-metric). The whole-eval prior (est["eval"], ~3.4h incl. 8b) is a terrible
 # per-metric prior, so use a dedicated one: at bs=16 the 6 metrics run ~10-25 min each (teacher_free
@@ -336,9 +345,13 @@ def _latest_log(mtag):
     NEWER than the main tee and carry no GPU ◀/✓ markers, so picking one made every job read as
     pending (all train cells showed ⬚ despite the resume-skip of 10 trained arms).
     iter18 2026-06-12: same bug, third strike — _et_ (the Stage-8c F: job logs) joined the
-    family with m12f and made the whole table read ⬚/0🔄 on the 4×96GB POC restart."""
+    family with m12f and made the whole table read ⬚/0🔄 on the 4×96GB POC restart.
+    iter18 2026-06-14: _wiseft_ (the post-hoc merge job log) is the SAME family — no GPU markers, and
+    for the ~3 min the merge runs it's the newest iter18_ngpu_poc*.log, so leaving it in would flip the
+    whole table to all-pending mid-run. Added to the skip set."""
     cands = [p for p in (REPO / "logs").glob(f"iter18_ngpu_{mtag}*.log")
-             if p.exists() and not any(seg in p.name for seg in ("_train_", "_eval_", "_pt_", "_et_", "_s3_"))]
+             if p.exists() and not any(seg in p.name
+                                       for seg in ("_train_", "_eval_", "_pt_", "_et_", "_s3_", "_wiseft_"))]
     return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
 
 
@@ -479,19 +492,21 @@ def _running_total(jobs, jid, elapsed, prior, calib, ecalib):
         contrib, live_rate = 0, None
         if bar:
             cur, stage_tot = int(bar[-1][0]), int(bar[-1][1])
-            bsec = _bar_secs(*bar[-1][2:])
             n_full_bars = len(set(_RE_FINAL_BAR.findall(full)))
             n_complete = len(re.findall(r"Stage \w+ complete:", full))
             if cur < stage_tot:
                 contrib = cur                          # live mid-stage bar
-                # RECENT rate from the last distinct bar pair (reacts to contention
-                # easing within minutes); whole-bar average as fallback (lags hours).
-                pairs = [(int(c), _bar_secs(*hms)) for c, _t, *hms in bar]
-                for (c1, e1), (c2, e2) in zip(pairs, pairs[1:]):
-                    if c2 > c1 and e2 > e1:
-                        live_rate = (e2 - e1) / (c2 - c1)
-                if live_rate is None and cur - bar_init > 0 and bsec > 0:
-                    live_rate = bsec / (cur - bar_init)
+                # RECENT rate = Δelapsed / Δcur between the OLDEST and NEWEST bar samples in
+                # the tail. Anchoring on the SPAN (subtract the oldest sample's elapsed) drops
+                # the one-time stage STARTUP baked into the bar clock — a factor-stream worker
+                # respin makes the bar read "0/175 [54:02<?]", so a cumulative bsec/cur over a
+                # single step read ~3000 s/step and flashed a 394h ETA (06-14). Trust it only
+                # once the span covers ≥ _MIN_RATE_STEPS real steps; else leave live_rate None
+                # → fall back to the measured (calib) rate / prior below, never a 1-step guess.
+                samples = [(int(c), _bar_secs(*hms)) for c, _t, *hms in bar]
+                (c0, e0), (cN, eN) = samples[0], samples[-1]
+                if cN - c0 >= _MIN_RATE_STEPS and eN > e0:
+                    live_rate = (eN - e0) / (cN - c0)
             elif n_full_bars > n_complete:
                 # current stage's bar hit 100% but its "complete" line hasn't printed
                 # yet (stage-end probe running) → its steps aren't in done_now yet.
@@ -750,6 +765,8 @@ def main():
         st = classify(jid)
         arm = _arm_of(jid)
         prior = est.get(arm, est["eval"])
+        if arm in MERGE_ARMS:                  # WiSE-FT: post-hoc weight merge, ~minutes, no step plan
+            prior = _MERGE_PRIOR.get(mtag, 3 * 60)
         if st in ("done", "failed"):
             remaining[jid] = 0.0
         elif jid.startswith(("P:", "F:")):
@@ -767,9 +784,12 @@ def main():
             # PENDING E: eval = stages 2-8 plan × measured/projected stage walls (Stage 8b is the
             # separate P: jobs above) — its OWN honest total, not a class prior.
             remaining[jid] = _eval_total(jid, 0.0, prior, ecalib)
-        elif jid.startswith("T:") and ledger and calib["rate"] is not None:
+        elif jid.startswith("T:") and ledger and arm in ledger and calib["rate"] is not None:
             # PENDING train = full ledger plan × measured pure rate + every pad —
             # the REAL ETA (known work ÷ measured throughput), not a hopeful prior.
+            # `arm in ledger` guards the kind=merge job (wiseft): it has NO ledger entry, so without
+            # this it would KeyError the whole watch the moment calib["rate"] goes non-None (the first
+            # train arm completes). The merge instead falls through to `prior` (the small _MERGE_PRIOR).
             led = ledger[arm]
             remaining[jid] = (led["total"] * calib["rate"]
                               + (len(led["stages"]) + 2) * calib["pad"])
@@ -881,6 +901,8 @@ def main():
         return f"{glyph}{tag}·~{_dur(rem)}"
 
     def kemoji(arm):
+        if arm in MERGE_ARMS:
+            return "🔀"   # post-hoc weight merge (WiSE-FT) — not a training run
         if arm.startswith("pretrain"):
             return "🚂"
         if arm.startswith(("surgery", "surgical")):
@@ -895,7 +917,7 @@ def main():
     print("├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
     print("│ " + "📊 frozen (eval-only)".ljust(SW - 1) + "│" + " —".ljust(CW) + "│ "
           + _eval_group_cell(enc_name("frozen")).ljust(CW - 1) + "│")
-    for arm in TRAIN_ORDER:
+    for arm in DISPLAY_ORDER:        # incl. the wiseft merge — its row is built like any other
         tj, ej = f"T:{BACKBONE}:{arm}", f"E:{enc_name(ARM2ENC[arm])}"
         if tj not in jobs and ej not in jobs:
             continue
@@ -939,7 +961,7 @@ def main():
     # the tcc job carries BOTH tcc_cycle and tcc_tau (one forward, two headline numbers).
     _FAN = [("P", m) for m in PT_METRICS] + [("F", m) for m in ET_METRICS]
     enc_rows = ([("frozen", enc_name("frozen"))]
-                + [(a, enc_name(ARM2ENC[a])) for a in TRAIN_ORDER
+                + [(a, enc_name(ARM2ENC[a])) for a in DISPLAY_ORDER
                    if f"E:{enc_name(ARM2ENC[a])}" in jobs])
     EW, PW = 26, 5
 
@@ -999,7 +1021,7 @@ def main():
     if counts["failed"]:
         print("  ❌ failed (recover with --cache 1): "
               + ", ".join(j for j in jobs if classify(j) == "failed"))
-    print("\n  legend: 🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 📊 eval │ "
+    print("\n  legend: 🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 📊 eval │ "
           "✅ done · 🔄 running · ⬚ pending · ❌ failed")
 
 
