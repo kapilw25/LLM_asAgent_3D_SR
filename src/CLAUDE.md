@@ -10,7 +10,7 @@
 
 # GPU HARDWARE & SOFTWARE
 - **SANITY**: RTX Pro 5000 (48GB, ~$1/hr). **FULL**: RTX Pro 6000 Blackwell (96GB, ~$1.5/hr). **Mac**: CPU/lint only.
-- Stack: PyTorch 2.12.0+cu128 nightly, CUDA 12.8, FA2 2.8.3, FAISS-GPU 1.14.1, cuML 26.04, SAM 3.1, Python 3.12, UV.
+- Stack: PyTorch 2.12.0+cu130, CUDA 13.0, FA2 2.8.3, FAISS-GPU 1.14.1, cuML 26.06, SAM 3.1, Python 3.12, UV.  (resolved by setup_env_uv.sh on the Blackwell sm_120 box, 2026-06-14)
 - **GPU util ≥85% is TOP PRIORITY.** Idle GPU = wasted money. Fix I/O pipeline (parallelize TAR readers, increase DECODE_WORKERS/PREFETCH_QUEUE), not the model.
 - **No CPU fallback** in inference/compute scripts (m04/m05/m06/m07/m09/m10). FATAL if GPU path missing. Exception: m08 (plotting, CPU-only).
 - torch.compile after model.eval(). For adapted models, monkey-patch `torch.backends.cuda.sdp_kernel = contextlib.nullcontext` before compile (PyTorch #130098). FAISS: `index_cpu_to_gpu()`. cuML for iterative algos. Attention: V-JEPA/DINOv2=FA2, CLIP=SDPA.
@@ -48,9 +48,10 @@ Every `src/m*.py` using GPU MUST have: (1) `check_gpu()`, (2) `cleanup_temp()`, 
 - **Per-lambda encoder paths** for ablation. Dynamic fallback in `get_encoder_info()`.
 - **No V-JEPA deduplication** — circular reasoning. Hard mode ±30s exclusion is metadata-based.
 - Use `--model-config` + `--train-config`. Model configs = architecture. Train configs = technique.
-- **Factor streaming (iter9+)**: m09c has two factor-data paths that coexist. Legacy = `FactorSampler` + `load_factor_clip` reading m11 D_L/D_A `.npy` files (~340 GB @ 10K); streaming = `StreamingFactorDataset(IterableDataset)` + `DataLoader(num_workers, persistent_workers, prefetch_factor)` generating D_L/D_A on-demand from `(raw_mp4, mask.npz)` via `utils.factor_streaming.stream_factor` (~40 GB @ 10K). Mode-gated in `ch11_surgery.yaml > factor_streaming: {sanity,poc,full}`; CLI override `--factor-streaming` / `--no-factor-streaming` wins. Bitwise parity verified against legacy disk output — see `scripts/tests_streaming/test_parity.py`. Under streaming, `m11 --streaming` short-circuits all non-verify clips (manifest-only, no MP4 decode, no scipy blur, no np.save) → ~90% m11 wall-time reduction. `plot_factor_per_clip` keeps reading .npy → m11 still materializes the 100 `select_verify_clips(seed=42)` regardless.
+- **Factor streaming (iter9+)**: m09c has two factor-data paths that coexist. Legacy = `FactorSampler` + `load_factor_clip` reading m11 D_L/D_A `.npy` files (~340 GB @ 10K); streaming = `StreamingFactorDataset(IterableDataset)` + `DataLoader(num_workers, persistent_workers, prefetch_factor)` generating D_L/D_A on-demand from `(raw_mp4, mask.npz)` via `utils.factor_streaming.stream_factor` (~40 GB @ 10K). Mode-gated in `surgery_base.yaml > factor_streaming: {sanity,poc,full}`; CLI override `--factor-streaming` / `--no-factor-streaming` wins. Bitwise parity verified against legacy disk output — see `scripts/tests_streaming/test_parity.py`. Under streaming, `m11 --streaming` short-circuits all non-verify clips (manifest-only, no MP4 decode, no scipy blur, no np.save) → ~90% m11 wall-time reduction. `plot_factor_per_clip` keeps reading .npy → m11 still materializes the 100 `select_verify_clips(seed=42)` regardless.
 
 # TESTING & VALIDATION
+- **EDIT `src/` + `scripts/` ONLY via the Edit/Write tool — NEVER via Bash** (`python … .read_text()/.replace()/.write_text()`, `sed -i`, `echo >>`, `cat > file`, `perl -pi`). Bash-route edits (a) render **no inline diff card** for the user to review at edit-time, and (b) **bypass the `post-edit-lint.sh` hook** → no auto py_compile/ruff fires, so a syntax/F-error slips silently into a GPU run. Even a many-site mechanical change (e.g. flipping `full=True` across 5 trainers) MUST be N separate `Edit` calls (or one `replace_all`), not a shell loop. The user reviews via `git diff`, but the live diff card + the lint gate are the in-loop safety net — don't skip them for speed. 2026-06-14 incident: patched `full_resume_anchor` + the resume-guard across 5 trainers via `python str.replace` in Bash; the user couldn't see the change (no diff card) and the lint hook never ran.
 - **3-check gate after ANY edit to `src/**/*.py`**: (1) `py_compile`, (2) `ast.parse`, (3) `ruff check --select F,E9`. Auto-enforced by `post-edit-lint.sh` hook.
 - **Smallest-SANITY smoke after each code mod (when GPU available)**: after every edit touching `src/m*.py` or `src/utils/*.py` reachable from a GPU pipeline (m04/m04d/m05/m06/m09a/m09c/m10/m11, probe_*.py, frozen_features, gpu_batch, etc.), run the smallest possible `--SANITY` invocation of the affected stage on the local Pro 4000 24 GB **before marking the task complete**. Catches what 3-check misses: missing yaml keys (FAIL LOUD asserts), broken CLI wiring (`getattr` defaults silently `None`-propagating), dtype/shape mismatches, CUDA OOM on the new code path, downstream regressions in callers. Define "smallest" per-stage in the plan's verification block (e.g., iter16 M1's smoke was `probe_action.py --FULL --stage labels` on eval_10k; M2's was `yaml_extract.py "$cfg" optimization.max_epochs.${mode}` resolution across 5 train configs). Run-mode order: SANITY → POC → FULL — never propose POC/FULL until SANITY is green. If GPU is genuinely unavailable (Mac, CPU-only box, cloud GPU not provisioned), substitute the CPU-side import + helper-test (`python -c "from utils.X import Y; print(Y(...))"`) and explicitly note the substitution in the completion report. **NEVER skip both** — silent code changes accumulate into the iter11 v1→v10 cycle trap.
 - **End-to-end REPL test** before restarting pipelines. Test FULL code path with real data, not just import.
@@ -120,12 +121,12 @@ Shared `utils/wandb_utils.py`. `--no-wandb` on every module. All functions no-op
 - `configs/train/base_optimization.yaml` — shared: masking, augmentation, AdamW, EMA, mixed precision
 - `configs/legacy2/ch10_pretrain.yaml` — continual pretraining (drift control, lambda sweep)
 - `configs/legacy2/explora.yaml` — ExPLoRA (LoRA rank=16 + unfreeze 2 blocks)
-- `configs/train/ch11_surgery.yaml` — factor surgery (2-stage progressive unfreezing, SAM3 params, early-stop triggers, `factor_streaming` block)
+- `configs/train/surgery_base.yaml` — factor surgery base (3-stage progressive unfreeze D_L→D_A→D_I, SAM3 params, early-stop triggers, `factor_streaming` block); per-arm `surgery_3stage_DI_*.yaml` / `surgery_2stage_noDI_*.yaml` extend it
 
 # 📚 REFERENCE
-- 🏗️ Training plan: `iter/iter8/plan_training.md` (HIGH level — system design, literature)
-- 📋 TODO + status: `iter/iter8/plan_TODO.md` (MID level — kanban, m09c iteration table, time budget)
-- 🚀 Runbook: `iter/iter8/runbook.md` (LOW level — GPU-ready commands + verify tables)
-- 🐛 Bug log: `iter/iter8/errors_N_fixes.md` (ERROR level — 63 entries catalogued, #1-#63 as of 2026-04-19: +#62 poc_simplified removed, +#63 probe infra landed)
+- 🏗️ Roadmap: `iter/iter18_ablations_FTtechniues/plan_baselines_roadmap.md` (HIGH level — 13 FT-ablation arms + the 5 improvement arms)
+- 📋 Improvement plan + status: `iter/iter18_ablations_FTtechniues/plan_outperform_FT.md` (MID level — each new arm → the eval gap it targets)
+- 🚀 Runbook: `iter/iter18_ablations_FTtechniues/runbook.md` (LOW level — GPU-ready commands + verify tables)
+- 🐛 Bug log: `iter/utils/high_level_errors_N_fixes.md` (ERROR level — ~#82 as of 2026-06; the old `iter/iter8/errors_N_fixes.md` was consolidated here)
 - 🛡️ Preflight CPU-side guards: `.claude/skills/preflight/SKILL.md` (B1-B42 static checks citing errors_N_fixes entries)
 - 📖 Fallback techniques if Surgery fails: `iter/utils/literarure_survey.md` (24 JEPA variants, SIGReg / VLA-JEPA / temporal-projection)

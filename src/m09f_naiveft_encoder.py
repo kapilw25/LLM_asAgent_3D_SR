@@ -858,8 +858,10 @@ def train(cfg: dict, args):
         _pick = max(_cands, key=lambda p: p.stat().st_mtime)   # newest save wins
         _rck = torch.load(_pick, map_location="cuda", weights_only=False)
         student.load_state_dict(_rck["student"])
-        teacher.load_state_dict(_rck["teacher"])
-        predictor.load_state_dict(_rck["predictor"])
+        if "teacher" in _rck:                  # student-only SANITY anchor (full_resume_anchor=false):
+            teacher.load_state_dict(_rck["teacher"])     # teacher/predictor are rebuilt at stage entry
+        if "predictor" in _rck:
+            predictor.load_state_dict(_rck["predictor"])
         if uw_module is not None and "uw" in _rck:
             uw_module.load_state_dict(_rck["uw"])
         global_step = int(_rck["step"])
@@ -1705,7 +1707,7 @@ def train(cfg: dict, args):
                     save_training_checkpoint(
                         output_dir / f"{CHECKPOINT_PREFIX}_latest.pt",
                         student, teacher, predictor, optimizer, scheduler,
-                        scaler, global_step, best_state[best_ckpt_metric], full=True,
+                        scaler, global_step, best_state[best_ckpt_metric], full=cfg["checkpoint"]["full_resume_anchor"],
                         uw=uw_module,
                         extra={"resume_stage_idx": stage_idx,
                                "resume_local_step": local_step + 1})
@@ -1719,7 +1721,7 @@ def train(cfg: dict, args):
                     save_training_checkpoint(
                         output_dir / f"{CHECKPOINT_PREFIX}_latest.pt",
                         student, teacher, predictor, optimizer, scheduler,
-                        scaler, global_step, best_state[best_ckpt_metric], full=True,
+                        scaler, global_step, best_state[best_ckpt_metric], full=cfg["checkpoint"]["full_resume_anchor"],
                         uw=uw_module,
                         extra={"resume_stage_idx": stage_idx,
                                "resume_local_step": local_step + 1})
@@ -1745,7 +1747,7 @@ def train(cfg: dict, args):
                 # scheduler + scaler restore correctly.
                 save_training_checkpoint(output_dir / f"{CHECKPOINT_PREFIX}_stage{stage_idx}.pt",
                                          student, teacher, predictor, optimizer, scheduler,
-                                         scaler, global_step, best_state["top1"], full=True,
+                                         scaler, global_step, best_state["top1"], full=cfg["checkpoint"]["full_resume_anchor"],
                                          uw=uw_module)
                 cleanup_stage_checkpoints(output_dir, CHECKPOINT_PREFIX, keep_n=1, cache_policy=args.cache_policy)
                 timed_gate.mark()
@@ -1753,7 +1755,7 @@ def train(cfg: dict, args):
                 break
             save_training_checkpoint(output_dir / f"{CHECKPOINT_PREFIX}_stage{stage_idx}.pt",
                                      student, teacher, predictor, optimizer, scheduler,
-                                     scaler, global_step, 0.0, full=True,
+                                     scaler, global_step, 0.0, full=cfg["checkpoint"]["full_resume_anchor"],
                                      uw=uw_module)
             # Per-stage rotation: keep only the newest stage checkpoint on disk. Without
             # this, the run accumulates 3 × ~15 GB = ~45 GB of redundant rollback points

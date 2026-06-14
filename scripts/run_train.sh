@@ -572,7 +572,7 @@ case "$SUBCMD" in
     pretrain_encoder|pretrain_2X_encoder|pretrain_head)
         FULL_CKPT="${OUT_DIR}/m09a_ckpt_best.pt"
         ;;
-    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
+    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder|surgery_3stage_DI_replay25_encoder|surgery_3stage_DI_diheavy_encoder|surgery_3stage_DI_tccaux_encoder|surgery_3stage_DI_intervene_encoder)
         FULL_CKPT="${OUT_DIR}/m09c_ckpt_best.pt"   # autorgn (m09e) + naive-FT (m09f) + contssl (m09d) inherit m09c1's m09c_ ckpt prefix
         ;;
 esac

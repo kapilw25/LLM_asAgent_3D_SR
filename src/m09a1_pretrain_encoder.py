@@ -1069,7 +1069,7 @@ def train(cfg: dict, args):
                     step + 1, best_sel_score, full=False)
                 save_training_checkpoint(
                     ckpt_path, student, teacher, predictor, optimizer, scheduler,
-                    scaler, step + 1, best_sel_score, full=True)
+                    scaler, step + 1, best_sel_score, full=cfg["checkpoint"]["full_resume_anchor"])
                 cleanup_old_checkpoints(output_dir, prefix=CHECKPOINT_PREFIX,
                                         keep_n=keep_last_n)
                 timed_gate.mark()
@@ -1081,7 +1081,7 @@ def train(cfg: dict, args):
             if timed_gate.due():
                 save_training_checkpoint(
                     ckpt_path, student, teacher, predictor, optimizer, scheduler,
-                    scaler, step + 1, best_sel_score, full=True)
+                    scaler, step + 1, best_sel_score, full=cfg["checkpoint"]["full_resume_anchor"])
                 timed_gate.mark()
                 print(f"  [timed-ckpt] {ckpt_path.name} @ step {step + 1} — wall-clock anchor",
                       flush=True)
@@ -1305,7 +1305,7 @@ def train(cfg: dict, args):
         gc.enable()
         save_training_checkpoint(
             ckpt_path, student, teacher, predictor, optimizer, scheduler,
-            scaler, step + 1, best_sel_score, full=True)
+            scaler, step + 1, best_sel_score, full=cfg["checkpoint"]["full_resume_anchor"])
         print(f"  Checkpoint saved at step {step + 1}/{total_steps}. Resume with same command.")
         sys.exit(0)  # user-initiated, not an error
     finally:

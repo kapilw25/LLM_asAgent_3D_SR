@@ -857,8 +857,10 @@ def train(cfg: dict, args):
         _pick = max(_cands, key=lambda p: p.stat().st_mtime)   # newest save wins
         _rck = torch.load(_pick, map_location="cuda", weights_only=False)
         student.load_state_dict(_rck["student"])
-        teacher.load_state_dict(_rck["teacher"])
-        predictor.load_state_dict(_rck["predictor"])
+        if "teacher" in _rck:                  # student-only SANITY anchor (full_resume_anchor=false):
+            teacher.load_state_dict(_rck["teacher"])     # teacher/predictor are rebuilt at stage entry
+        if "predictor" in _rck:
+            predictor.load_state_dict(_rck["predictor"])
         if uw_module is not None and "uw" in _rck:
             uw_module.load_state_dict(_rck["uw"])
         global_step = int(_rck["step"])

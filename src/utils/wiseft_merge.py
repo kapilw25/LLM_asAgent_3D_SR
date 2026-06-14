@@ -39,37 +39,47 @@ from pathlib import Path
 import torch
 
 # Common containers a checkpoint's parameter dict may hide under.
-_STATE_KEYS = ("state_dict", "model", "encoder", "module", "model_state_dict")
+_STATE_KEYS = ("state_dict", "model", "encoder", "module", "model_state_dict", "student_state_dict")
 
 
-def _find_state_dict(obj, label: str) -> dict:
-    """Return the {name: Tensor} mapping from a loaded checkpoint, FAIL LOUD if not found."""
+def _find_state_dict(obj, label: str):
+    """Return (mapping, container_key) — container_key=None for a raw state_dict. FAIL LOUD if not found."""
     if isinstance(obj, dict):
         # raw state_dict: dict whose values are mostly tensors
         tensor_vals = sum(1 for v in obj.values() if torch.is_tensor(v))
         if tensor_vals >= max(1, len(obj) // 2):
-            return obj
+            return obj, None
         for k in _STATE_KEYS:
             if k in obj and isinstance(obj[k], dict):
-                return obj[k]
+                return obj[k], k
     sys.exit(f"FATAL: could not locate a parameter state_dict inside {label} "
              f"(top-level type={type(obj).__name__}, keys={list(obj)[:8] if isinstance(obj, dict) else 'n/a'}). "
              f"Add the container key to _STATE_KEYS.")
 
 
 def _strip(prefixes, sd: dict) -> dict:
-    """Drop a leading module prefix (e.g. 'encoder.', 'backbone.') so the two dicts align."""
-    for p in prefixes:
-        if all(k.startswith(p) for k in sd):
-            return {k[len(p):]: v for k, v in sd.items()}
-    return sd
+    """Drop a leading module prefix (e.g. 'backbone.') PER-KEY so a frozen base with MIXED
+    prefixes (backbone.* encoder + predictor.*) aligns with bare surgery encoder keys."""
+    out = {}
+    for k, v in sd.items():
+        changed = True
+        while changed:                      # frozen base = DOUBLE-prefixed 'module.backbone.X'
+            changed = False
+            for p in prefixes:
+                if k.startswith(p):
+                    k = k[len(p):]
+                    changed = True
+                    break
+        out[k] = v
+    return out
 
 
-def _load(path: Path, label: str) -> dict:
+def _load(path: Path, label: str):
     if not path.exists():
         sys.exit(f"FATAL: {label} not found: {path}")
-    sd = _find_state_dict(torch.load(str(path), map_location="cpu", weights_only=False), label)
-    return _strip(("module.", "encoder.", "backbone."), sd)
+    obj = torch.load(str(path), map_location="cpu", weights_only=False)
+    sd, key = _find_state_dict(obj, label)
+    return _strip(("module.", "encoder.", "backbone."), sd), obj, key
 
 
 def _common_float_keys(a: dict, b: dict):
@@ -98,8 +108,8 @@ def main():
     ap.add_argument("--inspect", action="store_true", help="report state-dict alignment, write nothing")
     a = ap.parse_args()
 
-    fro = _load(a.frozen_ckpt, "frozen-ckpt")
-    sur = _load(a.surgery_ckpt, "surgery-ckpt")
+    fro, _fro_obj, _fro_key = _load(a.frozen_ckpt, "frozen-ckpt")
+    sur, sur_obj, sur_key = _load(a.surgery_ckpt, "surgery-ckpt")
     inter, skipped = _common_float_keys(fro, sur)
     print(f"  [wiseft] frozen={len(fro)} keys · surgery={len(sur)} keys · "
           f"interpolated={len(inter)} · skipped={len(skipped)}")
@@ -122,10 +132,13 @@ def main():
         merged = dict(sur)                                  # start from surgery (keeps non-float buffers)
         for k in inter:
             merged[k] = (1.0 - al) * fro[k].float() + al * sur[k].float()
+        # re-wrap in surgery's container (e.g. student_state_dict) so the eval loader reads the
+        # merged ckpt byte-identically to every other arm's student_encoder.pt.
+        payload = merged if sur_key is None else {**sur_obj, sur_key: merged}
         sub = a.out_dir if (a.alphas is None) else (a.out_dir / f"alpha{al:g}")
         sub.mkdir(parents=True, exist_ok=True)
         out = sub / "student_encoder.pt"
-        torch.save(merged, str(out))
+        torch.save(payload, str(out))
         print(f"  [wiseft] α={al:g} → {out}  ({len(inter)} keys blended)")
 
 
