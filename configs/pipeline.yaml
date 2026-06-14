@@ -816,6 +816,18 @@ arm_train_configs:
   peft_dora_encoder: "configs/train/peft_dora_encoder.yaml"
   cassle_encoder: "configs/train/cassle_encoder.yaml"
   ewc_encoder: "configs/train/ewc_encoder.yaml"
+  # iter18 (2026-06-13) improvement arms — additive variants of surgery_3stage_DI (plan_outperform_FT.md)
+  surgery_3stage_DI_replay25_encoder: "configs/train/surgery_3stage_DI_replay25_encoder.yaml"   # lever #2
+  surgery_3stage_DI_diheavy_encoder: "configs/train/surgery_3stage_DI_diheavy_encoder.yaml"     # lever #3
+  surgery_3stage_DI_tccaux_encoder: "configs/train/surgery_3stage_DI_tccaux_encoder.yaml"       # lever #4 (FAIL-LOUD stub)
+  surgery_3stage_DI_intervene_encoder: "configs/train/surgery_3stage_DI_intervene_encoder.yaml" # lever #5 (FAIL-LOUD stub)
+
+# iter18 (2026-06-13) WiSE-FT merge (plan_outperform_FT.md lever #1) — the scheduler reads alpha
+# from here (no number literal in the .py); the frozen base ckpt is resolved per backbone via
+# backbone_model_configs.<BACKBONE> → model.checkpoint_path. alpha = OURS weight in θ*=(1-α)·frozen+α·OURS.
+wiseft:
+  alpha: 0.7                        # default for the scheduler's auto arm; the α-sweep (manual) overrides
+
 output_roots:
   sanity: "outputs/sanity"
   poc: "outputs/poc"

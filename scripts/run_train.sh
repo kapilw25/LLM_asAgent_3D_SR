@@ -58,6 +58,7 @@ MODE_FLAG="$1"; shift
 case "$SUBCMD" in
     pretrain_encoder|pretrain_2X_encoder|pretrain_head| \
     surgery_3stage_DI_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder| \
+    surgery_3stage_DI_replay25_encoder|surgery_3stage_DI_diheavy_encoder|surgery_3stage_DI_tccaux_encoder|surgery_3stage_DI_intervene_encoder| \
     surgery_3stage_DI_head|surgery_noDI_head) ;;
     *) echo "FATAL: subcommand must be {pretrain_encoder|pretrain_2X_encoder|pretrain_head|surgery_3stage_DI_encoder|surgery_noDI_encoder|surgery_3stage_DI_head|surgery_noDI_head} (got: $SUBCMD)" >&2; exit 2 ;;
 esac
@@ -322,7 +323,7 @@ case "$SUBCMD" in
             --no-wandb \
             2>&1 | tee "logs/m09a_${SUBCMD}_${mode_dir}.log"
         ;;
-    surgery_3stage_DI_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
+    surgery_3stage_DI_encoder|surgery_3stage_DI_replay25_encoder|surgery_3stage_DI_diheavy_encoder|surgery_3stage_DI_tccaux_encoder|surgery_3stage_DI_intervene_encoder|surgery_noDI_encoder|surgical_autorgn_encoder|full_ft_encoder|lpft_encoder|surgery_raw_encoder|peft_lora_encoder|peft_dora_encoder|cassle_encoder|ewc_encoder)
         # Map subcommand → yaml + variant tag (used in output dir + log name).
         # RUNNER + MODULE_PREFIX default to the surgery novelty; surgical_autorgn (iter18 B2 baseline)
         # overrides both → its OWN script m09e_autorgn_encoder.py, keeping the m09c1 novelty un-polluted.
@@ -331,6 +332,26 @@ case "$SUBCMD" in
             surgery_3stage_DI_encoder)
                 TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_encoder)
                 VARIANT_TAG="3stage_DI_encoder"
+                ;;
+            surgery_3stage_DI_replay25_encoder)
+                # iter18 improvement #2 (less raw replay) — m09c1 novelty, default RUNNER/MODULE_PREFIX.
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_replay25_encoder)
+                VARIANT_TAG="3stage_DI_replay25_encoder"
+                ;;
+            surgery_3stage_DI_diheavy_encoder)
+                # iter18 improvement #3 (more interaction practice).
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_diheavy_encoder)
+                VARIANT_TAG="3stage_DI_diheavy_encoder"
+                ;;
+            surgery_3stage_DI_tccaux_encoder)
+                # iter18 improvement #4 (TCC aux loss — FAIL-LOUD stub until implemented + GPU-validated).
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_tccaux_encoder)
+                VARIANT_TAG="3stage_DI_tccaux_encoder"
+                ;;
+            surgery_3stage_DI_intervene_encoder)
+                # iter18 improvement #5 (intervention objective — FAIL-LOUD stub until implemented + GPU-validated).
+                TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_3stage_DI_intervene_encoder)
+                VARIANT_TAG="3stage_DI_intervene_encoder"
                 ;;
             surgery_noDI_encoder)
                 TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.surgery_noDI_encoder)

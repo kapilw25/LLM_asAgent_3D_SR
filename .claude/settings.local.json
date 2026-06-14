@@ -294,7 +294,9 @@
       "Bash(bash -c ' *)",
       "Bash(grep -vE \"^\\\\s*$\")",
       "Bash(awk 'NR==1||/workspace|\\\\/$/')",
-      "WebFetch(domain:arxiv.org)"
+      "WebFetch(domain:arxiv.org)",
+      "Bash(ITER18_BACKBONE=vjepa_2_1_vitG timeout 120 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms 'cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head' --dry-run)",
+      "Bash(ITER18_BACKBONE=vjepa_2_1_vitG timeout 120 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head --dry-run)"
     ]
   }
 }

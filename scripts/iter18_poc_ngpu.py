@@ -71,6 +71,13 @@ ARM2ENC = {
     "peft_dora_encoder":         "peft_dora_encoder",
     "cassle_encoder":            "cassle_encoder",
     "ewc_encoder":               "ewc_encoder",
+    # iter18 (2026-06-13) improvement arms (plan_outperform_FT.md) — ADDITIVE: old endpoints keep
+    # their student_encoder.pt → train SKIPPED (resume-guard) → eval enumerates OLD + NEW together.
+    "surgery_3stage_DI_replay25_encoder":  "surgical_3stage_DI_replay25_encoder",   # lever #2 (less raw replay)
+    "surgery_3stage_DI_diheavy_encoder":   "surgical_3stage_DI_diheavy_encoder",    # lever #3 (more interaction)
+    "surgery_3stage_DI_tccaux_encoder":    "surgical_3stage_DI_tccaux_encoder",     # lever #4 (TCC aux — FAIL-LOUD stub)
+    "surgery_3stage_DI_intervene_encoder": "surgical_3stage_DI_intervene_encoder",  # lever #5 (intervention — FAIL-LOUD stub)
+    "surgical_3stage_DI_wiseft_encoder":   "surgical_3stage_DI_wiseft_encoder",     # lever #1 (post-hoc WiSE-FT merge)
 }
 # run_train arm → on-disk m09 output dir (resume done-marker: student_encoder.pt). Verified against
 # the 2026-06-04 SANITY outputs (outputs/sanity/vjepa_2_1_vitG/<dir>/).
@@ -88,6 +95,11 @@ ARM2DIR = {
     "peft_dora_encoder":         "m09b_peft_dora_encoder",
     "cassle_encoder":            "m09d_cassle_encoder",
     "ewc_encoder":               "m09d_ewc_encoder",
+    "surgery_3stage_DI_replay25_encoder":  "m09c_surgery_3stage_DI_replay25_encoder",
+    "surgery_3stage_DI_diheavy_encoder":   "m09c_surgery_3stage_DI_diheavy_encoder",
+    "surgery_3stage_DI_tccaux_encoder":    "m09c_surgery_3stage_DI_tccaux_encoder",
+    "surgery_3stage_DI_intervene_encoder": "m09c_surgery_3stage_DI_intervene_encoder",
+    "surgical_3stage_DI_wiseft_encoder":   "m09c_surgical_3stage_DI_wiseft_encoder",
 }
 # Stage split (verified against scripts/run_eval.sh should_skip gates, 2026-06-04; 8c/9c iter18):
 #   per-encoder stages: 2 features · 3 probe · 11 taxonomy-train · 5/6 motion_cos · 8 future_mse
@@ -159,6 +171,25 @@ def build_jobs(mode):
     seed_id = f"T:{BACKBONE}:pretrain_encoder"   # seeds shared labels + everyone's init ckpt
     for arm in ARM2ENC:
         jid = f"T:{BACKBONE}:{arm}"
+        # iter18 (2026-06-13) lever #1: WiSE-FT is NOT trained — its "train" job is a post-hoc weight
+        # merge (OURS encoder × FROZEN base V-JEPA). Depends on the OURS train job (needs its
+        # student_encoder.pt). NO literals: alpha ← pipeline.yaml wiseft.alpha; the frozen base ckpt is
+        # resolved per backbone via backbone_model_configs.<BACKBONE> → model.checkpoint_path (same
+        # registry run_train.sh uses). The resume-guard still skips it if the merge already ran.
+        if arm == "surgical_3stage_DI_wiseft_encoder":
+            _ours_dir = ARM2DIR["surgery_3stage_DI_encoder"]
+            _wf_dir = ARM2DIR["surgical_3stage_DI_wiseft_encoder"]
+            _yx = "scripts/lib/yaml_extract.py"
+            _alpha = f"$({_yx} configs/pipeline.yaml wiseft.alpha)"
+            _frozen = f"$({_yx} $({_yx} configs/pipeline.yaml backbone_model_configs.{BACKBONE}) model.checkpoint_path)"
+            jobs[jid] = dict(
+                id=jid, kind="train", deps={f"T:{BACKBONE}:surgery_3stage_DI_encoder"}, needs_labels=False,
+                cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} {{pin}}python -u src/utils/wiseft_merge.py "
+                     f"--alpha {_alpha} --frozen-ckpt {_frozen} "
+                     f"--surgery-ckpt outputs/{mtag}/{BACKBONE}/{_ours_dir}/student_encoder.pt "
+                     f"--out-dir outputs/{mtag}/{BACKBONE}/{_wf_dir}"),
+                log=f"logs/iter18_ngpu_{mtag}_wiseft_{{ts}}.log")
+            continue
         # iter18: EVERY non-pretrain arm inits from pretrain's m09a_ckpt_best.pt → all dep on it.
         deps = set() if arm == "pretrain_encoder" else {seed_id}
         jobs[jid] = dict(

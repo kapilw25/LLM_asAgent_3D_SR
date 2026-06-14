@@ -412,11 +412,12 @@ flowchart LR
 
 ---
 
-## 0.6 · 🗺️ Data + model pipeline (all baselines at a glance)
+## § 12 · 🗺️ Data + model pipeline (all baselines at a glance)
 
 > Every node is `abbrev (FULL FORM)`. Solid green = surgery on FACTOR (OURS). Dashed green = SURGERY-RAW
 > (the SAME method on RAW = the causal CONTROL: surgery − surgery_raw = the factor-curriculum effect, Figure-1).
 > Red = B2 Auto-RGN (Automatic Relative Gradient Norm) = the must-beat namesake. Thick arrow ⇒ FACTOR data.
+> 🆕 iter18 (2026-06-13): light-green **IMP18** cluster = the 5 improvement arms, each = OURS + ONE change (plan_outperform_FT.md); amber = wiseft (post-hoc weight merge, NOT trained).
 
 ```mermaid
 flowchart LR
@@ -435,6 +436,17 @@ flowchart LR
 
     FAC ==> SURG
 
+    SURG --> IMP18
+    subgraph IMP18["⭐ iter18 improvement arms · each = SURGERY (ours) + ONE change"]
+        direction TB
+        V1["📉 replay25<br>raw replay 50% → 25%<br>(let factor signal express)"]
+        V2["⬆️ diheavy<br>D_I stage budget 30% → 45%<br>(more interaction practice)"]
+        V3["➕ tccaux<br>+ TCC cycle loss (γ·TCC)<br>(stop temporal forgetting)"]
+        V4["➕ intervene<br>+ object-tube mask<br>(Causal-JEPA adaptation)"]
+        V5["✨ wiseft · POST-HOC, NO train<br>0.7·ours + 0.3·🧊 frozen"]
+        V1 ~~~ V2 ~~~ V3 ~~~ V4 ~~~ V5
+    end
+
     B4F --> EXP["📦 student_encoder.pt"]
     B4L --> EXP
     B1 --> EXP
@@ -442,16 +454,25 @@ flowchart LR
     B3 --> EXP
     SURG --> EXP
     SURGR --> EXP
-    EXP --> EVAL["📊 eval m12a–m12e ·<br>9 metrics<br>N=1825 · paired<br>surgery − vanilla<br>cont-SSL · BCa 95% CI"]
+    IMP18 --> EXP
+    EXP --> EVAL["📊 eval m12a–m12f ·<br>14 metrics<br>N=1825 · paired<br>surgery − vanilla<br>cont-SSL · BCa 95% CI"]
 
     style SURG fill:#cfc,stroke:#080,stroke-width:3px,color:#000
     style SURGR fill:#dfd,stroke:#080,stroke-dasharray:6 4,color:#000
     style B2 fill:#fdd,stroke:#a00,stroke-width:2px,color:#000
+    style IMP18 fill:#f1f8e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style V1 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V2 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V3 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V4 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V5 fill:#fff3e0,stroke:#ef6c00,color:#000
 ```
 
 ---
 
-## 1 · Architecture: where each baseline plugs in
+## § 13 · Architecture: where each baseline plugs in
+
+> 🆕 iter18 (2026-06-13): the light-green **IMP** cluster hangs off PROPOSED (S) = the 5 improvement arms; each box names its ONE diff from `surgery_3stage_DI` (4 = m09c1 + a config change · wiseft = post-hoc weight merge). Amber = wiseft.
 
 ```mermaid
 flowchart TD
@@ -464,7 +485,15 @@ flowchart TD
     SEL -->|"PROPOSED"| S["m09c1 surgery<br>factor curriculum<br>D_L→D_A→D_I<br>SALT + SPD +<br>saliency + replay"]
     SEL -->|"CONTROL"| SR["m09c1 surgery<br>factors OFF · RAW<br>= surgery_raw<br>(the ablation)"]
 
-    B1 & B2 & B3 & B4 & S & SR --> EXP["student_encoder.pt<br>(+ predictor)<br>export_student_<br>for_eval()"]
+    S --> IMP["⭐ iter18 improvements<br>(variants of S ·<br>plan_outperform_FT.md)"]
+    IMP --> V1["📉 replay25<br>cfg: raw replay<br>0.5 → 0.25"]
+    IMP --> V2["⬆️ diheavy<br>cfg: D_I stage<br>0.30 → 0.45"]
+    IMP --> V3["➕ tccaux<br>cfg: gamma_tcc 0 → 0.1<br>reuse γ·TCC loss<br>(Dwibedi CVPR'19)"]
+    IMP --> V4["➕ intervene<br>cfg: +object-tube mask<br>(Causal-JEPA<br>arXiv:2602.11389)"]
+    S -.->|"0.7·S"| V5["✨ wiseft<br>src/utils/wiseft_merge.py<br>post-hoc<br>0.7·S + 0.3·frozen"]
+    CKPT -.->|"🧊 0.3·frozen"| V5
+
+    B1 & B2 & B3 & B4 & S & SR & V1 & V2 & V3 & V4 & V5 --> EXP["student_encoder.pt<br>(+ predictor)<br>export_student_<br>for_eval()"]
     EXP --> REG["configs/eval/<br>probe_encoders.yaml<br>(one row per<br>baseline×arm)"]
     REG --> EVAL["run_eval.sh →<br>m12a..f<br>14 metrics +<br>BCa 95% CI"]
     EVAL --> HERO["m13 §G hero table<br>surgery vs 4<br>baselines vs anchors"]
@@ -472,4 +501,10 @@ flowchart TD
     style S fill:#cfc,stroke:#080,color:#000
     style SR fill:#dfd,stroke:#080,stroke-dasharray:6 4,color:#000
     style B2 fill:#fdd,stroke:#a00,color:#000
+    style IMP fill:#f1f8e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style V1 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V2 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V3 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V4 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style V5 fill:#fff3e0,stroke:#ef6c00,color:#000
 ```

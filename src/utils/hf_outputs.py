@@ -43,11 +43,36 @@ except ImportError:
 # (iter18 2026-06-06: dropped HF_HUB_ENABLE_HF_TRANSFER=1 — hf_transfer was
 # REMOVED in huggingface_hub 1.x; the flag was a silent no-op + FutureWarning.)
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+# iter18 (2026-06-13): raise the per-request READ timeout (huggingface_hub default = 10 s,
+# far too short for a multi-GB .pt over a slow/flaky CDN → httpx.ReadTimeout /
+# RemoteProtocolError "peer closed connection" aborts the WHOLE snapshot_download). The
+# constant is read at huggingface_hub IMPORT time, so it MUST be set before the import below.
+# (gold standard: huggingface_hub #1903 "snapshot_download timeout will not resume", #2822.)
+os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "60")
 
 from huggingface_hub import HfApi, repo_exists, snapshot_download
 from huggingface_hub.errors import BadRequestError   # iter18 06-07: LFS churn-retry
 from utils.progress import make_pbar
 from utils.hf_upload_mode import resolve_upload_mode_interactive, delete_repo_folder_scoped
+
+# iter18 (2026-06-13): transient network errors a flaky CDN raises mid-download (huggingface_hub
+# 1.x uses httpx; older paths use requests). The download loop RESUMES on these — snapshot_download
+# caches completed files + resumes partials — instead of crashing; FAIL LOUD only after the budget.
+# httpx.TimeoutException = Read/Connect/PoolTimeout · NetworkError = Connect/ReadError ·
+# RemoteProtocolError = "peer closed connection without sending complete message body".
+try:
+    import httpx as _httpx
+    _HTTPX_NET_ERRS = (_httpx.TimeoutException, _httpx.NetworkError, _httpx.RemoteProtocolError)
+except ImportError:
+    _HTTPX_NET_ERRS = ()
+try:
+    import requests as _requests
+    _RQ_NET_ERRS = (_requests.exceptions.ConnectionError, _requests.exceptions.Timeout,
+                    _requests.exceptions.ChunkedEncodingError)
+except ImportError:
+    _RQ_NET_ERRS = ()
+_TRANSIENT_NET_ERRS = _HTTPX_NET_ERRS + _RQ_NET_ERRS + (ConnectionError, TimeoutError)
+_DOWNLOAD_ATTEMPTS = 6   # bounded resume-retry for snapshot_download over a flaky CDN
 
 # iter16 (2026-05-20): moved to configs/pipeline.yaml > hf_repos.outputs per
 # CLAUDE.md "No hardcoded values in Python". To fork for a new org, change yaml.
@@ -593,14 +618,31 @@ def download_outputs(output_dir: str, subfolder: str = None):
 
     t0 = time.time()
 
-    snapshot_download(
-        repo_id=HF_OUTPUTS_REPO,
-        repo_type="dataset",
-        local_dir=".",  # download to project root, HF preserves subfolder structure
-        allow_patterns=[f"{subfolder}/*"],
-        token=token,
-        max_workers=16,
-    )
+    # iter18 (2026-06-13): bounded RESUME-retry. snapshot_download caches completed files and
+    # resumes partials, so a transient CDN drop (ReadTimeout / RemoteProtocolError on a multi-GB
+    # .pt) re-attempts and skips what's already done — instead of crashing the whole pull. The
+    # raised HF_HUB_DOWNLOAD_TIMEOUT (above) reduces how often this fires. FAIL LOUD only after
+    # the attempt budget. (gold standard: huggingface_hub #1903 / #2822.)
+    for _attempt in range(1, _DOWNLOAD_ATTEMPTS + 1):
+        try:
+            snapshot_download(
+                repo_id=HF_OUTPUTS_REPO,
+                repo_type="dataset",
+                local_dir=".",  # download to project root, HF preserves subfolder structure
+                allow_patterns=[f"{subfolder}/*"],
+                token=token,
+                max_workers=16,
+            )
+            break
+        except _TRANSIENT_NET_ERRS as e:
+            if _attempt == _DOWNLOAD_ATTEMPTS:
+                print(f"FATAL download: {_DOWNLOAD_ATTEMPTS} attempts exhausted on transient "
+                      f"network error ({type(e).__name__}: {str(e)[:160]})")
+                raise
+            wait = min(60, 5 * _attempt)
+            print(f"  [download retry {_attempt}/{_DOWNLOAD_ATTEMPTS}] {type(e).__name__}: "
+                  f"{str(e)[:120]} — resuming (done files skipped) in {wait}s…", flush=True)
+            time.sleep(wait)
 
     elapsed = time.time() - t0
 
