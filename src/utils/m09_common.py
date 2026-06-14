@@ -197,6 +197,13 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
     if isinstance(spe, dict):
         cfg["checkpoint"]["saves_per_epoch"] = spe[mode_key]
 
+    # iter18 (2026-06-14): checkpoint.full_resume_anchor mode-gated {sanity,poc,full}. SANITY
+    # writes student-only (~7 GB) stage/latest ckpts (no resume needed); poc/full keep full=True
+    # (~24 GB) anchors. Flatten per-mode (mirrors saves_per_epoch). isinstance → scalar-safe.
+    fra = cfg["checkpoint"]["full_resume_anchor"]
+    if isinstance(fra, dict):
+        cfg["checkpoint"]["full_resume_anchor"] = fra[mode_key]
+
     # 3) drift_control: --lambda-reg CLI + auto-disable on λ=0
     if args.lambda_reg is not None:
         cfg["drift_control"]["lambda_reg"] = args.lambda_reg

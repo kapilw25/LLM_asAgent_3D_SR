@@ -15,11 +15,18 @@ ls data/eval_10k_local/test_split.json >/dev/null && echo "OK: eval data"
 ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_ngpu_sanity_${BB}_$(date +%Y%m%d_%H%M%S).log
 
 # 2) POC (--gpus 4 on the 96 GB box · --gpus 1 works serially on the 24 GB box)
+# Confirm the 9 POC-skip arms are all present:
+find outputs/poc -name student_encoder.pt | wc -l    # expect 12
+for a in full_ft lpft peft_dora peft_lora pretrain surgery_3stage_DI surgery_noDI surgery_raw autorgn; do
+  printf "%-22s " "$a"; find outputs/poc -path "*${a}*" -name student_encoder.pt | head -1 || echo MISSING
+done
+# If all 9 print a path, you're clear to start POC the moment SANITY goes green.
+
+
 ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_ngpu_poc_${BB}_$(date +%Y%m%d_%H%M%S).log
 # banner MUST show: backbone=$BB · [resume --cache 1] skipping 9 already-trained arms + ~60 Stage-8b jobs
-# iter18 (2026-06-13): the 5 NEW improvement arms (replay25 · diheavy · tccaux · intervene · wiseft) are now in
-# ARM2ENC, so this SAME command ALSO trains + evals them (the 9 old encoder arms skip on --cache 1); the §3
-# finale + scorecard include them automatically. No command change needed — only the new arms actually run.
+
+
 
 # watch panes (8c shows as ·8c d✓r▶/4 in the eval cells)
 watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_status.py'

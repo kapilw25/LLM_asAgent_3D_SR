@@ -337,6 +337,14 @@ checkpoint:
   # because anchor pullback continued into epochs 2-4 and step rotation
   # discarded it. 5 step ckpts × ~7 GB = 35 GB, fits 200 GB budget.
   keep_last_n: 5                  # Keep last 5 step ckpts (~7 GB each with student-only saves)
+  # iter18 (2026-06-14): stage/latest resume anchors save full=True (student+teacher+predictor+
+  # optimizer+scheduler+scaler, ~24 GB each) for crash-resume. SANITY is a minutes-long code smoke
+  # that never resumes → student-only (~7 GB) avoids the 579 GB disk-full that aborted the run.
+  # Flattened per-mode in utils.m09_common.merge_m09_common_config (mirrors saves_per_epoch).
+  full_resume_anchor:
+    sanity: false                 # smoke: no resume → ~7 GB student-only stage/latest ckpts
+    poc:    true                  # long runs keep full resume anchors
+    full:   true
 
 # -- Mixed precision --
 mixed_precision:
