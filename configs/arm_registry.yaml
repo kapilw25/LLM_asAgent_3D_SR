@@ -43,4 +43,12 @@ arms:
   surgery_3stage_DI_diheavy_encoder:   {encoder: surgical_3stage_DI_diheavy_encoder,   dir: m09c_surgery_3stage_DI_diheavy_encoder,    kind: surgery,       scheduler: true,  group: improvement}
   surgery_3stage_DI_tccaux_encoder:    {encoder: surgical_3stage_DI_tccaux_encoder,    dir: m09c_surgery_3stage_DI_tccaux_encoder,     kind: surgery,       scheduler: true,  group: improvement}
   surgery_3stage_DI_intervene_encoder: {encoder: surgical_3stage_DI_intervene_encoder, dir: m09c_surgery_3stage_DI_intervene_encoder,  kind: surgery,       scheduler: true,  group: improvement}
-  surgical_3stage_DI_wiseft_encoder:   {encoder: surgical_3stage_DI_wiseft_encoder,    dir: m09c_surgical_3stage_DI_wiseft_encoder,    kind: merge,         scheduler: true,  group: improvement}
+  # kind: merge → NOT trained; the scheduler builds a post-hoc wiseft_merge job from merge_recipe (base/alpha/predictor),
+  # resume-guard skips it once its student_encoder.pt exists → the POC command just EVALS them. merge_alpha = OURS weight
+  # in θ* = (1−α)·frozen + α·OURS  (so frozen-fraction = 1 − merge_alpha). merge_predictor: true also blends the predictor
+  # (→ future-MSE/causal populate; the old encoder-only wiseft left them blank).
+  surgical_3stage_DI_wiseft_encoder:   {encoder: surgical_3stage_DI_wiseft_encoder,    dir: m09c_surgical_3stage_DI_wiseft_encoder,    kind: merge,         scheduler: true,  group: improvement, merge_base: surgery_3stage_DI_encoder,           merge_alpha: 0.7, merge_predictor: false}
+  # iter18 (2026-06-14) WiSE-FT v2 sweep — blend the BEST predictor arm (intervene) × frozen, predictor INCLUDED, over frozen-fraction fNN:
+  surgical_intervene_wiseft_f30_encoder: {encoder: surgical_intervene_wiseft_f30_encoder, dir: m09c_surgical_intervene_wiseft_f30_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_intervene_encoder, merge_alpha: 0.7, merge_predictor: true}
+  surgical_intervene_wiseft_f50_encoder: {encoder: surgical_intervene_wiseft_f50_encoder, dir: m09c_surgical_intervene_wiseft_f50_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_intervene_encoder, merge_alpha: 0.5, merge_predictor: true}
+  surgical_intervene_wiseft_f70_encoder: {encoder: surgical_intervene_wiseft_f70_encoder, dir: m09c_surgical_intervene_wiseft_f70_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_intervene_encoder, merge_alpha: 0.3, merge_predictor: true}

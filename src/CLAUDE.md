@@ -33,7 +33,7 @@
 # DELETE PROTECTION (iter11 — META-fix for v1→v10 cycle)
 - **No shell-level `rm`.** All destructive deletes live in .py behind `--cache-policy`. Past pattern (script wipes `.npy` + m05 deletes its own checkpoint post-save) destroyed both durable artifacts every round-trip and rebuilt the same 9,297-clip frozen embeddings ~10 h across v1→v10. Scripts use merge-`cp -rf`, atomic `os.replace`, `: >` truncate — never `rm`.
 - **`utils.cache_policy` is the SINGLE cross-module guard.** `output_guard` was removed (2026-04-26) because its silent skip masked `--cache-policy` and made re-runs surprising. Per-script intra-run resume (`load_checkpoint`, fingerprint files like `.m05_checkpoint_*_<fp>.npz`) handles "skip already-finished clips" — that is resume, not a guard.
-- **CLI contract**: each .py (m04/m04d/m05/m05b/m05c/m06/m08/m08b/m09a/m09b/m09c/m10/m11) registers `--cache-policy {1,2}` via `utils.cache_policy.add_cache_policy_arg()` AND prompts the user via `input("[1=keep / 2=recompute] (Enter=1): ")` if the flag wasn't supplied (see `resolve_cache_policy_interactive` pattern below). `1=keep` (default, Enter) preserves all caches with a log line; `2=recompute` authorizes destruction through `guarded_delete(path, policy, label)`. No `.py` deletes anything without the flag reaching `2`.
+- **CLI contract**: each .py (m04/m04d/m05/m05b/m05c/m06/m08/m08b/m09a/m09b/m09c/m10/m11) registers `--cache-policy {1,2}` via `utils.cache_policy.add_cache_policy_arg()` AND prompts the user via `input("[1=keep / 2=recompute] (Enter=1): ")` if the flag wasn't supplied (see `resolve_cache_policy_interactive` pattern below). `1=keep` (default, Enter) preserves all caches with a log line; `2=recompute` authorizes destruction through `guarded_delete(path, policy, label)`. No `.py` deletes anything without the flag reaching `2` — **ONE sanctioned exception**: `clear_anchors_on_completion()` deletes a FINISHED arm's resume anchors (`*_ckpt_{latest,stage,step}.pt`) UN-GATED on success. Rationale: resume anchors are single-arm training SCRATCH, not the durable cross-module CACHES this guard exists to protect (frozen embeddings, factor sets). Safe by construction — it refuses unless `student_encoder.pt` + `*ckpt_best*.pt` already exist (so a parked/interrupted arm keeps every anchor) and only ever removes latest/stage/step, never best/student.
 - **Shell contract**: shells stay THIN. Wrappers (`scripts/*.sh`) do NOT prompt — they just forward CLI args to the .py. Overnight/tmux runs pass `--cache-policy 1` (or `2`) explicitly to bypass the .py's `input()` prompt; or set `CACHE_POLICY_ALL=1|2` env var which each .py honors before prompting.
 - **Retiring files**: `mv` to sibling `legacy/` subdir — never `rm`.
 
@@ -44,7 +44,7 @@ Every `src/m*.py` using GPU MUST have: (1) `check_gpu()`, (2) `cleanup_temp()`, 
 - **Epoch-based, not step-based.** `max_epochs` from YAML per mode. Steps = `n_train // batch_size`.
 - **LR warmup capped at 10%** of total steps. Predictor LR 1x (gold standard audit).
 - **Crash-safe JSONL logging** with `os.fsync()` every write. CSV for backward compat only.
-- **Checkpoint management**: export only `student_encoder.pt` (~3.8GB). Clean all intermediates after training. Periodic saves use `full=False` (~8GB, no optimizer). `keep_last_n` from YAML.
+- **Checkpoint management**: export `student_encoder.pt` (~3.8GB encoder, eval Stages 2-7) + `*_ckpt_best.pt` (~8GB encoder+predictor, Stage-8 future-MSE/JEPA prediction). **Clean intermediates ON SUCCESS** — every m09 trainer calls `clear_anchors_on_completion(output_dir)` (`utils/clear_resume_anchors`) right after the final `export_student_for_eval` → deletes the resume anchors `*_ckpt_{latest,stage,step}.pt` (~15-50 GB/arm of pure scratch), keeping student + best. Without it they persist (iter18: 319 GB across 13 arms). Periodic saves use `full=False` (~8GB, no optimizer); `keep_last_n` (YAML) rotates `*_ckpt_step*` mid-run.
 - **Per-lambda encoder paths** for ablation. Dynamic fallback in `get_encoder_info()`.
 - **No V-JEPA deduplication** — circular reasoning. Hard mode ±30s exclusion is metadata-based.
 - Use `--model-config` + `--train-config`. Model configs = architecture. Train configs = technique.
@@ -108,6 +108,31 @@ Shared `utils/wandb_utils.py`. `--no-wandb` on every module. All functions no-op
 
 ## OUTPUT FORMATTING — TABLES, NOT LISTS  (with emojis for scannability)
 **Default to ASCII box-drawing tables** (`┌─┬─┐` `│` `├─┼─┤` `└─┴─┘`) for ANY comparison spanning ≥2 columns × ≥2 rows. Markdown pipe tables (`| col | col |`) and bullet lists are BANNED for comparison data — Claude Code's CommonMark renderer flattens them into unaligned single-column "lists" in the user's terminal, which breaks the comparison and frustrates the user. **Use emojis LIBERALLY** in column headers, row identifiers, and status/marker columns for visual scannability — the user explicitly chose "eyeballable with emojis" over "perfectly aligned plain ASCII". Keep emojis OUT of pure-numeric cells (where width drift matters most) but in headers / status / verdict columns they're encouraged. Box-drawing borders MUST still be present so the table structure is visible even if cell widths drift slightly with emoji rendering. Always declare a marker legend below the table. POC ablation sweeps (Cell A/B/C/D × N metrics) MUST be a single box-drawn grid, not N grouped lists.
+
+## SPELL OUT METRIC NAMES IN PROSE — NO SHORT KEYS / UNDEFINED JARGON
+The eval suite is **14 metrics**, so the short json/code keys (`act` `tax` `mcos` `fut` `rollout` `causal` `tdist` `teacher_free` `maskratio` `order` `aot` `tov` `pace` `tcc_tau` `tcc_cycle`) are UNREADABLE mixed into a sentence — the user cannot tell them apart at a glance, and they've explicitly asked to stop using them. When EXPLAINING results to the user (chat replies + result/plan `.md` docs), ALWAYS write the **FULL human metric name** — e.g. "Action top-1 accuracy", "taxonomy F1", "motion-cosine separation", "future-frame MSE", "rollout drift slope", "causal future-block L1", "L1-vs-Δt decay", "Arrow-of-Time accuracy", "temporal-order (frame-permutation) accuracy", "playback-pace accuracy", "TCC Kendall τ", "TCC cycle-back error", "frame-order sensitivity". The canonical full names are the `_CATALOG` ylabels/descriptions in `src/m13_eval_plot.py` (the single metric registry — use those, don't coin variants). The short key may appear ONCE in parentheses for a csv/json lookup, NEVER as the standalone reference. Same rule for undefined ML jargon (`Pareto`, `BCa`, `co-leader`, a bare `Δ`): say it in plain English ("a trade-off win — better on X without losing Y", "95% confidence band") or define it on first use. Short keys live in code/csv/json ONLY.
+
+**GLOSSARY — the 15 eval keys → the full name to use in prose** (↑/↓ = higher/lower is better; group = the umbrella to use instead of vague words like "coherence"):
+```text
+key           full name (USE THIS in prose)              dir  group              what it measures (plain)
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+act           Action top-1 accuracy                      ↑    head/probe         classify the motion class from frozen features
+tax           taxonomy F1                                 ↑    head/probe         linear read-off of VLM scene attributes
+mcos          motion-cosine separation                   ↑    head/probe         same-motion clips sit closer than different-motion
+fut           future-frame MSE                            ↓    predictor          JEPA predictor's L1 on the masked next frame
+rollout       rollout drift slope                         ↓    predictor          how fast multi-step prediction error snowballs
+causal        causal future-block L1                      ↓    predictor          predict the 2nd half of a clip from the 1st
+tdist         L1-vs-Δt decay slope                        ↓    predictor          accuracy decay as it predicts further ahead
+teacher_free  free-running exposure-bias gap              ↓    predictor          worse on its OWN predictions vs fed the truth
+maskratio     mask-ratio robustness slope                ↓    predictor          graceful degradation as more video is hidden
+order         frame-order sensitivity                     —    predictor          shuffled−ordered ΔL1 (does it actually use time?)
+aot           Arrow-of-Time accuracy                      ↑    encoder-temporal   tell forwards from backwards playback
+tov           temporal-order (frame-permutation) acc      ↑    encoder-temporal   put shuffled frames back in order
+pace          playback-pace accuracy                      ↑    encoder-temporal   tell normal 1× from 2×/4× fast-forward
+tcc_tau       TCC Kendall τ                               ↑    encoder-temporal   matching moments line up across two clips
+tcc_cycle     TCC cycle-back error                        ↓    encoder-temporal   frame → its match → back: how far it lands off
+```
+Group umbrellas (use the group name, never invent one like "coherence"): **head/probe** = linear read-off of the frozen features · **predictor** = the JEPA predictor's quality · **encoder-temporal** = does the encoder preserve frame order / timing.
 
 # HOOKS
 - `enforce-dev-rules.sh` (PreToolUse:Bash) — blocks pip install, git state changes, bare `python3` without venv activation

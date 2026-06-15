@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_frozen",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.071953,
+  "std": 0.015046,
+  "ci": {
+    "mean": 0.071953,
+    "ci_lo": 0.071242,
+    "ci_hi": 0.072634,
+    "ci_half": 0.000696
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "checkpoints/vjepa2_1_vitG_384.pt"
+}

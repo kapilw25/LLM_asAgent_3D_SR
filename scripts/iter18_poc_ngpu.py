@@ -37,7 +37,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))   # iter18 (2026-06-14): arm roster single-source (configs/arm_registry.yaml)
-from utils.arm_registry import arm2enc as _arm2enc, arm2dir as _arm2dir  # noqa: E402
+from utils.arm_registry import (  # noqa: E402
+    arm2enc as _arm2enc, arm2dir as _arm2dir, merge_arms as _merge_arms, merge_recipe)
 # iter18 2026-06-08: BACKBONE is the run's encoder family, switchable via env so the SAME scheduler
 # runs the 2B champion (vjepa_2_1_vitG, default) or the 1B scale-axis backbone (vjepa_2_1_vitg). The
 # status tool reads it back from the run banner (or this same env) so its job-ids match. Set it once
@@ -65,6 +66,7 @@ def enc_name(arm_enc):
 # byte-equal to the former literals (parity-tested). Add a new arm = ONE entry in the yaml.
 ARM2ENC = _arm2enc()   # run_train arm → eval encoder-token  (surgery_* → surgical_* swap lives in the yaml)
 ARM2DIR = _arm2dir()   # run_train arm → on-disk m09 output dir (resume done-marker: student_encoder.pt)
+MERGE_ARMS = _merge_arms()   # kind=merge train_names → built by a post-hoc wiseft_merge job, never run_train
 # Stage split (verified against scripts/run_eval.sh should_skip gates, 2026-06-04; 8c/9c iter18):
 #   per-encoder stages: 2 features · 3 probe · 11 taxonomy-train · 5/6 motion_cos · 8 future_mse
 #                       · 8b predictor_temporal · 8c encoder_temporal (m12f aot/tov/pace/tcc)
@@ -135,24 +137,26 @@ def build_jobs(mode):
     seed_id = f"T:{BACKBONE}:pretrain_encoder"   # seeds shared labels + everyone's init ckpt
     for arm in ARM2ENC:
         jid = f"T:{BACKBONE}:{arm}"
-        # iter18 (2026-06-13) lever #1: WiSE-FT is NOT trained — its "train" job is a post-hoc weight
-        # merge (OURS encoder × FROZEN base V-JEPA). Depends on the OURS train job (needs its
-        # student_encoder.pt). NO literals: alpha ← pipeline.yaml wiseft.alpha; the frozen base ckpt is
-        # resolved per backbone via backbone_model_configs.<BACKBONE> → model.checkpoint_path (same
-        # registry run_train.sh uses). The resume-guard still skips it if the merge already ran.
-        if arm == "surgical_3stage_DI_wiseft_encoder":
-            _ours_dir = ARM2DIR["surgery_3stage_DI_encoder"]
-            _wf_dir = ARM2DIR["surgical_3stage_DI_wiseft_encoder"]
+        # iter18 lever #1: a kind=merge arm is NOT trained — its "train" job is a post-hoc weight merge
+        # (OURS encoder [+ predictor] × FROZEN base V-JEPA). Recipe (base/alpha/predictor) ← registry
+        # merge_recipe() — SINGLE source, no literals; the frozen base ckpt is resolved per backbone via
+        # backbone_model_configs.<BACKBONE> → model.checkpoint_path. Depends on the base arm's train job.
+        # The resume-guard skips it once the merge's student_encoder.pt exists → a re-run just evals.
+        if arm in MERGE_ARMS:
+            _rec = merge_recipe(arm)
+            _base_dir = ARM2DIR[_rec["base"]]
+            _wf_dir = ARM2DIR[arm]
             _yx = "scripts/lib/yaml_extract.py"
-            _alpha = f"$({_yx} configs/pipeline.yaml wiseft.alpha)"
             _frozen = f"$({_yx} $({_yx} configs/pipeline.yaml backbone_model_configs.{BACKBONE}) model.checkpoint_path)"
+            _pred = (f"--surgery-pred-ckpt outputs/{mtag}/{BACKBONE}/{_base_dir}/m09c_ckpt_best.pt "
+                     if _rec["predictor"] else "")
             jobs[jid] = dict(
-                id=jid, kind="train", deps={f"T:{BACKBONE}:surgery_3stage_DI_encoder"}, needs_labels=False,
+                id=jid, kind="train", deps={f"T:{BACKBONE}:{_rec['base']}"}, needs_labels=False,
                 cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} {{pin}}python -u src/utils/wiseft_merge.py "
-                     f"--alpha {_alpha} --frozen-ckpt {_frozen} "
-                     f"--surgery-ckpt outputs/{mtag}/{BACKBONE}/{_ours_dir}/student_encoder.pt "
-                     f"--out-dir outputs/{mtag}/{BACKBONE}/{_wf_dir}"),
-                log=f"logs/iter18_ngpu_{mtag}_wiseft_{{ts}}.log")
+                     f"--alpha {_rec['alpha']} --frozen-ckpt {_frozen} "
+                     f"--surgery-ckpt outputs/{mtag}/{BACKBONE}/{_base_dir}/student_encoder.pt "
+                     f"{_pred}--out-dir outputs/{mtag}/{BACKBONE}/{_wf_dir}"),
+                log=f"logs/iter18_ngpu_{mtag}_merge_{arm}_{{ts}}.log")
             continue
         # iter18: EVERY non-pretrain arm inits from pretrain's m09a_ckpt_best.pt → all dep on it.
         deps = set() if arm == "pretrain_encoder" else {seed_id}

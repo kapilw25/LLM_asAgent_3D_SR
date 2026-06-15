@@ -1,0 +1,2 @@
+arm,ckpt,step,probe_top1,motion_cos,future_l1,causal_l1,maskratio,val_jepa_loss,verdict,kept
+pretrain_encoder,1,119,0.239468,0.062477,0.609487,0.627151,0.059719,0.432634,🎯,True

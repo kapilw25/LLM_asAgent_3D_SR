@@ -271,6 +271,17 @@ interaction_mining:
   # for Stage-3 ablation: [[cart, cart], [cow, cow]] drops "static × static" pairs
   # that don't produce meaningful interaction tubes.
   category_pair_blacklist: []
+  # iter18 (2026-06-15) RESULT-SAFE tube cache. When enabled, stream_interaction_tubes()
+  # memoizes its (decode MP4 + mine tubes) output to one .npz per (clip,cfg-hash) under
+  # data_paths.tube_cache_dir(local_data) — 2nd+ epoch reads the .npz instead of recomputing.
+  # The .dir field is INJECTED at runtime by utils.m09_common.merge_m09_common_config from
+  # the resolved cfg.data.local_data (so it tracks --local-data; never hardcoded here). The
+  # random tube-PICK stays in StreamingFactorDataset → training is bit-equivalent. Cache key
+  # includes tube_margin_pct + category_pair_blacklist + enabled + num_frames → any change
+  # MISSES (no stale reuse). enabled:false → exact pre-cache behavior (revertible).
+  tube_cache:
+    enabled: true                     # read-through D_I tube cache (set false to bypass)
+    dir: null                         # INJECTED at runtime from local_data (do not hardcode)
 
 # -- Surgery: progressive prefix unfreezing --
 # Sec 11.5 of proposal. Per-variant `surgery.stages` overrides this file's empty default.

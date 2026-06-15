@@ -63,6 +63,13 @@ data:
   masks_inner_dirname:   "masks"                   # the inner dir m10 writes .npz masks into (iter18 H1)
   shard_subdir:          "m00d_download_subset"    # m00d_download_subset.py output dir (subset-*.tar inside)
   factor_manifest_name:  "factor_manifest.json"    # m11 manifest filename
+  # iter18 (2026-06-15): RESULT-SAFE read-through disk cache for D_I interaction-tube
+  # streaming. stream_interaction_tubes() is a PURE deterministic fn of (mp4_bytes,
+  # mask.npz, cfg) → its decode+mining output is memoized HERE (one .npz per clip,key)
+  # so the 2nd+ epoch reuses it instead of re-decoding the MP4 + re-mining tubes. The
+  # RANDOM tube-pick stays in the caller → training is bit-equivalent. Cache MISS on any
+  # cfg-field change (margin/blacklist/enabled) or num_frames change (key includes them).
+  tube_cache_subdir:     "m12_tube_cache"          # sibling of m10/m11; one .npz per (clip,cfg-hash)
 
   clips_per_shard: 1000       # m03/m00d: WebDataset shard size (≈1 GB each at 480p MP4 × 1000 clips)
   data_prep_workers: 10       # m00b: concurrent duration fetchers
@@ -822,11 +829,9 @@ arm_train_configs:
   surgery_3stage_DI_tccaux_encoder: "configs/train/surgery_3stage_DI_tccaux_encoder.yaml"       # lever #4 (FAIL-LOUD stub)
   surgery_3stage_DI_intervene_encoder: "configs/train/surgery_3stage_DI_intervene_encoder.yaml" # lever #5 (FAIL-LOUD stub)
 
-# iter18 (2026-06-13) WiSE-FT merge (plan_outperform_FT.md lever #1) — the scheduler reads alpha
-# from here (no number literal in the .py); the frozen base ckpt is resolved per backbone via
-# backbone_model_configs.<BACKBONE> → model.checkpoint_path. alpha = OURS weight in θ*=(1-α)·frozen+α·OURS.
-wiseft:
-  alpha: 0.7                        # default for the scheduler's auto arm; the α-sweep (manual) overrides
+# iter18 (2026-06-14) WiSE-FT merge recipe (base/alpha/predictor) moved to configs/arm_registry.yaml
+# (merge_* fields on each kind=merge arm) — SINGLE source the scheduler reads via merge_recipe(). The frozen
+# base ckpt is still resolved per backbone via backbone_model_configs.<BACKBONE> → model.checkpoint_path.
 
 output_roots:
   sanity: "outputs/sanity"

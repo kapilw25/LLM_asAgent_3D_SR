@@ -1,0 +1,245 @@
+{
+  "encoder": "vjepa_2_1_vitg_frozen",
+  "dims": {
+    "scene_type": {
+      "type": "single",
+      "n_classes": 13,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.651885,
+      "test_mean": 0.594521,
+      "test_ci": {
+        "mean": 0.594521,
+        "ci_lo": 0.572055,
+        "ci_hi": 0.617534,
+        "ci_half": 0.02274
+      }
+    },
+    "time_of_day": {
+      "type": "single",
+      "n_classes": 2,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.980044,
+      "test_mean": 0.976986,
+      "test_ci": {
+        "mean": 0.976986,
+        "ci_lo": 0.969315,
+        "ci_hi": 0.983562,
+        "ci_half": 0.007123
+      }
+    },
+    "weather": {
+      "type": "single",
+      "n_classes": 5,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.880266,
+      "test_mean": 0.873425,
+      "test_ci": {
+        "mean": 0.873425,
+        "ci_lo": 0.857534,
+        "ci_hi": 0.888219,
+        "ci_half": 0.015342
+      }
+    },
+    "crowd_density": {
+      "type": "single",
+      "n_classes": 3,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.791574,
+      "test_mean": 0.820822,
+      "test_ci": {
+        "mean": 0.820822,
+        "ci_lo": 0.80274,
+        "ci_hi": 0.837808,
+        "ci_half": 0.017534
+      }
+    },
+    "traffic_density": {
+      "type": "single",
+      "n_classes": 3,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.72949,
+      "test_mean": 0.765479,
+      "test_ci": {
+        "mean": 0.765479,
+        "ci_lo": 0.744658,
+        "ci_hi": 0.78411,
+        "ci_half": 0.019726
+      }
+    },
+    "traffic_mix": {
+      "type": "single",
+      "n_classes": 4,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.773836,
+      "test_mean": 0.753425,
+      "test_ci": {
+        "mean": 0.753425,
+        "ci_lo": 0.733151,
+        "ci_hi": 0.773151,
+        "ci_half": 0.02
+      }
+    },
+    "pedestrian_vehicle_separation": {
+      "type": "single",
+      "n_classes": 3,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.878049,
+      "test_mean": 0.854247,
+      "test_ci": {
+        "mean": 0.854247,
+        "ci_lo": 0.837808,
+        "ci_hi": 0.869589,
+        "ci_half": 0.01589
+      }
+    },
+    "road_layout": {
+      "type": "multi",
+      "n_classes": 8,
+      "metric": "sample_f1",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.718059,
+      "test_mean": 0.726291,
+      "test_ci": {
+        "mean": 0.726291,
+        "ci_lo": 0.710769,
+        "ci_hi": 0.74091,
+        "ci_half": 0.01507
+      }
+    },
+    "road_surface": {
+      "type": "single",
+      "n_classes": 8,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.798226,
+      "test_mean": 0.792329,
+      "test_ci": {
+        "mean": 0.792329,
+        "ci_lo": 0.772603,
+        "ci_hi": 0.810411,
+        "ci_half": 0.018904
+      }
+    },
+    "infrastructure_quality": {
+      "type": "single",
+      "n_classes": 3,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.871397,
+      "test_mean": 0.833425,
+      "test_ci": {
+        "mean": 0.833425,
+        "ci_lo": 0.815542,
+        "ci_hi": 0.849315,
+        "ci_half": 0.016886
+      }
+    },
+    "road_encroachment": {
+      "type": "single",
+      "n_classes": 3,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.815965,
+      "test_mean": 0.851507,
+      "test_ci": {
+        "mean": 0.851507,
+        "ci_lo": 0.834521,
+        "ci_hi": 0.867945,
+        "ci_half": 0.016712
+      }
+    },
+    "notable_objects": {
+      "type": "multi",
+      "n_classes": 15,
+      "metric": "sample_f1",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.700873,
+      "test_mean": 0.670765,
+      "test_ci": {
+        "mean": 0.670765,
+        "ci_lo": 0.656982,
+        "ci_hi": 0.683893,
+        "ci_half": 0.013455
+      }
+    },
+    "vegetation": {
+      "type": "single",
+      "n_classes": 4,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.796009,
+      "test_mean": 0.779726,
+      "test_ci": {
+        "mean": 0.779726,
+        "ci_lo": 0.76,
+        "ci_hi": 0.798356,
+        "ci_half": 0.019178
+      }
+    },
+    "lighting": {
+      "type": "single",
+      "n_classes": 4,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.971175,
+      "test_mean": 0.968767,
+      "test_ci": {
+        "mean": 0.968767,
+        "ci_lo": 0.96,
+        "ci_hi": 0.97589,
+        "ci_half": 0.007945
+      }
+    },
+    "video_quality": {
+      "type": "single",
+      "n_classes": 3,
+      "metric": "top1_acc",
+      "n_train": 6854,
+      "n_val": 451,
+      "n_test": 1825,
+      "best_val": 0.751663,
+      "test_mean": 0.761644,
+      "test_ci": {
+        "mean": 0.761644,
+        "ci_lo": 0.741918,
+        "ci_hi": 0.780822,
+        "ci_half": 0.019452
+      }
+    }
+  }
+}

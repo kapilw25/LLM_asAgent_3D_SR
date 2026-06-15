@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_lpft_encoder",
+  "metric": "order",
+  "n_test": 1825,
+  "mean": 0.017198,
+  "std": 0.028626,
+  "ci": {
+    "mean": 0.017198,
+    "ci_lo": 0.015859,
+    "ci_hi": 0.018501,
+    "ci_half": 0.001321
+  },
+  "lower_is_better": null,
+  "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09f_lpft_encoder/m09c_ckpt_best.pt"
+}

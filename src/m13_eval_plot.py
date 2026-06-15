@@ -45,7 +45,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch, Rectangle
 from matplotlib.ticker import FuncFormatter
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -57,6 +57,8 @@ from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 from utils.bootstrap import N_BOOTSTRAP
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+from utils.arm_registry import (arm2dir, arm2enc, display_arms, merge_arms,  # iter18: SINGLE-SOURCE arm roster (no hardcoded names)
+                                merge_recipe)
 
 # iter18 W7 (PLR2004): semantic named constants.
 _AXIS_DECIMAL_MIN = 0.01   # tick-format band edges (display only)
@@ -64,6 +66,7 @@ _AXIS_INT_MIN = 10
 _FONT_MIN_PT = 28          # hero-figure auto-shrink floor
 _K_FMT_MIN = 1000          # render bootstrap count as 'N K' above this
 _MIN_COMPARABLE = 2
+_LABEL_ROT = 25            # x-tick names AND bar-value labels share ONE rotation (user 2026-06-15: rotate scores like the names)
 
 
 # ── Display helpers (no hardcoded encoder list — derived per-call) ───
@@ -123,13 +126,22 @@ _FALLBACK_COLOR_CYCLE = ("blue", "green", "orange", "purple", "red", "cyan", "go
 # bar — but stay 4 separately-labelled bars (NOT merged) so you can see WHICH ours wins by height.
 _OURS_GREEN = {"surgical_3stage_DI_encoder", "surgical_noDI_encoder",
                "surgical_3stage_DI_head", "surgical_noDI_head"}
+# user goal (2026-06-14): EVERY variant of OUR SURGERY NOVELTY renders GREEN in the bar panels (F3 EVAL
+# scorecard + the eval/ hero bars) — never a non-green hue. "Our surgery" = registry kind ∈ {surgery,
+# surgery_head, merge}: this INCLUDES surgery_raw (kind=surgery) + the 4 improvement arms + the wiseft
+# merges, but EXCLUDES surgical_autorgn (kind=baseline — a prior FT technique, NOT our novelty → keeps its
+# own orange). Kept SEPARATE from _OURS_GREEN above on purpose: _OURS_GREEN is the WIN-CREDIT set used by the
+# hero win-attribution (where raw/autorgn must NOT be credited as ours — see _is_ours below); this set is
+# COLOUR-only. Single-source via registry kinds → a new surgery/improvement arm auto-greens with no edit.
+_SURGERY_GREEN_ENCODERS = {e for _a, e, _g, k in display_arms(include_merge=True)
+                           if k in ("surgery", "surgery_head", "merge")}
 # every OTHER arm gets its OWN distinct colour, keyed by NAME (stable across all metric panels —
 # the old code keyed off enc.startswith("vjepa") so ALL 14 encoders rendered in one identical blue).
+# (surgery_raw is intentionally absent — it is surgery-green via _SURGERY_GREEN_ENCODERS, not a brown control.)
 _ITER18_ENC_COLOR = {
     "frozen":                   "#616161",  # gray   — frozen baseline
     "pretrain_encoder":         "#1565C0",  # blue   — vanilla cont-SSL anchor
-    "surgical_autorgn_encoder": "#E65100",  # orange — Auto-RGN (Surgical-FT baseline)
-    "surgery_raw_encoder":      "#8D6E63",  # brown  — surgery-on-raw control
+    "surgical_autorgn_encoder": "#E65100",  # orange — Auto-RGN (Surgical-FT baseline, NOT our novelty)
     "full_ft_encoder":          "#C62828",  # red    — Full-FT
     "lpft_encoder":             "#D81B60",  # magenta— LP-FT
     "peft_lora_encoder":        "#6A1B9A",  # purple — LoRA
@@ -150,11 +162,11 @@ _WINNER_MODE = os.environ.get("HERO_WINNER_MODE", "coleader_set")
 
 
 def _color_for(enc: str, idx: int) -> str:
-    """Per-encoder colour: the 4 OURS → one GREEN; every other arm → its own distinct colour keyed
-    by name (stable across panels). Legacy/cross-arch encoders fall back to the canonical map."""
+    """Per-encoder colour: EVERY surgery-novelty arm → one GREEN; every other arm → its own distinct colour
+    keyed by name (stable across panels). Legacy/cross-arch encoders fall back to the canonical map."""
     short = enc.replace("vjepa_2_1_", "")
-    if short in _OURS_GREEN:
-        return "#2E7D32"                                  # GREEN — the OURS group
+    if short in _OURS_GREEN or short in _SURGERY_GREEN_ENCODERS:
+        return "#2E7D32"                                  # GREEN — our surgery novelty (incl. raw + improvement + wiseft)
     if short in _ITER18_ENC_COLOR:
         return _ITER18_ENC_COLOR[short]
     if enc in ENCODER_COLORS:
@@ -215,6 +227,10 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
     else:
         pad = 0.05
     y_lo, y_hi = ax.get_ylim()
+    # Lean value labels toward the SHORT-bar side so they fall into empty space, not onto the next bar:
+    # higher=better sorts tall→short L→R → lean +rot (toward the short RIGHT); lower=better sorts short→tall
+    # → lean −rot (toward the short LEFT). The x-tick names below the axis keep +rot (user 2026-06-15).
+    _val_rot = -_LABEL_ROT if direction == "lower" else _LABEL_ROT
     for xi, e, v, er in zip(x, encoders, plot_vals, plot_errs):
         if e in na_set:
             ax.text(xi, y_lo + (y_hi - y_lo) * 0.5, "N/A", ha="center", va="center",
@@ -222,14 +238,20 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
         else:
             er_safe = 0.0 if (isinstance(er, float) and np.isnan(er)) else er
             ax.text(xi, v + er_safe + (y_hi - y_lo) * 0.01, fmt_mantissa(v),
-                    ha="center", va="bottom", fontsize=9, color="#222")
+                    ha="center", va="bottom", fontsize=9, color="#222", rotation=_val_rot)
     ax.set_xticks(x)
-    ax.set_xticklabels([_display_label(e) for e in encoders], fontsize=9, rotation=25, ha="right")
+    ax.set_xticklabels([_display_label(e) for e in encoders], fontsize=9, rotation=_LABEL_ROT, ha="right")
+    # analysis-phase aid (user 2026-06-15): tint each x-label with ITS bar's colour so a name maps to its bar at
+    # a glance (NOT paper-acceptable — paper keeps black; fine for these analysis-phase scorecards).
+    for _tick, _c in zip(ax.get_xticklabels(), colors):
+        _tick.set_color(_c)
     ax.set_ylabel(ylabel + exp_axis_tag(exp), fontsize=11)
     ax.set_title(title, fontsize=12, fontweight="bold")
     if direction == "higher":
-        ax.text(0.02, 0.97, "↑ higher = better", transform=ax.transAxes, fontsize=10,
-                fontweight="bold", color="#2E7D32", va="top", ha="left",
+        # higher=better sorts tallest-bar-first (LEFT) → a top-LEFT badge overlaps the bars; put it top-RIGHT
+        # (the short-bar side). lower=better is the mirror image, so it STAYS top-left (user 2026-06-15).
+        ax.text(0.98, 0.97, "↑ higher = better", transform=ax.transAxes, fontsize=10,
+                fontweight="bold", color="#2E7D32", va="top", ha="right",
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="#E8F5E9",
                           edgecolor="#2E7D32", linewidth=1.0, alpha=0.85))
     elif direction == "lower":
@@ -423,7 +445,7 @@ def _agg_taxonomy_deltas(taxonomy_json: dict) -> dict:
 def _load_all_metrics(srcs: dict, encoders: list) -> dict:
     """Return {metric_key: {"by_encoder": {enc: (val, ci_half)}, "na": set, "deltas": {pair_key:
     (Δ, lo, hi)}}} for every catalog metric whose source JSON is present (graceful: absent → omitted).
-    `deltas` (the paired Δ across variants) feeds the hero's Δ-vs-frozen + CI-exclusion ★."""
+    `deltas` (the paired Δ across variants) feeds the hero's Δ-vs-frozen + CI-exclusion *."""
     out = {}
 
     def _pack(by_enc, deltas):
@@ -621,6 +643,375 @@ def plot_hero_table(metrics: dict, encoders: list, frozen: str, output_dir: Path
         csv.writer(f).writerows(csv_rows)
     print(f"  [hero-table] m13_hero_table.{{png,pdf,csv}} — {len(scorable)} metric rows drawn "
           f"(+signed 'order' in CSV only) × {len(col_labels)} cols (transposed) · WINNER col = champion duel (ties shown)")
+
+
+# ── iter18 WiSE-FT v2 sweep readout (intervene × frozen predictor-merge · frozen-fraction sweep) ──
+# The eval_metrics.json metric keys the prediction↔coherence trade-off is told through (same key space as
+# the metrics_watch dumps; directions mirror _CATALOG). Roster is DERIVED from the registry, not listed here.
+_WISEFT_SWEEP_COLS = [
+    ("fut",     "Future-MSE\n↓ predict",   "lo"),
+    ("causal",  "Causal-L1\n↓ predict",    "lo"),
+    ("tcc_tau", "TCC τ\n↑ cohere",          "hi"),
+    ("aot",     "Arrow-of-Time\n↑ cohere",  "hi"),
+]
+
+
+def _wiseft_sweep_rows(present: list) -> list:
+    """(eval_encoder_name, display_label) for the predictor-merged WiSE-FT sweep + its base + frozen — all
+    DERIVED from configs/arm_registry.yaml (merge arms with merge_predictor=true, ordered by frozen-fraction
+    = 1−merge_alpha) and matched to the encoders actually present in eval_metrics.json. NO hardcoded names."""
+    t2e = {a: e for a, e, _g, _k in display_arms(include_merge=True)}    # train-name → encoder token
+
+    def _find(token):                                   # eval name (<backbone-prefix>_<token>) present in the json
+        hits = [e for e in present if e == token or e.endswith("_" + token)]
+        return hits[0] if hits else None
+
+    sweep, base_arm = [], None
+    for a in sorted(merge_arms()):
+        rec = merge_recipe(a)
+        if rec["predictor"]:                            # the predictor-merged sweep (intervene × frozen, f30/f50/f70)
+            sweep.append((t2e[a], rec["alpha"]))
+            base_arm = rec["base"]
+    sweep.sort(key=lambda t: -t[1])                     # alpha desc → frozen-fraction asc
+    out = []
+    fr = _find("frozen")
+    if fr:
+        out.append((fr, "Frozen  (coherence reference)"))
+    if base_arm:
+        b = _find(t2e[base_arm])
+        if b:
+            out.append((b, f"{_display_label(b)}  (base · no merge)"))
+    for tok, alpha in sweep:
+        e = _find(tok)
+        if e:
+            out.append((e, f"WiSE-FT  ·  frozen {1.0 - alpha:.2f}"))
+    return out
+
+
+def plot_wiseft_sweep_table(metrics_json: Path, out_dir: Path, stem: str = "wiseft_sweep_table"):
+    """iter18 WiSE-FT v2 sweep readout — a matplotlib value±CI TABLE (NOT ASCII). Rows (registry-derived) =
+    frozen ref + the base intervene arm + the 3 frozen-fraction merges; cols = the PREDICTION pair
+    (future-MSE, causal-L1) and the COHERENCE pair (TCC τ, AoT) the sweep trades between. Cell colour =
+    per-column min-max, direction-aware (green = best). Any sweep arm still evaling → 'pending' cell, so this
+    is safe to regenerate repeatedly as the run fills the aggregated eval_metrics.json in."""
+    if not metrics_json.exists():
+        print(f"  [wiseft-sweep] {metrics_json} absent — skip"); return
+    data = {d["encoder"]: d for d in json.loads(metrics_json.read_text())}
+    present = _wiseft_sweep_rows(list(data))
+    if len(present) < 2:
+        print(f"  [wiseft-sweep] <2 sweep arms present in {metrics_json.name} — skip"); return
+    cmap = plt.get_cmap("RdYlGn")
+    colstat = {}
+    for key, _h, _d in _WISEFT_SWEEP_COLS:
+        vals = [data[e][key]["mean"] for e, _ in present
+                if data[e].get(key) and data[e][key]["mean"] is not None]
+        colstat[key] = (min(vals), max(vals)) if vals else (0.0, 0.0)
+    text_rows, colour_rows = [], []
+    for enc, _disp in present:
+        cells, ccols = [], []
+        for key, _h, direction in _WISEFT_SWEEP_COLS:
+            cell = data[enc].get(key)
+            mean = cell["mean"] if cell else None
+            if mean is None:
+                cells.append("—\n(pending)"); ccols.append((0.92, 0.92, 0.92, 1.0)); continue
+            ci = cell["ci_half"] or 0.0
+            cells.append(f"{mean:.4f}\n±{ci:.4f}")
+            vmin, vmax = colstat[key]
+            t = 0.5 if vmax == vmin else (mean - vmin) / (vmax - vmin)
+            if direction == "lo":
+                t = 1.0 - t                                      # low value = good = green
+            r, g, b, _ = cmap(t)
+            ccols.append((r, g, b, 0.55))
+        text_rows.append(cells); colour_rows.append(ccols)
+    fig, ax = plt.subplots(figsize=(3.0 + 2.1 * len(_WISEFT_SWEEP_COLS), 1.6 + 0.95 * len(present)))
+    ax.axis("off")
+    tbl = ax.table(cellText=text_rows, cellColours=colour_rows,
+                   rowLabels=[d for _, d in present],
+                   colLabels=[h for _k, h, _d in _WISEFT_SWEEP_COLS], loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(9); tbl.scale(1.0, 2.7)
+    ax.set_title("WiSE-FT v2 sweep — intervene × frozen, predictor merged   ·   value ± BCa 95% CI\n"
+                 "prediction pair (←)  vs  coherence pair (→):  more frozen recovers coherence, gives back "
+                 "prediction · colour = per-column best (green)", fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    save_fig(fig, str(out_dir / stem))
+    print(f"  [wiseft-sweep] {stem}.{{png,pdf}} — {len(present)} sweep arms (registry-derived)")
+
+
+# ═══ HONEST paper scorecard (folded from scripts/iter18_paper_scorecard.py, iter18 2026-06-14) ═══════════
+# The figure that survives a hostile review: FULL baseline set (nothing hidden), the surgery FAMILY shares
+# one colour so the reader SEES it cluster at the top of the predictive metrics, HERO = causal-L1 + future-MSE.
+# Reads the same eval_metrics.json the watch refresh emits. Helpers/constants are _ps_*-prefixed so they don't
+# collide with this module's own (or the tcc fold's) names. Figure recipe kept byte-equivalent to the original
+# (direct fig.savefig png@150 + pdf, NOT save_fig — that would change dpi/facecolor).
+# arm taxonomy (display short-name, group) — group drives colour/role. groups:
+#   ours_flagship · surgery_ablation · ft_baseline · frozen · improvement
+_PS_ARMS = {
+    "vjepa_2_1_frozen":                     ("frozen",   "frozen"),
+    "vjepa_2_1_pretrain_encoder":           ("continual-SSL", "ft_baseline"),
+    "vjepa_2_1_surgical_3stage_DI_encoder": ("Surgery 3-stage-DI  (ours)", "ours_flagship"),
+    "vjepa_2_1_surgical_noDI_encoder":      ("Surgery no-DI  (ours)",      "ours_flagship"),
+    "vjepa_2_1_surgery_raw_encoder":        ("Surgery raw  (ablation)",    "surgery_ablation"),
+    "vjepa_2_1_surgical_autorgn_encoder":   ("Surgery auto-RGN  (ablation)", "surgery_ablation"),
+    "vjepa_2_1_full_ft_encoder":            ("Full fine-tune", "ft_baseline"),
+    "vjepa_2_1_lpft_encoder":               ("LP-FT",          "ft_baseline"),
+    "vjepa_2_1_peft_lora_encoder":          ("LoRA",           "ft_baseline"),
+    "vjepa_2_1_peft_dora_encoder":          ("DoRA",           "ft_baseline"),
+}
+# head-only arms duplicate the pretrain ENCODER on encoder-side metrics → excluded
+# (they would draw 3 identical bars and confuse the family story); cassle/ewc are null.
+_PS_GROUP_STYLE = {
+    "ours_flagship":    dict(color="#1B5E20", edge="black", lw=1.8, label="Surgery — ours (3-stage-DI, no-DI)"),
+    "surgery_ablation": dict(color="#66BB6A", edge="#2E7D32", lw=0.8, label="Surgery — ablations (raw, auto-RGN)"),
+    "ft_baseline":      dict(color="#90A4AE", edge="#546E7A", lw=0.8, label="Fine-tune / PEFT / continual-SSL baselines"),
+    "frozen":           dict(color="#E53935", edge="#B71C1C", lw=1.2, label="Frozen V-JEPA (the baseline to beat)"),
+    "improvement":      dict(color="#00897B", edge="#00695C", lw=1.4, label="Surgery — iter18 improvement arms"),
+}
+# iter18 (2026-06-14): complete _PS_ARMS from the single source (configs/arm_registry.yaml) — any scheduler
+# encoder not explicitly styled above is added with its registry group, so a NEW arm auto-appears (heads
+# excluded as before; they duplicate the pretrain encoder on encoder-side metrics).
+_PS_GRP2PS = {"ours_flagship": "ours_flagship", "improvement": "improvement", "surgery_ablation": "surgery_ablation",
+              "ft_baseline": "ft_baseline", "anchor": "ft_baseline"}
+for _a, _enc, _grp, _kind in display_arms(include_heads=False):
+    _full = f"vjepa_2_1_{_enc}"
+    if _full not in _PS_ARMS:
+        _PS_ARMS[_full] = (_enc.replace("_encoder", "").replace("_", " "), _PS_GRP2PS.get(_grp, "ft_baseline"))
+# (json-key, pretty title, direction)  — higher='hi', lower='lo'
+_PS_HERO = [
+    ("causal", "HERO  ·  Causal L1   (sensitivity to causal perturbation)", "lo"),
+    ("fut",    "HERO  ·  Future-frame MSE   (world-model prediction)",      "lo"),
+]
+_PS_SUPPORT = [
+    ("mcos",      "Motion-cosine   (motion coherence)", "hi"),
+    ("maskratio", "Mask-ratio slope   (masking robustness)", "lo"),
+]
+
+
+def _ps_load(metrics_json: Path):
+    rows = {}
+    for d in json.load(open(metrics_json)):
+        enc = d["encoder"]
+        if enc not in _PS_ARMS:
+            continue
+        rows[enc] = d
+    missing = [a for a in _PS_ARMS if a not in rows]
+    if missing:
+        print(f"  [warn] arms absent from json (skipped): {missing}")
+    return rows
+
+
+def _ps_panel(ax, rows, key, title, direction, annotate_family=False):
+    hi = direction == "hi"
+    items = []
+    for enc, (short, grp) in _PS_ARMS.items():
+        if enc not in rows:
+            continue
+        cell = rows[enc][key]
+        if cell["mean"] is None:
+            continue
+        items.append((short, grp, cell["mean"], cell["ci_half"] or 0.0))
+    items.sort(key=lambda t: -t[2] if hi else t[2])     # best first (top of chart)
+    ys = np.arange(len(items))[::-1]
+    # iter18 (2026-06-13, user order): auto common-exponent so clustered small decimals
+    # separate — rescale the value axis + bar labels and tag the exponent in the title.
+    scale, exp = common_exponent([m for *_, m, _ in items], [ci for *_, ci in items])
+    for y, (short, grp, m, ci) in zip(ys, items):
+        st = _PS_GROUP_STYLE[grp]
+        ax.barh(y, m * scale, color=st["color"], edgecolor=st["edge"], linewidth=st["lw"],
+                height=0.7, xerr=ci * scale, capsize=2.5,
+                error_kw=dict(lw=1.0, ecolor="#263238"))
+        star = "* " if grp == "ours_flagship" else ""
+        ax.text((m + ci) * scale, y, f"  {star}{fmt_mantissa(m * scale)}", va="center", fontsize=8.5,
+                fontweight="bold" if grp == "ours_flagship" else "normal")
+    ax.set_yticks(ys)
+    ax.set_yticklabels([s for s, *_ in items], fontsize=9)
+    arrow = "↑ higher better" if hi else "↓ lower better"
+    ax.set_title(f"{title}     ({arrow}){exp_axis_tag(exp)}", fontweight="bold", fontsize=11.5, loc="left")
+    lo = min((m - ci) * scale for _, _, m, ci in items)
+    hivv = max((m + ci) * scale for _, _, m, ci in items)
+    pad = (hivv - lo) * 0.16 or abs(hivv) * 0.05
+    ax.set_xlim(lo - pad, hivv + pad * 3.4)
+    ax.grid(axis="x", alpha=0.25)
+    ax.set_axisbelow(True)
+
+    if annotate_family:
+        # shade the contiguous top run of surgery-family bars
+        fam = {"ours_flagship", "surgery_ablation"}
+        top_run = 0
+        for _, grp, _, _ in items:
+            if grp in fam:
+                top_run += 1
+            else:
+                break
+        if top_run >= 2:
+            ax.axhspan(ys[top_run - 1] - 0.45, ys[0] + 0.45,
+                       color="#A5D6A7", alpha=0.22, zorder=0)
+
+        # best-ours vs raw ablation tie
+        def get(name_sub):
+            for s, g, m, ci in items:
+                if name_sub in s:
+                    return m, ci
+            return None
+        ours = min((get(n) for n in ("3-stage-DI", "no-DI") if get(n)),
+                   key=lambda t: (t[0] if not hi else -t[0]), default=None)
+        raw = get("raw")
+        tie = ours and raw and abs(ours[0] - raw[0]) <= ours[1] + raw[1]
+        # ── ONE annotation in the GUARANTEED-EMPTY corner ──
+        # ↓ metrics sort asc → shortest bars at TOP → top-right is whitespace.
+        # ↑ metrics sort desc → shortest bars at BOTTOM → bottom-right is whitespace.
+        lines = []
+        if top_run >= 2:
+            lines.append(f"SURGERY FAMILY — sweeps top {top_run}")
+        if tie:
+            lines.append("* DI/3-stage ≈ raw surgery (95% CI)\n   → schedule adds no sig. gain")
+        if lines:
+            cy, va = (0.955, "top") if not hi else (0.045, "bottom")
+            ax.text(0.985, cy, "\n".join(lines), transform=ax.transAxes,
+                    ha="right", va=va, fontsize=8.2, fontweight="bold",
+                    color="#1B5E20", linespacing=1.3,
+                    bbox=dict(boxstyle="round,pad=0.35", fc="#F1F8E9",
+                              ec="#7CB342", alpha=0.95))
+
+
+def plot_paper_scorecard(metrics_json: Path, out_dir: Path, stem: str = "eval_scorecard_paper"):
+    """HONEST paper scorecard — surgery-family predictive dominance over the FULL baseline set (nothing
+    hidden). Reads eval_metrics.json (same file the watch refresh emits). Folded verbatim from
+    scripts/iter18_paper_scorecard.py build() — figure kept byte-equivalent."""
+    rows = _ps_load(metrics_json)
+    fig = plt.figure(figsize=(20, 16))
+    # dedicated rows: hero · support · legend · banner — no overlap by construction
+    gs = fig.add_gridspec(4, 2, height_ratios=[1.25, 1.0, 0.10, 0.32],
+                          hspace=0.40, wspace=0.34,
+                          left=0.17, right=0.965, top=0.91, bottom=0.03)
+    # hero row
+    for j, (k, t, d) in enumerate(_PS_HERO):
+        _ps_panel(fig.add_subplot(gs[0, j]), rows, k, t, d, annotate_family=True)
+    # support row
+    for j, (k, t, d) in enumerate(_PS_SUPPORT):
+        _ps_panel(fig.add_subplot(gs[1, j]), rows, k, t, d, annotate_family=True)
+
+    # legend — own row, won't collide with the banner
+    handles = [Patch(facecolor=s["color"], edgecolor=s["edge"], label=s["label"])
+               for s in _PS_GROUP_STYLE.values()]
+    axl = fig.add_subplot(gs[2, :]); axl.axis("off")
+    axl.legend(handles=handles, loc="center", ncol=4, fontsize=10.5, frameon=True)
+
+    # narrative banner — own row
+    ax = fig.add_subplot(gs[3, :]); ax.axis("off")
+    banner = (
+        "HONEST READ (full baseline set — nothing hidden):  the FACTOR-SURGERY FAMILY occupies the top of every predictive-quality "
+        "metric — causal sensitivity and future-frame MSE — with 95% CIs clear of full fine-tune, LoRA/DoRA and the frozen encoder.\n"
+        "The DI / 3-stage schedule (ours) MATCHES raw surgery within 95% CI: an honest ablation, not a hidden weakness — the gain "
+        "comes from surgery itself.   Surgery trades a small temporal-ordering / TCC margin (see full 14-panel scorecard) for this "
+        "predictive lead; we report that trade-off rather than dropping those panels."
+    )
+    ax.text(0.5, 0.5, banner, transform=ax.transAxes, ha="center", va="center",
+            fontsize=11, wrap=True,
+            bbox=dict(boxstyle="round,pad=0.6", fc="#FFFDE7", ec="#F9A825", lw=1.2))
+
+    fig.suptitle("Factor surgery dominates predictive-quality metrics — full baseline set, no per-panel hiding "
+                 "(* = ours · green band = surgery family · 95% BCa CI)",
+                 fontsize=15, fontweight="bold", y=0.965)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for ext in ("png", "pdf"):
+        p = out_dir / f"{stem}.{ext}"
+        fig.savefig(p, dpi=150 if ext == "png" else None, bbox_inches="tight")
+        print(f"  [paper-scorecard] saved → {p}")
+    plt.close(fig)
+
+
+# ═══ Big eyeball-able TCC comparison chart (folded from scripts/iter18_tcc_chart.py, iter18 2026-06-14) ═══
+# Two horizontal-bar panels (TCC Kendall τ ↑ · TCC cycle-back ↓). Every encoder with TCC data is shown; the 4
+# named players (Frozen / Pretrain / OURS-3stage-DI / raw) are boldly coloured, the rest grey. PLAIN decimals
+# (no ×10ⁿ rescale) so they verify by eye against eval_metrics.csv. _tcc_*-prefixed to avoid name collisions;
+# figure kept byte-equivalent (direct fig.savefig png@150 + pdf).
+# display name + colour + bold? — keyed by encoder. The 4 named players pop; rest grey.
+_TCC_ARMS = {
+    "vjepa_2_1_frozen":                     ("Frozen  (reference)",   "#E53935", True),
+    "vjepa_2_1_pretrain_encoder":           ("Pretrain  (start pt)",  "#1565C0", True),
+    "vjepa_2_1_surgical_3stage_DI_encoder": ("OURS  (3-stage DI)",    "#1B5E20", True),
+    "vjepa_2_1_surgery_raw_encoder":        ("raw  (surgery control)", "#C0CA33", True),
+    "vjepa_2_1_surgical_noDI_encoder":      ("Surgery no-DI",         "#9E9E9E", False),
+    "vjepa_2_1_surgical_autorgn_encoder":   ("Surgery auto-RGN",      "#9E9E9E", False),
+    "vjepa_2_1_full_ft_encoder":            ("Full fine-tune",        "#9E9E9E", False),
+    "vjepa_2_1_lpft_encoder":               ("LP-FT",                 "#9E9E9E", False),
+    "vjepa_2_1_peft_lora_encoder":          ("LoRA",                  "#9E9E9E", False),
+    "vjepa_2_1_peft_dora_encoder":          ("DoRA",                  "#9E9E9E", False),
+}
+# iter18 (2026-06-14): any scheduler encoder NOT explicitly styled above → grey default (same treatment as
+# the other fine-tuners), so a NEW arm auto-appears in this chart with no edit here. Roster from the single
+# source (configs/arm_registry.yaml); the 4 named players above keep their bold custom colours.
+for _a, _enc, _grp, _kind in display_arms():
+    _full = f"vjepa_2_1_{_enc}"
+    if _full not in _TCC_ARMS:
+        _TCC_ARMS[_full] = (_enc.replace("_encoder", "").replace("_", " "), "#9E9E9E", False)
+_TCC_PANELS = [
+    ("tcc_tau",   "TCC Kendall τ   (↑ higher = better)", "higher",
+     "frame-order rank correlation"),
+    ("tcc_cycle", "TCC cycle-back   (↓ lower = better)",      "lower",
+     "cycle-consistency error"),
+]
+
+
+def _tcc_panel(ax, rows, key, title, direction, subtitle, frozen_val):
+    hi = direction == "higher"
+    items = [(_TCC_ARMS[e][0], _TCC_ARMS[e][1], _TCC_ARMS[e][2], d[key]["mean"], d[key]["ci_half"] or 0.0)
+             for e, d in rows.items() if e in _TCC_ARMS and d[key]["mean"] is not None]
+    items.sort(key=lambda t: -t[3] if hi else t[3])          # best at TOP
+    ys = np.arange(len(items))[::-1]
+    for y, (name, col, bold, m, ci) in zip(ys, items):
+        ax.barh(y, m, color=col, alpha=0.95 if bold else 0.5, height=0.66,
+                edgecolor="black" if bold else col, linewidth=1.8 if bold else 0.6,
+                xerr=ci, capsize=4, error_kw=dict(lw=1.2, ecolor="#222"))
+        ax.text(m + ci, y, f"  {m:.3f}", va="center", fontsize=12.5,
+                fontweight="bold" if bold else "normal",
+                color="#000" if bold else "#666")
+    ax.set_yticks(ys)
+    ax.set_yticklabels([n for n, *_ in items], fontsize=12.5)
+    for tick, (_, col, bold, *_2) in zip(ax.get_yticklabels(), items):
+        tick.set_color(col if bold else "#777")
+        tick.set_fontweight("bold" if bold else "normal")
+    # "the bar to beat" — Frozen reference line
+    ax.axvline(frozen_val, color="#E53935", ls="--", lw=1.6, alpha=0.7, zorder=0)
+    ax.text(frozen_val, len(items) - 0.3, " Frozen = the bar to beat",
+            color="#E53935", fontsize=10.5, fontweight="bold", va="bottom")
+    lo = min(m - ci for *_3, m, ci in items)
+    hivv = max(m + ci for *_3, m, ci in items)
+    pad = (hivv - lo) * 0.18
+    ax.set_xlim(lo - pad, hivv + pad * 2.6)                   # zoom so gaps are visible
+    ax.set_title(title, fontsize=15, fontweight="bold", pad=10)
+    ax.set_xlabel(f"score  ({subtitle}) — exact decimals, = eval_metrics.csv", fontsize=11)
+    ax.grid(axis="x", alpha=0.3)
+    ax.set_axisbelow(True)
+
+
+def plot_tcc_chart(metrics_json: Path, out_dir: Path, stem: str = "tcc_comparison"):
+    """Big eyeball-able TCC-only comparison chart (Kendall τ + cycle-back). Reads eval_metrics.json. Folded
+    verbatim from scripts/iter18_tcc_chart.py build() — figure kept byte-equivalent. Requires the frozen +
+    3stage-DI + raw rows (FAIL LOUD via KeyError if the json is missing them — same as the original)."""
+    rows = {x["encoder"]: x for x in json.load(open(metrics_json))}
+    frozen = rows["vjepa_2_1_frozen"]
+    fig, axes = plt.subplots(1, 2, figsize=(20, 8.5))
+    for ax, (key, title, direction, sub) in zip(axes, _TCC_PANELS):
+        _tcc_panel(ax, rows, key, title, direction, sub, frozen[key]["mean"])
+    o = rows["vjepa_2_1_surgical_3stage_DI_encoder"]
+    take = (f"Frozen wins BOTH · every fine-tuner drops below it · "
+            f"OURS (τ {o['tcc_tau']['mean']:.3f}) is the GENTLEST surgery — "
+            f"beats raw ({rows['vjepa_2_1_surgery_raw_encoder']['tcc_tau']['mean']:.3f}) "
+            f"but still below Frozen ({frozen['tcc_tau']['mean']:.3f}).")
+    fig.suptitle("TCC — can the encoder keep video frames in time-order?   "
+                 "(bold = the 4 players · grey = other fine-tuners · whiskers = 95% CI)",
+                 fontsize=16, fontweight="bold", y=0.99)
+    fig.text(0.5, 0.015, take, ha="center", fontsize=12.5, fontweight="bold",
+             bbox=dict(boxstyle="round,pad=0.5", fc="#FFF9C4", ec="#F9A825", lw=1.2))
+    fig.subplots_adjust(left=0.16, right=0.97, top=0.90, bottom=0.13, wspace=0.45)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for ext in ("png", "pdf"):
+        p = out_dir / f"{stem}.{ext}"
+        fig.savefig(p, dpi=150 if ext == "png" else None, bbox_inches="tight")
+        print(f"  [tcc-chart] saved → {p}")
+    plt.close(fig)
 
 
 def _winner_row(ax, tiesets, ny, mode):
@@ -1423,46 +1814,18 @@ def _skip_encoders_from_env(encoders):
 # Backbone via ITER18_BACKBONE env, hidden arms via ITER18_SKIP_ARMS env (same contract as
 # the watch scripts; the scheduler-log fallback is dropped — env is the durable source).
 _MW_BACKBONE = os.environ.get("ITER18_BACKBONE", "vjepa_2_1_vitG")
-_MW_TRAIN_ORDER = [
-    "pretrain_encoder",
-    "surgery_3stage_DI_encoder", "surgery_noDI_encoder",
-    "surgery_3stage_DI_head", "surgery_noDI_head",
-    "surgical_autorgn_encoder", "surgery_raw_encoder",
-    "full_ft_encoder", "lpft_encoder",
-    "peft_lora_encoder", "peft_dora_encoder",
-    "cassle_encoder", "ewc_encoder",
-]
-_MW_HEAD_ARMS = {"surgery_3stage_DI_head", "surgery_noDI_head"}
-_MW_ARM2ENC = {
-    "pretrain_encoder":          "pretrain_encoder",
-    "surgery_3stage_DI_encoder": "surgical_3stage_DI_encoder",
-    "surgery_noDI_encoder":      "surgical_noDI_encoder",
-    "surgery_3stage_DI_head":    "surgical_3stage_DI_head",
-    "surgery_noDI_head":         "surgical_noDI_head",
-    "surgical_autorgn_encoder":  "surgical_autorgn_encoder",
-    "surgery_raw_encoder":       "surgery_raw_encoder",
-    "full_ft_encoder":           "full_ft_encoder",
-    "lpft_encoder":              "lpft_encoder",
-    "peft_lora_encoder":         "peft_lora_encoder",
-    "peft_dora_encoder":         "peft_dora_encoder",
-    "cassle_encoder":            "cassle_encoder",
-    "ewc_encoder":               "ewc_encoder",
-}
-_MW_ARM2DIR = {
-    "pretrain_encoder":          "m09a_pretrain_encoder",
-    "surgery_3stage_DI_encoder": "m09c_surgery_3stage_DI_encoder",
-    "surgery_noDI_encoder":      "m09c_surgery_noDI_encoder",
-    "surgery_3stage_DI_head":    "m09c_surgery_3stage_DI_head",
-    "surgery_noDI_head":         "m09c_surgery_noDI_head",
-    "surgical_autorgn_encoder":  "m09e_autorgn_encoder",
-    "surgery_raw_encoder":       "m09c_surgery_raw_encoder",
-    "full_ft_encoder":           "m09f_full_ft_encoder",
-    "lpft_encoder":              "m09f_lpft_encoder",
-    "peft_lora_encoder":         "m09b_peft_lora_encoder",
-    "peft_dora_encoder":         "m09b_peft_dora_encoder",
-    "cassle_encoder":            "m09d_cassle_encoder",
-    "ewc_encoder":               "m09d_ewc_encoder",
-}
+# iter18 (2026-06-14): these 4 roster maps are now READ FROM THE SINGLE SOURCE (configs/arm_registry.yaml)
+# via src/utils/arm_registry.py — NOT hardcoded — so a NEW arm (e.g. the wiseft-v2 sweep) auto-appears in
+# the metrics_watch refresh with no edit here. arm2enc()/arm2dir() return the scheduler arms in registry
+# order (byte-equal to the old ARM2ENC/ARM2DIR literals + the post-06-12 improvement & merge arms);
+# _MW_TRAIN_ORDER preserves registry file order (display_arms order == the table/figure order); _MW_HEAD_ARMS
+# is the surgery/pretrain HEAD kinds. Merge arms (wiseft) carry no probe_history → empty train blocks, and
+# _mw_render_graphs styles every arm via _MW_TRAIN_STYLE.get(arm, _MW_DEF_TRAIN_STYLE) (grey fallback).
+_MW_ARM2ENC = arm2enc()
+_MW_ARM2DIR = arm2dir()
+_MW_TRAIN_ORDER = [a for a, _e, _g, _k in display_arms(include_merge=True)]
+_MW_HEAD_ARMS = {a for a, _e, _g, k in display_arms(include_merge=True)
+                 if k in ("surgery_head", "pretrain_head")}
 _MW_PT_FAMILIES = ["rollout", "causal", "tdist", "maskratio", "order", "teacher_free"]
 _MW_ET_FLAT = ["aot", "tov", "pace"]
 _MW_FRESH_LOG_S = 1800
@@ -1600,8 +1963,12 @@ def _mw_eval_rows(outputs_root: Path):
     return rows
 
 
-_MW_FAM_OURS = {"surgery_3stage_DI_encoder", "surgery_noDI_encoder",
-                "surgery_3stage_DI_head", "surgery_noDI_head"}
+# OURS = the surgery NOVELTY family from the SINGLE source (registry groups), so a new improvement arm
+# auto-counts as OURS in the kept-scorecard verdict (a winning tccaux/intervene no longer mislabels as
+# "OTHERS LEAD"). Mirrors scripts/iter18_poc_metrics.py _FAM_OURS exactly. include_merge=True so the
+# wiseft merge arms (also ours_*/improvement group) count too.
+_MW_OURS_GROUPS = {"ours_flagship", "ours_head", "improvement"}
+_MW_FAM_OURS = {a for a, _e, _g, _k in display_arms(include_merge=True) if _g in _MW_OURS_GROUPS}
 _MW_TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = greens
     "pretrain_encoder":          ("vCSSL",     "#1565C0", "-",  1.8),
     "surgery_3stage_DI_encoder": ("s3DI-enc",  "#1B5E20", "-",  2.6),
@@ -1616,7 +1983,29 @@ _MW_TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS 
     "peft_dora_encoder":         ("DoRA",      "#546E7A", "--", 1.4),
     "cassle_encoder":            ("CaSSLe",    "#9E9D24", "--", 1.4),
     "ewc_encoder":               ("EWC",       "#6D4C41", "--", 1.4),
+    # iter18 (2026-06-14) improvement arms — GREENS (the recolor below forces them to the family green anyway);
+    # any FUTURE/merge arm falls back to _MW_DEF_TRAIN_STYLE.
+    "surgery_3stage_DI_replay25_encoder":  ("replay25", "#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_diheavy_encoder":   ("diheavy",  "#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_tccaux_encoder":    ("tccaux",   "#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_intervene_encoder": ("interv",   "#2E7D32", "-", 2.2),
 }
+_MW_DEF_TRAIN_STYLE = ("?", "#BDBDBD", ":", 1.2)   # unregistered/merge arm → grey (a new arm never KeyErrors the graph)
+# user goal (2026-06-14): every variant of OUR SURGERY NOVELTY renders GREEN — never a non-green hue — so the
+# surgery family is one visual cluster vs the distinctly-coloured baselines. "Our surgery" = registry kind ∈
+# {surgery, surgery_head, merge} (the surgery trainers + the wiseft merges built FROM them); this INCLUDES
+# surgery_raw (kind=surgery — it IS surgery on raw factors) but EXCLUDES surgical_autorgn (kind=baseline — a
+# prior FT technique, NOT our novelty), which keeps its own colour. Shade MAY differ between sub-roles (the
+# user allows "different of GREEN"), so the recolor keeps each arm's linestyle/width/label and forces only the
+# COLOUR: the ours headline family (flagship + head + improvement, incl. wiseft merges) → ONE dark green;
+# surgery_raw → a DISTINCT green so the ablation stays separable yet unmistakably surgery-green. kind-derived
+# (single source), so a new surgery/improvement arm auto-greens with no edit here.
+_MW_OURS_DARK_GREEN = "#2E7D32"
+_MW_SURGERY_GREEN = {a: _MW_OURS_DARK_GREEN for a, _e, _g, k in display_arms(include_merge=True)
+                     if k in ("surgery", "surgery_head", "merge")}
+_MW_SURGERY_GREEN["surgery_raw_encoder"] = "#558B2F"   # ablation (still surgery) → distinct olive-green
+_MW_TRAIN_STYLE = {a: ((s[0], _MW_SURGERY_GREEN[a], s[2], s[3]) if a in _MW_SURGERY_GREEN else s)
+                   for a, s in _MW_TRAIN_STYLE.items()}
 _MW_TRAIN_METRICS = [
     ("probe_top1",    "action top-1",  "higher"),
     ("motion_cos",    "motion-cos",    "higher"),
@@ -1655,7 +2044,7 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
     for ax, (key, title, direction) in zip(axes.flat, _MW_TRAIN_METRICS):
         panel_ys = []
         for b in blocks:
-            sty = _MW_TRAIN_STYLE[b["arm"]]
+            sty = _MW_TRAIN_STYLE.get(b["arm"], _MW_DEF_TRAIN_STYLE)   # merge/new arm → grey, no KeyError
             pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
                          if r.get(key) is not None and r.get("step") is not None)
             if not pts:
@@ -1719,9 +2108,9 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
             verdicts.append((title, None, None, None, None, None))
             continue
         entries.sort(key=lambda t: t[1], reverse=(direction == "higher"))
-        labels = [_MW_TRAIN_STYLE[a][0] + (" (hd)" if a.endswith("_head") else "")
+        labels = [_MW_TRAIN_STYLE.get(a, _MW_DEF_TRAIN_STYLE)[0] + (" (hd)" if a.endswith("_head") else "")
                   for a, _, _ in entries]
-        colors = [_MW_TRAIN_STYLE[a][1] for a, _, _ in entries]
+        colors = [_MW_TRAIN_STYLE.get(a, _MW_DEF_TRAIN_STYLE)[1] for a, _, _ in entries]
         vals = [v for _, v, _ in entries]
         errs = [(e or 0.0) for _, _, e in entries]
         scale, exp = common_exponent(vals, errs)     # iter18 (2026-06-13): rescale value axis
@@ -1854,11 +2243,25 @@ def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
     vis_blocks = [b for b in blocks if b["arm"] not in skip]
     vis_ev = [r for r in ev if r["_enc_full"] not in skip_encs]
     _mw_render_graphs(vis_blocks, vis_ev, out_dir)
+    # The 3 registry-derived eval_metrics.json readers (consolidated here so `--metrics-watch-only` is a
+    # superset of the retired scripts/iter18_poc_metrics.py figure set): WiSE-FT v2 sweep table + the HONEST
+    # paper scorecard + the eyeball-able TCC chart. They read the eval_metrics.json _mw_dump just wrote; under
+    # a LIVE partial run a not-yet-evaled arm just shows pending / is skipped. tcc_chart needs the frozen +
+    # 3stage-DI + raw rows (FAIL LOUD KeyError otherwise) → guarded so a partial json can't break the watch.
+    mj = out_dir / "eval_metrics.json"
+    plot_wiseft_sweep_table(mj, out_dir)
+    plot_paper_scorecard(mj, out_dir)
+    _tcc_keys = {"vjepa_2_1_frozen", "vjepa_2_1_surgical_3stage_DI_encoder", "vjepa_2_1_surgery_raw_encoder"}
+    _have = {x["encoder"] for x in json.loads(mj.read_text())} if mj.exists() else set()
+    if _tcc_keys <= _have:
+        plot_tcc_chart(mj, out_dir)
+    else:
+        print(f"  [tcc-chart] skip — partial json missing {sorted(_tcc_keys - _have)} (not evaled yet)")
     if skip:
         print(f"  [metrics-watch] ⏷ {sorted(skip)} hidden from graphs · still in the json/csv")
     print(f"  [metrics-watch] regenerated → {out_dir}/ · "
-          f"{{train_trajectories,kept_scorecard,eval_scorecard}}.{{png,pdf}} + "
-          f"{{train,eval}}_metrics.{{json,csv}}")
+          f"{{train_trajectories,kept_scorecard,eval_scorecard,wiseft_sweep_table,eval_scorecard_paper,"
+          f"tcc_comparison}}.{{png,pdf}} + {{train,eval}}_metrics.{{json,csv}}")
 
 
 def main():

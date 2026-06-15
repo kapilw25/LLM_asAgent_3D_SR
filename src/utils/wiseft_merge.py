@@ -97,10 +97,21 @@ def _common_float_keys(a: dict, b: dict):
     return inter, skipped
 
 
+def _blend(fro: dict, sur: dict, inter, al: float) -> dict:
+    """α·surgery + (1−α)·frozen on the shared float keys; non-shared keys/buffers kept from surgery."""
+    m = dict(sur)
+    for k in inter:
+        m[k] = (1.0 - al) * fro[k].float() + al * sur[k].float()
+    return m
+
+
 def main():
     ap = argparse.ArgumentParser(description="WiSE-FT weight-space merge (frozen × surgery).")
     ap.add_argument("--frozen-ckpt",  type=Path, required=True, help="base FROZEN encoder ckpt")
     ap.add_argument("--surgery-ckpt", type=Path, required=True, help="fine-tuned surgery student_encoder.pt")
+    ap.add_argument("--surgery-pred-ckpt", type=Path, default=None,
+                    help="surgery arm's m09*_ckpt_best.pt — ALSO blend its predictor and write out/m09c_ckpt_best.pt "
+                         "so the WiSE-FT arm reports prediction metrics (future-MSE/causal), not just encoder ones")
     ap.add_argument("--out-dir",      type=Path, default=None, help="arm output dir (required unless --inspect)")
     ap.add_argument("--alpha",  type=float, default=None, help="single α → writes <out-dir>/student_encoder.pt")
     ap.add_argument("--alphas", type=float, nargs="+", default=None,
@@ -118,6 +129,24 @@ def main():
     if not inter:
         sys.exit("FATAL: 0 interpolable keys — the two checkpoints don't align (see skips above).")
 
+    # optional predictor blend — Stage 8/8b reads the predictor from <arm>/m09c_ckpt_best.pt, so without this
+    # the WiSE-FT arm carries no predictor and future-MSE/causal stay blank (the original encoder-only flaw).
+    pred_fro = pred_sur = pred_inter = None
+    if a.surgery_pred_ckpt is not None:
+        if not (isinstance(_fro_obj, dict) and isinstance(_fro_obj.get("predictor"), dict)):
+            sys.exit("FATAL: --frozen-ckpt carries no 'predictor' dict — cannot merge the predictor.")
+        pred_fro = _strip(("module.", "encoder.", "backbone."), _fro_obj["predictor"])
+        pso = torch.load(str(a.surgery_pred_ckpt), map_location="cpu", weights_only=False, mmap=True)
+        if not (isinstance(pso, dict) and isinstance(pso.get("predictor"), dict)):
+            top = list(pso)[:6] if isinstance(pso, dict) else type(pso).__name__
+            sys.exit(f"FATAL: --surgery-pred-ckpt has no 'predictor' dict (top={top}).")
+        pred_sur = _strip(("module.", "encoder.", "backbone."), pso["predictor"])
+        pred_inter, pred_skip = _common_float_keys(pred_fro, pred_sur)
+        print(f"  [wiseft] predictor: frozen={len(pred_fro)} · surgery={len(pred_sur)} · "
+              f"interpolated={len(pred_inter)} · skipped={len(pred_skip)}")
+        if not pred_inter:
+            sys.exit("FATAL: 0 interpolable predictor keys — frozen/surgery predictors don't align.")
+
     if a.inspect:
         print("  [wiseft] --inspect only; nothing written.")
         return
@@ -129,17 +158,22 @@ def main():
     for al in alphas:
         if not 0.0 <= al <= 1.0:
             sys.exit(f"FATAL: alpha {al} out of [0,1]")
-        merged = dict(sur)                                  # start from surgery (keeps non-float buffers)
-        for k in inter:
-            merged[k] = (1.0 - al) * fro[k].float() + al * sur[k].float()
+        merged = _blend(fro, sur, inter, al)                # encoder blend (starts from surgery → keeps buffers)
         # re-wrap in surgery's container (e.g. student_state_dict) so the eval loader reads the
         # merged ckpt byte-identically to every other arm's student_encoder.pt.
         payload = merged if sur_key is None else {**sur_obj, sur_key: merged}
         sub = a.out_dir if (a.alphas is None) else (a.out_dir / f"alpha{al:g}")
         sub.mkdir(parents=True, exist_ok=True)
-        out = sub / "student_encoder.pt"
-        torch.save(payload, str(out))
-        print(f"  [wiseft] α={al:g} → {out}  ({len(inter)} keys blended)")
+        torch.save(payload, str(sub / "student_encoder.pt"))
+        line = f"  [wiseft] α={al:g} → student_encoder.pt ({len(inter)} enc keys)"
+        if pred_inter is not None:
+            # combined ckpt Stage 8/8b reads: encoder under 'student', predictor under 'predictor'
+            merged_pred = _blend(pred_fro, pred_sur, pred_inter, al)
+            torch.save({"student": merged, "predictor": merged_pred, "step": 0,
+                        "best_metric": float(al), "is_full": True, "has_optimizer": False},
+                       str(sub / "m09c_ckpt_best.pt"))
+            line += f" + m09c_ckpt_best.pt ({len(pred_inter)} pred keys)"
+        print(line + f"  → {sub}")
 
 
 if __name__ == "__main__":

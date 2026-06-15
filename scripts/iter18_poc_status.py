@@ -622,12 +622,35 @@ def maybe_plot(mtag, mode):
         lock.unlink(missing_ok=True)
 
 
+def maybe_metrics_plots(mtag, mode):
+    """`--plots`: refresh the WHOLE metrics_watch figure+data set via m13's self-contained
+    --metrics-watch refresh (so `iter18_poc_status.py --plots` = one command for status + every figure).
+    Reuses THIS process's ITER18_BACKBONE / ITER18_SKIP_ARMS env (m13 reads the same vars: _MW_BACKBONE +
+    _mw_skip_arms). Read-only on the eval/train artifacts; safe next to a live run."""
+    out = REPO / f"outputs/{mtag}"
+    cmd = [sys.executable, "-u", "src/m13_eval_plot.py", f"--{mode}",
+           "--output-dir", f"outputs/{mtag}/probe_plot",
+           "--outputs-root", f"outputs/{mtag}",
+           "--metrics-watch-out", f"outputs/{mtag}/probe_plot/metrics_watch",
+           "--metrics-watch-only"]
+    print(f"\n  📊 --plots: refreshing metrics_watch figures+data → {out}/probe_plot/metrics_watch/{BACKBONE}/")
+    rc = subprocess.run(cmd, cwd=str(REPO), env=os.environ.copy()).returncode
+    if rc == 0:
+        print(f"  📊 metrics_watch refreshed (rc=0) → outputs/{mtag}/probe_plot/metrics_watch/{BACKBONE}/")
+    else:
+        print(f"  📊 metrics_watch refresh rc={rc} — partial/blocked (partial json under a live run is normal)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["POC", "SANITY"], default="POC")
     ap.add_argument("--log", default=None,
                     help="explicit main log (default: latest logs/iter18_ngpu_<mode>*.log "
                          "excluding per-job _train_/_eval_/_s3_ logs)")
+    ap.add_argument("--plots", action="store_true",
+                    help="after the ASCII status, refresh ALL metrics_watch figures (3 base + WiSE-FT sweep "
+                         "+ paper scorecard + TCC chart) + {train,eval}_metrics.{json,csv} via m13's "
+                         "self-contained --metrics-watch refresh (one command = status + every figure).")
     args = ap.parse_args()
 
     jobs, mtag = build_jobs(args.mode)
@@ -1023,6 +1046,11 @@ def main():
               + ", ".join(j for j in jobs if classify(j) == "failed"))
     print("\n  legend: 🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 📊 eval │ "
           "✅ done · 🔄 running · ⬚ pending · ❌ failed")
+
+    # --plots: AFTER the ASCII status, refresh the full metrics_watch figure+data set (consolidated path —
+    # one command for status + every figure). mtag/mode come from the parsed --mode above.
+    if args.plots:
+        maybe_metrics_plots(mtag, args.mode)
 
 
 if __name__ == "__main__":

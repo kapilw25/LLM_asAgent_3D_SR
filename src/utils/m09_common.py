@@ -28,6 +28,7 @@ from utils.cache_policy import add_cache_policy_arg
 from utils.multi_task_loss import merge_multi_task_config
 from utils.motion_aux_loss import merge_motion_aux_config
 from utils.stream_autotune import enable_train_frame_cache
+from utils import data_paths  # iter18: tube_cache_dir(local_data) — single source for cache path
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -175,6 +176,19 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
     # one seam every m09 trainer passes through — so the env reaches DataLoader fork-
     # workers + producer threads. See stream_autotune.enable_train_frame_cache.
     enable_train_frame_cache(cfg["data"]["local_data"])
+
+    # iter18 (2026-06-15): D_I tube cache dir injection — SAME single seam. The
+    # tube_cache.dir is RUNTIME-derived from the resolved local_data (so it tracks
+    # --local-data) and written into cfg["interaction_mining"]["tube_cache"] — which
+    # every m09 trainer forwards as interaction_cfg=cfg["interaction_mining"] into
+    # StreamingFactorDataset → stream_interaction_tubes(). Single source: no per-module
+    # re-derivation (CLAUDE.md SHARED DERIVATION VIA CLI). Only when the yaml declares the
+    # block + enabled:true do we resolve a dir; a missing block / enabled:false leaves the
+    # cfg untouched → stream_interaction_tubes falls back to its pre-cache compute path.
+    im = cfg.get("interaction_mining")
+    if im is not None and im.get("tube_cache", {}).get("enabled"):
+        im["tube_cache"]["dir"] = str(
+            data_paths.tube_cache_dir(cfg["data"]["local_data"]))
 
     # 2) optimization overrides
     # Per-mode flatten: max_epochs may be a dict {sanity, poc, full} OR scalar.

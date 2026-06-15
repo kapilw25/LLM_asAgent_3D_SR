@@ -12,6 +12,7 @@ USAGE:
 """
 import csv
 import json
+import logging
 import math
 
 import matplotlib
@@ -189,6 +190,13 @@ def init_style():
         "savefig.pad_inches": 0.1,
         "savefig.facecolor": "white",
     })
+    # Silence matplotlib's cosmetic "findfont: Failed to find font weight bold" noise: the global BOLD
+    # weight has no bold face in the math/serif fallback (exponent tags etc.), so font_manager logs it
+    # ~10×/figure then renders at 400 — no harm to the data. Single-source here → EVERY plot path is quiet.
+    _fm = logging.getLogger("matplotlib.font_manager")
+    if not getattr(_fm, "_fj_bold_filtered", False):
+        _fm.addFilter(lambda _r: "Failed to find font weight" not in _r.getMessage())
+        _fm._fj_bold_filtered = True
 
 
 def save_fig(fig, path_stem: str, dpi: int = None):

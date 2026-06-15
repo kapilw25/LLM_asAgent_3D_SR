@@ -12,8 +12,11 @@ scripts/tests_streaming/test_parity.py.
 This module is pure: no globals, no side effects, no RNG. Deterministic given
 (mp4_bytes, mask_npz_path, factor_type, factor_cfg).
 """
+import hashlib
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import List, Tuple
 
@@ -135,43 +138,105 @@ def stream_factor(
     )
 
 
-def stream_interaction_tubes(
+# ─────────────────────────────────────────────────────────────────────────
+# D_I interaction-tube READ-THROUGH DISK CACHE (iter18 2026-06-15)
+# ─────────────────────────────────────────────────────────────────────────
+# stream_interaction_tubes() is a PURE deterministic fn of (mp4_bytes, mask.npz,
+# cfg, num_frames) — its docstring contract. So its (decode MP4 + mine tubes)
+# output can be memoized to ONE .npz per (clip_key, cfg-hash): the 2nd+ epoch reads
+# the .npz instead of re-decoding + re-mining. RESULT-SAFETY: the cache returns the
+# SAME tube LIST → the caller's random pick (training.py:2235) is byte-identical →
+# training is bit-equivalent. The cache key includes every input that changes the
+# tubes (cfg fields + num_frames) so any change MISSES (no stale reuse). Atomic
+# write (temp + os.replace) survives concurrent DataLoader fork-workers computing
+# the same clip. Bypassed entirely when tube_cache absent / enabled:false.
+
+def _tube_cache_key(clip_key: str, num_frames: int, interaction_cfg: dict) -> str:
+    """Short stable hash of EVERYTHING the tube list depends on. A change to any
+    field below → different key → cache MISS → recompute (never a stale tube).
+
+    Inputs hashed: clip_key (identifies mp4_bytes + mask.npz pair), num_frames
+    (decode_video_bytes arg → changes frame sampling), and the 3 cfg fields the
+    compute reads: enabled, tube_margin_pct, category_pair_blacklist. mp4_bytes +
+    mask.npz are NOT hashed directly (immutable per clip_key in this corpus); the
+    clip_key stands in for them. blacklist is order-canonicalized (sorted pairs)
+    so [[a,b]] and [[b,a]] map to the same key (matches the compute's filter)."""
+    blacklist = sorted(tuple(sorted(pair))
+                       for pair in interaction_cfg["category_pair_blacklist"])
+    payload = json.dumps({
+        "clip_key": clip_key,
+        "num_frames": int(num_frames),
+        "enabled": bool(interaction_cfg["enabled"]),
+        "tube_margin_pct": interaction_cfg["tube_margin_pct"],
+        "category_pair_blacklist": blacklist,
+        "v": 1,  # cache schema version — bump to invalidate all entries
+    }, sort_keys=True)
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+
+
+def _tube_cache_path(cache_dir: str, clip_key: str, key: str) -> Path:
+    """<cache_dir>/<safe_clip_key>__<cfg-hash>.npz (slashes → __ like masks)."""
+    safe_key = clip_key.replace("/", "__")
+    return Path(cache_dir) / f"{safe_key}__{key}.npz"
+
+
+def _load_tube_cache(path: Path) -> List[np.ndarray]:
+    """Read a cached tube list. Returns the list (possibly empty when n=0).
+    Raises on a malformed file (fail loud — a corrupt cache must not be silently
+    treated as a miss-then-overwrite that could mask an upstream write bug)."""
+    d = np.load(path, allow_pickle=False)
+    n = int(d["n"])
+    return [d[f"t{i}"] for i in range(n)]
+
+
+def _save_tube_cache_atomic(path: Path, tubes: List[np.ndarray]) -> None:
+    """Atomically write the whole tube list to `path`. Write to a temp file in the
+    SAME dir then os.replace (atomic on POSIX) so a concurrent reader never sees a
+    half-written file and two fork-workers racing the same clip don't corrupt it
+    (last writer wins; both wrote identical bytes — the fn is deterministic).
+    Empty list → n=0, no t* arrays (handled symmetrically by _load_tube_cache)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    arrays = {"n": np.int64(len(tubes))}
+    for i, t in enumerate(tubes):
+        arrays[f"t{i}"] = t
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent),
+                                    prefix=f".{path.stem}.", suffix=".tmp.npz")
+    os.close(fd)
+    try:
+        np.savez(tmp_name, **arrays)
+        # np.savez appends .npz to a name without that suffix; normalize.
+        written = tmp_name if os.path.exists(tmp_name) else tmp_name + ".npz"
+        os.replace(written, path)
+    finally:
+        for leftover in (tmp_name, tmp_name + ".npz"):
+            if os.path.exists(leftover):
+                os.remove(leftover)
+
+
+def _compute_interaction_tubes(
     mp4_bytes: bytes,
     mask_npz_path: Path,
     interaction_cfg: dict,
-    num_frames: int,  # iter18 H6: caller passes (cfg data.num_frames)
-    tmp_dir: str = None,
-    clip_key: str = "",
+    num_frames: int,
+    tmp_dir: str,
+    clip_key: str,
 ) -> List[np.ndarray]:
-    """Generate D_I interaction tubes on-demand from (raw MP4 bytes + m10 mask.npz).
+    """PURE compute — the original (pre-cache) stream_interaction_tubes body.
 
     Bitwise-parity contract with m11's legacy disk path at
     src/m11_factor_datasets.py:_process_one_clip lines 643-691 (the regen_di_only
-    branch). Follows the same 4-step pipeline:
+    branch). 4-step pipeline:
       1. np.load(mask_npz_path) → interactions_json + per_object_bboxes_json +
          centroids_json + obj_id_to_cat_json
       2. decode_video_bytes(mp4_bytes, ...) → frames_np (T, H, W, C) uint8
       3. Apply category_pair_blacklist filter (order-insensitive, per #77)
-      4. If per_object_bboxes present: make_interaction_tubes_from_bboxes(...)
-         Elif centroids present:       make_interaction_tubes_from_centroids(...)
-         Else:                         empty list
+      4. bboxes → make_interaction_tubes_from_bboxes / centroids → _from_centroids
 
-    Returns list of (T_tube, H, W, C) uint8 arrays — one per non-filtered
-    interaction event with ≥4 valid frames. Empty list when all filtered out or
-    no interactions present in mask.npz.
-
-    interaction_cfg must contain:
-      - `tube_margin_pct`: float, box expansion margin (e.g. 0.15)
-      - `category_pair_blacklist`: list of [cat_a, cat_b] pairs to drop
-      - `enabled`: bool (when False returns empty list — matches m11 behavior)
-
-    This is a pure function: deterministic given (mp4_bytes, mask_npz, cfg). No
-    globals, no RNG. Called per-step from StreamingFactorDataset; the caller
-    picks a random tube via its seeded RNG.
+    Deterministic given (mp4_bytes, mask_npz, cfg, num_frames). No globals, no RNG.
     """
     # iter18 H3: strict — "interaction_cfg must contain enabled" is the declared
-    # contract (docstring above); a missing yaml key silently disabling D_I
-    # mining is exactly the masked-failure class CLAUDE.md bans.
+    # contract; a missing yaml key silently disabling D_I mining is exactly the
+    # masked-failure class CLAUDE.md bans.
     if not interaction_cfg["enabled"]:
         return []
 
@@ -221,6 +286,60 @@ def stream_interaction_tubes(
         return make_interaction_tubes_from_centroids(
             frames_np, filtered, centroids, tube_margin)
     return []
+
+
+def stream_interaction_tubes(
+    mp4_bytes: bytes,
+    mask_npz_path: Path,
+    interaction_cfg: dict,
+    num_frames: int,  # iter18 H6: caller passes (cfg data.num_frames)
+    tmp_dir: str = None,
+    clip_key: str = "",
+) -> List[np.ndarray]:
+    """Generate D_I interaction tubes on-demand from (raw MP4 bytes + m10 mask.npz).
+
+    Returns list of (T_tube, H, W, C) uint8 arrays — one per non-filtered
+    interaction event with ≥4 valid frames. Empty list when all filtered out or
+    no interactions present in mask.npz.
+
+    interaction_cfg must contain:
+      - `tube_margin_pct`: float, box expansion margin (e.g. 0.15)
+      - `category_pair_blacklist`: list of [cat_a, cat_b] pairs to drop
+      - `enabled`: bool (when False returns empty list — matches m11 behavior)
+      - OPTIONAL `tube_cache`: {`enabled`: bool, `dir`: str} — when enabled+dir set,
+        this fn is a READ-THROUGH cache: on call, if a .npz for (clip_key, cfg-hash)
+        exists, load+return it (skips the MP4 decode + tube mining); else compute the
+        tubes (via _compute_interaction_tubes), atomically save, return. Absent /
+        disabled → exact pre-cache behavior (pure compute every call).
+
+    RESULT-SAFETY: the cache returns the SAME tube LIST as the compute path, so the
+    caller's random tube-pick (StreamingFactorDataset) is byte-identical → cached and
+    uncached training are bit-equivalent. The cache key includes every tube-affecting
+    input (clip_key, num_frames, enabled, tube_margin_pct, category_pair_blacklist) so
+    any change MISSES → recompute. Determinism verified in
+    scripts/legacy/tests_streaming/test_tube_cache.py.
+
+    Deterministic given (mp4_bytes, mask_npz, cfg, num_frames). The only side effect
+    (when the cache is enabled) is the atomic .npz write — pure read-through otherwise.
+    Called per-step from StreamingFactorDataset; the caller picks a random tube via
+    its seeded RNG.
+    """
+    tube_cache = interaction_cfg.get("tube_cache")
+    cache_on = bool(tube_cache and tube_cache.get("enabled") and tube_cache.get("dir"))
+
+    if not cache_on:
+        return _compute_interaction_tubes(
+            mp4_bytes, mask_npz_path, interaction_cfg, num_frames, tmp_dir, clip_key)
+
+    key = _tube_cache_key(clip_key, num_frames, interaction_cfg)
+    cache_path = _tube_cache_path(tube_cache["dir"], clip_key, key)
+    if cache_path.exists():
+        return _load_tube_cache(cache_path)
+
+    tubes = _compute_interaction_tubes(
+        mp4_bytes, mask_npz_path, interaction_cfg, num_frames, tmp_dir, clip_key)
+    _save_tube_cache_atomic(cache_path, tubes)
+    return tubes
 
 
 def tensor_from_factor_array(

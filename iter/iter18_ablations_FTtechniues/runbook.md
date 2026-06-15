@@ -17,13 +17,11 @@ ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode SANI
 # 2) POC (--gpus 4 on the 96 GB box · --gpus 1 works serially on the 24 GB box)
 # Confirm the 9 POC-skip arms are all present:
 find outputs/poc -name student_encoder.pt | wc -l    # expect 12
-for a in full_ft lpft peft_dora peft_lora pretrain surgery_3stage_DI surgery_noDI surgery_raw autorgn; do
-  printf "%-22s " "$a"; find outputs/poc -path "*${a}*" -name student_encoder.pt | head -1 || echo MISSING
-done
 rm -rf outputs/sanity
 # If all 9 print a path, you're clear to start POC the moment SANITY goes green.
 
-
+BB=vjepa_2_1_vitG
+SKIP="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" 
 ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_ngpu_poc_${BB}_$(date +%Y%m%d_%H%M%S).log
 # banner MUST show: backbone=$BB · [resume --cache 1] skipping 9 already-trained arms + ~60 Stage-8b jobs
 
@@ -31,7 +29,30 @@ ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode POC 
 
 # watch panes (8c shows as ·8c d✓r▶/4 in the eval cells)
 watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_status.py'
+# CONSOLIDATED refresh — status + EVERY metrics_watch figure (3 base + WiSE-FT sweep + paper scorecard + TCC) + {train,eval}_metrics.{json,csv} in ONE command:
+ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_status.py --plots
+# (legacy figure-only refresh — retired after the --plots path is verified; m13 now owns these plots:)
 ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_metrics.py
+```
+
+## 1b · repeat for the 1B (ViT-g) — SAME §1 commands, just `BB=vjepa_2_1_vitg`
+
+```bash
+BB=vjepa_2_1_vitg     # ✅ lowercase 'g' = 1B ViT-g  (vitG = 2B). Then run §1 verbatim: pre-reqs → SANITY → POC.
+# pre-req base ckpt: checkpoints/vjepa2_1_vitg_384.pt   (the §1 ls line already derives this from $BB)
+# resume state: the 1B already has pretrain + surgery_3stage_DI/noDI/raw + autorgn (5 arms) → --cache 1 SKIPS them;
+#   it TRAINS the 8 missing (full_ft, lpft, peft_lora, peft_dora + replay25, diheavy, tccaux, intervene),
+#   merges wiseft, evals all 13.
+SKIP="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head"
+ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_ngpu_sanity_${BB}_$(date +%Y%m%d_%H%M%S).log
+ITER18_BACKBONE=$BB PT_H_MEMO=1 python -u scripts/iter18_poc_ngpu.py --mode POC    --gpus 4 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_ngpu_poc_${BB}_$(date +%Y%m%d_%H%M%S).log
+# watch — note the lowercase g in the env:
+watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitg ITER18_SKIP_ARMS="cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head" python -u scripts/iter18_poc_status.py'
+
+# ✅ RUN THE FULL GRID — do NOT skip the 5 improvement arms. At 2B they are NOT null: CI-CLEAR wins over base
+#    surgery — intervene/tccaux on future-MSE, diheavy/tccaux on mask-ratio, wiseft on aot + tcc_cycle (recovers
+#    frozen's coherence = its design goal). The 1B tests whether these gains GENERALIZE across scale = the
+#    stronger paper claim, so the marginal extra compute is worth it.
 ```
 
 ## 2 · m12f (8c) SANITY smoke — run once per fresh box, BEFORE the POC
@@ -47,18 +68,27 @@ bash scripts/run_eval.sh --sanity --encoders vjepa_2_1_frozen \
 ## 3 · upload to HF — light mirror (run it DURING the POC, then once more after the finale)
 
 ```bash
+# Mirror upload (deletes files on HF which do not exist on disk)
 HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-# light mirror: every file incl. resume anchors · no tars · xet dedups against the tar
-# shards already on HF, so much less than 338G actually transfers
-# run #1 mid-POC (overlaps the run = $0 extra) · run #2 after the finale = delta only,
-# minutes → kill the box right after
-# NOT upload-full here: it packs ~330G of shards BEFORE uploading (252G free → disk-full
-# crashes the live run) and the 08:58 tar snapshot already covers the final train arms
 
+# raw additive → overwrites same-path files, keeps remote-not-local (your ckpts survive). Neither shrinks the 3 TB history.
+# upload-large-folder is parallel + truly resumable (re-run on any drop = it picks up where it left off).
+set -a; . .env; set +a
+hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset \
+--include "outputs/poc/**" --exclude "**/.*"   2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+
+# light mirror: every file incl. resume anchors · no tars · xet dedups against the tar shards already on HF, so much less than 338G actually transfers
+# run #1 mid-POC (overlaps the run = $0 extra) · run #2 after the finale = delta only, minutes → kill the box right after
 # before killing: one last delta pass (~3-5 min, mostly dedup) for the finale's last files
 HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 | tail -5
-# prints "Upload complete" → kill the box (verify-full FAIL vs the tar manifest = expected;
-# the light mirror uploads loose files it doesn't count)
+# prints "Upload complete" → kill the box (verify-full FAIL vs the tar manifest = expected; the light mirror uploads loose files it doesn't count)
+
+# One caveat tied to your actual goal: additive does NOT shrink the 3 TB — it adds a commit, so history keeps growing. To reclaim the 3 TB you still need to collapse history after the upload:
+
+python -c "from huggingface_hub import HfApi, os; 
+HfApi(token=os.environ['HF_TOKEN']).super_squash_history('anonymousML123/factorjepa-outputs', repo_type='dataset')"
+
+# super_squash keeps the current tree (every file now in the repo, including your ckpt) and discards only the old commit versions — that's what frees the storage.
 ```
 
 ## 4 · ⏱️ measured durations (2026-06-12 unless noted)
@@ -92,37 +122,3 @@ HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc 2>&1 |
 - dora/lpft raw log-spans read 12–18h, but that's restart + peak-contention idle gaps; same recipe as surgery ⇒ real ≈ 6–9h.
 - 5 NEW arms: replay25 / diheavy = 480 steps (≈ OURS ~8:40 at 4-way) · tccaux ≈ +5% · intervene ≈ ×1.3 (3rd mask) ≈ ~11h · wiseft = post-hoc merge, ~10 min (no training).
 
-## 5 · move outputs/poc/ instance→instance (skip the slow/costly HF download on a $$$ box)
-
-```bash
-# ⚠️ DON'T run this on your Mac: rsync rejects remote→remote, and routing 123 GB THROUGH the Mac's
-# home uplink is slow + double-transfers. Orchestrate FROM the Mac but make data flow DIRECTLY box→box:
-#   ssh-add ~/.ssh/id_ed25519              # load the key into the Mac's ssh-agent
-#   ssh -A vast_RTXpro_4X_96gb             # land on the DEST (4X) with agent-FORWARDING (-A)
-# The two instances DON'T hold each other's keys (each only has YOUR Mac pubkey), so without -A the
-# pull below fails auth. -A lets the dest authenticate to the source using your forwarded agent.
-#
-# SMART subset (~123 GB = what the 5-new-arm run needs) — then run this PULL on the DEST (4X):
-# keeps m09a_ckpt_best.pt (pretrain init) + every student_encoder.pt + eval caches; drops 211 GB of resume anchors.
-SRC_IP=<source PUBLIC_IPADDR>;  SRC_SSH=<source VAST_TCP_PORT_22>   # the 5000 source = 75.63.212.140 / 42229
-rsync -a --info=progress2 --partial \
-  --exclude='*_ckpt_latest.pt' --exclude='*_ckpt_stage*.pt' --exclude='*_ckpt_step*.pt' \
-  --exclude='m09c_ckpt_best.pt' --exclude='m09b_ckpt_best.pt' --exclude='m09d_ckpt_best.pt' \
-  --exclude='m09e_ckpt_best.pt' --exclude='m09f_ckpt_best.pt' \
-  -e "ssh -p $SRC_SSH -o StrictHostKeyChecking=no -c aes128-gcm@openssh.com" \
-  root@$SRC_IP:/workspace/factorjepa/outputs/poc/ /workspace/factorjepa/outputs/poc/
-
-# FULL copy (332 GB) — drop the --exclude lines above.
-# FASTEST streaming (no per-file overhead, NOT resumable) — run on the SOURCE, push to dest:
-#   tar -C outputs/poc --exclude='*_ckpt_latest.pt' --exclude='*_ckpt_stage*.pt' -cf - . | \
-#   ssh -p $DEST_SSH -c aes128-gcm@openssh.com root@$DEST_IP "tar -C /workspace/factorjepa/outputs/poc -xf -"
-
-# data/ for POC = data/eval_10k_local (20 GB) — IS BOTH the eval data AND the factor-streaming source
-# (m10 masks 5.6G + m11 factor sets 4.5G + m00d raw clips + m04d motion_features + splits). Transfer it too:
-rsync -a --info=progress2 --partial \
-  -e "ssh -p $SRC_SSH -o StrictHostKeyChecking=no -c aes128-gcm@openssh.com" \
-  root@$SRC_IP:/workspace/factorjepa/data/eval_10k_local/ /workspace/factorjepa/data/eval_10k_local/
-# (m10/m11 hold many small .npz/.npy → rsync per-file overhead; for THIS dir a tar-pipe is faster)
-
-# duration (single ssh stream, aes128-gcm): outputs/poc 123 GB ≈ 8–16 min  +  data 20 GB ≈ 2–5 min  (vs HF ~47 min + CDN stalls)
-```

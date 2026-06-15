@@ -53,6 +53,16 @@ def masks_dir(local_data) -> Path:
     return Path(local_data) / _data_cfg()["masks_subdir"] / _data_cfg()["masks_inner_dirname"]
 
 
+def tube_cache_dir(local_data) -> Path:
+    """D_I interaction-tube read-through cache dir: <local_data>/<tube_cache_subdir>/.
+
+    iter18 (2026-06-15): one .npz per (clip_key, cfg-hash) memoizing
+    stream_interaction_tubes()'s decode+mining output. Sibling of m10/m11 so it
+    rides the same upload/download/clean conventions. Subdir name from
+    pipeline.yaml data.tube_cache_subdir (single source — never hardcoded)."""
+    return Path(local_data) / _data_cfg()["tube_cache_subdir"]
+
+
 def shards_dir(local_data) -> Path:
     """m00d video-shard dir: <local_data>/<shard_subdir>/ (holds subset-*.tar).
 

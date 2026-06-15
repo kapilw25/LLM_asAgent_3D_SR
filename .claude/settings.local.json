@@ -303,7 +303,15 @@
       "Bash(grep -nA3 \"def vit_giant_xformers_rope\" deps/vjepa2/app/vjepa_2_1/models/vision_transformer.py)",
       "Bash(grep -nA3 \"def vit_gigantic_xformers\" deps/vjepa2/app/vjepa_2_1/models/vision_transformer.py)",
       "Bash(grep -E \"\\\\.\\(png|pdf|csv|json\\)$\")",
-      "Bash(grep -E \"\\\\.\\(png|pdf\\)$\")"
+      "Bash(grep -E \"\\\\.\\(png|pdf\\)$\")",
+      "Bash(awk '{print \" one nf16 ≈\", $5, \"bytes\"}')",
+      "Bash(awk '{print \"  one nf64 ≈\", $5, \"bytes \\(≈4× nf16\\)\"}')",
+      "Bash(awk '{print $5, $NF}')",
+      "Bash(awk '{print \"  \"$5, $NF}')",
+      "Bash(nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv,noheader)",
+      "Bash(/venv/main/bin/python -u scripts/legacy/tests_streaming/test_tube_cache.py)",
+      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml clip_pool_ratio.sanity)",
+      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml clip_pool_ratio.poc)"
     ]
   }
 }

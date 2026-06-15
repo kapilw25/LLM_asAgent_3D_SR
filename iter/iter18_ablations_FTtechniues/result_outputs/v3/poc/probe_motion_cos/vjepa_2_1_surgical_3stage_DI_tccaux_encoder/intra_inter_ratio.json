@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_surgical_3stage_DI_tccaux_encoder",
+  "n_test": 1825,
+  "pos_mean": 0.763249,
+  "neg_mean": 0.645451,
+  "score_mean": 0.117798,
+  "score_ci": {
+    "mean": 0.117798,
+    "ci_lo": 0.113609,
+    "ci_hi": 0.12187,
+    "ci_half": 0.00413
+  },
+  "elapsed_sec": 0.03
+}

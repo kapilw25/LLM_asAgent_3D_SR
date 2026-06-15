@@ -705,8 +705,24 @@ def main():
         vis_blocks = [b for b in blocks if b["arm"] not in skip]            # graphs honor --skip-arms
         vis_ev = [r for r in ev if r["_enc_full"] not in skip_encs]
         render_metric_graphs(vis_blocks, vis_ev, out_dir)
+        # iter18 (2026-06-14) consolidation: the 3 registry-derived eval_metrics.json readers now live in
+        # src/m13_eval_plot.py (so they survive this script's retirement to scripts/legacy/). WiSE-FT v2 sweep
+        # table + HONEST paper scorecard + eyeball-able TCC chart, all reading the eval_metrics.json just dumped.
+        from m13_eval_plot import plot_paper_scorecard, plot_tcc_chart, plot_wiseft_sweep_table
+        mj = out_dir / "eval_metrics.json"
+        plot_wiseft_sweep_table(mj, out_dir)
+        plot_paper_scorecard(mj, out_dir)
+        # tcc_chart needs frozen + 3stage-DI + raw rows (FAIL LOUD KeyError otherwise); under `watch` over a
+        # LIVE partial run those may not be evaled yet → guard so a partial json can't break the refresh.
+        _tcc_keys = {"vjepa_2_1_frozen", "vjepa_2_1_surgical_3stage_DI_encoder", "vjepa_2_1_surgery_raw_encoder"}
+        _have = {x["encoder"] for x in json.loads(mj.read_text())} if mj.exists() else set()
+        if _tcc_keys <= _have:
+            plot_tcc_chart(mj, out_dir)
+        else:
+            print(f"  [tcc-chart] skip — partial json missing {sorted(_tcc_keys - _have)} (not evaled yet)")
         print(f"  🖼  graphs + data → {rel}/ · "
-              f"{{train_trajectories,kept_scorecard,eval_scorecard}}.{{png,pdf}} + {{train,eval}}_metrics.{{json,csv}}")
+              f"{{train_trajectories,kept_scorecard,eval_scorecard,wiseft_sweep_table,eval_scorecard_paper,"
+              f"tcc_comparison}}.{{png,pdf}} + {{train,eval}}_metrics.{{json,csv}}")
     else:
         print(f"  📄 data → {rel}/{{train,eval}}_metrics.{{json,csv}}  (--no-plots: graphs skipped)")
 

@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_surgical_3stage_DI_intervene_encoder",
+  "n_test": 1825,
+  "pos_mean": 0.763152,
+  "neg_mean": 0.64222,
+  "score_mean": 0.120931,
+  "score_ci": {
+    "mean": 0.120931,
+    "ci_lo": 0.116906,
+    "ci_hi": 0.125061,
+    "ci_half": 0.004077
+  },
+  "elapsed_sec": 0.03
+}

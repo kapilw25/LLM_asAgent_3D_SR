@@ -81,6 +81,23 @@ encoders:
     arch: vit_gigantic_xformers
     crop: 384
     embed_dim: 1664
+  # iter18 (2026-06-14): WiSE-FT v2 sweep — intervene × frozen, predictor merged, frozen-fraction f30/f50/f70.
+  # Same 2B ViT-G arch (only the blended weights differ); built by wiseft_merge.py, evaled via run_eval --encoders.
+  vjepa_2_1_surgical_intervene_wiseft_f30_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_intervene_wiseft_f50_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_intervene_wiseft_f70_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
 
   # P3 variant B — m09c 2-stage surgery (D_L → D_A only, 50/50 epoch split, NO D_I).
   # Tests skepticism that D_I worsens learning; same encoder arch, different yaml.

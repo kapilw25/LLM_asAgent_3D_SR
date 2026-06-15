@@ -49,6 +49,20 @@ def arm2dir() -> dict:
     return {a: r["dir"] for a, r in _load().items() if r["scheduler"]}
 
 
+def merge_arms() -> set:
+    """train_names of all kind=merge arms — the scheduler builds their post-hoc merge job (not a train)."""
+    return {a for a, r in _load().items() if r["kind"] == "merge"}
+
+
+def merge_recipe(arm: str) -> dict:
+    """{base, alpha, predictor} merge recipe for a kind=merge arm — the SINGLE source for the scheduler's
+    wiseft_merge command. FAIL LOUD on a non-merge arm or a missing field (KeyError, no .get default)."""
+    r = _load()[arm]
+    if r["kind"] != "merge":
+        sys.exit(f"merge_recipe: {arm!r} is kind={r['kind']!r}, not a merge arm")
+    return {"base": r["merge_base"], "alpha": r["merge_alpha"], "predictor": r["merge_predictor"]}
+
+
 def _by_token() -> dict:
     """{encoder_token: record} across ALL arms (incl. legacy non-scheduler ones)."""
     return {r["encoder"]: {"train": a, **r} for a, r in _load().items()}
@@ -89,11 +103,13 @@ def token_table() -> list:
 
 
 def display_arms(include_merge: bool = True, include_heads: bool = True) -> list:
-    """[(train_name, encoder_token, group, kind), ...] for SCHEDULER arms in registry order — the plot
-    scripts build their roster from this (so a new arm auto-appears) and map group→color locally."""
+    """[(train_name, encoder_token, group, kind), ...] for SCHEDULER arms + ALL merge arms, in registry
+    order — the plot/eval_metrics scripts build their roster from this (so a new arm auto-appears) and map
+    group→color locally. A kind=merge arm is a post-hoc RESULT (built by wiseft_merge.py, not the scheduler),
+    so it displays even when scheduler:false — display is decoupled from scheduler orchestration (arm2enc)."""
     out = []
     for a, r in _load().items():
-        if not r["scheduler"]:
+        if not r["scheduler"] and r["kind"] != "merge":   # legacy non-scheduler, non-merge arm → never display
             continue
         if not include_merge and r["kind"] == "merge":
             continue

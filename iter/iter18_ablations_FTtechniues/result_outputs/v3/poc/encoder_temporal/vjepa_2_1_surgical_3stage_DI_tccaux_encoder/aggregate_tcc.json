@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_tccaux_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.270298,
+    "std": 0.199173,
+    "ci": {
+      "mean": 2.270298,
+      "ci_lo": 2.261162,
+      "ci_hi": 2.27955,
+      "ci_half": 0.009194
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.267954,
+    "std": 0.117797,
+    "ci": {
+      "mean": 0.267954,
+      "ci_lo": 0.262569,
+      "ci_hi": 0.273529,
+      "ci_half": 0.00548
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgery_3stage_DI_tccaux_encoder/student_encoder.pt"
+}

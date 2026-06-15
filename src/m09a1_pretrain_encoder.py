@@ -117,6 +117,7 @@ from utils.training import (
     BEST_METRIC_DIRECTION,
     export_student_for_eval, finalize_training,
 )
+from utils.clear_resume_anchors import clear_anchors_on_completion  # noqa: E402
 from utils.action_labels import load_action_labels
 from utils.multi_task_loss import (
     build_multi_task_head_from_cfg,
@@ -1384,6 +1385,7 @@ def train(cfg: dict, args):
     # Step 1: export student encoder (m09a is vanilla → explora_enabled=False).
     # Step 2-4: shared finalize_training (assert_diverged + mt_head + ma_head).
     export_student_for_eval(student, student_path, explora_enabled=False)
+    clear_anchors_on_completion(output_dir)
     init_ckpt_path = Path(__file__).parent.parent / cfg["model"]["checkpoint_path"]
     finalize_training(
         student=student, mt_head=mt_head, mt_dims_spec=mt_dims_spec,

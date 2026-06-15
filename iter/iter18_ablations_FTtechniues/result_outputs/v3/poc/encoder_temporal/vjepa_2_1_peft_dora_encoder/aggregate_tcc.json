@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_peft_dora_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.330617,
+    "std": 0.202883,
+    "ci": {
+      "mean": 2.330617,
+      "ci_lo": 2.32138,
+      "ci_hi": 2.339811,
+      "ci_half": 0.009215
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.26906,
+    "std": 0.119066,
+    "ci": {
+      "mean": 0.26906,
+      "ci_lo": 0.263647,
+      "ci_hi": 0.274598,
+      "ci_half": 0.005475
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09b_peft_dora_encoder/student_encoder.pt"
+}

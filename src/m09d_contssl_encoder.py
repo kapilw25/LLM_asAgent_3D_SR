@@ -137,6 +137,7 @@ from utils.training import (
     run_trio_at_val, track_block_drift_at_val,
     apply_val_cycle_triggers, finalize_training,
 )
+from utils.clear_resume_anchors import clear_anchors_on_completion  # noqa: E402
 from utils.multi_task_loss import (
     build_multi_task_head_from_cfg,
     attach_head_to_optimizer, run_multi_task_step,
@@ -1828,7 +1829,7 @@ def train(cfg: dict, args):
             # this, the run accumulates 3 × ~15 GB = ~45 GB of redundant rollback points
             # (cause of the 2026-04-19 disk-full halt on 199 GB /workspace). `keep_n=1`
             # preserves one resume anchor for mid-stage crash recovery. Final cleanup
-            # (keep_n=0) happens after export_student_for_eval below.
+            # (clear_anchors_on_completion) happens after export_student_for_eval below.
             cleanup_stage_checkpoints(output_dir, CHECKPOINT_PREFIX, keep_n=1, cache_policy=args.cache_policy)
             timed_gate.mark()
             print(f"  Stage {stage_name} complete: {stage_steps} steps, loss={jepa_val:.4f}")
@@ -1889,8 +1890,8 @@ def train(cfg: dict, args):
     # Stage 8 probe_future_mse can load it. Without this, m09c writes
     # student_best.pt (full=False, encoder-only) which gets promoted to
     # student_encoder.pt and the only full ckpts are stage rollbacks
-    # that get nuked by cleanup_stage_checkpoints(keep_n=0) below. The new
-    # filename is OUTSIDE the cleanup pattern ({prefix}_stage*.pt) so survives.
+    # that get nuked by clear_anchors_on_completion below. The new
+    # filename is OUTSIDE the anchor patterns ({prefix}_ckpt_{latest,stage,step}.pt) so survives.
     # iter13 disk-budget fix (2026-05-04, mirroring m09a fix): include_optimizer=False
     # drops 16 GB optimizer state; saves student+teacher+predictor only (~8 GB).
     # Downstream (m05 re-embed, Stage 8 future_mse) needs only those — optimizer
@@ -1909,9 +1910,11 @@ def train(cfg: dict, args):
     # and probe_future_mse Stage 8 respectively). Stage rollback ckpts are
     # disposable once the run completes cleanly. Per CLAUDE.md "Clean all
     # intermediates after training." Saves ~15 GB per run at 2B model scale.
-    # The keep_n=0 pattern only matches `{prefix}_stage*.pt`, NOT `_best.pt`
-    # (different glob), so the predictor-bearing ckpt survives this call.
-    cleanup_stage_checkpoints(output_dir, CHECKPOINT_PREFIX, keep_n=0, cache_policy=args.cache_policy)
+    # ON SUCCESS (un-gated by cache_policy — resume anchors are training scratch,
+    # not a cache): removes the `*_ckpt_{latest,stage,step}.pt` resume anchors and
+    # KEEPS student_encoder.pt + the predictor-bearing `_best.pt` (both outside the
+    # latest/stage/step name patterns; the helper verifies they exist first).
+    clear_anchors_on_completion(output_dir)
 
     # Trajectory stats across stage boundaries. Single-probe-set regime so BWT
     # degenerates to net top-1 improvement (R[-1]-R[0]). Non-zero max_drop

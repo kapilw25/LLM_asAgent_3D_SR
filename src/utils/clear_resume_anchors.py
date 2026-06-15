@@ -93,6 +93,42 @@ def clear_resume_anchors(root: Path, policy: str, include_best: bool) -> dict:
             "done": done, "parked": parked}
 
 
+# ON-COMPLETION (in-trainer) sweep — latest/stage are pure scaffolding once the final encoder is exported;
+# add ckpt_step (the keep_last_n survivors) so a completed arm leaves ZERO resume anchors on disk.
+_COMPLETION_ANCHOR_SUBSTRINGS = _ANCHOR_SUBSTRINGS + ("ckpt_step",)
+
+
+def clear_anchors_on_completion(arm_dir: Path) -> int:
+    """Delete ONE arm's resume anchors (ckpt_latest / ckpt_stage* / ckpt_step*) right after a SUCCESSFUL
+    training run — called from inside the trainer, AFTER export_student_for_eval. Returns bytes freed.
+
+    UN-GATED by cache_policy (unlike the manual `clear_resume_anchors` CLI above): a resume anchor is
+    single-arm training SCRATCH, not a durable cross-module CACHE, so the 'Clean all intermediates after
+    training' policy (src/CLAUDE.md) applies on SUCCESS regardless of --cache 1/2. This is the ONE
+    sanctioned exception to the 'no .py delete without cache_policy=2' rule — narrow by construction:
+
+    SAFETY — refuses unless BOTH durable eval artifacts already exist in arm_dir: student_encoder.pt AND a
+    *ckpt_best*.pt. So it can NEVER strip the resume state of an incomplete/failed/parked run (which has no
+    student_encoder.pt → keeps every anchor), and it only ever removes latest/stage/step (never best/student)."""
+    student = arm_dir / "student_encoder.pt"
+    has_best = any(_BEST_SUBSTRING in p.name for p in arm_dir.glob("*.pt"))
+    if not (student.exists() and has_best):
+        raise RuntimeError(
+            f"clear_anchors_on_completion: refusing in {arm_dir} — durable artifacts missing "
+            f"(student_encoder.pt={student.exists()}, *{_BEST_SUBSTRING}*={has_best}); call ONLY after a "
+            f"successful export, otherwise the resume anchors are still needed to resume.")
+    freed = 0
+    for p in sorted(arm_dir.glob("*.pt")):
+        if any(s in p.name for s in _COMPLETION_ANCHOR_SUBSTRINGS):
+            sz = p.stat().st_size
+            p.unlink()
+            freed += sz
+            print(f"  [anchor-cleanup] removed {p.name} ({_gb(sz):.1f} G)")
+    print(f"  [anchor-cleanup] {arm_dir.name}: freed {_gb(freed):.1f} G of resume anchors "
+          f"(kept student_encoder.pt + *{_BEST_SUBSTRING}*)")
+    return freed
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", type=Path, required=True,
