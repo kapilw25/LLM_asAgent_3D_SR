@@ -1,0 +1,261 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 18:45:32 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 14 01:23 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+  ✓ skip_stages:          1,4,12,13,7,9,9b,9c,10,8b,8c
+  ✓ cache_policy:         1
+  ✓ output_prefix:        outputs/poc
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/probe_motion_cos/probe_motion_cos_paired.json → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/probe_future_mse/probe_future_mse_per_variant.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ⚠️  vjepa_2_1_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/m09c_ckpt_best.pt not found — Stage 8 will SKIP this encoder
+       Re-train (m09c writes m09c_ckpt_best.pt at end of surgery):
+         CACHE_POLICY_ALL=2 ./scripts/run_train.sh 3stage_DI_wiseft_encoder --POC
+  → no V-JEPA variants have predictor ckpt; Stage 8/9 will be auto-skipped
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ⚠️  vjepa_2_1_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/motion_aux_head.pt not found — eval falls back to encoder-only for this variant
+  → head-augmented eval ENCODERS: <none>
+  → final ENCODERS after head preflight: vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 18:45:33 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_surgical_3stage_DI_wiseft_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+
+═══ 18:45:33 ·   STAGE 2 · features for vjepa_2_1_surgical_3stage_DI_wiseft_encoder (splits=test, dtype=fp16) ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12a_action_top1] cgroup envelope:
+[m12a_action_top1]   memory: 396.7 GB / 683.9 GB (58%)
+[m12a_action_top1]   pids:   2561 / 47104 (5%)
+[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+Loading V-JEPA frozen vjepa_2_1_surgical_3stage_DI_wiseft_encoder (vit_gigantic_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 588/588 params  (missing=0, unexpected=0)
+  [features] saving splits ['test']; lazy splits (extracted by Stage 3): ['train', 'val']
+
+=== Stage 2 features: test (1825 clips, encoder=vjepa_2_1_surgical_3stage_DI_wiseft_encoder, pool_tokens=16) ===
+  AdaptiveBatchSizer(features_test): start=20, max=44, target_vram=85%
+probe_features_test:   0%|          | 0/1825 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
+probe_features_test:   0%|          | 1/1825 [00:37<18:58:52, 37.46s/clip]  AdaptiveBatch: VRAM 11% < 65% → sub-batch 20 → 21
+probe_features_test:   1%|          | 21/1825 [00:39<57:14,  1.90s/clip, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 11% < 65% → sub-batch 21 → 22
+probe_features_test:   2%|▏         | 41/1825 [00:46<33:26,  1.12s/clip, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 12% < 65% → sub-batch 22 → 23
+probe_features_test:   3%|▎         | 61/1825 [00:48<23:14,  1.26clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 12% < 65% → sub-batch 23 → 24
+probe_features_test:   4%|▍         | 81/1825 [00:55<19:45,  1.47clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 12% < 65% → sub-batch 24 → 25
+  AdaptiveBatch: VRAM 12% < 65% → sub-batch 25 → 26
+probe_features_test:   6%|▌         | 101/1825 [01:04<18:20,  1.57clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 13% < 65% → sub-batch 26 → 27
+probe_features_test:   7%|▋         | 123/1825 [01:05<15:09,  1.87clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 13% < 65% → sub-batch 27 → 28
+probe_features_test:   8%|▊         | 145/1825 [01:13<14:08,  1.98clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 28 → 29
+  AdaptiveBatch: VRAM 14% < 65% → sub-batch 29 → 30
+probe_features_test:   9%|▉         | 167/1825 [01:21<13:33,  2.04clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 30 → 31
+probe_features_test:  10%|█         | 191/1825 [01:22<11:44,  2.32clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 31 → 32
+probe_features_test:  12%|█▏        | 215/1825 [01:30<11:19,  2.37clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 32 → 33
+probe_features_test:  13%|█▎        | 239/1825 [01:39<10:59,  2.41clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 33 → 34
+probe_features_test:  14%|█▍        | 263/1825 [01:47<10:40,  2.44clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 34 → 35
+probe_features_test:  16%|█▌        | 289/1825 [01:56<10:19,  2.48clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 35 → 36
+probe_features_test:  18%|█▊        | 321/1825 [02:05<09:46,  2.56clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 36 → 37
+probe_features_test:  19%|█▉        | 353/1825 [02:13<09:18,  2.64clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 37 → 38
+probe_features_test:  21%|██        | 385/1825 [02:22<08:53,  2.70clip/s, recent=0.3s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 38 → 39
+  [tar reader] subset-00004.tar: emitted=137, dropped=0 (missing_part=0, empty_mp4=0), filtered=863 (subset=863, resume=0)
+probe_features_test:  23%|██▎       | 417/1825 [02:31<08:30,  2.76clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 39 → 40
+probe_features_test:  25%|██▍       | 449/1825 [02:39<08:09,  2.81clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 40 → 41
+probe_features_test:  26%|██▋       | 481/1825 [02:48<07:50,  2.86clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 41 → 42
+probe_features_test:  28%|██▊       | 513/1825 [02:56<07:32,  2.90clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 42 → 43
+probe_features_test:  30%|██▉       | 545/1825 [03:05<07:14,  2.94clip/s, recent=0.2s/clip ETA0.1h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 43 → 44
+probe_features_test:  32%|███▏      | 577/1825 [03:13<06:58,  2.98clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  33%|███▎      | 609/1825 [03:22<06:44,  3.01clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  35%|███▌      | 641/1825 [03:31<06:29,  3.04clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  37%|███▋      | 673/1825 [03:39<06:16,  3.06clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  39%|███▊      | 705/1825 [03:48<06:02,  3.09clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  40%|████      | 737/1825 [03:56<05:49,  3.12clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  42%|████▏     | 769/1825 [04:05<05:37,  3.13clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  44%|████▍     | 801/1825 [04:13<05:24,  3.15clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00000.tar: emitted=144, dropped=0 (missing_part=0, empty_mp4=0), filtered=856 (subset=856, resume=0)
+probe_features_test:  46%|████▌     | 833/1825 [04:22<05:12,  3.17clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00005.tar: emitted=231, dropped=0 (missing_part=0, empty_mp4=0), filtered=769 (subset=769, resume=0)
+probe_features_test:  47%|████▋     | 865/1825 [04:31<05:00,  3.19clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  49%|████▉     | 897/1825 [04:39<04:49,  3.20clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  51%|█████     | 929/1825 [04:48<04:38,  3.22clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  53%|█████▎    | 961/1825 [04:57<04:27,  3.23clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00009.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=277 (subset=277, resume=0)
+  [tar reader] subset-00003.tar: emitted=138, dropped=0 (missing_part=0, empty_mp4=0), filtered=862 (subset=862, resume=0)
+probe_features_test:  54%|█████▍    | 993/1825 [05:06<04:16,  3.24clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  56%|█████▌    | 1025/1825 [05:15<04:06,  3.25clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  58%|█████▊    | 1057/1825 [05:24<03:55,  3.26clip/s, recent=0.2s/clip ETA0.1h]probe_features_test:  60%|█████▉    | 1089/1825 [05:32<03:44,  3.27clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  61%|██████▏   | 1121/1825 [05:40<03:34,  3.29clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  63%|██████▎   | 1153/1825 [05:49<03:23,  3.30clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  65%|██████▍   | 1185/1825 [05:57<03:13,  3.31clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00002.tar: emitted=244, dropped=0 (missing_part=0, empty_mp4=0), filtered=756 (subset=756, resume=0)
+probe_features_test:  67%|██████▋   | 1217/1825 [06:06<03:03,  3.32clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  68%|██████▊   | 1249/1825 [06:15<02:52,  3.33clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  70%|███████   | 1281/1825 [06:23<02:42,  3.34clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00001.tar: emitted=199, dropped=0 (missing_part=0, empty_mp4=0), filtered=801 (subset=801, resume=0)
+probe_features_test:  72%|███████▏  | 1313/1825 [06:32<02:33,  3.34clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00006.tar: emitted=204, dropped=0 (missing_part=0, empty_mp4=0), filtered=796 (subset=796, resume=0)
+probe_features_test:  74%|███████▎  | 1345/1825 [06:41<02:23,  3.35clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00008.tar: emitted=172, dropped=0 (missing_part=0, empty_mp4=0), filtered=828 (subset=828, resume=0)
+probe_features_test:  75%|███████▌  | 1377/1825 [06:50<02:13,  3.36clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  77%|███████▋  | 1409/1825 [06:58<02:03,  3.37clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  79%|███████▉  | 1441/1825 [07:06<01:53,  3.38clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00007.tar: emitted=336, dropped=0 (missing_part=0, empty_mp4=0), filtered=664 (subset=664, resume=0)
+probe_features_test:  81%|████████  | 1473/1825 [07:15<01:44,  3.38clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  82%|████████▏ | 1505/1825 [07:24<01:34,  3.39clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  84%|████████▍ | 1537/1825 [07:32<01:24,  3.39clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  86%|████████▌ | 1569/1825 [07:41<01:15,  3.40clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  88%|████████▊ | 1601/1825 [07:49<01:05,  3.41clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  89%|████████▉ | 1633/1825 [07:58<00:56,  3.41clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  91%|█████████ | 1665/1825 [08:06<00:46,  3.42clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  93%|█████████▎| 1697/1825 [08:15<00:37,  3.42clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  95%|█████████▍| 1729/1825 [08:23<00:27,  3.43clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  96%|█████████▋| 1761/1825 [08:31<00:18,  3.44clip/s, recent=0.2s/clip ETA0.0h]probe_features_test:  98%|█████████▊| 1793/1825 [08:39<00:09,  3.45clip/s, recent=0.2s/clip ETA0.0h]probe_features_test: 100%|██████████| 1825/1825 [08:39<00:00,  3.51clip/s, recent=0.2s/clip ETA0.0h]probe_features_test: 100%|██████████| 1825/1825 [08:39<00:00,  3.51clip/s, recent=0.2s/clip ETA0.0h]
+  extract_features_for_keys(features_test): 1825/1825 clips in 492s
+  [D9] final resume ckpt saved: .probe_features_test_ckpt.npz (1825 clips) — Stage 3.5 will resume from this
+  Saved outputs/poc/probe_action/vjepa_2_1_surgical_3stage_DI_wiseft_encoder/features_test.npy (1825, 16, 1664)  (493s)
+
+═══ 18:54:16 ·   STAGE 3 · train probe (1 LR(s); epochs=20 warmup=0.0) for vjepa_2_1_surgical_3stage_DI_wiseft_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12a_action_top1] cgroup envelope:
+[m12a_action_top1]   memory: 435.0 GB / 683.9 GB (64%)
+[m12a_action_top1]   pids:   2438 / 47104 (5%)
+[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [lazy-extract] missing splits on disk: ['train', 'val'] — loading vjepa_2_1_surgical_3stage_DI_wiseft_encoder encoder for in-memory extraction
+Loading V-JEPA frozen vjepa_2_1_surgical_3stage_DI_wiseft_encoder (vit_gigantic_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 588/588 params  (missing=0, unexpected=0)
+  AdaptiveBatchSizer(features_train): start=20, max=44, target_vram=85%
+probe_features_train:   0%|          | 0/6854 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
+probe_features_train:   0%|          | 1/6854 [00:28<54:39:20, 28.71s/clip]  AdaptiveBatch: VRAM 11% < 65% → sub-batch 20 → 21
+probe_features_train:   0%|          | 21/6854 [00:31<2:49:24,  1.49s/clip, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 11% < 65% → sub-batch 21 → 22
+probe_features_train:   1%|          | 41/6854 [00:37<1:43:28,  1.10clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 12% < 65% → sub-batch 22 → 23
+probe_features_train:   1%|          | 61/6854 [00:39<1:13:14,  1.55clip/s, recent=0.2s/clip ETA0.3h]  AdaptiveBatch: VRAM 12% < 65% → sub-batch 23 → 24
+probe_features_train:   1%|          | 81/6854 [00:46<1:04:21,  1.75clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 12% < 65% → sub-batch 24 → 25
+  AdaptiveBatch: VRAM 12% < 65% → sub-batch 25 → 26
+probe_features_train:   1%|▏         | 101/6854 [00:55<1:01:25,  1.83clip/s, recent=0.3s/clip ETA0.5h]  AdaptiveBatch: VRAM 13% < 65% → sub-batch 26 → 27
+probe_features_train:   2%|▏         | 123/6854 [00:56<51:26,  2.18clip/s, recent=0.2s/clip ETA0.4h]    AdaptiveBatch: VRAM 13% < 65% → sub-batch 27 → 28
+probe_features_train:   2%|▏         | 145/6854 [01:04<49:34,  2.26clip/s, recent=0.2s/clip ETA0.5h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 28 → 29
+  AdaptiveBatch: VRAM 14% < 65% → sub-batch 29 → 30
+probe_features_train:   2%|▏         | 167/6854 [01:13<48:58,  2.28clip/s, recent=0.3s/clip ETA0.5h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 30 → 31
+probe_features_train:   3%|▎         | 191/6854 [01:13<42:52,  2.59clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 14% < 65% → sub-batch 31 → 32
+probe_features_train:   3%|▎         | 215/6854 [01:22<42:21,  2.61clip/s, recent=0.3s/clip ETA0.5h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 32 → 33
+probe_features_train:   3%|▎         | 239/6854 [01:31<42:04,  2.62clip/s, recent=0.3s/clip ETA0.5h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 33 → 34
+probe_features_train:   4%|▍         | 263/6854 [01:40<41:51,  2.62clip/s, recent=0.3s/clip ETA0.5h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 34 → 35
+probe_features_train:   4%|▍         | 289/6854 [01:48<41:10,  2.66clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 35 → 36
+probe_features_train:   5%|▍         | 321/6854 [01:57<39:49,  2.73clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 36 → 37
+probe_features_train:   5%|▌         | 353/6854 [02:05<38:39,  2.80clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 37 → 38
+probe_features_train:   6%|▌         | 385/6854 [02:14<37:42,  2.86clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 38 → 39
+probe_features_train:   6%|▌         | 417/6854 [02:23<36:51,  2.91clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 39 → 40
+probe_features_train:   7%|▋         | 449/6854 [02:32<36:10,  2.95clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 40 → 41
+probe_features_train:   7%|▋         | 481/6854 [02:40<35:32,  2.99clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 41 → 42
+probe_features_train:   7%|▋         | 513/6854 [02:49<34:59,  3.02clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 42 → 43
+probe_features_train:   8%|▊         | 545/6854 [02:58<34:23,  3.06clip/s, recent=0.2s/clip ETA0.4h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 43 → 44
+probe_features_train:   8%|▊         | 577/6854 [03:07<33:58,  3.08clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:   9%|▉         | 609/6854 [03:15<33:29,  3.11clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:   9%|▉         | 641/6854 [03:24<33:04,  3.13clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  10%|▉         | 673/6854 [03:33<32:39,  3.15clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  10%|█         | 705/6854 [03:42<32:17,  3.17clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  11%|█         | 737/6854 [03:50<31:55,  3.19clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  11%|█         | 769/6854 [03:59<31:34,  3.21clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  12%|█▏        | 801/6854 [04:07<31:13,  3.23clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  12%|█▏        | 833/6854 [04:16<30:54,  3.25clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  13%|█▎        | 865/6854 [04:25<30:37,  3.26clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  13%|█▎        | 897/6854 [04:33<30:18,  3.28clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  14%|█▎        | 929/6854 [04:42<30:02,  3.29clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  14%|█▍        | 961/6854 [04:51<29:46,  3.30clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  14%|█▍        | 993/6854 [04:59<29:28,  3.31clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  15%|█▍        | 1025/6854 [05:08<29:13,  3.32clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  15%|█▌        | 1057/6854 [05:17<28:59,  3.33clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  16%|█▌        | 1089/6854 [05:25<28:43,  3.34clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  16%|█▋        | 1121/6854 [05:34<28:30,  3.35clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  17%|█▋        | 1153/6854 [05:43<28:16,  3.36clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  17%|█▋        | 1185/6854 [05:52<28:05,  3.36clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  18%|█▊        | 1217/6854 [06:00<27:51,  3.37clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  18%|█▊        | 1249/6854 [06:10<27:40,  3.37clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  19%|█▊        | 1281/6854 [06:18<27:28,  3.38clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  19%|█▉        | 1313/6854 [06:27<27:17,  3.38clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  20%|█▉        | 1345/6854 [06:36<27:04,  3.39clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  20%|██        | 1377/6854 [06:45<26:53,  3.40clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  21%|██        | 1409/6854 [06:54<26:40,  3.40clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  21%|██        | 1441/6854 [07:02<26:28,  3.41clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  21%|██▏       | 1473/6854 [07:11<26:15,  3.42clip/s, recent=0.2s/clip ETA0.4h]probe_features_train:  22%|██▏       | 1505/6854 [07:19<26:02,  3.42clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  22%|██▏       | 1537/6854 [07:28<25:51,  3.43clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  23%|██▎       | 1569/6854 [07:37<25:39,  3.43clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  23%|██▎       | 1601/6854 [07:46<25:29,  3.43clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  24%|██▍       | 1633/6854 [07:55<25:18,  3.44clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  24%|██▍       | 1665/6854 [08:03<25:08,  3.44clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  25%|██▍       | 1697/6854 [08:12<24:57,  3.44clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  25%|██▌       | 1729/6854 [08:21<24:46,  3.45clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  26%|██▌       | 1761/6854 [08:30<24:35,  3.45clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  26%|██▌       | 1793/6854 [08:39<24:25,  3.45clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  27%|██▋       | 1825/6854 [08:48<24:15,  3.46clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  27%|██▋       | 1857/6854 [08:56<24:04,  3.46clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  28%|██▊       | 1889/6854 [09:05<23:53,  3.46clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  28%|██▊       | 1921/6854 [09:14<23:43,  3.47clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  28%|██▊       | 1953/6854 [09:22<23:31,  3.47clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  29%|██▉       | 1985/6854 [09:31<23:21,  3.48clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  29%|██▉       | 2017/6854 [09:39<23:10,  3.48clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  30%|██▉       | 2049/6854 [09:48<23:00,  3.48clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  30%|███       | 2081/6854 [09:57<22:50,  3.48clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  31%|███       | 2113/6854 [10:06<22:40,  3.48clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  31%|███▏      | 2145/6854 [10:15<22:30,  3.49clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  32%|███▏      | 2177/6854 [10:24<22:21,  3.49clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  32%|███▏      | 2209/6854 [10:32<22:10,  3.49clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  33%|███▎      | 2241/6854 [10:41<22:00,  3.49clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  33%|███▎      | 2273/6854 [10:50<21:50,  3.50clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  34%|███▎      | 2305/6854 [10:58<21:40,  3.50clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  34%|███▍      | 2337/6854 [11:07<21:30,  3.50clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  35%|███▍      | 2369/6854 [11:15<21:19,  3.51clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  35%|███▌      | 2401/6854 [11:24<21:10,  3.51clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  35%|███▌      | 2433/6854 [11:33<21:00,  3.51clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  36%|███▌      | 2465/6854 [11:42<20:50,  3.51clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  36%|███▋      | 2497/6854 [11:50<20:40,  3.51clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  37%|███▋      | 2529/6854 [11:59<20:30,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  37%|███▋      | 2561/6854 [12:08<20:20,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  38%|███▊      | 2593/6854 [12:17<20:11,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  38%|███▊      | 2625/6854 [12:26<20:01,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  39%|███▉      | 2657/6854 [12:34<19:52,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  39%|███▉      | 2689/6854 [12:43<19:43,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  40%|███▉      | 2721/6854 [12:52<19:33,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  40%|████      | 2753/6854 [13:01<19:23,  3.52clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  41%|████      | 2785/6854 [13:09<19:13,  3.53clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  41%|████      | 2817/6854 [13:17<19:03,  3.53clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  42%|████▏     | 2849/6854 [13:26<18:53,  3.53clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  42%|████▏     | 2881/6854 [13:34<18:43,  3.54clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  43%|████▎     | 2913/6854 [13:42<18:33,  3.54clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  43%|████▎     | 2945/6854 [13:51<18:23,  3.54clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  43%|████▎     | 2977/6854 [14:00<18:14,  3.54clip/s, recent=0.2s/clip ETA0.3h]probe_features_train:  44%|████▍     | 3009/6854 [14:08<18:04,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  44%|████▍     | 3041/6854 [14:17<17:54,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  45%|████▍     | 3073/6854 [14:25<17:44,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  45%|████▌     | 3105/6854 [14:34<17:35,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  46%|████▌     | 3137/6854 [14:43<17:26,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  46%|████▌     | 3169/6854 [14:52<17:17,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  47%|████▋     | 3201/6854 [15:00<17:08,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  47%|████▋     | 3233/6854 [15:09<16:58,  3.55clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  48%|████▊     | 3265/6854 [15:18<16:49,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  48%|████▊     | 3297/6854 [15:26<16:39,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  49%|████▊     | 3329/6854 [15:35<16:30,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  49%|████▉     | 3361/6854 [15:44<16:21,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  50%|████▉     | 3393/6854 [15:53<16:12,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  50%|████▉     | 3425/6854 [16:01<16:03,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  50%|█████     | 3457/6854 [16:10<15:53,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  51%|█████     | 3489/6854 [16:19<15:44,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  51%|█████▏    | 3521/6854 [16:28<15:35,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  52%|█████▏    | 3553/6854 [16:36<15:26,  3.56clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  52%|█████▏    | 3585/6854 [16:45<15:16,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  53%|█████▎    | 3617/6854 [16:54<15:07,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  53%|█████▎    | 3649/6854 [17:03<14:58,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  54%|█████▎    | 3681/6854 [17:11<14:49,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  54%|█████▍    | 3713/6854 [17:20<14:40,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  55%|█████▍    | 3745/6854 [17:28<14:30,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  55%|█████▌    | 3777/6854 [17:37<14:21,  3.57clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  56%|█████▌    | 3809/6854 [17:45<14:11,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  56%|█████▌    | 3841/6854 [17:53<14:02,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  57%|█████▋    | 3873/6854 [18:01<13:52,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  57%|█████▋    | 3905/6854 [18:10<13:43,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  57%|█████▋    | 3937/6854 [18:18<13:34,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  58%|█████▊    | 3969/6854 [18:27<13:24,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  58%|█████▊    | 4001/6854 [18:35<13:15,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  59%|█████▉    | 4033/6854 [18:45<13:06,  3.58clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  59%|█████▉    | 4065/6854 [18:53<12:57,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  60%|█████▉    | 4097/6854 [19:02<12:48,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  60%|██████    | 4129/6854 [19:11<12:39,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  61%|██████    | 4161/6854 [19:20<12:30,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  61%|██████    | 4193/6854 [19:28<12:21,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  62%|██████▏   | 4225/6854 [19:37<12:12,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  62%|██████▏   | 4257/6854 [19:46<12:03,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  63%|██████▎   | 4289/6854 [19:54<11:54,  3.59clip/s, recent=0.2s/clip ETA0.2h]  [tar reader] subset-00007.tar: emitted=596, dropped=0 (missing_part=0, empty_mp4=0), filtered=404 (subset=404, resume=0)
+probe_features_train:  63%|██████▎   | 4321/6854 [20:03<11:45,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  64%|██████▎   | 4353/6854 [20:12<11:36,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  64%|██████▍   | 4385/6854 [20:21<11:27,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  64%|██████▍   | 4417/6854 [20:29<11:18,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  65%|██████▍   | 4449/6854 [20:38<11:09,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  65%|██████▌   | 4481/6854 [20:47<11:00,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  66%|██████▌   | 4513/6854 [20:55<10:51,  3.59clip/s, recent=0.2s/clip ETA0.2h]probe_features_train:  66%|██████▋   | 4545/6854 [21:04<10:42,  3.59clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  67%|██████▋   | 4577/6854 [21:12<10:33,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  67%|██████▋   | 4609/6854 [21:21<10:24,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  68%|██████▊   | 4641/6854 [21:29<10:15,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  68%|██████▊   | 4673/6854 [21:38<10:05,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  69%|██████▊   | 4705/6854 [21:46<09:56,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  69%|██████▉   | 4737/6854 [21:55<09:47,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  70%|██████▉   | 4769/6854 [22:03<09:38,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  70%|███████   | 4801/6854 [22:12<09:29,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  71%|███████   | 4833/6854 [22:21<09:20,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  71%|███████   | 4865/6854 [22:29<09:11,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  71%|███████▏  | 4897/6854 [22:38<09:02,  3.60clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  72%|███████▏  | 4929/6854 [22:46<08:53,  3.61clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00002.tar: emitted=698, dropped=0 (missing_part=0, empty_mp4=0), filtered=302 (subset=302, resume=0)
+probe_features_train:  72%|███████▏  | 4961/6854 [22:55<08:44,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  73%|███████▎  | 4993/6854 [23:03<08:35,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  73%|███████▎  | 5025/6854 [23:13<08:27,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  74%|███████▍  | 5057/6854 [23:22<08:18,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  74%|███████▍  | 5089/6854 [23:30<08:09,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  75%|███████▍  | 5121/6854 [23:39<08:00,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  75%|███████▌  | 5153/6854 [23:48<07:51,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  76%|███████▌  | 5185/6854 [23:57<07:42,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  76%|███████▌  | 5217/6854 [24:06<07:33,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  77%|███████▋  | 5249/6854 [24:15<07:24,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  77%|███████▋  | 5281/6854 [24:24<07:16,  3.61clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00001.tar: emitted=697, dropped=0 (missing_part=0, empty_mp4=0), filtered=303 (subset=303, resume=0)
+probe_features_train:  78%|███████▊  | 5313/6854 [24:33<07:07,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  78%|███████▊  | 5345/6854 [24:41<06:58,  3.61clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00000.tar: emitted=709, dropped=0 (missing_part=0, empty_mp4=0), filtered=291 (subset=291, resume=0)
+probe_features_train:  78%|███████▊  | 5377/6854 [24:50<06:49,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  79%|███████▉  | 5409/6854 [24:59<06:40,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  79%|███████▉  | 5441/6854 [25:07<06:31,  3.61clip/s, recent=0.2s/clip ETA0.1h]
+[m12a_action_top1]-oom-watchdog ⚠️  warn: memory 550.2 GB / 683.9 GB (80.5%) — approaching cgroup cap
+probe_features_train:  80%|███████▉  | 5473/6854 [25:16<06:22,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  80%|████████  | 5505/6854 [25:24<06:13,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  81%|████████  | 5537/6854 [25:33<06:04,  3.61clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  81%|████████▏ | 5569/6854 [25:41<05:55,  3.61clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00006.tar: emitted=762, dropped=0 (missing_part=0, empty_mp4=0), filtered=238 (subset=238, resume=0)
+  [tar reader] subset-00005.tar: emitted=713, dropped=0 (missing_part=0, empty_mp4=0), filtered=287 (subset=287, resume=0)
+probe_features_train:  82%|████████▏ | 5601/6854 [25:49<05:46,  3.61clip/s, recent=0.2s/clip ETA0.1h]
+[m12a_action_top1]-oom-watchdog ⚠️  warn: memory 555.1 GB / 683.9 GB (81.2%) — approaching cgroup cap
+probe_features_train:  82%|████████▏ | 5633/6854 [25:58<05:37,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  83%|████████▎ | 5665/6854 [26:06<05:28,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  83%|████████▎ | 5697/6854 [26:15<05:20,  3.62clip/s, recent=0.2s/clip ETA0.1h]
+[m12a_action_top1]-oom-watchdog ⚠️  warn: memory 553.8 GB / 683.9 GB (81.0%) — approaching cgroup cap
+probe_features_train:  84%|████████▎ | 5729/6854 [26:24<05:11,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  84%|████████▍ | 5761/6854 [26:33<05:02,  3.62clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00003.tar: emitted=827, dropped=0 (missing_part=0, empty_mp4=0), filtered=173 (subset=173, resume=0)
+probe_features_train:  85%|████████▍ | 5793/6854 [26:41<04:53,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  85%|████████▍ | 5825/6854 [26:50<04:44,  3.62clip/s, recent=0.2s/clip ETA0.1h]
+[m12a_action_top1]-oom-watchdog ⚠️  warn: memory 548.4 GB / 683.9 GB (80.2%) — approaching cgroup cap
+probe_features_train:  85%|████████▌ | 5857/6854 [26:58<04:35,  3.62clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00004.tar: emitted=801, dropped=0 (missing_part=0, empty_mp4=0), filtered=199 (subset=199, resume=0)
+probe_features_train:  86%|████████▌ | 5889/6854 [27:06<04:26,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  86%|████████▋ | 5921/6854 [27:15<04:17,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  87%|████████▋ | 5953/6854 [27:24<04:08,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  87%|████████▋ | 5985/6854 [27:32<03:59,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  88%|████████▊ | 6017/6854 [27:40<03:51,  3.62clip/s, recent=0.2s/clip ETA0.1h]probe_features_train:  88%|████████▊ | 6049/6854 [27:49<03:42,  3.62clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00009.tar: emitted=272, dropped=0 (missing_part=0, empty_mp4=0), filtered=25 (subset=25, resume=0)
+probe_features_train:  89%|████████▊ | 6081/6854 [27:58<03:33,  3.62clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  89%|████████▉ | 6113/6854 [28:07<03:24,  3.62clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  90%|████████▉ | 6145/6854 [28:15<03:15,  3.62clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  90%|█████████ | 6177/6854 [28:24<03:06,  3.62clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  91%|█████████ | 6209/6854 [28:32<02:57,  3.62clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  91%|█████████ | 6241/6854 [28:41<02:49,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  92%|█████████▏| 6273/6854 [28:49<02:40,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  92%|█████████▏| 6305/6854 [28:58<02:31,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  92%|█████████▏| 6337/6854 [29:06<02:22,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  93%|█████████▎| 6369/6854 [29:15<02:13,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  93%|█████████▎| 6401/6854 [29:24<02:04,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  94%|█████████▍| 6433/6854 [29:33<01:56,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  94%|█████████▍| 6465/6854 [29:42<01:47,  3.63clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00008.tar: emitted=779, dropped=0 (missing_part=0, empty_mp4=0), filtered=221 (subset=221, resume=0)
+probe_features_train:  95%|█████████▍| 6497/6854 [29:50<01:38,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  95%|█████████▌| 6529/6854 [29:59<01:29,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  96%|█████████▌| 6561/6854 [30:07<01:20,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  96%|█████████▌| 6593/6854 [30:16<01:11,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  97%|█████████▋| 6625/6854 [30:25<01:03,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  97%|█████████▋| 6657/6854 [30:34<00:54,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  98%|█████████▊| 6689/6854 [30:43<00:45,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  98%|█████████▊| 6721/6854 [30:51<00:36,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  99%|█████████▊| 6753/6854 [31:00<00:27,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  99%|█████████▉| 6785/6854 [31:07<00:18,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train:  99%|█████████▉| 6817/6854 [31:15<00:10,  3.63clip/s, recent=0.2s/clip ETA0.0h]probe_features_train: 100%|█████████▉| 6849/6854 [31:17<00:01,  3.65clip/s, recent=0.2s/clip ETA0.0h]probe_features_train: 100%|██████████| 6854/6854 [31:17<00:00,  3.65clip/s, recent=0.2s/clip ETA0.0h]
+  extract_features_for_keys(features_train): 6854/6854 clips in 1858s
+  [D9] final resume ckpt saved: .probe_features_train_ckpt.npz (6854 clips) — Stage 3.5 will resume from this
+  AdaptiveBatchSizer(features_val): start=20, max=44, target_vram=85%
+probe_features_val:   0%|          | 0/451 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
+  [tar reader] subset-00006.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00004.tar: emitted=46, dropped=0 (missing_part=0, empty_mp4=0), filtered=954 (subset=954, resume=0)
+  [tar reader] subset-00003.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00007.tar: emitted=55, dropped=0 (missing_part=0, empty_mp4=0), filtered=945 (subset=945, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00005.tar: emitted=39, dropped=0 (missing_part=0, empty_mp4=0), filtered=961 (subset=961, resume=0)
+  [tar reader] subset-00002.tar: emitted=41, dropped=0 (missing_part=0, empty_mp4=0), filtered=959 (subset=959, resume=0)
+probe_features_val:   0%|          | 1/451 [31:29<236:09:02, 1889.21s/clip]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 20 → 21
+probe_features_val:   5%|▍         | 21/451 [31:31<10:45:36, 90.08s/clip, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 21 → 22
+  [tar reader] subset-00008.tar: emitted=28, dropped=0 (missing_part=0, empty_mp4=0), filtered=972 (subset=972, resume=0)
+probe_features_val:   9%|▉         | 41/451 [31:37<5:16:16, 46.29s/clip, recent=0.2s/clip ETA0.0h]   AdaptiveBatch: VRAM 15% < 65% → sub-batch 22 → 23
+probe_features_val:  14%|█▎        | 61/451 [31:39<3:22:26, 31.14s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 23 → 24
+  [tar reader] subset-00001.tar: emitted=92, dropped=0 (missing_part=0, empty_mp4=0), filtered=908 (subset=908, resume=0)
+probe_features_val:  18%|█▊        | 81/451 [31:45<2:25:05, 23.53s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 24 → 25
+  AdaptiveBatch: VRAM 15% < 65% → sub-batch 25 → 26
+  [tar reader] subset-00000.tar: emitted=118, dropped=0 (missing_part=0, empty_mp4=0), filtered=882 (subset=882, resume=0)
+probe_features_val:  22%|██▏       | 101/451 [31:55<1:50:37, 18.96s/clip, recent=0.3s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 26 → 27
+probe_features_val:  27%|██▋       | 123/451 [31:56<1:25:10, 15.58s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 27 → 28
+probe_features_val:  32%|███▏      | 145/451 [32:04<1:07:41, 13.27s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 28 → 29
+  AdaptiveBatch: VRAM 15% < 65% → sub-batch 29 → 30
+probe_features_val:  37%|███▋      | 167/451 [32:13<54:48, 11.58s/clip, recent=0.3s/clip ETA0.0h]    AdaptiveBatch: VRAM 15% < 65% → sub-batch 30 → 31
+probe_features_val:  42%|████▏     | 191/451 [32:14<43:53, 10.13s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 31 → 32
+probe_features_val:  48%|████▊     | 215/451 [32:23<35:33,  9.04s/clip, recent=0.3s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 32 → 33
+probe_features_val:  53%|█████▎    | 239/451 [32:32<28:52,  8.17s/clip, recent=0.3s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 33 → 34
+probe_features_val:  58%|█████▊    | 263/451 [32:41<23:22,  7.46s/clip, recent=0.3s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 34 → 35
+probe_features_val:  64%|██████▍   | 289/451 [32:50<18:24,  6.82s/clip, recent=0.3s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 35 → 36
+probe_features_val:  71%|███████   | 321/451 [32:59<13:21,  6.17s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 36 → 37
+probe_features_val:  78%|███████▊  | 353/451 [33:08<09:11,  5.63s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 37 → 38
+probe_features_val:  85%|████████▌ | 385/451 [33:15<05:42,  5.18s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 38 → 39
+probe_features_val:  92%|█████████▏| 417/451 [33:23<02:43,  4.80s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 39 → 40
+probe_features_val: 100%|█████████▉| 449/451 [33:23<00:08,  4.46s/clip, recent=0.2s/clip ETA0.0h]  AdaptiveBatch: VRAM 15% < 65% → sub-batch 40 → 41
+probe_features_val: 100%|██████████| 451/451 [33:23<00:00,  4.44s/clip, recent=0.2s/clip ETA0.0h]
+  extract_features_for_keys(features_val): 451/451 clips in 125s
+  [D9] final resume ckpt saved: .probe_features_val_ckpt.npz (451 clips) — Stage 3.5 will resume from this
+Probe: AttentiveClassifier(embed_dim=1664, n_classes=11, depth=4)
+  params: 130.24M  → output_dir=outputs/poc/probe_action/vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+  epoch   0/20: loss=2.7806 train_acc=0.3793 val_acc=0.3991 lr=4.97e-04
+  epoch   2/20: loss=1.4215 train_acc=0.4924 val_acc=0.4656 lr=4.73e-04
+  epoch   4/20: loss=1.3260 train_acc=0.5149 val_acc=0.5078 lr=4.27e-04
+  epoch   6/20: loss=1.2122 train_acc=0.5651 val_acc=0.4900 lr=3.63e-04
+  epoch   8/20: loss=1.0933 train_acc=0.6068 val_acc=0.5078 lr=2.89e-04
+  epoch  10/20: loss=0.9377 train_acc=0.6595 val_acc=0.5144 lr=2.11e-04
+  epoch  12/20: loss=0.7935 train_acc=0.7051 val_acc=0.5144 lr=1.37e-04
+  epoch  14/20: loss=0.6719 train_acc=0.7460 val_acc=0.5144 lr=7.32e-05
+  epoch  16/20: loss=0.5860 train_acc=0.7718 val_acc=0.4967 lr=2.72e-05
+  epoch  18/20: loss=0.5473 train_acc=0.7803 val_acc=0.5011 lr=3.08e-06
+  epoch  19/20: loss=0.5399 train_acc=0.7823 val_acc=0.4967 lr=0.00e+00
+Saved best probe → outputs/poc/probe_action/vjepa_2_1_surgical_3stage_DI_wiseft_encoder/probe.pt (val_acc=0.5299)
+Test top-1 acc: 0.4855  ±0.0227  (95% BCa CI)
+
+═══ 19:28:38 ·   STAGE 3.5 · taxonomy probe (16 dims) for vjepa_2_1_surgical_3stage_DI_wiseft_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+  [lazy-extract] missing splits on disk: ['train', 'val'] — loading vjepa_2_1_surgical_3stage_DI_wiseft_encoder encoder for in-memory extraction
+Loading V-JEPA frozen vjepa_2_1_surgical_3stage_DI_wiseft_encoder (vit_gigantic_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 588/588 params  (missing=0, unexpected=0)
+  Resume: 6854 clips already cached
+  Resume: 451 clips already cached
+m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:   0%|          | 0/15 [00:00<?, ?dim/s]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:   7%|▋         | 1/15 [01:15<17:34, 75.33s/dim]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  13%|█▎        | 2/15 [02:08<13:54, 64.19s/dim]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  20%|██        | 3/15 [03:01<12:06, 60.57s/dim, recent=53.0s/dim ETA0.2h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  27%|██▋       | 4/15 [03:55<10:46, 58.77s/dim, recent=53.3s/dim ETA0.2h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  33%|███▎      | 5/15 [04:49<09:39, 57.92s/dim, recent=53.4s/dim ETA0.2h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  40%|████      | 6/15 [05:42<08:34, 57.16s/dim, recent=54.5s/dim ETA0.2h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  47%|████▋     | 7/15 [06:36<07:32, 56.58s/dim, recent=53.3s/dim ETA0.1h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  53%|█████▎    | 8/15 [07:29<06:33, 56.25s/dim, recent=53.1s/dim ETA0.1h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  60%|██████    | 9/15 [08:23<05:35, 55.98s/dim, recent=53.9s/dim ETA0.1h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  67%|██████▋   | 10/15 [09:17<04:38, 55.71s/dim, recent=53.8s/dim ETA0.1h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  73%|███████▎  | 11/15 [10:10<03:41, 55.46s/dim, recent=53.3s/dim ETA0.1h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  80%|████████  | 12/15 [11:05<02:46, 55.43s/dim, recent=52.9s/dim ETA0.1h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  87%|████████▋ | 13/15 [11:58<01:50, 55.26s/dim, recent=55.1s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]:  93%|█████████▎| 14/15 [12:50<00:55, 55.07s/dim, recent=53.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]: 100%|██████████| 15/15 [13:44<00:00, 54.99s/dim, recent=52.7s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_surgical_3stage_DI_wiseft_encoder]: 100%|██████████| 15/15 [13:44<00:00, 54.99s/dim, recent=53.9s/dim ETA0.0h]
+Wrote: outputs/poc/probe_taxonomy/vjepa_2_1_surgical_3stage_DI_wiseft_encoder/test_metrics.json (15 dim records)
+  [probe-head cleanup] removed 15 probe_*.pt (7.81 GB freed; metrics kept in test_metrics.json) — --keep-probe-heads to retain
+  [lazy-cleanup] removed .probe_features_train_ckpt.npz (0.4 GB)
+  [lazy-cleanup] removed .probe_features_val_ckpt.npz (0.0 GB)
+
+═══ 19:42:29 ·   STAGE 5 · motion_cos features for vjepa_2_1_surgical_3stage_DI_wiseft_encoder ═══
+  [share-features] mean-pooled (1825, 16, 1664) -> (1825, 1664); reused 1825 clip keys
+
+═══ 19:42:32 ·   STAGE 6 · motion_cos cosine for vjepa_2_1_surgical_3stage_DI_wiseft_encoder ═══
+Cosine over N=1825 clips, D=1664, classes=11
+  computed in 0.0s   pos_mean=0.7857  neg_mean=0.7236  score_mean=0.0621
+  Stage 8 SKIP vjepa_2_1_surgical_3stage_DI_wiseft_encoder (not in STAGE8_ENCODERS preflight set)
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_surgical_3stage_DI_wiseft_encoder (mode=POC, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 19:42:35 · DONE · total wall = 57 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/probe_action/vjepa_2_1_surgical_3stage_DI_wiseft_encoder/probe.pt

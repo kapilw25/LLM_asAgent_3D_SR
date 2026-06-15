@@ -1,0 +1,100 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 11:26:22 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 14 01:23 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_surgical_noDI_encoder
+  ✓ skip_stages:          1,4,12,13,7,9,9b,9c,10,8b,8c
+  ✓ cache_policy:         1
+  ✓ output_prefix:        outputs/poc
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/probe_motion_cos/probe_motion_cos_paired.json → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/probe_future_mse/probe_future_mse_per_variant.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_noDI_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_surgical_noDI_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ⚠️  vjepa_2_1_surgical_noDI_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/m09c_ckpt_best.pt not found — Stage 8 will SKIP this encoder
+       Re-train (m09c writes m09c_ckpt_best.pt at end of surgery):
+         CACHE_POLICY_ALL=2 ./scripts/run_train.sh noDI_encoder --POC
+  → no V-JEPA variants have predictor ckpt; Stage 8/9 will be auto-skipped
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_noDI_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_surgical_noDI_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_surgical_noDI_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 11:26:22 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_surgical_noDI_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_surgical_noDI_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgery_noDI_encoder/motion_aux_head.pt
+
+═══ 11:26:22 ·   STAGE 2 · features for vjepa_2_1_surgical_noDI_encoder (splits=test, dtype=fp16) ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12a_action_top1] cgroup envelope:
+[m12a_action_top1]   memory: 614.3 GB / 683.9 GB (90%)
+[m12a_action_top1]   pids:   2100 / 47104 (4%)
+[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+
+[m12a_action_top1]-oom-watchdog ⚠️  warn: memory 614.3 GB / 683.9 GB (89.8%) — approaching cgroup cap
+Loading V-JEPA frozen vjepa_2_1_surgical_noDI_encoder (vit_gigantic_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+
+[m12a_action_top1]-oom-watchdog 🚨 CRITICAL: memory 620.9 GB / 683.9 GB (90.8%) — reduce decode_workers / producer_queue in pipeline.yaml NOW
+  Loaded 588/588 params  (missing=0, unexpected=0)
+  [features] saving splits ['test']; lazy splits (extracted by Stage 3): ['train', 'val']
+  [keep] test: features cached -> skipping
+
+═══ 11:26:51 ·   STAGE 3 · train probe (1 LR(s); epochs=20 warmup=0.0) for vjepa_2_1_surgical_noDI_encoder ═══
+  [keep] Stage 3 cached for vjepa_2_1_surgical_noDI_encoder: probe.pt, test_predictions.npy, test_clip_keys.npy, test_metrics.json all present in outputs/poc/probe_action/vjepa_2_1_surgical_noDI_encoder — skipping (--cache-policy 2 to redo)
+
+═══ 11:26:54 ·   STAGE 3.5 · taxonomy probe (16 dims) for vjepa_2_1_surgical_noDI_encoder ═══
+  [keep] Stage 3.5 cached for vjepa_2_1_surgical_noDI_encoder: test_metrics.json present in outputs/poc/probe_taxonomy/vjepa_2_1_surgical_noDI_encoder — skipping (--cache-policy 2 to redo)
+
+═══ 11:26:59 ·   STAGE 5 · motion_cos features for vjepa_2_1_surgical_noDI_encoder ═══
+  [keep] outputs/poc/probe_motion_cos/vjepa_2_1_surgical_noDI_encoder/pooled_features_test.npy present -- skipping (--cache-policy 2 to redo)
+
+═══ 11:27:02 ·   STAGE 6 · motion_cos cosine for vjepa_2_1_surgical_noDI_encoder ═══
+  [keep] cosine cache present at outputs/poc/probe_motion_cos/vjepa_2_1_surgical_noDI_encoder -- skipping
+  Stage 8 SKIP vjepa_2_1_surgical_noDI_encoder (not in STAGE8_ENCODERS preflight set)
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_surgical_noDI_encoder (mode=POC, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 11:27:04 · DONE · total wall = 0 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/probe_action/vjepa_2_1_surgical_noDI_encoder/probe.pt

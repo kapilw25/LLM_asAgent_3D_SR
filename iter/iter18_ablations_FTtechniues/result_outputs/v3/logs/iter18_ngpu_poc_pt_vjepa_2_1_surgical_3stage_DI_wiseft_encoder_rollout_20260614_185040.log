@@ -1,0 +1,69 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 18:50:43 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 14 01:23 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8c,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ output_prefix:        outputs/poc
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/probe_motion_cos/probe_motion_cos_paired.json → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/probe_future_mse/probe_future_mse_per_variant.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ⚠️  vjepa_2_1_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/m09c_ckpt_best.pt not found — Stage 8 will SKIP this encoder
+       Re-train (m09c writes m09c_ckpt_best.pt at end of surgery):
+         CACHE_POLICY_ALL=2 ./scripts/run_train.sh 3stage_DI_wiseft_encoder --POC
+  → no V-JEPA variants have predictor ckpt; Stage 8/9 will be auto-skipped
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ⚠️  vjepa_2_1_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/motion_aux_head.pt not found — eval falls back to encoder-only for this variant
+  → head-augmented eval ENCODERS: <none>
+  → final ENCODERS after head preflight: vjepa_2_1_surgical_3stage_DI_wiseft_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 18:50:43 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_surgical_3stage_DI_wiseft_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  Stage 8b SKIP vjepa_2_1_surgical_3stage_DI_wiseft_encoder (not in STAGE8_ENCODERS preflight set)
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_surgical_3stage_DI_wiseft_encoder (mode=POC, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 18:50:45 · DONE · total wall = 0 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/probe_action/vjepa_2_1_surgical_3stage_DI_wiseft_encoder/probe.pt

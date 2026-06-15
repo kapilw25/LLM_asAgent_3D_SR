@@ -1,0 +1,4 @@
+  [wiseft] frozen=590 keys · surgery=588 keys · interpolated=588 · skipped=2
+    skip patch_embed_img.proj.weight: missing in surgery
+    skip patch_embed_img.proj.bias: missing in surgery
+  [wiseft] α=0.7 → outputs/poc/vjepa_2_1_vitG/m09c_surgical_3stage_DI_wiseft_encoder/student_encoder.pt  (588 keys blended)
