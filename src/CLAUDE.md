@@ -106,6 +106,25 @@ Shared `utils/wandb_utils.py`. `--no-wandb` on every module. All functions no-op
 ## SESSION-END SYNC
 **Update CLAUDE.md + MEMORY.md** at end of every session with new results/pivots/decisions. Sync `src/MEMORY.md` → `~/.claude/projects/.../memory/MEMORY.md`.
 
+## INSTANCE TEARDOWN — 3 BACKUPS BEFORE KILL/RECYCLE/DESTROY (NON-NEGOTIABLE)
+**This is a Vast.ai container — `recycle`/`destroy` WIPES the whole filesystem** (`/workspace` is NOT a persistent volume here — `workspace_is_volume:false`; even `stop` still bills storage). Nothing on the box survives unless it is pushed off-box first. **Before the user closes / stops / kills / recycles / destroys the instance (or its disk), CLAUDE must remind the user to run ALL THREE** and only then declare the box safe to tear down. The user runs them (never me — GPU/secret commands are the user's). Each is independently resumable, so a half-finished one just re-runs.
+1. **CODE → GitHub** (THE script — prompts for Kapil/Gaytri account):
+   ```bash
+   bash git_push.sh "<commit message>"
+   ```
+2. **OUTPUTS → HF** (resumable large-folder; `--exclude "**/.*"` keeps `.env`/secrets/`.cache` out; re-run to top-up):
+   ```bash
+   hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset \
+     --include "outputs/poc/**" --exclude "**/.*" \
+     2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+   ```
+   Verify the tail shows `committed N/N` + `Upload is complete!` (N = candidate count) before trusting it.
+3. **SESSIONS + MEMORY → Mac** (run ON THE MAC, not the instance — pulls the `.claude` transcripts + `memory/*.md`):
+   ```bash
+   bash claude_session.sh --download --host <vast_host_alias>
+   ```
+**Teardown gate:** the box is safe to kill ONLY after all 3 succeed — code reconstructable from GitHub, outputs from HF, sessions/memory on the Mac. Regenerable caches (`*/m12_frame_cache`, `outputs/poc/**/*.pt` once mirrored on HF) do NOT need backup — they rebuild. NEVER bake `${WORKSPACE}/.env` (live HF/OpenAI/GitHub/WANDB secrets) into any uploaded/public artifact — the `--exclude "**/.*"` above is what keeps it out.
+
 ## OUTPUT FORMATTING — TABLES, NOT LISTS  (with emojis for scannability)
 **Default to ASCII box-drawing tables** (`┌─┬─┐` `│` `├─┼─┤` `└─┴─┘`) for ANY comparison spanning ≥2 columns × ≥2 rows. Markdown pipe tables (`| col | col |`) and bullet lists are BANNED for comparison data — Claude Code's CommonMark renderer flattens them into unaligned single-column "lists" in the user's terminal, which breaks the comparison and frustrates the user. **Use emojis LIBERALLY** in column headers, row identifiers, and status/marker columns for visual scannability — the user explicitly chose "eyeballable with emojis" over "perfectly aligned plain ASCII". Keep emojis OUT of pure-numeric cells (where width drift matters most) but in headers / status / verdict columns they're encouraged. Box-drawing borders MUST still be present so the table structure is visible even if cell widths drift slightly with emoji rendering. Always declare a marker legend below the table. POC ablation sweeps (Cell A/B/C/D × N metrics) MUST be a single box-drawn grid, not N grouped lists.
 

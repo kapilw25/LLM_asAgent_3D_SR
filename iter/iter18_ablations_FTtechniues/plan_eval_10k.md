@@ -12,12 +12,14 @@
 | 🐛 Gap in the experiment | 🗣️ Reviewer's line | ✅ Fixed by this run? |
 |---|---|---|
 | 🎲 **Single seed** — the 95 % bands are eval-bootstrap over test clips, *not* training-seed variance | *"Report ≥ 3 seeds — your bands don't capture training stochasticity."* | ❌ needs **re-train × seeds** *(biggest one)* |
+| 🥊 **FT-baseline coverage** — 6 non-ours competitors (vanilla continual-SSL pretrain, full-FT, LP-FT, LoRA, DoRA, Auto-RGN) | *"Did you compare against the standard fine-tuning techniques?"* | ✅ **yes — 6 competitors** *(CaSSLe / EWC compute-heavy → dropped)* |
+| 🧬 **Single backbone** — all numbers on **2B ViT-G** only | *"Does surgery ≫ FT hold on another backbone (e.g. the 1B ViT-g)?"* | ❌ needs the **1B ViT-g ablation** (full 2nd-backbone sweep) |
 | 📏 **Scale = 10k, not 115k** | *"Why only 10k?"* | ✅ **declared scope** (compute-bounded, stated honestly) |
 | 🧮 **14 metrics × ~18 arms, NO multiple-comparison correction** | *"Some 'wins' are false positives at α = 0.05."* | ❌ free stats fix — **just do it** (Bonferroni / FDR) |
 | 🌍 **In-domain only** (all WalkIndia) | *"Does it hold on fresh, unseen clips?"* | ✅ **this run is exactly that test** (disjoint 10k) |
 | 📉 **WiSE-FT wins overlap baselines** | *"Not statistically significant."* | 〰️ partially — see caveat ⚠️ |
 
-> 🎯 **Still owed before submission:** ① ≥ 3 **seeds** · ② **multiple-comparison correction**. This run buys the **generalization** check — not those two.
+> 🎯 **Still owed before submission:** ① ≥ 3 **seeds** · ② **multiple-comparison correction** · ③ a **2nd backbone (1B ViT-g)**. This run buys the **generalization** check — not those three.
 
 ---
 
