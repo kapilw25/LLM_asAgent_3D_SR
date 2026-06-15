@@ -3,10 +3,10 @@ Upload/download compute outputs + POC/val data to HuggingFace Hub.
 Repo: anonymousML123/factorjepa-outputs (public, gated, auto-created on first upload).
 
 USAGE:
+    # clean MIRROR [delete file on HF, if doesnt exist on disk]
     >> HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc/ 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-    # verify the snapshot file-by-file 
-    python -u src/utils/hf_outputs.py verify-full outputs/ 2>&1 | tee logs/verify_full_outputs_$(date +%Y%m%d_%H%M%S).log
-    >> python -u src/utils/hf_outputs.py download outputs/poc/ 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    # only ADDTIVE
+    hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/**" --exclude "**/.*"   2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
