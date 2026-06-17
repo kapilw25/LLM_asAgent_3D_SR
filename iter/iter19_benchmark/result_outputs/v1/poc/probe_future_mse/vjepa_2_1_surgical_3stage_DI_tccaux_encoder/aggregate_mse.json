@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_tccaux_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.49555,
+  "mse_std": 0.021826,
+  "mse_ci": {
+    "mean": 0.49555,
+    "ci_lo": 0.494519,
+    "ci_hi": 0.496541,
+    "ci_half": 0.001011
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitG/m09c_surgery_3stage_DI_tccaux_encoder/m09c_ckpt_best.pt"
+}

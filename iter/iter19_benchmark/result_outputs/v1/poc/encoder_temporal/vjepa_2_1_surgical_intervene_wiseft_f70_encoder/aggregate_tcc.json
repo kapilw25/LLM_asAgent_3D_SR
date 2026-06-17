@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_surgical_intervene_wiseft_f70_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.092389,
+    "std": 0.186856,
+    "ci": {
+      "mean": 2.092389,
+      "ci_lo": 2.083716,
+      "ci_hi": 2.101095,
+      "ci_half": 0.008689
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.287823,
+    "std": 0.122054,
+    "ci": {
+      "mean": 0.287823,
+      "ci_lo": 0.282404,
+      "ci_hi": 0.293382,
+      "ci_half": 0.005489
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgical_intervene_wiseft_f70_encoder/student_encoder.pt"
+}

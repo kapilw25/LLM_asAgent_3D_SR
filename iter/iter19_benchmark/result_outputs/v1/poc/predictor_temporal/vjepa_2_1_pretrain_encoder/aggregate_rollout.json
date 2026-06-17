@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_pretrain_encoder",
+  "metric": "rollout",
+  "n_test": 1825,
+  "mean": 0.007682,
+  "std": 0.00487,
+  "ci": {
+    "mean": 0.007682,
+    "ci_lo": 0.00746,
+    "ci_hi": 0.00791,
+    "ci_half": 0.000225
+  },
+  "lower_is_better": true,
+  "interpretation": "free-run drift slope; lower = stabler dynamics",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09a_pretrain_encoder/m09a_ckpt_best.pt"
+}

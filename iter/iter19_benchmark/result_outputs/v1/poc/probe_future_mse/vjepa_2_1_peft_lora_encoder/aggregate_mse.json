@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_peft_lora_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.504026,
+  "mse_std": 0.019935,
+  "mse_ci": {
+    "mean": 0.504026,
+    "ci_lo": 0.503117,
+    "ci_hi": 0.50493,
+    "ci_half": 0.000907
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitG/m09b_peft_lora_encoder/m09c_ckpt_best.pt"
+}

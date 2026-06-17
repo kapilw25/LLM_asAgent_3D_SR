@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_surgical_intervene_wiseft_f50_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.519386,
+  "mse_std": 0.019331,
+  "mse_ci": {
+    "mean": 0.519386,
+    "ci_lo": 0.518519,
+    "ci_hi": 0.520264,
+    "ci_half": 0.000872
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitG/m09c_surgical_intervene_wiseft_f50_encoder/m09c_ckpt_best.pt"
+}

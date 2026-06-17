@@ -1,0 +1,57 @@
+{
+  "slow__downward": {
+    "train": 276,
+    "val": 19,
+    "test": 74
+  },
+  "still__upward": {
+    "train": 573,
+    "val": 37,
+    "test": 153
+  },
+  "medium__upward": {
+    "train": 1337,
+    "val": 87,
+    "test": 355
+  },
+  "still__downward": {
+    "train": 141,
+    "val": 10,
+    "test": 38
+  },
+  "still__rightward": {
+    "train": 792,
+    "val": 52,
+    "test": 213
+  },
+  "slow__upward": {
+    "train": 1176,
+    "val": 78,
+    "test": 316
+  },
+  "medium__downward": {
+    "train": 355,
+    "val": 23,
+    "test": 92
+  },
+  "slow__rightward": {
+    "train": 225,
+    "val": 15,
+    "test": 59
+  },
+  "fast__upward": {
+    "train": 1336,
+    "val": 87,
+    "test": 355
+  },
+  "still__leftward": {
+    "train": 236,
+    "val": 16,
+    "test": 63
+  },
+  "fast__downward": {
+    "train": 407,
+    "val": 27,
+    "test": 107
+  }
+}

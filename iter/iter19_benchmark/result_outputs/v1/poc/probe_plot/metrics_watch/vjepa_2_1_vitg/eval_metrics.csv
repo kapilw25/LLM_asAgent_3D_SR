@@ -1,0 +1,15 @@
+encoder,n_test,act,act_ci,tax,tax_ci,mcos,mcos_ci,fut,fut_ci,rollout,rollout_ci,causal,causal_ci,tdist,tdist_ci,maskratio,maskratio_ci,order,order_ci,teacher_free,teacher_free_ci
+vjepa_2_1_vitg_frozen,1825,0.4246575342465753,0.02274,0.8015572666666666,,0.007001,0.000688,0.636863,0.001246,0.007262,0.000237,0.655149,0.001569,0.007439,0.000372,0.06511,0.000654,0.022689,0.001474,0.043995,0.000513
+vjepa_2_1_vitg_pretrain_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_surgical_3stage_DI_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_surgical_noDI_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_surgical_3stage_DI_head,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_surgical_noDI_head,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_surgical_autorgn_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_surgery_raw_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_full_ft_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_lpft_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_peft_lora_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_peft_dora_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_cassle_encoder,—,,,,,,,,,,,,,,,,,,,,
+vjepa_2_1_vitg_ewc_encoder,—,,,,,,,,,,,,,,,,,,,,
