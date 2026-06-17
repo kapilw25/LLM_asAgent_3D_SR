@@ -3,6 +3,43 @@
 # AUDIENCE has knowledge about ONLY plots from @iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/poc/probe_plot/eval/
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
+
+## Tue, June 16, 2026
+- Began reframing the work: a benchmark scoring any open world-model, our arms as references.
+- Started checking the fifteen metrics measure distinct skills, not redundant numbers (early, inconclusive).
+- Next: score outside models (Cosmos, VideoMAE, DINO-WM) on the same fifteen-metric benchmark.
+
+## Mon, June 15, 2026
+- Blending surgery with frozen recovers frozen-level temporal while keeping surgery's future-frame win.
+- All seventeen models now scored on every metric; the trade-off win is clean.
+- Next: confirm the wins on a fresh, unseen batch of clips.
+
+## Sun, June 14, 2026
+- Built blend variants mixing surgery and frozen weights at fixed ratios (30/50/70%).
+- Consolidated the model roster to one source; refreshed the results deck.
+- Next: score the blend variants on prediction and temporal tests.
+
+## Sat, June 13, 2026
+- Built the all-metric head-to-head scorecard and the frame-alignment comparison chart.
+- Designed blend variants to recover frozen's temporal edge without losing prediction.
+- Next: build and evaluate the surgery-plus-frozen blends.
+
+## Fri, June 12, 2026
+- Five new temporal tests in (arrow-of-time, frame-order, pace, frame-alignment) for all models.
+- Frozen keeps the strongest time-ordering; surgery trades it for future-frame prediction.
+- Next: find a blend keeping prediction win plus frozen's temporal strength.
+
+## Thu, June 11, 2026
+- Sped up frame decoding so every model could afford the new temporal tests.
+- Infrastructure day; no new model numbers, temporal results land tomorrow.
+- Next: run all encoders through the five temporal tests.
+
+## Wed, June 10, 2026
+- Built five new temporal tests measuring whether encoders preserve frame order and timing.
+- Extends the comparison beyond prediction into the pure time-structure of features.
+- Next: speed up the pipeline, then score every model.
+
+
 ## Tue, June 9, 2026
 - Surgery-on-raw matches surgery-on-factor on future-frame and causal — surgery's only clean wins over frozen.
 - Factorized data adds no edge over the surgery technique; frozen/vanilla still lead the semantic metrics.
@@ -15,9 +52,9 @@
 - Next: repeat the full surgery-vs-baselines comparison on the smaller 1B backbone (scale ablation).
 
 ## Sun, June 7, 2026
-- 
--
--
+- Built faster evaluation and live charts tracking every model's scores as they finish.
+- Infrastructure day; foundation for the held-out comparisons, no new model numbers.
+- Next: run held-out evaluations; surgery-vs-baseline numbers follow.
 
 ## Sat, June 6, 2026
 - Nine of thirteen arms trained; surgery leads future-frame and causal error at selected checkpoints.
