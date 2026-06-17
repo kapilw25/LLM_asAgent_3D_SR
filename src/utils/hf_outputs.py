@@ -8,9 +8,21 @@ USAGE:
     # only ADDTIVE
     hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/**" --exclude "**/.*"   2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
+    # resolves the consistency-check crash (plain-HTTP path, no broken validator)
+    python -u src/utils/hf_outputs.py download-data outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
+    # LIGHT refresh (data only; plain-HTTP skips server-broken xet blobs non-fatally — unlike `hf download`):
+    python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv 2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
+    
+    # If you only want the light science files refreshed (a few MB, also dodges the poisoned .npz), use the hf CLI --include (there's no extension filter in hf_outputs.py):
+HF_HUB_DISABLE_XET=1 hf download anonymousML123/factorjepa-outputs --repo-type dataset \
+--include "outputs/poc/*.json" --include "outputs/poc/*.csv" \
+--include "outputs/poc/*.png"  --include "outputs/poc/*.pdf" \
+--local-dir . \
+2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
 
 
 
@@ -1265,7 +1277,7 @@ def _download_one_file(rpath: str, base_url: str, headers: dict,
         return (rpath, "failed", f"{type(e).__name__}: {str(e)[:120]}")
 
 
-def download_data(data_root: Path = None):
+def download_data(data_root: Path = None, exts: tuple = None):
     """Download data_root/ from HF — parallel plain HTTP. Bypasses HF lib.
 
     iter16 (2026-05-22): rewritten to skip huggingface_hub's download stack
@@ -1297,6 +1309,13 @@ def download_data(data_root: Path = None):
     subfolder = str(data_root)
     api = HfApi(token=token)
     remote_files = _list_remote_files(api, subfolder)
+    if exts:
+        # LIGHT filter (e.g. outputs/poc/**/*.{json,csv} only). The 8-way plain-HTTP loop below is
+        # NON-FATAL per file, so the handful of server-side xet-corrupt blobs that crash `hf download`
+        # / snapshot_download (500/416 on a zero-hash cas-bridge URL) are reported 'failed' + skipped
+        # instead of aborting the whole batch.
+        remote_files = [(p, s) for p, s in remote_files if p.lower().endswith(exts)]
+        print(f"  [--ext] light filter → {len(remote_files)} files matching {exts}")
     total_bytes = sum(size for _, size in remote_files)
     print(f"Downloading {HF_OUTPUTS_REPO}/{subfolder}/ → {data_root}/")
     print(f"  {len(remote_files)} files ({_fmt_size(total_bytes)}) on HF "
@@ -1380,7 +1399,16 @@ if __name__ == "__main__":
         # Default = "data" (project convention). No more hardcoded subfolder list.
         rc = upload_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
     elif cmd == "download-data":
-        rc = download_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
+        # optional `--ext json,csv,png,pdf` LIGHT filter — plain-HTTP path is non-fatal per file, so a
+        # few server-side xet-corrupt blobs are reported + skipped, not crashing the batch like `hf download`.
+        _dargs = sys.argv[2:]
+        _exts = None
+        if "--ext" in _dargs:
+            _i = _dargs.index("--ext")
+            _exts = tuple("." + e.strip().lstrip(".").lower()
+                          for e in _dargs[_i + 1].split(",") if e.strip())
+            _dargs = _dargs[:_i] + _dargs[_i + 2:]
+        rc = download_data(Path(_dargs[0]) if _dargs else None, exts=_exts)
     else:
         print(f"Unknown command: {cmd}")
         sys.exit(1)

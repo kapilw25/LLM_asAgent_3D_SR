@@ -46,6 +46,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from matplotlib.patches import Patch, Rectangle
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import FuncFormatter
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -57,6 +58,9 @@ from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 from utils.bootstrap import N_BOOTSTRAP
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
+from utils.validity import (criterion_rho, family_summary,  # iter19 §2b construct validity
+                            orient_higher_better, pairwise_spearman)
+from utils.config import get_pipeline_config  # iter19 §2b: plots.validity n_perm/seed (single source)
 from utils.arm_registry import (arm2dir, arm2enc, display_arms, merge_arms,  # iter18: SINGLE-SOURCE arm roster (no hardcoded names)
                                 merge_recipe)
 
@@ -1801,6 +1805,254 @@ def _skip_encoders_from_env(encoders):
     return out
 
 
+# ═══ §2b construct-validity: convergent/discriminant nomological-net heatmap (iter19) ═══════
+# The hardest benchmark bar — SHOW the metrics measure their named construct, not "N numbers of
+# unknown meaning". Reuses the eval_metrics.json matrix (no GPU). The 3 construct families are the
+# documented umbrellas (head/probe · predictor · encoder-temporal). `future_mse`/`fut` is the JEPA
+# PREDICTOR's L1 → grouped with predictor (its _CATALOG 'HEAD' tag is the legacy eval-band it ships
+# in, NOT its construct; mirrors the CLAUDE.md glossary). Directions come from _CATALOG (single
+# source). The statistics live in utils/validity.py (rule 32: it takes families/dirs as args).
+_VALIDITY_SHORT2LONG = {"act": "action_top1", "tax": "taxonomy_f1",
+                        "mcos": "motion_cos", "fut": "future_mse"}  # eval_metrics.json key ↔ _CATALOG key
+_VALIDITY_CONSTRUCT = {"HEAD": "head/probe", "PRED": "predictor", "ENC": "encoder-temporal"}
+# Human metric names for FIGURE tick labels — mirrors the CLAUDE.md GLOSSARY (the single source for
+# prose metric names). Short keys stay in the CSV per "short keys live in code/csv/json ONLY".
+_VALIDITY_PLAIN = {
+    "act": "Action top-1 accuracy", "tax": "taxonomy F1", "mcos": "motion-cosine separation",
+    "fut": "future-frame MSE", "rollout": "rollout drift slope", "causal": "causal future-block L1",
+    "tdist": "L1-vs-Δt decay slope", "teacher_free": "free-running exposure-bias gap",
+    "maskratio": "mask-ratio robustness slope", "order": "frame-order sensitivity",
+    "aot": "Arrow-of-Time accuracy", "tov": "temporal-order (frame-permutation) acc",
+    "pace": "playback-pace accuracy", "tcc_tau": "TCC Kendall τ", "tcc_cycle": "TCC cycle-back error",
+}
+_VALIDITY_FAM_ORDER = {"head/probe": 0, "predictor": 1, "encoder-temporal": 2}
+# DESIRABILITY colormap (overrides the textbook red=+/blue=- sign-convention — labeled on the
+# colorbar): BLUE = +1 (metrics agree → convergent validity, BEST) · WHITE = 0 (independent) ·
+# RED = -1 (disagree, WORST). Blue↔red is colour-blind-SAFE (unlike green↔red); endpoints kept
+# MODERATE so the bold-black cell numbers stay legible (builtin RdBu ends too dark). .claude/plotting.md.
+_VALIDITY_CMAP = LinearSegmentedColormap.from_list("rd_wt_bu", ["#C0392B", "#FFFFFF", "#2C6FBB"])
+
+
+def _validity_metric_spec():
+    """Ordered [(short_key, construct_family, direction)] derived from _CATALOG (single source).
+
+    `future_mse` moves HEAD→predictor (the _CATALOG 'HEAD' tag is its eval-band, not its construct
+    — it IS the JEPA predictor's L1). Stable-sorted by construct family so the heatmap's family
+    blocks are contiguous; within a family, the original _CATALOG order is preserved."""
+    long2short = {v: k for k, v in _VALIDITY_SHORT2LONG.items()}
+    spec = []
+    for key, fam, _out, direction, *_rest in _CATALOG:
+        short = long2short.get(key, key)
+        construct = "predictor" if key == "future_mse" else _VALIDITY_CONSTRUCT[fam]
+        spec.append((short, construct, direction))
+    spec.sort(key=lambda t: _VALIDITY_FAM_ORDER[t[1]])   # stable → keeps _CATALOG order within family
+    return spec
+
+
+def plot_metric_validity(metrics_json, out_dir, n_perm, seed):
+    """§2b convergent/discriminant heatmap from an eval_metrics.json (subjects × metrics).
+
+    Writes m13_metric_validity.{png,pdf,csv}: the Spearman correlation of the metrics (oriented
+    higher=better, signed `order` excluded), with the 3 construct-family blocks outlined and the
+    within / between / gap / permutation-p headline. Reuses the existing matrix — pure CPU, no GPU.
+    """
+    metrics_json, out_dir = Path(metrics_json), Path(out_dir)
+    rows = json.loads(metrics_json.read_text())
+    spec = _validity_metric_spec()
+
+    def _val(r, k):
+        v = r.get(k)
+        return v["mean"] if isinstance(v, dict) and v.get("mean") is not None else np.nan
+
+    # metrics actually present (non-null somewhere) in this json
+    present = [s for s in spec if any(np.isfinite(_val(r, s[0])) for r in rows)]
+    keys = [s[0] for s in present]
+    families = [s[1] for s in present]
+    directions = [s[2] for s in present]
+    fam_set = sorted(set(families))
+
+    # subjects = encoder rows with ≥1 non-null metric in EACH construct family. Drops the all-null
+    # arms (cassle/ewc) and the head-only / predictor-only partial arms whose duplicate-encoder
+    # rows would inflate the correlation; pairwise-complete then handles any remaining gaps.
+    subjects, dropped = [], []
+    for r in rows:
+        vals = {k: _val(r, k) for k in keys}
+        covered = {families[i] for i, k in enumerate(keys) if np.isfinite(vals[k])}
+        if set(fam_set).issubset(covered):
+            subjects.append((r["encoder"], [vals[k] for k in keys]))
+        else:
+            dropped.append((r["encoder"], sorted(set(fam_set) - covered)))
+    for enc, miss in dropped:
+        print(f"  [metric-validity] drop {enc} (no data in: {', '.join(miss)})")
+    # iter19 fix-2: drop by-construction DUPLICATE rows — an arm that reuses another's encoder yields
+    # an identical metric vector → a fake-perfect correlation. The family-coverage drop above already
+    # removes the *_head/empty rows; this explicit guard keeps it honest as the board grows (v2).
+    _seen, _uniq = [], []
+    for enc, vec in subjects:
+        key = tuple(round(x, 6) if np.isfinite(x) else None for x in vec)
+        if key in _seen:
+            print(f"  [metric-validity] drop {enc} — by-construction duplicate metric vector of an earlier row")
+            continue
+        _seen.append(key)
+        _uniq.append((enc, vec))
+    subjects = _uniq
+    if len(subjects) < 4:
+        print(f"  [metric-validity] SKIP — only {len(subjects)} fully-covered subjects (need ≥4)")
+        return
+
+    enc_names = [e for e, _ in subjects]
+    M = np.array([v for _, v in subjects], dtype=float)         # subjects × metrics
+    corr, npair = pairwise_spearman(orient_higher_better(M, directions))
+    summ = family_summary(corr, families, n_perm=n_perm, rng=np.random.default_rng(seed))
+
+    # signed metrics (order) are all-NaN after orientation → drop them from the figure
+    keep = [j for j, d in enumerate(directions) if d != "signed"]
+    keys_k = [keys[j] for j in keep]
+    fam_k = [families[j] for j in keep]
+    corr_k = corr[np.ix_(keep, keep)]
+
+    # Styling per .claude/plotting.md: ALL text BLACK + BOLD (never white-on-dark — fails on a
+    # projector / B&W print), and cell numbers sized to fill ~70% of the cell width (drop the
+    # leading zero → fewer glyphs → bigger font). Analysis-phase eyeball figure.
+    init_style()
+    n = len(keys_k)
+    cell_in = 0.85                                   # inches per cell → big cells so numbers read large
+    side = cell_in * n
+    cell_pt = cell_in * 72.0
+    num_fs = 0.32 * cell_pt                          # 4-char value ('-.91') fills ~70% of the cell width
+    tick_fs = 0.22 * cell_pt
+
+    def _annot(v):                                   # 2dp, drop the leading zero so glyphs are bigger
+        s = f"{v:.2f}"
+        if s.startswith("0."):
+            return s[1:]                             # 0.91 → .91
+        if s.startswith("-0."):
+            return "-" + s[2:]                       # -0.91 → -.91
+        return s
+
+    fig, ax = plt.subplots(figsize=(side + 3.8, side + 3.4))
+    im = ax.imshow(np.where(np.isfinite(corr_k), corr_k, 0.0), cmap=_VALIDITY_CMAP, vmin=-1, vmax=1)
+    plain = [_VALIDITY_PLAIN[k] for k in keys_k]   # full metric names on the figure (CLAUDE.md glossary)
+    ax.set_xticks(range(n))
+    ax.set_xticklabels(plain, rotation=45, ha="right", rotation_mode="anchor",
+                       fontsize=tick_fs, fontweight="bold", color="black")
+    ax.set_yticks(range(n))
+    ax.set_yticklabels(plain, rotation=45, ha="right", va="center", rotation_mode="anchor",
+                       fontsize=tick_fs, fontweight="bold", color="black")
+    for i in range(n):
+        for j in range(n):
+            txt = "·" if (i == j or not np.isfinite(corr_k[i, j])) else _annot(corr_k[i, j])
+            ax.text(j, i, txt, ha="center", va="center",
+                    fontsize=num_fs, fontweight="bold", color="black")   # ALL annotations black + bold
+    start = 0
+    for fam in sorted(set(fam_k), key=fam_k.index):
+        size = fam_k.count(fam)
+        ax.add_patch(Rectangle((start - 0.5, start - 0.5), size, size, fill=False,
+                               edgecolor="black", lw=3.0))
+        ax.text(start + size / 2.0 - 0.5, -0.62, fam, ha="center", va="bottom",
+                fontsize=tick_fs + 1.0, fontweight="bold", color="black")
+        start += size
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Spearman ρ   ·   blue = +1 agree (convergent, best)   ·   red = -1 disagree (worst)",
+                   fontsize=tick_fs, fontweight="bold", color="black")
+    cbar.ax.tick_params(labelsize=tick_fs * 0.85, colors="black")
+    tri = npair[np.triu_indices_from(npair, 1)]
+    n_lo = int(tri[tri > 0].min()) if np.any(tri > 0) else 0
+    ax.set_title(
+        f"§2b construct validity — convergent / discriminant   ·   "
+        f"N = {len(enc_names)} subjects (pairwise n {n_lo}–{int(npair.max())})\n"
+        f"within-family ρ = {summ['within']:.2f}   >>   between-family ρ = {summ['between']:.2f}"
+        f"   ·   gap = {summ['gap']:.2f}   (permutation p = {summ['perm_p']:.3f})\n"
+        f"signed `order` excluded (reported-not-ranked)",
+        fontsize=tick_fs * 0.9, fontweight="bold", color="black", pad=cell_pt * 1.15)
+    save_fig(fig, str(out_dir / "m13_metric_validity"))
+    plt.close(fig)
+
+    # CSV: the oriented Spearman matrix + the summary header (literal stem, matching save_fig usage)
+    csv_path = out_dir / "m13_metric_validity.csv"
+    lines = [f"# within={summ['within']:.4f} between={summ['between']:.4f} gap={summ['gap']:.4f} "
+             f"perm_p={summ['perm_p']:.4f} N={len(enc_names)} n_perm={n_perm} seed={seed}",
+             "metric,family," + ",".join(keys_k)]
+    for i, k in enumerate(keys_k):
+        cells = ["" if not np.isfinite(corr_k[i, j]) else f"{corr_k[i, j]:.4f}"
+                 for j in range(len(keys_k))]
+        lines.append(f"{k},{fam_k[i]}," + ",".join(cells))
+    csv_path.write_text("\n".join(lines) + "\n")
+    print(f"  [metric-validity] within ρ={summ['within']:.2f} ≫ between ρ={summ['between']:.2f} "
+          f"(gap {summ['gap']:.2f}, perm p={summ['perm_p']:.3f}, N={len(enc_names)}) "
+          f"→ {out_dir / 'm13_metric_validity'}.{{png,pdf,csv}}")
+    return summ
+
+
+def plot_criterion_validity(metrics_json, criterion_csv, metric_key, out_dir, n_boot, seed):
+    """§2b criterion validity — does `metric_key` track an EXTERNAL capability? Reads criterion_csv
+    (rows: encoder,ext_score — e.g. a frozen action-probe on a public SSv2/Kinetics subset), aligns by
+    encoder, renders a rank-scatter (subject rank by the metric vs by the external score) + Spearman ρ
+    with a bootstrap 95% CI → m13_criterion_<metric_key>.{png,pdf,csv}.
+
+    SKIPS (no crash) when criterion_csv is absent — the external score needs a GPU probe, so in a normal
+    metrics_watch refresh this is a documented no-op until criterion.csv exists (iter19 plan §2b)."""
+    import csv as _csv
+    metrics_json, out_dir, criterion_csv = Path(metrics_json), Path(out_dir), Path(criterion_csv)
+    if not criterion_csv.exists():
+        print(f"  [criterion] skip — no external criterion at {criterion_csv} "
+              f"(needs a GPU action-probe → encoder,ext_score CSV; iter19 §2b)")
+        return None
+    spec = {s[0]: s for s in _validity_metric_spec()}
+    if metric_key not in spec:
+        sys.exit(f"plot_criterion_validity: unknown metric_key {metric_key!r} (not in _CATALOG)")
+    direction = spec[metric_key][2]
+    ext = {}
+    with open(criterion_csv, newline="") as f:
+        for r in _csv.DictReader(f):
+            ext[r["encoder"]] = float(r["ext_score"])
+    rows = json.loads(metrics_json.read_text())
+
+    def _mval(r):
+        v = r.get(metric_key)
+        m = v["mean"] if isinstance(v, dict) and v.get("mean") is not None else np.nan
+        return (-m if direction == "lower" else m)        # orient higher=better
+
+    pairs = [(r["encoder"], _mval(r), ext[r["encoder"]])
+             for r in rows if r["encoder"] in ext and np.isfinite(_mval(r))]
+    if len(pairs) < 4:
+        print(f"  [criterion] skip — only {len(pairs)} subjects shared between {metric_key} + criterion (need ≥4)")
+        return None
+    encs = [p[0] for p in pairs]
+    mx = np.array([p[1] for p in pairs])
+    cy = np.array([p[2] for p in pairs])
+    res = criterion_rho(mx, cy, n_boot=n_boot, rng=np.random.default_rng(seed))
+    rx = np.argsort(np.argsort(mx))                        # ordinal ranks for the scatter
+    ry = np.argsort(np.argsort(cy))
+
+    init_style()
+    fig, ax = plt.subplots(figsize=(6.8, 6.4))
+    ax.scatter(rx, ry, s=70, color="#2C6FBB", edgecolor="black", zorder=3)
+    for e, a, b in zip(encs, rx, ry):
+        ax.text(a, b, " " + _short_label(e), fontsize=6.5, va="center", color="black")
+    ax.set_xlabel(f"subject rank by {_VALIDITY_PLAIN[metric_key]} (↑=better)",
+                  fontsize=10, fontweight="bold", color="black")
+    ax.set_ylabel("subject rank by EXTERNAL gold-standard (↑=better)",
+                  fontsize=10, fontweight="bold", color="black")
+    ci = f"[{res['lo']:.2f}, {res['hi']:.2f}]" if np.isfinite(res["lo"]) else "[n/a]"
+    # iter19 fix-6: title stays NEUTRAL — the label depends on the anchor: a same-construct anchor
+    # (e.g. act vs an SSv2 action-probe) is CONVERGENT validity (weak); a predictor metric (fut/causal)
+    # vs a DOWNSTREAM task is true CRITERION validity. The plan states which per anchor; don't overclaim.
+    ax.set_title(f"§2b external-anchor validity — {_VALIDITY_PLAIN[metric_key]} vs external\n"
+                 f"Spearman ρ = {res['rho']:.2f}  {ci}   (N = {res['n']} subjects)",
+                 fontsize=9.5, fontweight="bold", color="black")
+    ax.grid(True, alpha=0.3, zorder=0)
+    save_fig(fig, str(out_dir / f"m13_criterion_{metric_key}"))
+    plt.close(fig)
+    (out_dir / f"m13_criterion_{metric_key}.csv").write_text(
+        f"# metric={metric_key} rho={res['rho']:.4f} lo={res['lo']:.4f} hi={res['hi']:.4f} "
+        f"N={res['n']} n_boot={n_boot} seed={seed}\nencoder,metric_oriented,ext_score\n"
+        + "\n".join(f"{e},{m:.6f},{c:.6f}" for e, m, c in pairs) + "\n")
+    print(f"  [criterion] {metric_key} vs external: ρ={res['rho']:.2f} {ci} (N={res['n']}) "
+          f"→ {out_dir / f'm13_criterion_{metric_key}'}.{{png,pdf,csv}}")
+    return res
+
+
 # ═══ metrics_watch regeneration (iter18 2026-06-12, user order) ═══════════════════════════
 # SELF-CONTAINED copy of scripts/iter18_poc_metrics.py's figure + data-dump generation, so the
 # probe_plot/metrics_watch/<BACKBONE>/ artifacts (train_trajectories / kept_scorecard /
@@ -2251,6 +2503,10 @@ def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
     mj = out_dir / "eval_metrics.json"
     plot_wiseft_sweep_table(mj, out_dir)
     plot_paper_scorecard(mj, out_dir)
+    _pv = get_pipeline_config()["plots"]["validity"]   # iter19 §2b: permutation count + seed (single source)
+    plot_metric_validity(mj, out_dir, n_perm=_pv["n_perm"], seed=_pv["seed"])  # convergent/discriminant heatmap
+    plot_criterion_validity(mj, out_dir / "criterion.csv", _pv["criterion_metric"], out_dir,
+                            n_boot=_pv["criterion_n_boot"], seed=_pv["seed"])  # skips until criterion.csv exists
     _tcc_keys = {"vjepa_2_1_frozen", "vjepa_2_1_surgical_3stage_DI_encoder", "vjepa_2_1_surgery_raw_encoder"}
     _have = {x["encoder"] for x in json.loads(mj.read_text())} if mj.exists() else set()
     if _tcc_keys <= _have:

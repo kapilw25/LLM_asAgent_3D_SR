@@ -420,6 +420,11 @@ plots:
   interaction_samples_n: 8       # m11 plot_interaction_samples
   progress_recent_window_sec: 60.0
   rate_print_window_s: 30.0     # iter18 W7: windowed-throughput print cadence (was `>= 30` ×8 GPU loops)  # make_pbar/_RecentRateBar windowed-rate horizon
+  validity:                      # iter19 §2b construct-validity figures (m13.plot_metric_validity + plot_criterion_validity)
+    n_perm: 5000                 # family-label permutation count for the convergent/discriminant p-value
+    seed: 0                      # RNG seed → reproducible permutation p + criterion bootstrap CI
+    criterion_metric: act        # which metric to correlate vs the external criterion.csv (encoder,ext_score)
+    criterion_n_boot: 10000      # bootstrap resamples for the criterion Spearman ρ 95% CI
 
 # -- m11 D_A tube-extraction recipe (iter18 W7: were inline literals ×2 code paths) --
 m11_factors:
