@@ -4,26 +4,21 @@ Repo: anonymousML123/factorjepa-outputs (public, gated, auto-created on first up
 
 USAGE:
     # clean MIRROR [delete file on HF, if doesnt exist on disk]
-    >> HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc/ 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc/ 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     # only ADDTIVE
     hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/**" --exclude "**/.*"   2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    # VERIFY UPLOAD
+    python -u src/utils/hf_outputs.py verify outputs/poc 2>&1 | tee logs/verify_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
     # resolves the consistency-check crash (plain-HTTP path, no broken validator)
     python -u src/utils/hf_outputs.py download-data outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    # LIGHT refresh (data only; plain-HTTP skips server-broken xet blobs non-fatally — unlike `hf download`):
+    python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv 2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
     python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
-    # LIGHT refresh (data only; plain-HTTP skips server-broken xet blobs non-fatally — unlike `hf download`):
-    python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv 2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
-    
-    # If you only want the light science files refreshed (a few MB, also dodges the poisoned .npz), use the hf CLI --include (there's no extension filter in hf_outputs.py):
-HF_HUB_DISABLE_XET=1 hf download anonymousML123/factorjepa-outputs --repo-type dataset \
---include "outputs/poc/*.json" --include "outputs/poc/*.csv" \
---include "outputs/poc/*.png"  --include "outputs/poc/*.pdf" \
---local-dir . \
-2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
-
+    python -u src/utils/hf_outputs.py download-data data/subset_10k_local 2>&1 | tee logs/download_data_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
 
 
 """
@@ -840,6 +835,65 @@ def _post_download_unpack_full(output_path: Path) -> None:
         _delete_shards_after_unpack(shards, _FULL_SHARD_GLOB)
 
 
+def verify_outputs(output_dir: str, subfolder: str = None):
+    """Verify LOOSE files: every file under HF/<subfolder> is on local disk at the right size (and
+    flag local-only extras). This is the disk-vs-HF check for prefixes pushed with plain `upload` /
+    `upload-large-folder` / `download-data` — UNLIKE `verify-full`, which checks an `upload-full`
+    tar-shard snapshot via `_full-manifest.json` (absent here → that's why verify-full 404s).
+
+    FAIL LOUD (exit 1) if any HF file is missing on disk OR genuinely short. Size note: list_repo_tree's
+    size is unreliable for some xet/LFS blobs (the resolve CDN serves a different byte count than the tree
+    reports — huggingface_hub#3643), so a disk file LARGER than HF's listed size is the real blob (accepted);
+    only a disk file SMALLER than listed (a true truncation) fails.
+    """
+    token = _get_token()
+    if not token:
+        print("FATAL verify: HF_TOKEN not found (env or repo-root .env)")
+        sys.exit(1)
+    if not repo_exists(HF_OUTPUTS_REPO, repo_type="dataset", token=token):
+        print(f"FATAL verify: repo {HF_OUTPUTS_REPO} does not exist")
+        sys.exit(1)
+    output_path = Path(output_dir)
+    if subfolder is None:
+        subfolder = str(output_path)
+    api = HfApi(token=token)
+    remote = {(p[len(subfolder) + 1:] if p.startswith(subfolder) else p): s
+              for p, s in _list_remote_files(api, subfolder)}
+    local = {str(f.relative_to(output_path)): f.stat().st_size
+             for f in output_path.rglob("*") if f.is_file() and not f.name.endswith(".part")}
+    rset, lset = set(remote), set(local)
+
+    missing_disk = sorted(rset - lset)                               # on HF, NOT on disk → incomplete pull
+    extra_disk   = sorted(lset - rset)                              # on disk, NOT on HF → local-only (unbacked)
+    short  = sorted(p for p in rset & lset if local[p] < remote[p])   # disk SMALLER than HF → truncated → FAIL
+    larger = sorted(p for p in rset & lset if local[p] > remote[p])   # disk LARGER → xet stale metadata → OK
+    matched = len(rset & lset) - len(short) - len(larger)
+
+    print(f"verify (loose, disk vs HF): {HF_OUTPUTS_REPO}/{subfolder}  <->  {output_path}/")
+    print(f"  HF files   : {len(remote):>5}  ({sum(remote.values()) / _GB:7.1f} GB listed)")
+    print(f"  disk files : {len(local):>5}  ({sum(local.values()) / _GB:7.1f} GB)")
+    print(f"  matched    : {matched}")
+    for label, items in [("on HF but MISSING on disk (incomplete pull)", missing_disk),
+                         ("on disk SMALLER than HF (truncated)", short),
+                         ("disk LARGER than HF-listed (xet stale size — OK)", larger),
+                         ("on disk but NOT on HF (local-only, not backed up)", extra_disk)]:
+        if items:
+            print(f"  {label}: {len(items)}")
+            for p in items[:_LIST_PREVIEW_N]:
+                d, h = local.get(p), remote.get(p)
+                extra = f"  (disk {d} vs HF {h})" if d is not None and h is not None else ""
+                print(f"       - {p}{extra}")
+            if len(items) > _LIST_PREVIEW_N:
+                print(f"       ... and {len(items) - _LIST_PREVIEW_N} more")
+
+    if missing_disk or short:
+        print(f"VERIFY: FAIL - {len(missing_disk)} missing + {len(short)} truncated. "
+              f"Re-run `download-data {output_dir}` to fetch/resume them.")
+        sys.exit(1)
+    print(f"VERIFY: PASS - all {len(remote)} HF files present on disk at full size "
+          f"({len(larger)} xet-stale-size accepted, {len(extra_disk)} local-only).")
+
+
 def verify_outputs_full(output_dir: str, subfolder: str = None):
     """File-by-file proof that the last upload-full snapshot is COMPLETE (runbook §0.A7).
 
@@ -1244,37 +1298,87 @@ def _download_one_file(rpath: str, base_url: str, headers: dict,
     size to be skipped. The old "exists + non-empty" rule silently kept a stale
     or truncated local copy when the remote file changed size (same trap class
     as the dl_test loose-file incident). Size mismatch → re-download.
+
+    iter19 (2026-06-19): bounded retry + HTTP Range RESUME + xet size-metadata tolerance.
+    The OLD single-GET path `unlink()`ed the WHOLE partial on any mid-stream drop, so an
+    ~18 GB ckpt that dropped at 13 GB threw away all 13 GB (`ChunkedEncodingError:
+    IncompleteRead`). Now each file streams to a `<file>.part`, and a TRANSIENT drop (network
+    error OR a 429/5xx CDN hiccup) retries up to `_DOWNLOAD_ATTEMPTS` times, each attempt
+    RESUMING from the bytes on disk via `Range: bytes=<have>-` (200 = server ignored Range →
+    restart; 416 = our offset is past EOF → restart clean), then atomically `os.replace`s the
+    `.part` onto the final path.
+
+    Completeness is judged by the SERVER's own `Content-Length`, NOT by list_repo_tree's
+    `expected_size`. The list size is UNRELIABLE for xet/LFS blobs — the resolve CDN can serve
+    a different byte count than the tree reports (huggingface_hub#3643, xet-core#592). The old
+    strict `got == expected_size` gate turned that metadata mismatch into a hard failure that
+    killed the whole batch over a throwaway `.npz` whose listed size was stale. Now a clean full
+    transfer is ACCEPTED even if its total differs from the listed size (returned as a "downloaded"
+    note); only a genuine short read (< the server's Content-Length) retries. Persistent 4xx, or a
+    blob the CDN keeps 500-ing on, still fail per-file (no client can fetch bytes the server won't
+    serve — that blob must be re-uploaded).
     """
     import requests
     local = Path(rpath)
     if local.exists() and local.stat().st_size == expected_size:
         return (rpath, "skipped", None)
     local.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with requests.get(f"{base_url}/{rpath}",
-                          headers=headers,
-                          stream=True,
-                          timeout=600,
-                          allow_redirects=True) as r:
-            r.raise_for_status()
-            content_length = r.headers.get("Content-Length")
-            bytes_written = 0
-            with open(local, "wb") as f:
-                # 32 MB chunks (was 8 MB) — fewer syscalls per file, ~4×
-                # higher throughput on 1 GB+ files.
-                for chunk in r.iter_content(chunk_size=32 << 20):
-                    if chunk:
-                        f.write(chunk)
-                        bytes_written += len(chunk)
-            if content_length is not None and int(content_length) != bytes_written:
-                raise RuntimeError(
-                    f"incomplete: {bytes_written} written but "
-                    f"Content-Length was {content_length}")
-        return (rpath, "downloaded", None)
-    except Exception as e:
-        if local.exists():
-            local.unlink()
-        return (rpath, "failed", f"{type(e).__name__}: {str(e)[:120]}")
+    part = Path(str(local) + ".part")
+    url = f"{base_url}/{rpath}"
+    last_err = None
+    for attempt in range(1, _DOWNLOAD_ATTEMPTS + 1):
+        have = part.stat().st_size if part.exists() else 0
+        try:
+            req_headers = dict(headers)
+            mode = "ab" if have else "wb"
+            if have:
+                req_headers["Range"] = f"bytes={have}-"
+            with requests.get(url, headers=req_headers, stream=True,
+                              timeout=600, allow_redirects=True) as r:
+                if have and r.status_code == 200:       # server ignored Range → restart from 0
+                    have, mode = 0, "wb"
+                r.raise_for_status()
+                resp_len = r.headers.get("Content-Length")   # bytes THIS response promises
+                written = 0
+                with open(part, mode) as f:
+                    # 32 MB chunks — fewer syscalls per file, ~4× faster on 1 GB+ files.
+                    for chunk in r.iter_content(chunk_size=32 << 20):
+                        if chunk:
+                            f.write(chunk)
+                            written += len(chunk)
+            if resp_len is not None and written != int(resp_len):   # genuine short read → resume
+                last_err = RuntimeError(f"short read {written}/{resp_len} this attempt")
+                if attempt < _DOWNLOAD_ATTEMPTS:
+                    time.sleep(min(30, 3 * attempt))
+                continue
+            total = part.stat().st_size
+            note = (f"got {total}B but HF listed {expected_size}B — accepted "
+                    f"(xet size-metadata mismatch)") if (expected_size and total != expected_size) else None
+            os.replace(part, local)                     # atomic publish: server delivered all it promised
+            return (rpath, "downloaded", note)
+        except _TRANSIENT_NET_ERRS as e:                # keep .part → next attempt resumes from `have`
+            last_err = e
+            if attempt < _DOWNLOAD_ATTEMPTS:
+                time.sleep(min(30, 3 * attempt))
+        except requests.exceptions.HTTPError as e:
+            code = e.response.status_code if e.response is not None else None
+            if code == 416:                             # offset past EOF → drop .part, restart clean
+                if part.exists():
+                    part.unlink()
+                last_err = e
+            elif code in (429, 500, 502, 503, 504) and attempt < _DOWNLOAD_ATTEMPTS:
+                last_err = e                            # transient server/CDN hiccup → retry (keep .part)
+                time.sleep(min(30, 3 * attempt))
+            else:                                       # 4xx, or exhausted-5xx → terminal
+                if part.exists():
+                    part.unlink()
+                return (rpath, "failed", f"HTTP {code}: {str(e)[:100]}")
+        except Exception as e:                          # truly non-transient → give up now
+            if part.exists():
+                part.unlink()
+            return (rpath, "failed", f"{type(e).__name__}: {str(e)[:120]}")
+    return (rpath, "failed", f"{type(last_err).__name__}: {str(last_err)[:100]} "
+            f"(after {_DOWNLOAD_ATTEMPTS} attempts)")
 
 
 def download_data(data_root: Path = None, exts: tuple = None):
@@ -1341,6 +1445,8 @@ def download_data(data_root: Path = None, exts: tuple = None):
                 skipped += 1
             elif status == "downloaded":
                 downloaded += 1
+                if err:                                  # accepted-with-note (xet size mismatch)
+                    print(f"  ⚠️  {rpath}: {err}")
             else:
                 print(f"  ❌ {rpath}: {err}")
                 fails.append((rpath, err))
@@ -1376,6 +1482,7 @@ if __name__ == "__main__":
         print("  python -u src/utils/hf_outputs.py download-full <output_dir>  # pulls + auto-unpacks _full-*.tar")
         print("  python -u src/utils/hf_outputs.py upload-data [data_dir]      # default 'data'")
         print("  python -u src/utils/hf_outputs.py download-data [data_dir]    # default 'data'")
+        print("  python -u src/utils/hf_outputs.py verify <output_dir>         # LOOSE files: disk vs HF (path+size)")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -1392,6 +1499,8 @@ if __name__ == "__main__":
         rc = upload_outputs_full(sys.argv[2])
     elif cmd == "download-full" and len(sys.argv) >= _MIN_CLI_ARGS:
         rc = download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
+    elif cmd == "verify" and len(sys.argv) >= _MIN_CLI_ARGS:
+        verify_outputs(sys.argv[2])          # LOOSE files disk-vs-HF; exits 1 itself on any gap
     elif cmd == "verify-full" and len(sys.argv) >= _MIN_CLI_ARGS:
         verify_outputs_full(sys.argv[2])     # exits 1 itself on any gap
     elif cmd == "upload-data":

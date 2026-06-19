@@ -1,81 +1,233 @@
-# 🎯 Validate the 2B WiSE-FT story on a **fresh 10k** — our FULL-scale run
+# 🎯 Tighten the 2B confidence bands — re-eval the 17 arms on a **fresh, disjoint 10k**
 
-> 💡 **Scope (honest + compute-bounded).** We are **NOT** running 115k clips.
-> Our declared **FINAL / "FULL" scale = 10k**: train on **75 % of 10k + 5 % val**, evaluate on a **fresh, disjoint 10k**.
-> An individual researcher's budget is a legitimate, openly-stated scope — *"we collected 115k"* ≠ *"we must burn money on 115k."*
-> 📄 In the paper, **"FULL" = this 10k-scale result.**
+> 💡 **One job, nothing else.** Our 2B arms are already trained + evaluated on `eval_10k` (a 75/5/20
+> split). The close OURS arms have **overlapping 95% bands** (`n_test ≈ 1,825`), so we can't cleanly
+> separate them. This run **re-uses the already-trained arms** and **tests them on the FULL, disjoint
+> `subset_10k` (≈10k clips)** → `n_test ≈ 10k` → bands shrink ~**2.3×** → close arms can separate.
+> **No re-training. No new arms. EVAL only.** *(The iter19 benchmark pivot — `plan_benchmark.md` — is PARKED.)*
 
----
-
-## 🔬 QQ0 — what an AAAI reviewer bites (and what THIS run fixes)
-
-| 🐛 Gap in the experiment | 🗣️ Reviewer's line | ✅ Fixed by this run? |
-|---|---|---|
-| 🎲 **Single seed** — the 95 % bands are eval-bootstrap over test clips, *not* training-seed variance | *"Report ≥ 3 seeds — your bands don't capture training stochasticity."* | ❌ needs **re-train × seeds** *(biggest one)* |
-| 🥊 **FT-baseline coverage** — 6 non-ours competitors (vanilla continual-SSL pretrain, full-FT, LP-FT, LoRA, DoRA, Auto-RGN) | *"Did you compare against the standard fine-tuning techniques?"* | ✅ **yes — 6 competitors** *(CaSSLe / EWC compute-heavy → dropped)* |
-| 🧬 **Single backbone** — all numbers on **2B ViT-G** only | *"Does surgery ≫ FT hold on another backbone (e.g. the 1B ViT-g)?"* | ❌ needs the **1B ViT-g ablation** (full 2nd-backbone sweep) |
-| 📏 **Scale = 10k, not 115k** | *"Why only 10k?"* | ✅ **declared scope** (compute-bounded, stated honestly) |
-| 🧮 **14 metrics × ~18 arms, NO multiple-comparison correction** | *"Some 'wins' are false positives at α = 0.05."* | ❌ free stats fix — **just do it** (Bonferroni / FDR) |
-| 🌍 **In-domain only** (all WalkIndia) | *"Does it hold on fresh, unseen clips?"* | ✅ **this run is exactly that test** (disjoint 10k) |
-| 📉 **WiSE-FT wins overlap baselines** | *"Not statistically significant."* | 〰️ partially — see caveat ⚠️ |
-
-> 🎯 **Still owed before submission:** ① ≥ 3 **seeds** · ② **multiple-comparison correction** · ③ a **2nd backbone (1B ViT-g)**. This run buys the **generalization** check — not those three.
-
----
-
-## 📥 Step 1 — download the fresh 10k  · 🌐 network only, **no GPU**
-```bash
-python -u src/utils/hf_outputs.py download-data data/subset_10k_local \
-  2>&1 | tee logs/download_subset_10k_$(date +%Y%m%d_%H%M%S).log
+```text
+   data/eval_10k_local/   (10k clips, 75/5/20)        data/subset_10k_local/  (10k clips, DISJOINT)
+   ├─ trained heads + arms  ──────── REUSE ──────────▶ test the SAME heads/arms on ALL 10k
+   └─ results @ outputs/poc/...      (READ-only)        └─ NEW results @ outputs/poc/subset10k/...
+        ▲ never touched (Task 1)                              ▲ tighter bands, lands beside the old
 ```
-> 📦 Raw on HF: `subset-0000{0..9}.tar` (the clips) + `manifest.json` + `subset_10k.json` + `tags.json` — **no labels / features yet.**
 
-## ⚙️ Step 2 — prep = **ONE** light GPU step · 🟢 1 GPU, ~30–60 min
+---
+
+## ✅ Task checklist — ordered by ROI (highest first)
+
+> Legend: ✅ done/proven this session · 🟢 zero-code (env only) · 🔧 small code to build · ⛔ GPU run (yours)
+
+| # | task | what it buys | status |
+|---|---|---|---|
+| 1 | 🔒 **Task 1 — no previous artifact deleted/overwritten** (namespacing + guards) | safe to run | 🟢 zero-code (env block below) |
+| 2 | 🧬 **Task 3 — factorization NOT needed for eval** (grep-proven) → prep = `m04d` only | skip m10 SAM (GPU-hrs) + m11 (~58 GB) | ✅ proven |
+| 3 | 🧮 **Task 2 — disjointness proof** (`audit_disjoint.py`: 0 shared clips) | the clean-CI evidence | ✅ proven (0 overlap) |
+| 4 | 🔧 **Stage A — `test-all` labels** → the **13** head-free metrics on the FULL 10k | settles the future-MSE arm-tie | 🔧 `m04e`/`m04f` small mode |
+| 5 | ⚡ **Multi-GPU fan** the 17 encoders → `outputs/poc/subset10k/` | uses all GPUs | 🔧/⛔ |
+| 6 | 🔧 **Stage B — head-reuse** (`--head-ckpt`) → the **2** probe metrics on the FULL 10k | tightens action-top1 + taxonomy-F1 | 🔧 `m12a`/`m12c` |
+
+---
+
+## 🧠 The ONE insight (why a naïve re-run does nothing)
+
+```text
+  point the eval at subset_10k  ──▶  m04e re-splits it 70/15/15  ──▶  TEST = 15% ≈ 1.5k  ──▶ SAME wide bars ❌
+  the ONLY lever that shrinks bands:  make TEST = the FULL disjoint 10k  ──▶ n_test ≈ 10k  ──▶ ~2.3× tighter ✅
+```
+
+All 15 metrics read their **test clip keys from ONE file** (`action_labels.json`, written by `m04e`). So the
+single change that tightens every metric is: emit that file with **test = every clip** (the `test-all` mode, item 4).
+
+---
+
+## 🗂️ The roster — **17 encoders** (frozen + 7 competitors + 9 OURS), all already trained on 2B
+
+| 🥊 Competitors — non-ours (7) | 🏆 OURS — surgery family (9) | ⚓ anchor |
+|---|---|---|
+| `pretrain_encoder` · `surgical_autorgn_encoder` · `surgery_raw_encoder` · `full_ft_encoder` · `lpft_encoder` · `peft_lora_encoder` · `peft_dora_encoder` | `surgery_3stage_DI_encoder` · `surgery_noDI_encoder` · `…_replay25_encoder` · `…_diheavy_encoder` · `…_tccaux_encoder` · `…_intervene_encoder` · `surgical_intervene_wiseft_f30/f50/f70_encoder` | `vjepa_2_1_frozen` |
+
+> 🧾 Eval-encoder name = `vjepa_2_1_<encoder-token>` (e.g. `surgery_3stage_DI_encoder` → `vjepa_2_1_surgical_3stage_DI_encoder`).
+> **Excluded on purpose** (not in this roster): the `*_head` arms, `pretrain_2X`, `cassle`, `ewc`, the v1 `…_wiseft`.
+> Tokens resolve via `configs/arm_registry.yaml` (the single source) — no hand-typed lists.
+
+---
+
+## 🧪 Which metrics tighten, and how (verified across `m12a`–`m12f`)
+
+| group (count) | metrics | trained head? | to reach `n_test≈10k` it needs |
+|---|---|---|---|
+| 🟦 forward-only (8) | motion-cosine sep · future-frame MSE · rollout drift · causal L1 · L1-vs-Δt · exposure-bias gap · mask-ratio · frame-order | **none** (`m12b`/`m12d`/`m12e` forward passes) | **`test-all` only** (Stage A) |
+| 🟩 self-contained (5) | Arrow-of-Time · frame-permutation · playback-pace · TCC Kendall τ · TCC cycle-back | trains its **own** read-out on the eval corpus (`m12f`) | **`test-all` only** (Stage A) |
+| 🟥 transfer head (2) | Action top-1 · taxonomy F1 | **yes** — head trained on `eval_10k` (`m12a`/`m12c`) | **`test-all` + REUSE the `eval_10k` head** (Stage B) |
+
+> 🎯 **Future-frame MSE — the metric that drives the arm-selection tie — is in the head-free group**, so the
+> selection tightens in **Stage A alone** (no head-reuse, no label-binning subtlety). Stage B is a follow-on for the 2 probe metrics.
+
+---
+
+## 🔒 Task 1 — guarantee **nothing** from `eval_10k` is deleted or overwritten
+
+**Two things must stay untouched:** (a) the `eval_10k` **data prep** in `data/eval_10k_local/`, and (b) the
+`eval_10k` **results + trained arms** in `outputs/poc/` (incl. `…/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.{json,csv}`).
+
+The contract is **env-only — zero code change** (verified against every write/cleanup path in `run_eval.sh`):
+
+| risk path (in `run_eval.sh`) | what it touches by default | the guard that makes it safe |
+|---|---|---|
+| Stage 1–8 **result writes** (`OUTPUT_ACTION`, …, `OUTPUT_PLOTS`) | `outputs/poc/probe_action`, … (eval_10k) | **override the 7 `OUTPUT_*` → `outputs/poc/subset10k/*`** → new results land in the tag |
+| **encoder/head ckpt resolvers** (`encoder_ckpt_for`, `motion_aux_head_for`) | read `${DEFAULT_OUTPUT_PREFIX}/…/student_encoder.pt` | **leave `DEFAULT_OUTPUT_PREFIX = outputs/poc`** → trained arms are **READ**, never written |
+| pre-eval cleanup (L605–657) — `rm` `m09*_ckpt_latest/step.pt` | the **untagged** trained dir (eval_10k scratch) | **`EVAL_KEEP_LATEST=1`** → skips this block entirely |
+| post-Stage-8 cleanup (L1069) — `rm features_test.npy` | `OUTPUT_ACTION` (now tagged) + only on `FULL`/`policy=2` | **`CACHE_POLICY_ALL=1`** at POC → `P_ACTION=1` → block skipped; even if run, it's the tagged dir |
+| Stage 10 `m13` "wipes its own output_dir" | `OUTPUT_PLOTS` (now tagged) | tagged → wipes only `outputs/poc/subset10k/probe_plot` |
+| frame cache (`EVAL_FRAME_CACHE_DIR`) | `${LOCAL_DATA}/m12_frame_cache` | **`LOCAL_DATA=data/subset_10k_local`** → cache lands under subset_10k, never eval_10k |
+
+> 🧷 **Net:** the run **reads** trained arms/heads from the untagged `outputs/poc/…`, and **writes every new byte** under
+> `outputs/poc/subset10k/…`. The `eval_10k` results, the trained `*.pt`, and all of `data/eval_10k_local/` are **physically out of every write/`rm` path.**
+> *(Optional thin convenience: an `EVAL_TAG` env in `run_eval.sh` that sets the 7 `OUTPUT_*` in one place — same effect, fewer envs to type.)*
+
+---
+
+## 🧮 Task 2 — the disjointness proof (the clean-CI evidence)
+
+The tighter bands are only honest if `eval_10k` (where heads were trained) and `subset_10k` (the new test set) are
+truly disjoint — both were carved from the same WalkIndia parent. **Verified this session, FAIL-LOUD:**
+
+```text
+  clip key  =  section/video_id/source_file   (e.g. tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-004.mp4)
+  exact:   | eval_10k.clip_keys  ∩  subset_10k.saved_keys |  =  0   of 10,000 vs 10,000   ✅ ZERO overlap
+```
+
+- 🆕 **`src/utils/audit_disjoint.py`** (pure-CPU, built this session, self-test passes) checks three strengths:
+  **exact** shared clip-key · **shared source-video** (same `video_id` in both) · **adjacent clips** (same video within ±N clip-indices = the ±30 s hard-mode rule, metadata-based — **not** frame-embedding cosine, which floods false dups on same-camera walking clips).
+- 🔧 `m00d_download_subset.py` just **downloads** whatever keys are in `subset_10k.json`; the disjoint **selection** happened upstream — the audit is what **proves** it held. Put the printed verdict in the appendix.
+
 ```bash
+# the audit (CPU, ~5 s) — run before trusting the tighter bands
+python -u src/utils/audit_disjoint.py \
+  --set-a data/eval_10k_local/eval_10k.json   --keys-field-a clip_keys  --label-a eval_10k \
+  --set-b data/subset_10k_local/subset_10k.json --keys-field-b clip_keys --label-b subset_10k \
+  --window-clips 6
+```
+
+---
+
+## 🧬 Task 3 — does the EVAL need factorization? **No.**
+
+Factorization = `m10_sam_segment/` (SAM masks) + `m11_factor_datasets/` (`D_L`/`D_A`/`D_I` factor tubes). These are
+**training inputs consumed by `m09c` surgery** — not the eval. **Proven by grep** across every eval module:
+
+```text
+grep  m10_sam | m11_factor | D_L | D_A | D_I | masks | factor_manifest | sam_segment
+   over  m04d, m04e, m04f, m12a, m12b, m12c, m12d, m12e, m12f, m13, run_eval.sh
+   →  0 real reads   (every hit is a code COMMENT, or "head" = a probe-HEAD, unrelated)
+```
+
+> ✅ **Consequence:** for the `subset_10k` eval you build **only `m04d` motion-features** (needed by Stage-1
+> action/motion-class labels). **Skip `m10` (SAM, GPU-hours) and `m11` (factor-gen, ~58 GB) entirely.**
+> `tags.json` is already present in `subset_10k_local/` → the taxonomy stage can run too.
+
+---
+
+## 🔧 Code to build (small, grounded) — what exists vs what's new
+
+| piece | exists? | change |
+|---|---|---|
+| route outputs to a tag | ✅ | **none** — override the 7 `OUTPUT_*` env (Task 1); `ITER18_EVAL_TAG` was only *proposed*, never built |
+| **Stage A — `test-all` labels** | 🔧 | `m04e`/`m04f`: a `--probe-split test-all` mode → every clip → the **test** split (train/val empty), skipping the ≥5-per-split asserts. All 13 head-free metrics then test on the full 10k. `run_eval.sh` `SKIP_STAGES` drops the 2 probe-train stages in this mode |
+| **Stage B — head-reuse** | 🔧 | `m12a`/`m12c`: a `--head-ckpt <eval_10k probe.pt>` → **load** the trained head, **skip training**, extract features for all 10k, infer + bootstrap-CI. ⚠️ the `subset_10k` **action labels must use `eval_10k`'s motion-class bin edges** (shared-derivation arg) — else the reused head is scored against differently-defined classes |
+| **multi-GPU fan** | 🔧 | one `run_eval.sh` per encoder pinned to a GPU (the §-finale fan pattern), **or** thread the env block + the 17-roster into `iter18_poc_ngpu.py`'s eval jobs for the metric-parallel `P:`/`F:` fan |
+
+---
+
+## ▶️ Runbook (commands first; rationale as `#` comments)
+
+```bash
+# ── Step 0 · pull ONLY the trained arms + heads + result tables (READ-only source) ──
+#    outputs/poc on HF is 829 GB, but 477 GB of that is *ckpt_latest/step/stage* resume anchors
+#    (training scratch — the eval NEVER loads them) + 33 GB of regenerable .npy/.npz caches.
+#    The eval needs ONLY ~297 GB: student_encoder.pt + *ckpt_best.pt + probe*.pt + motion_aux_head.pt
+#    + the json/csv results. Do NOT `download-data outputs/poc` (full 829 GB) — include-filter instead:
+HF_HUB_DISABLE_XET=1 hf download anonymousML123/factorjepa-outputs --repo-type dataset \
+  --include "outputs/poc/**/student_encoder.pt" --include "outputs/poc/**/*ckpt_best.pt" \
+  --include "outputs/poc/**/probe*.pt"          --include "outputs/poc/**/motion_aux_head.pt" \
+  --include "outputs/poc/**/*.json"             --include "outputs/poc/**/*.csv" \
+  --local-dir . 2>&1 | tee logs/download_outputs_poc_lean_$(date +%Y%m%d_%H%M%S).log
+#    (if it aborts on a server-side xet-corrupt .pt blob, re-run — it's idempotent/skip-existing —
+#     or use the non-fatal plain-HTTP path: `download-data outputs/poc --ext pt,json,csv`, which is
+#     796 GB because --ext can't drop the latest/step anchors; only the include-filter hits 297 GB.)
+
+# ── Step 1 · the ONLY prep subset_10k needs = m04d motion-features (Task 3: NO m10/m11) ──
+#    ~30-60 min, 1 GPU. Writes data/subset_10k_local/m04d_motion_features/ (durable).
 python -u src/m04d_motion_features.py --POC \
   --subset data/subset_10k_local/subset_10k.json \
   --local-data data/subset_10k_local --cache-policy 1
+
+# ── Step 2 · disjointness audit (CPU, ~5 s) — the clean-CI evidence (Task 2) ──
+python -u src/utils/audit_disjoint.py \
+  --set-a data/eval_10k_local/eval_10k.json    --keys-field-a clip_keys --label-a eval_10k \
+  --set-b data/subset_10k_local/subset_10k.json --keys-field-b clip_keys --label-b subset_10k \
+  --window-clips 6
+
+# ── Step 3 · STAGE A — the 13 head-free metrics on the FULL 10k (after the m04e test-all build) ──
+#    Task-1 no-clobber env block: results → outputs/poc/subset10k/* ; trained arms READ from outputs/poc/.
+#    SKIP the 2 probe-train + their paired stages (3,11,4,12,13). Fan one encoder per GPU.
+ENCS="vjepa_2_1_frozen vjepa_2_1_pretrain_encoder vjepa_2_1_surgical_autorgn_encoder ..."   # the 17 (from arm_registry)
+for ENC in $ENCS; do GPU=...; CUDA_VISIBLE_DEVICES=$GPU \
+  LOCAL_DATA=data/subset_10k_local \
+  EVAL_SUBSET=data/subset_10k_local/subset_10k.json \
+  OUTPUT_ACTION=outputs/poc/subset10k/probe_action \
+  OUTPUT_COS=outputs/poc/subset10k/probe_motion_cos \
+  OUTPUT_MSE=outputs/poc/subset10k/probe_future_mse \
+  OUTPUT_PREDTEMP=outputs/poc/subset10k/predictor_temporal \
+  OUTPUT_ENCTEMP=outputs/poc/subset10k/encoder_temporal \
+  OUTPUT_TAXONOMY=outputs/poc/subset10k/probe_taxonomy \
+  OUTPUT_PLOTS=outputs/poc/subset10k/probe_plot \
+  CACHE_POLICY_ALL=1 EVAL_KEEP_LATEST=1 PROBE_SPLIT=test-all SKIP_STAGES=3,11,4,12,13 \
+  ./scripts/run_eval.sh --POC --encoders "$ENC" \
+  2>&1 | tee logs/subset10k_eval_${ENC}_$(date +%Y%m%d_%H%M%S).log & done; wait
+
+# ── Step 4 · STAGE B — action-top1 + taxonomy-F1 via head-reuse (after the m12a/m12c build) ──
+#    same env block, plus --head-ckpt pointing at the UNTAGGED eval_10k heads (read-only).
+
+# ── Step 5 · refresh the consolidated table under the tag ──
+#    lands at outputs/poc/subset10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.{json,csv}
+#    (the eval_10k one at outputs/poc/probe_plot/... stays intact → diff the two).
 ```
-> ✅ The **only** prep. 🏷️ action + taxonomy labels are auto-derived by `run_eval` **Stage 1** (m04e/m04f) from `tags.json`.
-> 🚫 `m10` / `m11` / split-files are **training-only** → the eval never reads them *(verified in m12c / m12e / m12f)*.
-
-## 💾 Step 3 — free disk **FIRST**  · you have **206 G**, the fresh frame-cache ≈ **423 G**
-```bash
-rm -rf data/eval_10k_local/m12_frame_cache      # regenerable + its 2B eval is DONE → frees 423 G
-```
-> 🗑️ Also droppable after the HF backup: `outputs/poc/**/*.pt` (~242 G).
-
-## 🖥️ Step 4 — eval via the **SCHEDULER** (⚡ 4-GPU fan-out) — patch `scripts/iter18_poc_ngpu.py`
-> ❌ Running `run_eval.sh` by hand serializes **one encoder at a time** — wasteful on a 4× node.
-> ✅ Teach the scheduler to do a **tagged, eval-only** pass → it fans the encoders across **all 4 GPUs**.
-
-### 🔧 Code change — `scripts/iter18_poc_ngpu.py` (add an `ITER18_EVAL_TAG` env)
-When `ITER18_EVAL_TAG` is set, the **eval** jobs (`E:` `P:` `F:` + the §3 finale):
-
-| # | change | why |
-|---|---|---|
-| 1️⃣ | prepend `LOCAL_DATA=data/subset_10k_local EVAL_SUBSET=…/subset_10k.json` to each `run_eval` cmd | read the **fresh** data |
-| 2️⃣ | prepend `OUTPUT_ACTION=outputs/<tag>/probe_action … OUTPUT_ENCTEMP=outputs/<tag>/encoder_temporal` | 🛡️ **don't clobber** the eval_10k 2B numbers |
-| 3️⃣ | point the resume done-markers (`aggregate_*.json` checks) at `outputs/<tag>/…` | eval runs **fresh** under the tag |
-| 4️⃣ | *(no change needed)* train jobs auto-skip via `--cache 1` + existing 2B `student_encoder.pt` | ✅ **eval-only** |
-
-### ▶️ Run — fans 6 encoders across 4 GPUs
-```bash
-ITER18_EVAL_TAG=subset10k ITER18_BACKBONE=vjepa_2_1_vitG PT_H_MEMO=1 \
-  python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 \
-  --skip-arms cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_noDI_head \
-  2>&1 | tee logs/iter18_eval_subset10k_$(date +%Y%m%d_%H%M%S).log
-```
-> 📂 New numbers land under `outputs/subset10k/…` → refresh figures with the same tag, the eval_10k results stay intact.
 
 ---
 
-## ⚠️ Honest caveats (don't skip)
+## 📐 The band-shrink math (honest)
 
-- 🚨 **n_test ≈ 2k, NOT 10k.** Stage 1 (`m04e`) re-splits `subset_10k` **75 / 5 / 20** (the 75 % trains the probe heads). So the test set is ~2k ≈ today's **1,825** → the **confidence bands barely shrink.** This run proves *the wins hold on fresh clips* (**generalization**) — it does **NOT** settle the overlap *significance* question. *(To force n_test = 10k you'd need a cross-set eval — heads trained on the train set, tested on ALL of the fresh 10k — a bigger code change; optional.)*
-- 🧊 The temporal-metric ties with **Frozen** (Arrow-of-Time accuracy, TCC Kendall τ, …) are **equal by construction** — WiSE-FT f70 *is* 70 % Frozen — they won't separate at any N. The real claim is the **trade-off win**: Frozen-level temporal structure **AND** better future-frame prediction than Frozen.
+```text
+  CI half-width  ∝  1/√n_test
+  eval_10k:  n_test ≈ 1,825        subset_10k (test-all):  n_test ≈ 10,000
+  shrink factor = √(10000/1825) ≈ 2.3×     (top-1 ±2.3pp → ±1.0pp ;  future-MSE ±0.001 → ±0.0004)
+```
+
+> ⚠️ **Tightening separates arms whose true gap ≳ the new half-width.** The current 3-way future-MSE tie
+> (`intervene 0.4955 · tccaux 0.4956 · diheavy 0.4959`, gaps 0.0001–0.0004) sits **at** the shrunk half-width —
+> some pairs will separate, some may stay a **reported tie**. Report ties as **co-equal**; do not manufacture a winner.
+
+---
+
+## ⚠️ Honest caveats
+
+- 🧊 **Temporal ties with Frozen are by construction.** WiSE-FT f70 *is* 70% Frozen → Arrow-of-Time / TCC τ will
+  match Frozen at any `n`. The real claim is the **trade-off**: Frozen-level temporal structure **and** better future-frame prediction.
+- 🟥 **Stage B label-binning.** Action-top1 head-reuse is only valid if `subset_10k`'s motion classes use **`eval_10k`'s
+  bin edges** (shared-derivation). Taxonomy-F1 is safe (its labels come from `tags.json`, dataset-independent).
+- 🔒 **Disjointness is verified, not assumed** (Task 2) — the tighter bands are clean **because** of the `audit_disjoint` proof.
+- 📏 **Scale = 10k, declared.** This is the generalization-to-fresh-clips check **and** the band-tightening run — it does **not**
+  replace still-owed training-seed variance (out of scope here).
 
 ---
 
 ## ✅ Bottom line
-Run it for the **generalization** check (cheap: 1 download + 1 motion-feature pass + a 4-GPU eval). It pre-empts the *"does it hold off your training clips?"* reviewer bite. It does **not** replace the still-owed **seeds** + **multiple-comparison correction**.
+
+Re-use the **17 already-trained 2B arms**, test them on the **disjoint `subset_10k` (full 10k)** → bands ~**2.3×** tighter →
+close OURS arms separate. **No training, no new arms, no factorization** (eval reads none — `m04d` is the only prep). Every new
+byte lands under **`outputs/poc/subset10k/`**; the `eval_10k` results + trained arms are **read-only and physically untouched**
+(Task 1). Disjointness is **proven** (Task 2: 0 shared clips). The only code to build is the **`test-all` labels** (Stage A → the
+13 head-free metrics, incl. the selection-critical future-MSE) and **head-reuse** (Stage B → the 2 probe metrics).
