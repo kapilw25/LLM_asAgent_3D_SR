@@ -5,9 +5,9 @@
 
 
 ## Sat, June 20, 2026
-- Reorganized every result by model, so each size (2B, 1B) gets its own clean scorecard.
-- Wired the fresh-batch retest to score into its own slot — original scores stay untouched.
-- Next: run the retest; confirm surgery's future-frame win with tighter bands; pick two best.
+- Reorganized every score by model (2B, 1B) so each gets its own clean scorecard.
+- Infrastructure day; no new model numbers — readied the retest to score beside the old, not over.
+- Next: run the retest; confirm surgery's future-frame win holds with tighter bands.
 
 ## Fri, June 19, 2026
 - Built the fresh-batch retest: reuse every trained model, test on the full unseen batch.
