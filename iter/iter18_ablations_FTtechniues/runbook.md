@@ -14,19 +14,13 @@ hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset -
 
 ---
 
-## 🟠 Box 2 · 1× RTX 6000 — single-GPU (m04d + taxonomy heads + smoke)
+## 🟠 Box 2 · 1× RTX 6000 — single-GPU (m04d motion-features only)
 
 ```bash
-# tars + tags.json for the taxonomy regen
-# encoders for the head regen
+# subset_10k tars for m04d
+python -u src/utils/hf_outputs.py download-data data/subset_10k_local 2>&1 | tee logs/download_data_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
 
-python -u src/utils/hf_outputs.py download-data data/subset_10k_local 2>&1 | tee logs/download_data_subset_10k_local_$(date +%Y%m%d_%H%M%S).log && \
-python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log && \ 
-python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv,pt 2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log    
-
-
-
-# m04d motion-features (compiled, ~1–1.5 h)
+# m04d motion-features (compiled, ~1 h)
 python -u src/m04d_motion_features.py --POC \
 --subset data/subset_10k_local/subset_10k.json \
 --local-data data/subset_10k_local \
@@ -34,47 +28,38 @@ python -u src/m04d_motion_features.py --POC \
 --no-wandb \
 2>&1 | tee logs/m04d_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
 
-# taxonomy heads — run_eval is single-GPU → 17 encoders sequential on the 1× box (~1.5–3 h)
-DROP="pretrain_2X_encoder pretrain_head surgical_3stage_DI_head surgical_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder"
-ENCS="vjepa_2_1_frozen"; for t in $(python src/utils/arm_registry.py eval-tokens); do case " $DROP " in *" $t "*) :;; *) ENCS="$ENCS vjepa_2_1_$t";; esac; done
-
-KEEP_PROBE_HEADS=1 CACHE_POLICY_ALL=2 SKIP_STAGES="1,2,3,4,5,6,7,8,8b,8c,9,9b,9c,10,12,13" \
-bash scripts/run_eval.sh --POC --encoders "$ENCS" \
-2>&1 | tee logs/regen_taxheads_$(date +%Y%m%d_%H%M%S).log
-
-# m12f self-smoke (fresh node, once) — confirms encoder-temporal metrics wire up before the smoke
-SKIP_STAGES="1,2,3,4,5,6,7,8,8b,9,9b,9c,10,11,12,13" CACHE_POLICY_ALL=1 \
-bash scripts/run_eval.sh --sanity --encoders vjepa_2_1_frozen 2>&1 | tee logs/m12f_sanity_$(date +%Y%m%d_%H%M%S).log
-
-# 200-clip smoke → subset_10k_smoke (separate dir, no clobber)
-E10=$(python src/utils/output_paths.py eval-root poc vjepa_2_1_vitG eval_10k)
-SKIP="surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder"
-python -c "import json; d=json.load(open('data/subset_10k_local/subset_10k.json')); d['clip_keys']=d['clip_keys'][:200]; d['n']=200; json.dump(d, open('data/subset_10k_local/subset_10k_smoke.json','w'))"
-ITER18_BACKBONE=vjepa_2_1_vitG EVAL_CORPUS=subset_10k_smoke PROBE_SPLIT=test-all \
-LOCAL_DATA=data/subset_10k_local EVAL_SUBSET=data/subset_10k_local/subset_10k_smoke.json \
-CLASS_EDGES=outputs/poc/_xset_edges/class_edges.json EVAL_HEAD_REUSE_ROOT="$E10" \
-python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 1 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_xset_smoke_$(date +%Y%m%d_%H%M%S).log
-
-# ships motion_features.npy
-python -u src/utils/hf_outputs.py upload-data data/subset_10k_local                
-set -a; . .env; set +a
-hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/**/probe_taxonomy/**"
+# ships motion_features.npy (box3 downloads it). taxonomy heads are built 4-wide on box3 — NOT here.
+python -u src/utils/hf_outputs.py upload-data data/subset_10k_local
 ```
 
 ---
 
-## 🔵 Box 3 · 4× RTX 6000 — 4-GPU (full retest)
+## 🔵 Box 3 · 4× RTX 6000 — 4-GPU (taxheads → m12f → smoke → full retest, all on this node)
 
 ```bash
+# downloads: subset_10k (retest corpus) · eval_10k_local (taxheads reuse-source corpus) · outputs/poc (encoders + class_edges)
 python -u src/utils/hf_outputs.py download-data data/subset_10k_local
-python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv,pt      # encoders + class_edges + heads
+python -u src/utils/hf_outputs.py download-data data/eval_10k_local
+python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv,pt
 
 E10=$(python src/utils/output_paths.py eval-root poc vjepa_2_1_vitG eval_10k)
 SKIP="surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder"
+# unattended (sleep through it): join the next 4 commands [m12f · taxheads · smoke · retest] with && so the first failure stops the rest
 
-# m12f self-smoke (fresh node, once) — confirms encoder-temporal metrics wire up before the retest
+# m12f self-smoke (fresh node, once) — confirms encoder-temporal metrics wire up
 SKIP_STAGES="1,2,3,4,5,6,7,8,8b,9,9b,9c,10,11,12,13" CACHE_POLICY_ALL=1 \
 bash scripts/run_eval.sh --sanity --encoders vjepa_2_1_frozen 2>&1 | tee logs/m12f_sanity_$(date +%Y%m%d_%H%M%S).log
+
+# taxonomy-head reuse source — 4-wide (~2.5 h); --cache 1 resumes a partial. (--taxheads-only = Stage-11-only, one encoder per GPU)
+python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --taxheads-only --cache 1 --skip-arms $SKIP \
+2>&1 | tee logs/regen_taxheads_ngpu_$(date +%Y%m%d_%H%M%S).log
+
+# 200-clip smoke → subset_10k_smoke (cheap pre-flight; validates the 4-GPU retest path before the full run)
+python -c "import json; d=json.load(open('data/subset_10k_local/subset_10k.json')); d['clip_keys']=d['clip_keys'][:200]; d['n']=200; json.dump(d, open('data/subset_10k_local/subset_10k_smoke.json','w'))"
+ITER18_BACKBONE=vjepa_2_1_vitG EVAL_CORPUS=subset_10k_smoke PROBE_SPLIT=test-all \
+LOCAL_DATA=data/subset_10k_local EVAL_SUBSET=data/subset_10k_local/subset_10k_smoke.json \
+CLASS_EDGES=outputs/poc/_xset_edges/class_edges.json EVAL_HEAD_REUSE_ROOT="$E10" \
+python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter18_xset_smoke_$(date +%Y%m%d_%H%M%S).log
 
 # full retest → subset_10k
 export ITER18_BACKBONE=vjepa_2_1_vitG EVAL_CORPUS=subset_10k PROBE_SPLIT=test-all
@@ -94,6 +79,6 @@ ls $(python src/utils/output_paths.py plot-dir poc vjepa_2_1_vitG subset_10k)/ev
 | op | box | wall (h:mm) |
 |---|---|---:|
 | class_edges regen (m04e, CPU) | Box-1 · 2060 | ~0:03 |
-| m04d motion-features (compiled) | Box-2 · 1× RTX 6000 | ~1:00–1:30 |
-| taxonomy-head regen (17 enc, sequential) | Box-2 · 1× RTX 6000 | ~1:30–3:00 |
+| m04d motion-features (compiled) | Box-2 · 1× RTX 6000 | ~1:00 |
+| taxonomy-head regen (17 enc · --taxheads-only 4-wide) | Box-3 · 4× RTX 6000 | ~2:30 |
 | cross-set retest (16 arms + frozen) | Box-3 · 4× RTX 6000 | ~8:00–12:00 |

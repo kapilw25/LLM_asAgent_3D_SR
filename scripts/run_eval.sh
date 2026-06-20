@@ -164,11 +164,15 @@ EVAL_HEAD_REUSE_ROOT="${EVAL_HEAD_REUSE_ROOT:-}"
 CLASS_EDGES="${CLASS_EDGES:-}"
 CLASS_EDGES_FLAG=""
 if [ -n "$CLASS_EDGES" ]; then CLASS_EDGES_FLAG="--class-edges $CLASS_EDGES"; fi
-# KEEP_PROBE_HEADS=1 → m12c retains its per-dim probe_<dim>.pt (the SOURCE for cross-set taxonomy
-# head-reuse). Default cleans them. Set this on the eval_10k run to (re)generate the reuse source.
-KEEP_PROBE_HEADS="${KEEP_PROBE_HEADS:-}"
+# m12c retains its per-dim probe_<dim>.pt — the SOURCE for cross-set taxonomy head-reuse. iter18
+# (2026-06-20): defaults to ON so the heads always persist next to their scores (earlier runs scored
+# taxonomy but cleaned the heads, leaving no reuse source). Set KEEP_PROBE_HEADS=0 to clean them.
+KEEP_PROBE_HEADS="${KEEP_PROBE_HEADS:-1}"
 KEEP_HEADS_FLAG=""
-if [ -n "$KEEP_PROBE_HEADS" ]; then KEEP_HEADS_FLAG="--keep-probe-heads"; fi
+case "${KEEP_PROBE_HEADS,,}" in
+    0|off|false|no) ;;
+    *) KEEP_HEADS_FLAG="--keep-probe-heads" ;;
+esac
 TAGS_JSON="${TAGS_JSON:-${LOCAL_DATA}/tags.json}"
 ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
 OUTPUT_ACTION="${OUTPUT_ACTION:-${EVAL_PREFIX}/probe_action}"

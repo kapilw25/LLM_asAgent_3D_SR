@@ -92,6 +92,11 @@ EVAL_SKIP_ONLY_8B = "2,3,11,5,6,8,8c," + EVAL_SKIP_SHARED    # P: job — skip a
 EVAL_SKIP_ONLY_8C = "2,3,11,5,6,8,8b," + EVAL_SKIP_SHARED    # F: job — skip all but 8c
 PT_METRICS = ["rollout", "causal", "tdist", "teacher_free", "maskratio", "order"]  # mirrors m12e.METRICS keys
 ET_METRICS = ["aot", "tov", "pace", "tcc"]                   # mirrors m12f.METRICS keys
+# iter18 (2026-06-20) --taxheads-only: build ONLY the taxonomy-head REUSE SOURCE. Runs Stage 11
+# (taxonomy-train) per encoder with KEEP_PROBE_HEADS=1 so the per-dim probe heads persist as the
+# cross-set EVAL_HEAD_REUSE_ROOT source — fanned one-encoder-per-GPU, turning the ~10 h single-GPU
+# `run_eval.sh --encoders <all-17>` taxheads pass into a ~gpus-wide one. No train, no §3 finale.
+TAXHEADS_SKIP = "1,2,3,4,5,6,7,8,8b,8c,9,9b,9c,10,12,13"
 
 
 def cpu_slots(n):
@@ -138,10 +143,24 @@ def now():
     return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
-def build_jobs(mode):
+def build_jobs(mode, taxheads_only=False):
     """dict id→job. job = {id,kind,cmd,deps:set,needs_labels:bool,log}."""
     mflag, mtag = f"--{mode}", mode.lower()
     jobs = {}
+    if taxheads_only:
+        # Reuse-source build: one Stage-11-only job per encoder (frozen + every ARM2ENC arm),
+        # KEEP_PROBE_HEADS=1 to persist the heads, no train deps (the encoders already exist on
+        # disk — run_eval FATALs loud if one is missing, same trust model as --only). Each gates
+        # only on labels_ready, so all N launch immediately and fan across the GPU pool.
+        for arm, enc in [("frozen", "frozen")] + list(ARM2ENC.items()):
+            encn = enc_name(enc)
+            xjid = f"X:{encn}"
+            jobs[xjid] = dict(
+                id=xjid, kind="eval", deps=set(), needs_labels=True,
+                cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={TAXHEADS_SKIP} "
+                     f"KEEP_PROBE_HEADS=1 CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
+                log=f"logs/iter18_ngpu_{mtag}_taxheads_{encn}_{{ts}}.log")
+        return jobs, mtag
     seed_id = f"T:{BACKBONE}:pretrain_encoder"   # seeds shared labels + everyone's init ckpt
     for arm in ARM2ENC:
         jid = f"T:{BACKBONE}:{arm}"
@@ -231,9 +250,17 @@ def main():
                          "only the remaining encoders. Skipped arms keep every on-disk anchor — "
                          "rerun later WITHOUT this flag + --cache 1 to train them and rebuild the "
                          "finale over all 14 encoders.")
+    ap.add_argument("--taxheads-only", action="store_true",
+                    help="iter18 (2026-06-20): build ONLY the taxonomy-head reuse source — one "
+                         "Stage-11 (KEEP_PROBE_HEADS=1) eval job per encoder, fanned across --gpus, "
+                         "no train + no other stages + no §3 finale. Replaces the ~10 h single-GPU "
+                         "`run_eval.sh --encoders <all-17>` taxheads pass. Use --cache 2 for a fresh "
+                         "build; --cache 1 resumes (run_eval skips encoders already done in the tree).")
     args = ap.parse_args()
+    if args.taxheads_only and args.only:
+        sys.exit("FATAL: --taxheads-only and --only are mutually exclusive.")
 
-    jobs, mtag = build_jobs(args.mode)
+    jobs, mtag = build_jobs(args.mode, taxheads_only=args.taxheads_only)
 
     if args.only:
         bad = [a for a in args.only if a not in ARM2ENC]
@@ -254,6 +281,7 @@ def main():
         if "pretrain_encoder" in args.skip_arms:
             sys.exit("FATAL: cannot skip pretrain_encoder — it is every arm's init dependency.")
         drop = ({f"T:{BACKBONE}:{a}" for a in args.skip_arms}
+                | {f"X:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --taxheads-only jobs
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}
                 | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in PT_METRICS}
                 | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in ET_METRICS})
@@ -428,6 +456,11 @@ def main():
     if args.only:
         print(f"═══ --only run complete ({sorted(args.only)}) — §3 finale skipped by design ═══",
               flush=True)
+        return
+
+    if args.taxheads_only:
+        print(f"═══ --taxheads-only complete — {len(done)}/{len(jobs)} taxonomy-head job(s) done · "
+              f"§3 finale skipped (reuse-source build only) ═══", flush=True)
         return
 
     # ── §3 finale: ONE run_eval over ALL encoders, per-encoder stages skipped (cached) →
