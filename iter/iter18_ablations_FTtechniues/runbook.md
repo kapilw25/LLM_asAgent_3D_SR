@@ -7,6 +7,7 @@
 python -u src/m04e_action_labels.py --POC --eval-subset data/eval_10k_local/eval_10k.json \
 --motion-features data/eval_10k_local/m04d_motion_features/motion_features.npy \
 --output-root outputs/poc/_xset_edges --cache-policy 2
+
 set -a; . .env; set +a
 hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/_xset_edges/**"
 ```
