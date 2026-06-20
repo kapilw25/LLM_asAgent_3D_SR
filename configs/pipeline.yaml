@@ -215,6 +215,12 @@ streaming:
   max_retries: 5              # HF stream reconnect attempts
   checkpoint_every: 500       # clips between checkpoint saves (m04/m05)
   tar_reader_queue: 256       # iter18 H6: iter_clips_parallel max_queue (was signature default)
+  # iter18 (2026-06-20) m04d decode override — the cgroup auto-scale capped at 16 workers, idling 64 of an
+  # 80-core box → m04d was decode-bound (GPU idle ~80%, ~4.5 h). 64 workers × the 64-clip flush above = a
+  # single decode wave; queue 6 (×64 = 384 clips) < the old 16×32 = 512 → LESS in-flight RAM. Expected ~1 h
+  # on the 2060. Manual escape hatch — DELETE these two lines to fall back to the cgroup auto-scale.
+  decode_workers_motion: 64
+  producer_queue_motion: 6
   # -- Runtime worker auto-tune (iter18 2026-06-06) -------------------------------------
   # Consumed by utils.stream_autotune.resolve_stream_workers when a train yaml declares
   # num_workers: auto. Measured incident: 3-4 concurrent arms each FIXED at poc:4 workers
@@ -350,7 +356,7 @@ gpu:
   default_batch_size: 16      # fallback if profiler unavailable
   default_num_workers: 8      # dataloader workers
   vlm_batch_size: 4           # m04: transformers sequential inference
-  motion_batch_size: 32       # m04d: optical flow batch
+  motion_batch_size: 64       # m04d: optical flow batch — iter18 (2026-06-20) 32→64 so ONE producer flush decodes 64 clips in a single wave across the idle cores (the AdaptiveBatchSizer still caps the GPU sub-batch by VRAM, so no GPU-OOM risk)
   # Profiled batch sizes (RTX PRO 6000, 96GB, real video data, median of 3 runs):
   training_batch_size: 112    # m09: 16 frames with grad ckpt (profiled)
   eval_frames_per_clip: 64   # m05/m05b: frames for embedding extraction (matches frozen V-JEPA HF model)
