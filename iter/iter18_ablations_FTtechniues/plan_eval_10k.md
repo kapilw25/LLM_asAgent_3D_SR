@@ -23,7 +23,7 @@
 |---|---|---|---|
 | 1 | 🔒 **Task 1 — no previous artifact deleted/overwritten** (namespacing + guards) | safe to run | 🟢 zero-code (env block below) |
 | 2 | 🧬 **Task 3 — factorization NOT needed for eval** (grep-proven) → prep = `m04d` only | skip m10 SAM (GPU-hrs) + m11 (~58 GB) | ✅ proven |
-| 3 | 🧮 **Task 2 — disjointness proof** (`audit_disjoint.py`: 0 shared clips) | the clean-CI evidence | ✅ proven (0 overlap) |
+| 3 | 🧮 **Task 2 — disjointness audit** (`audit_disjoint.py`) | the clean-CI evidence | ✅ 0 exact clips · adjacency footnoted (proceed-as-is) |
 | 4 | 🔧 **Stage A — `test-all` labels** → the **13** head-free metrics on the FULL 10k | settles the future-MSE arm-tie | 🔧 `m04e`/`m04f` small mode |
 | 5 | ⚡ **Multi-GPU fan** the 17 encoders → `outputs/poc/subset10k/` | uses all GPUs | 🔧/⛔ |
 | 6 | 🔧 **Stage B — head-reuse** (`--head-ckpt`) → the **2** probe metrics on the FULL 10k | tightens action-top1 + taxonomy-F1 | 🔧 `m12a`/`m12c` |
@@ -91,13 +91,24 @@ The contract is **env-only — zero code change** (verified against every write/
 
 ## 🧮 Task 2 — the disjointness proof (the clean-CI evidence)
 
-The tighter bands are only honest if `eval_10k` (where heads were trained) and `subset_10k` (the new test set) are
-truly disjoint — both were carved from the same WalkIndia parent. **Verified this session, FAIL-LOUD:**
+The tighter bands are only honest if `eval_10k` (where heads were trained) and `subset_10k` (the new test set)
+don't leak. Both were carved from the same WalkIndia parent. **Audited 2026-06-20:**
 
 ```text
   clip key  =  section/video_id/source_file   (e.g. tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-004.mp4)
-  exact:   | eval_10k.clip_keys  ∩  subset_10k.saved_keys |  =  0   of 10,000 vs 10,000   ✅ ZERO overlap
+  [exact]    shared clip keys           :    0   ← THE leakage bar (iter15 was exact-clip). Encoders saw
+                                                   ZERO subset_10k clips. ✅ CLEAN.
+  [video]    shared source videos       :  681   ← NOT leakage: WalkIndia videos are ~160 clips each
+                                                   (276 h / 714 vids) → non-adjacent same-video clips differ.
+  [adjacent] same video within ±1 clips : 2996   ← near-duplicate consecutive-10s pairs (the only residual).
 ```
+
+**Decision (2026-06-20, user): proceed as-is.** 0 exact overlap is the bar — the encoders trained on none of
+subset_10k. The 2996 adjacency does **not** bias the *surgery-vs-baselines* claim: it's a *relative* comparison
+(adjacency inflates every arm equally) and the CI is bootstrapped over subset_10k's own ~6-clips/video
+(spread-out → independent) sample, not over the eval_10k pairing. **📌 Paper footnote:** ~31% of subset_10k
+clips have a temporal neighbour in eval_10k → absolute held-out levels carry that mild caveat, the arm ranking
+does not. (Root cause: subset_10k was built `disjoint_from: data/val_1k.json`, not eval_10k.)
 
 - 🆕 **`src/utils/audit_disjoint.py`** (pure-CPU, built this session, self-test passes) checks three strengths:
   **exact** shared clip-key · **shared source-video** (same `video_id` in both) · **adjacent clips** (same video within ±N clip-indices = the ±30 s hard-mode rule, metadata-based — **not** frame-embedding cosine, which floods false dups on same-camera walking clips).
@@ -108,7 +119,7 @@ truly disjoint — both were carved from the same WalkIndia parent. **Verified t
 python -u src/utils/audit_disjoint.py \
   --set-a data/eval_10k_local/eval_10k.json   --keys-field-a clip_keys  --label-a eval_10k \
   --set-b data/subset_10k_local/subset_10k.json --keys-field-b clip_keys --label-b subset_10k \
-  --window-clips 6
+  --window-clips 1     # ±1 = consecutive-10s near-dups; the 2026-06-20 run → 0 exact / 681 vid / 2996 adj
 ```
 
 ---
@@ -168,7 +179,7 @@ python -u src/m04d_motion_features.py --POC \
 python -u src/utils/audit_disjoint.py \
   --set-a data/eval_10k_local/eval_10k.json    --keys-field-a clip_keys --label-a eval_10k \
   --set-b data/subset_10k_local/subset_10k.json --keys-field-b clip_keys --label-b subset_10k \
-  --window-clips 6
+  --window-clips 1     # ±1 = consecutive-10s near-dups; the 2026-06-20 run → 0 exact / 681 vid / 2996 adj
 
 # ── Step 3 · STAGE A — the 13 head-free metrics on the FULL 10k (after the m04e test-all build) ──
 #    Task-1 no-clobber env block: results → outputs/poc/subset10k/* ; trained arms READ from outputs/poc/.
