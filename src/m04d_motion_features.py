@@ -259,6 +259,15 @@ def load_raft_model(device):
     # while EAGER RAFT peaks ~0.24 GB. The env lets the 8 GB box prep in eager WITHOUT editing the
     # shared yaml (which keeps compile ON for the Pro 6000). DEFAULT still comes from yaml.
     _compile_on = _cfg["enabled"]
+    # iter18 (2026-06-20): auto-EAGER on small-VRAM GPUs. Inductor's pad_mm benchmark pre-allocates the
+    # ~7.65 GB compile workspace, which OOMs before clip 0 on an 8 GB card (2060 SUPER); eager peaks ~0.24 GB.
+    # Below m04d_compile.min_vram_gb → force eager so the bare command just works; the M04D_COMPILE env still
+    # wins below as the final override (=1 forces compile, =0 forces eager).
+    _vram_gb = torch.cuda.get_device_properties(device).total_memory / 1e9
+    if _compile_on and _vram_gb < _cfg["min_vram_gb"]:
+        print(f"[M8 m04d_compile] GPU has {_vram_gb:.1f} GB < {_cfg['min_vram_gb']} GB → auto-EAGER "
+              f"(the ~7.65 GB compile workspace would OOM)", flush=True)
+        _compile_on = False
     _env = os.environ.get("M04D_COMPILE")
     if _env is not None:
         _compile_on = _env.strip().lower() in ("1", "true", "yes", "on")

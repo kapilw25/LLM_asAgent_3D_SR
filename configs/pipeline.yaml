@@ -647,6 +647,7 @@ m04d_compile:
   mode:           "default"         # NOT reduce-overhead — saves ~70 GB cudagraphs pool
   dynamic:        false             # NON-NEGOTIABLE — iter13 CantSplit root cause was dynamic=True
   fullgraph:      false             # tolerate graph breaks at non-tensor ops
+  min_vram_gb:    16                # iter18 (2026-06-20): auto-EAGER below this — Inductor's ~7.65 GB pad_mm compile workspace OOMs an 8 GB GPU (2060 SUPER); 24 GB+ boxes (Pro 4000/5000/6000) still compile
 
 # iter16 M7 / R5 (2026-05-21): torch.compile gate for Grounding DINO.
 #

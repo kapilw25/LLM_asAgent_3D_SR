@@ -17,20 +17,30 @@ hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset -
 ## 🟠 Box 2 · 1× RTX 6000 — single-GPU (m04d + taxonomy heads)
 
 ```bash
-python -u src/utils/hf_outputs.py download-data data/subset_10k_local
-python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv,pt      # encoders for the head regen
+python -u src/utils/hf_outputs.py download-data data/subset_10k_local 2>&1 | tee logs/download_data_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
+# tars + tags.json for the taxonomy regen
+python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log                 
+# encoders for the head regen
+python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv,pt 2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log     
 
 # m04d motion-features (compiled, ~1–1.5 h)
 python -u src/m04d_motion_features.py --POC \
-  --subset data/subset_10k_local/subset_10k.json --local-data data/subset_10k_local --cache-policy 1
+--subset data/subset_10k_local/subset_10k.json \
+--local-data data/subset_10k_local \
+--cache-policy 1 \
+--no-wandb \
+2>&1 | tee logs/m04d_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
 
 # taxonomy heads — run_eval is single-GPU → 17 encoders sequential on the 1× box (~1.5–3 h)
 DROP="pretrain_2X_encoder pretrain_head surgical_3stage_DI_head surgical_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder"
 ENCS="vjepa_2_1_frozen"; for t in $(python src/utils/arm_registry.py eval-tokens); do case " $DROP " in *" $t "*) :;; *) ENCS="$ENCS vjepa_2_1_$t";; esac; done
-KEEP_PROBE_HEADS=1 CACHE_POLICY_ALL=2 SKIP_STAGES="1,2,3,4,5,6,7,8,8b,8c,9,9b,9c,10,12,13" \
-  bash scripts/run_eval.sh --POC --encoders "$ENCS" 2>&1 | tee logs/regen_taxheads_$(date +%Y%m%d_%H%M%S).log
 
-python -u src/utils/hf_outputs.py upload-data data/subset_10k_local                # ships motion_features.npy
+KEEP_PROBE_HEADS=1 CACHE_POLICY_ALL=2 SKIP_STAGES="1,2,3,4,5,6,7,8,8b,8c,9,9b,9c,10,12,13" \
+bash scripts/run_eval.sh --POC --encoders "$ENCS" \
+2>&1 | tee logs/regen_taxheads_$(date +%Y%m%d_%H%M%S).log
+
+# ships motion_features.npy
+python -u src/utils/hf_outputs.py upload-data data/subset_10k_local                
 set -a; . .env; set +a
 hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/**/probe_taxonomy/**"
 ```

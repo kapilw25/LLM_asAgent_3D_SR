@@ -332,7 +332,12 @@
       "Bash(EVAL_CORPUS=subset_10k python -)",
       "Bash(grep -vE '/$')",
       "Bash(grep -rnE 'outputs/\\\\{mtag\\\\}/\\(probe|predictor|encoder\\)|outputs/\\\\$\\\\{?mode' scripts/iter18_poc_ngpu.py scripts/iter18_poc_status.py scripts/run_eval.sh scripts/run_train.sh)",
-      "Bash(ITER18_BACKBONE=vjepa_2_1_vitG python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --dry-run --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder)"
+      "Bash(ITER18_BACKBONE=vjepa_2_1_vitG python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --dry-run --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder)",
+      "Bash(awk '{print \" ✅ class_edges.json\", $5\"B\"}')",
+      "Bash(echo \" classes: $\\(python -c \"import json;print\\(json.load\\(open\\('outputs/poc/_xset_edges/class_edges.json'\\)\\)['class_names']\\)\" \\)\")",
+      "Bash(echo \" run_eval default LOCAL_DATA = $\\(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir\\)\")",
+      "Bash(echo \"  m04d_compile cfg: $\\(python -c \"import yaml; print\\(yaml.safe_load\\(open\\('configs/pipeline.yaml'\\)\\)['m04d_compile']\\)\"\\)\")",
+      "Bash(echo \"  gate on this 2060: 7.6 GB < 16 GB → $\\(python -c \"print\\('auto-EAGER ✅' if 7.6 < 16 else 'compile'\\)\"\\)\")"
     ]
   }
 }
