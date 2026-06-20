@@ -113,8 +113,8 @@ def get_pipeline_config() -> dict:
 def get_probe_split(mode: str) -> dict:
     """Return {train_pct, val_pct} for the given mode.
 
-    iter16 (2026-05-21): mode-keyed. POC + FULL are parity-locked at 75/5/20
-    (paper recipe). SANITY uses laxer 60/20/20 because M5 video-disjoint
+    iter16 (2026-05-21): mode-keyed. POC + FULL are parity-locked (paper recipe);
+    SANITY uses a laxer ratio (exact ratios in pipeline.yaml `probe_split`) because M5 video-disjoint
     SGKF's n_splits is incompatible with SANITY's tiny per-class video
     coverage. test_pct is derived as 1 − train_pct − val_pct (kept out of
     yaml to avoid 3-way drift). FAIL LOUD on unknown mode via KeyError.

@@ -120,7 +120,7 @@ if [ ! -f "$ACTION_LABELS" ]; then
         MIN_SPLIT_BOOTSTRAP=1
     else
         # POC + FULL: thresholds from pipeline.yaml (single source; calibrated to the
-        # 75/5/20 probe split — see probe_action_labels.min_clips_per_class comment).
+        # the probe split (probe_split[mode] ratio) — see probe_action_labels.min_clips_per_class comment).
         MIN_CLIPS_BOOTSTRAP=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_clips_per_class.${mode_dir}")
         MIN_SPLIT_BOOTSTRAP=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "probe_action_labels.min_per_split.${mode_dir}")
     fi
@@ -145,7 +145,7 @@ if [ "$MODE" = "SANITY" ]; then
 fi
 
 # ── Generate train/val/test split JSONs from action_labels.json ──────────
-# action_labels.json carries 70/15/15 split (train=6964, val=1491, test=1496)
+# action_labels.json carries the stratified split at the probe_split[mode] ratio (configs/pipeline.yaml)
 # — paper-final m06d trio uses TEST clips that m09a never sees during pretrain_encoder.
 # iter13 Task #23 (2026-05-04): test split externalised here so eval stages
 # downstream can reference ${LOCAL_DATA}/test_split.json directly.

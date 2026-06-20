@@ -281,7 +281,7 @@ def run_train_stage(args, wb) -> None:
         model, crop, embed_dim = load_encoder_by_kind(args.encoder, args.encoder_ckpt, args.num_frames)
 
     # Group clip_keys by split (deterministic order from action_labels.json,
-    # which is the source-of-truth for the 70/15/15 split per iter13 plan).
+    # which is the source-of-truth for the split (probe_split[mode] ratio, configs/pipeline.yaml) per iter13 plan).
     action_labels_path = args.features_root / artifact("action_labels")
     action_labels = load_action_labels(action_labels_path)
     by_split = {"train": [], "val": [], "test": []}
@@ -313,9 +313,19 @@ def run_train_stage(args, wb) -> None:
             feats = np.concatenate([feats.astype(np.float16), ma_tiled], axis=-1)
         return feats, [str(k) for k in ordered_keys]
 
-    feats_train, keys_train = _load_or_extract("train")
-    feats_val,   keys_val   = _load_or_extract("val")
-    feats_test,  keys_test  = _load_or_extract("test")
+    # iter18 head-reuse (Stage B): --head-ckpt-dir set → load per-dim heads trained on eval_10k and
+    # SKIP training; score them on this run's TEST split only (pairs with --probe-split test-all →
+    # test = full disjoint corpus → tighter CIs). No train/val needed (none exist under test-all).
+    head_reuse = args.head_ckpt_dir is not None
+    feats_test, keys_test = _load_or_extract("test")
+    if head_reuse:
+        feats_train = feats_val = None
+        keys_train = keys_val = []
+        print(f"[head-reuse] taxonomy: per-dim heads from {args.head_ckpt_dir}; training SKIPPED, "
+              f"eval on TEST (n={len(keys_test)})")
+    else:
+        feats_train, keys_train = _load_or_extract("train")
+        feats_val,   keys_val   = _load_or_extract("val")
 
     # iter13 (2026-05-05): free encoder GPU memory BEFORE per-dim probe-head
     # training. Heads are tiny (~140K params each, 16 dims) but they still
@@ -334,37 +344,51 @@ def run_train_stage(args, wb) -> None:
     summary = {"encoder": args.encoder, "dims": {}}
     pbar = make_pbar(total=len(dims), desc=f"m12c_taxonomy_f1[{args.encoder}]", unit="dim")
 
+    d_in = int(feats_test.shape[-1])   # test always extracted; train/test share D
     for dim_name, spec in dims.items():
         # Filter to clips that have a label for this dim (most clips will).
         def _idx(keys):
             return [i for i, k in enumerate(keys) if k in labels_by_clip and dim_name in labels_by_clip[k]]
-        ti = _idx(keys_train); vi = _idx(keys_val); te = _idx(keys_test)
-        if len(ti) < _MIN_TRAIN_N or len(vi) < _MIN_VAL_N or len(te) < _MIN_TEST_N:
+        ti = _idx(keys_train); vi = _idx(keys_val); te = _idx(keys_test)   # head_reuse → ti/vi empty
+        too_few = (len(te) < _MIN_TEST_N if head_reuse
+                   else (len(ti) < _MIN_TRAIN_N or len(vi) < _MIN_VAL_N or len(te) < _MIN_TEST_N))
+        if too_few:
             print(f"  [skip] dim={dim_name}: too few labeled clips (train={len(ti)}, val={len(vi)}, test={len(te)})")
             summary["dims"][dim_name] = {"skipped": True, "reason": "too_few_clips"}
             pbar.update(1)
             continue
 
-        if spec["type"] == "single":
-            y_tr = np.array([labels_by_clip[keys_train[i]][dim_name] for i in ti], dtype=np.int64)
-            y_val = np.array([labels_by_clip[keys_val[i]][dim_name] for i in vi], dtype=np.int64)
-            y_te = np.array([labels_by_clip[keys_test[i]][dim_name] for i in te], dtype=np.int64)
-        else:
-            y_tr = np.array([labels_by_clip[keys_train[i]][dim_name] for i in ti], dtype=np.float32)
-            y_val = np.array([labels_by_clip[keys_val[i]][dim_name] for i in vi], dtype=np.float32)
-            y_te = np.array([labels_by_clip[keys_test[i]][dim_name] for i in te], dtype=np.float32)
+        _ydtype = np.int64 if spec["type"] == "single" else np.float32
+        y_te = np.array([labels_by_clip[keys_test[i]][dim_name] for i in te], dtype=_ydtype)
 
-        d_in = int(feats_train.shape[-1])
         probe = _make_probe(d_in, spec["n_classes"], depth=args.probe_depth)
-        best_val, best_state = _train_one_dim(
-            probe, feats_train[ti], y_tr, feats_val[vi], y_val,
-            dim_type=spec["type"], epochs=args.epochs, lr=args.probe_lr,
-            wd=args.probe_wd, batch_size=args.train_batch_size,
-            warmup_pct=args.warmup_pct, seed=args.seed)
-        probe.load_state_dict(best_state)
+        if head_reuse:
+            head_path = args.head_ckpt_dir / f"probe_{dim_name}.pt"
+            if not head_path.exists():
+                print(f"  [head-reuse][skip] dim={dim_name}: no head at {head_path}")
+                summary["dims"][dim_name] = {"skipped": True, "reason": "head_missing"}
+                pbar.update(1)
+                continue
+            state = torch.load(head_path, map_location="cpu", weights_only=True)
+            try:
+                probe.load_state_dict(state)
+            except (RuntimeError, KeyError) as e:
+                sys.exit(f"FATAL: --head-ckpt-dir head {head_path} does not fit (embed_dim={d_in}, "
+                         f"n_classes={spec['n_classes']}) — encoder/class-set/motion_aux mismatch. Error: {e}")
+            best_val = 0.0
+        else:
+            y_tr = np.array([labels_by_clip[keys_train[i]][dim_name] for i in ti], dtype=_ydtype)
+            y_val = np.array([labels_by_clip[keys_val[i]][dim_name] for i in vi], dtype=_ydtype)
+            best_val, best_state = _train_one_dim(
+                probe, feats_train[ti], y_tr, feats_val[vi], y_val,
+                dim_type=spec["type"], epochs=args.epochs, lr=args.probe_lr,
+                wd=args.probe_wd, batch_size=args.train_batch_size,
+                warmup_pct=args.warmup_pct, seed=args.seed)
+            probe.load_state_dict(best_state)
         per_clip, mean_v, ci, metric_name = _eval_test(probe, feats_test[te], y_te, spec["type"])
-        # Persist per-dim outputs.
-        torch.save(best_state, out_dir / f"probe_{dim_name}.pt")
+        # Persist per-dim outputs (the head itself only when freshly trained).
+        if not head_reuse:
+            torch.save(best_state, out_dir / f"probe_{dim_name}.pt")
         np.save(out_dir / f"per_clip_{dim_name}.npy", per_clip)
         np.save(out_dir / f"clip_keys_test_{dim_name}.npy",
                 np.array([keys_test[i] for i in te], dtype=object))
@@ -375,6 +399,7 @@ def run_train_stage(args, wb) -> None:
             "best_val": round(float(best_val), 6),
             "test_mean": round(mean_v, 6),
             "test_ci": ci,
+            **({"head_reuse_from": str(args.head_ckpt_dir)} if head_reuse else {}),
         }
         summary["dims"][dim_name] = dim_record
         log_metrics(wb, {f"{args.encoder}/{dim_name}/{metric_name}": mean_v})
@@ -556,6 +581,11 @@ def build_parser():
     # in-memory). When all 3 splits are already on disk, these are unused.
     p.add_argument("--encoder-ckpt", type=Path, default=None,
                    help="V-JEPA encoder ckpt (required when train/val features need lazy extraction)")
+    p.add_argument("--head-ckpt-dir", type=Path, default=None,
+                   help="iter18 head-reuse (Stage B): a DIRECTORY of per-dim heads (probe_<dim>.pt) "
+                        "trained on eval_10k. Loads each + SKIPS training, evals on this run's TEST "
+                        "split only. Use with --probe-split test-all upstream for cross-set CI-reduction. "
+                        "FAIL LOUD per dim if a head's dims don't fit this encoder.")
     # D1 fix (2026-05-16): wire motion_aux head for symmetry with probe_action.
     # When probe_action wrote features_<split>.npy with augmentation already
     # baked in (--motion-aux-head set there), probe_taxonomy inherits the

@@ -480,7 +480,7 @@ def train(cfg: dict, args):
     # generating data/eval_10k_local/eval_10k_poc.json (first N keys of eval_10k.json) →
     # action_labels.json → train/val/test split files. By the time m09a reads
     # train_keys/val_key_set here, they're already proportionally sized
-    # (~350/75/75 from a 500-clip pool via 70:15:15 stratified_split). No
+    # (a stratified_split per action_labels' probe_split[mode] ratio, from a ~500-clip pool). No
     # in-script POC cap needed — single source of truth = poc_total_clips yaml key.
 
     # Discover n_train: from subset, local manifest, or fail

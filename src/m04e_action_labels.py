@@ -38,7 +38,7 @@ from utils.cache_policy import (
     guarded_delete,
     resolve_cache_policy_interactive,
 )
-from utils.checkpoint import load_json_checkpoint
+from utils.checkpoint import load_json_checkpoint, save_json_checkpoint
 from utils.config import get_pipeline_config, get_probe_split
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
@@ -65,6 +65,14 @@ def run_labels(args, wb) -> None:
 
     # Mode-keyed clip-pool subsampling (POC↔FULL parity; SANITY = sorted()[:n] code check).
     mode = "sanity" if args.SANITY else ("poc" if args.POC else "full")
+    # iter18 (2026-06-20): single-source the class-filter floors from the CANONICAL mode-keyed
+    # probe_action_labels[mode] (same as probe_labels.py + run_eval.sh) when not overridden — was the
+    # stale scalar probe.min_clips_per_class:34 that conflicted with poc/full=100 and failed standalone.
+    _pal = get_pipeline_config()["probe_action_labels"]
+    if args.min_clips_per_class is None:
+        args.min_clips_per_class = _pal["min_clips_per_class"][mode]
+    if args.min_per_split is None:
+        args.min_per_split = _pal["min_per_split"][mode]
     manifest = json.loads(Path(args.eval_subset).read_text())
     n_motion_classes = get_pipeline_config()["probe_action_labels"]["n_motion_classes"]
     pool_keys = subsample_manifest_for_mode(
@@ -73,12 +81,21 @@ def run_labels(args, wb) -> None:
           f"{len(manifest['clip_keys']):,} clips "
           f"({len(pool_keys)/len(manifest['clip_keys']):.2%})")
 
+    # iter18 cross-set: --class-edges <eval_10k class_edges.json> → REUSE eval_10k's motion-bin
+    # quartiles + class→id ordering so a reused head (Stage B) scores against the SAME class
+    # definition. Without it, m04e DERIVES fresh edges + writes class_edges.json (the reusable source).
+    loaded_edges = json.loads(Path(args.class_edges).read_text()) if args.class_edges else None
+    edges_capture = None if loaded_edges else {}
     records, class_names = load_subset_with_labels(
         args.eval_subset, args.motion_features,
         min_clips_per_class=args.min_clips_per_class,
-        clip_keys=pool_keys)
+        clip_keys=pool_keys,
+        magnitude_quartiles=(loaded_edges["magnitude_quartiles"] if loaded_edges else None),
+        class_names_override=(loaded_edges["class_names"] if loaded_edges else None),
+        edges_out=edges_capture)
     print(f"Loaded {len(records)} labeled clips from {args.eval_subset} "
-          f"({len(class_names)} motion-flow classes)")
+          f"({len(class_names)} motion-flow classes)"
+          + (f" — REUSED edges from {args.class_edges}" if loaded_edges else ""))
 
     split_cfg = get_probe_split(mode)
     splits = stratified_split(records,
@@ -86,21 +103,34 @@ def run_labels(args, wb) -> None:
                               val_pct=split_cfg["val_pct"],
                               seed=args.seed,
                               min_per_split=args.min_per_split,
-                              mode=mode)
+                              mode=mode,
+                              test_all=(args.probe_split == "test-all"))
     write_action_labels_json(records, splits, labels_path)
+    if edges_capture is not None:   # derived fresh → persist as the reusable cross-set edge source
+        save_json_checkpoint(edges_capture, args.output_root / artifact("class_edges"))
+        print(f"  [class-edges] wrote {args.output_root / artifact('class_edges')} "
+              f"(quartiles + {len(class_names)} class_names) — reuse via --class-edges for cross-set eval")
 
     counts = load_json_checkpoint(args.output_root / artifact("class_counts"))
-    for cls, c in counts.items():
-        if c["test"] < args.min_per_split or c["val"] < args.min_per_split:
-            if mode == "sanity":
-                print(f"  WARN [SANITY]: class '{cls}' val={c['val']}/"
-                      f"test={c['test']} (need >= {args.min_per_split} each "
-                      f"for POC/FULL; SANITY only validates code paths)")
-            else:
-                sys.exit(f"FATAL: class '{cls}' val={c['val']}/test={c['test']} "
-                         f"(need >= {args.min_per_split} each)")
-        if c["train"] < _MIN_TRAIN_PER_CLASS:
-            print(f"  WARN: class '{cls}' train={c['train']} (recommended >=30)")
+    if args.probe_split == "test-all":
+        # test-all → every clip is TEST (train/val empty by design) → the per-split min_per_split
+        # asserts don't apply. The probe-TRAIN stages (m12a/m12c Stage 3/3.5) have NO train data in
+        # this mode and MUST be skipped; their heads are reused from eval_10k via --head-ckpt.
+        n_test = sum(c["test"] for c in counts.values())
+        print(f"  [probe-split=test-all] every clip → TEST (train=0, val=0, test={n_test}); "
+              f"per-split min_per_split asserts SKIPPED.")
+    else:
+        for cls, c in counts.items():
+            if c["test"] < args.min_per_split or c["val"] < args.min_per_split:
+                if mode == "sanity":
+                    print(f"  WARN [SANITY]: class '{cls}' val={c['val']}/"
+                          f"test={c['test']} (need >= {args.min_per_split} each "
+                          f"for POC/FULL; SANITY only validates code paths)")
+                else:
+                    sys.exit(f"FATAL: class '{cls}' val={c['val']}/test={c['test']} "
+                             f"(need >= {args.min_per_split} each)")
+            if c["train"] < _MIN_TRAIN_PER_CLASS:
+                print(f"  WARN: class '{cls}' train={c['train']} (recommended >=30)")
     log_metrics(wb, {"n_clips_labeled": len(records), "n_classes": len(counts)})
     print(f"Wrote: {labels_path}  +  class_counts.json")
 
@@ -115,11 +145,24 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--motion-features", type=Path, default=None,
                    help="m04d motion_features.npy (RAFT optical-flow 23D × N_clips). "
                         "Companion .paths.npy must sit next to it.")
-    p.add_argument("--min-clips-per-class", type=int, default=_PROBE_CFG["min_clips_per_class"],
-                   help="Drop motion-flow classes with fewer than this many clips.")
-    p.add_argument("--min-per-split", type=int, default=_PROBE_CFG["min_per_split"],
-                   help="Minimum clips per split per class for BCa CI floor.")
+    p.add_argument("--min-clips-per-class", type=int, default=None,
+                   help="Drop motion-flow classes with fewer than this many clips. Default (None) → "
+                        "the mode-keyed probe_action_labels.min_clips_per_class[mode] (single source; "
+                        "sanity 5 / poc 100 / full 100).")
+    p.add_argument("--min-per-split", type=int, default=None,
+                   help="Min clips per split per class for the BCa CI floor. Default (None) → "
+                        "probe_action_labels.min_per_split[mode] (sanity 1 / poc 5 / full 5).")
     p.add_argument("--seed", type=int, default=_PROBE_CFG["seed"])
+    p.add_argument("--probe-split", choices=["stratified", "test-all"], default="stratified",
+                   help="'stratified' (default): video-disjoint train/val/test (training + standard "
+                        "eval). 'test-all': every clip → the TEST split (train/val empty) for cross-set "
+                        "CI-reduction eval on a FULL disjoint corpus (iter18); the probe-TRAIN stages "
+                        "must then be skipped (no train data) — heads are reused via --head-ckpt.")
+    p.add_argument("--class-edges", type=Path, default=None,
+                   help="iter18 cross-set: reuse another corpus's motion-bin definition "
+                        "(eval_10k's class_edges.json = {magnitude_quartiles, class_names}) so a "
+                        "reused probe head (Stage B) scores against the SAME classes. Default (None) "
+                        "→ derive fresh + write class_edges.json (the reusable source).")
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p

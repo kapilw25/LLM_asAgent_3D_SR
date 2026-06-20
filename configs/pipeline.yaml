@@ -105,6 +105,7 @@ artifacts:
   tags: "tags.json"
   manifest: "manifest.json"
   class_counts: "class_counts.json"
+  class_edges: "class_edges.json"   # iter18 cross-set: {magnitude_quartiles, class_names} — eval_10k's motion-bin definition, reused by subset_10k via m04e --class-edges
   # training outputs (m09*)
   training_summary: "training_summary.json"
   loss_log_csv: "loss_log.csv"
@@ -406,9 +407,10 @@ eval:
   # m12b feature sharing with probe_action's cache (iter18 H2: was argparse default=True)
   motion_cos_share_features: true
   motion_aux_align_to: 16        # iter18 H6: apply_motion_aux_head_to_features frame alignment (was signature default)
-  # m04e/probe-label stratified split (iter18 H6: were stratified_split signature defaults)
-  action_split_train_pct: 0.7
-  action_split_val_pct: 0.15
+  # m04e/probe-label stratified split. iter18 (2026-06-20): the train/val PERCENTAGES were DELETED
+  # here — they were a stale duplicate ratio that CONFLICTED with the canonical `probe_split`.
+  # stratified_split now single-sources train/val from probe_split[mode].
+  # Only the seed + k-tolerance live here (not part of the ratio).
   action_split_seed: 99
   action_split_k_tolerance: 0.03   # iter18 W7: |1/k_test − test_pct| sanity tolerance (was literal)
   bca_max_n: 50000                 # iter18 W7: bootstrap switches BCa→percentile above this N (was literal ×2)
@@ -574,7 +576,7 @@ verify:
 # (with its asymmetric 80/10/10 split) retired to src/legacy/ same day.
 probe_split:
   # iter16 (2026-05-21): mode-keyed train/val/test split ratios.
-  # POC↔FULL parity-locked at 75/5/20 (paper recipe — tight val for trajectory
+  # POC↔FULL parity-locked (paper recipe — tight val for trajectory
   # plots). SANITY uses laxer 60/20/20 because M5 video-disjoint SGKF needs
   # n_splits ≤ min_videos_per_class — at SANITY scale (~100 clips × 11 classes
   # × ~14 clips/video ≈ 5 videos/class), k_val=16 from val_pct=0.05 is
@@ -688,8 +690,8 @@ probe_action_labels:
   # POC, identity for FULL) on top of the master manifest.
   min_clips_per_class:
     sanity: 5                   # 600 / 16 ≈ 37 → relaxed for code-correctness only
-    poc:    100                 # iter17 (2026-05-26): 34→100. The probe split is 75/5/20
-    full:   100                 # (val=5%), NOT the 70/15/15 the old 34 assumed; ≥5 val needs
+    poc:    100                 # iter17 (2026-05-26): 34→100. probe_split's val fraction is small,
+    full:   100                 # so a ≥5-per-val-class floor needs
                                 # ~5/0.05=100 clips/class. At 34, eval_10k's under-sampled
                                 # classes (medium__rightward 58cl/38vid, slow__leftward 86cl)
                                 # passed the filter but failed the video-disjoint val≥5 split.
@@ -712,8 +714,9 @@ probe:
   warmup_pct:          0.10          # was src/probe_{action,taxonomy}.py:--warmup-pct default
   depth:               4             # was src/probe_{action,taxonomy}.py:--probe-depth default (linear MLP depth)
   batch_size:          64            # was src/probe_{action,taxonomy}.py:--train-batch-size default
-  min_clips_per_class: 34            # was src/probe_action.py:--min-clips-per-class default (stratified-split threshold)
-  min_per_split:       5             # was src/probe_action.py:--min-per-split default
+  # iter18 (2026-06-20): DELETED the stale scalar min_clips_per_class:34 / min_per_split:5 — they
+  # CONFLICTED with the canonical mode-keyed probe_action_labels.{min_clips_per_class,min_per_split}
+  # (poc/full 100/5, sanity 5/1). m04e + action_labels now single-source from probe_action_labels[mode].
   eval_frame_cache:                  # iter17: decode each eval clip ONCE, shared across the 8 concurrent
                                      # per-encoder eval processes (memoized inside decode_video_bytes). Was
                                      # ~7 decodes/encoder × 8 encoders → CPU pinned (load 467/256), GPUs idle.

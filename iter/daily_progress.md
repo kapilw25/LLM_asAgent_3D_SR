@@ -4,6 +4,21 @@
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
 
+## Fri, June 19, 2026
+- Built the fresh-batch retest: reuse every trained model, test on the full unseen batch.
+- Hardened the result backups, then wired the retest so confidence bands tighten about twofold.
+- Next: run the retest; confirm surgery's future-frame win and pick the two best variants.
+
+## Thurs, June 18, 2026
+- Weighed the open-benchmark detour against the core claim; chose to harden the surgery wins first.
+- Planning day; no new model numbers.
+- Next: confirm the surgery wins on a fresh, unseen batch of clips.
+
+## Wed, June 17, 2026
+- Built a study testing whether the fifteen skill-scores measure distinct abilities or overlap.
+- Early signal weak on our models alone; needs outside encoders to conclude.
+- Next: decide between chasing the open benchmark and hardening the surgery wins.
+
 ## Tue, June 16, 2026
 - Began reframing the work: a benchmark scoring any open world-model, our arms as references.
 - Started checking the fifteen metrics measure distinct skills, not redundant numbers (early, inconclusive).

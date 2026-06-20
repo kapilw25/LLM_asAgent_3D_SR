@@ -23,10 +23,10 @@ data:
   sanity_val_clips: 10
   # iter14 (2026-05-08): POC pool size for end-to-end plot/early-stop test.
   # Generates data/eval_10k_local/eval_10k_poc.json = first N keys of eval_10k.json. Then
-  # probe_action.py --stage labels applies 70:15:15 stratified_split (post
-  # motion-flow filter ≈ N×0.95) → ~N×0.665 / N×0.143 / N×0.143 train/val/test.
-  # Single knob for scalability across datasets — the 70:15:15 ratio is enforced
-  # by stratified_split (utils/action_labels.py:208), NOT hardcoded counts here.
+  # probe_action.py --stage labels applies the stratified_split (post motion-flow
+  # filter ≈ N×0.95) at the probe_split[mode] ratio (configs/pipeline.yaml).
+  # Single knob for scalability across datasets — the ratio is enforced by
+  # stratified_split (utils/action_labels.py), NOT hardcoded counts here.
   # POC just needs code-completion of FULL features at ~10× lower compute.
   poc_total_clips: 1000
 

@@ -517,6 +517,45 @@ def run_train_stage(args, wb) -> None:
                   f"+ (K+n_dims)={ma_concat.shape[1]} = {feats.shape[-1]}  (N={feats.shape[0]})")
         return feats, np.array(ordered_keys, dtype=object)
 
+    # iter18 head-reuse (Stage B): load a head trained on ANOTHER corpus (eval_10k's probe.pt),
+    # SKIP training, and score it on this run's TEST split ONLY. Pairs with --probe-split test-all
+    # upstream (test = the full disjoint corpus → n_test≈10k → ~2.3× tighter CIs). Needs no train/val
+    # split (none exists under test-all), so it extracts test features only and returns early.
+    if args.head_ckpt is not None:
+        feats_test, keys_test = _load_or_extract("test")
+        if model is not None:
+            del model
+            import gc as _gc
+            _gc.collect(); torch.cuda.empty_cache(); torch.cuda.ipc_collect()
+        y_test = np.array([labels[str(k)]["class_id"] for k in keys_test], dtype=np.int64)
+        d_in = int(feats_test.shape[-1]); n_classes = len(class_names)
+        probe = _make_probe(d_in, n_classes, args.probe_depth)
+        state = torch.load(args.head_ckpt, map_location="cpu", weights_only=True)
+        try:
+            probe.load_state_dict(state)
+        except (RuntimeError, KeyError) as e:
+            sys.exit(f"FATAL: --head-ckpt {args.head_ckpt} does not fit this encoder's probe "
+                     f"(embed_dim={d_in}, n_classes={n_classes}) — head trained on a different "
+                     f"encoder/class-set, or feature dim mismatch (motion_aux?). Error: {e}")
+        print(f"[head-reuse] loaded {args.head_ckpt} → AttentiveClassifier(embed_dim={d_in}, "
+              f"n_classes={n_classes}); training SKIPPED, eval on TEST (n={len(keys_test)})")
+        X_test_t = torch.from_numpy(feats_test).float()
+        y_test_t = torch.from_numpy(y_test).long()
+        test_correct, test_acc, test_ci = _eval_per_clip(probe, X_test_t, y_test_t, args.train_batch_size)
+        np.save(out_dir / artifact("test_predictions"), test_correct)
+        np.save(out_dir / artifact("test_clip_keys"), keys_test)
+        save_json_checkpoint({
+            "encoder": args.encoder, "n_classes": n_classes, "class_names": class_names,
+            "n_test": int(len(test_correct)), "top1_acc": test_acc, "top1_ci": test_ci,
+            "head_reuse_from": str(args.head_ckpt), "epochs": 0,
+        }, out_dir / artifact("test_metrics"))
+        print(f"[head-reuse] test top-1: {test_acc:.4f} ±{test_ci['ci_half']:.4f} (95% BCa CI), "
+              f"n_test={len(test_correct)}")
+        log_metrics(wb, {"test_top1_acc": test_acc, "test_top1_ci_half": test_ci["ci_half"], "head_reuse": 1})
+        if not args.output_subdir and not args.keep_lazy_cache:
+            _cleanup_lazy_feature_caches(enc_dir)
+        return
+
     feats_train, keys_train = _load_or_extract("train")
     feats_val,   keys_val   = _load_or_extract("val")
     feats_test,  keys_test  = _load_or_extract("test")
@@ -785,6 +824,11 @@ def build_parser() -> argparse.ArgumentParser:
                    choices=["features", "train", "select_best_lr", "paired_delta", "cleanup_lazy"])
     p.add_argument("--encoder", choices=list(ENCODERS), default=None)
     p.add_argument("--encoder-ckpt", type=Path, default=None)
+    p.add_argument("--head-ckpt", type=Path, default=None,
+                   help="iter18 head-reuse (Stage B): load a probe head trained on another corpus "
+                        "(eval_10k's probe.pt) and SKIP training — eval it on this run's TEST split "
+                        "only. Use with --probe-split test-all upstream for cross-set CI-reduction. "
+                        "FAIL LOUD if the head's dims don't fit this encoder.")
     # iter15 Phase 6 audit (2026-05-16): optional motion_aux head for head-vs-
     # encoder paired-Δ. When provided, features_<split>.npy is augmented to
     # (N, n_tokens, D + K + n_dims) at the features stage (head logits + motion

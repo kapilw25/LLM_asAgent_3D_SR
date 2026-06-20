@@ -252,8 +252,17 @@ def load_raft_model(device):
     # fallback in inference scripts". Operator either fixes upstream or sets
     # m04d_compile.enabled=false in pipeline.yaml.
     from utils.config import get_pipeline_config
-    _cfg = get_pipeline_config()["m04d_compile"]                    # FAIL LOUD
-    if _cfg["enabled"]:
+    _cfg = get_pipeline_config()["m04d_compile"]                    # FAIL LOUD (default source)
+    # Operator env-override (mirrors CACHE_POLICY_ALL / EVAL_KEEP_LATEST): M04D_COMPILE=0 forces
+    # EAGER, =1 forces compile. A small-VRAM box CANNOT compile RAFT-Large — Inductor's compile
+    # workspace needs ~7.65 GB and OOMs on an 8 GB GPU (verified 2026-06-19 on a 2060 SUPER),
+    # while EAGER RAFT peaks ~0.24 GB. The env lets the 8 GB box prep in eager WITHOUT editing the
+    # shared yaml (which keeps compile ON for the Pro 6000). DEFAULT still comes from yaml.
+    _compile_on = _cfg["enabled"]
+    _env = os.environ.get("M04D_COMPILE")
+    if _env is not None:
+        _compile_on = _env.strip().lower() in ("1", "true", "yes", "on")
+    if _compile_on:
         print(f"[M8 m04d_compile] mode={_cfg['mode']} "
               f"dynamic={_cfg['dynamic']} fullgraph={_cfg['fullgraph']} — "
               f"compiling RAFT-Large (~30-60s × ~4-5 batch sizes; one-time)")
@@ -264,9 +273,10 @@ def load_raft_model(device):
             fullgraph=_cfg["fullgraph"],
         )
     else:
-        print("[M8 m04d_compile] disabled — running RAFT in eager mode")
+        print("[M8 m04d_compile] disabled — running RAFT in eager mode"
+              f"{' (M04D_COMPILE env override)' if _env is not None else ''}")
     transforms = weights.transforms()
-    _mode_tag = "compiled" if _cfg["enabled"] else "eager"
+    _mode_tag = "compiled" if _compile_on else "eager"
     print(f"RAFT-Large loaded on {device} (weights: C_T_SKHT_V2, {_mode_tag}, fp16)")
     return model, transforms
 

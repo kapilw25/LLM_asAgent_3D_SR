@@ -632,7 +632,7 @@ def train(cfg: dict, args):
     # generating data/eval_10k_local/eval_10k_poc.json (first N keys, N from
     # base_optimization.yaml:data.poc_total_clips). By the time m09c reaches
     # this split point, val_path resolves to data/eval_10k_local/eval_10k_val_split.json which
-    # was already stratified 70:15:15 from action_labels (which itself was
+    # was already stratified (probe_split[mode] ratio, configs/pipeline.yaml) from action_labels (which itself was
     # filtered to motion-flow-eligible clips within the POC pool). No in-script
     # POC cap needed — single source of truth = poc_total_clips yaml key.
     train_manifest = {k: manifest[k] for k in train_keys}

@@ -182,7 +182,7 @@ def ensure_probe_labels_for_mode(
             min_clips_per_class=min_clips_per_class,
             clip_keys=pool_keys,
         )
-        # iter16 M1: mode-keyed probe_split — SANITY 60/20/20, POC/FULL 75/5/20.
+        # iter16 M1: mode-keyed probe_split (ratios in configs/pipeline.yaml).
         # Symmetric with probe_action.run_labels_stage CLI path.
         from utils.config import get_probe_split
         _split_cfg = get_probe_split(mode_dir)

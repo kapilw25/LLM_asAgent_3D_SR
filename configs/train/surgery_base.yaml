@@ -409,7 +409,7 @@ probe:
   #   probe.subset     = ${local_data_dir}/val_split.json    (corpus-agnostic)
   #   probe.local_data = ${local_data_dir}
   #   probe.tags_path  = ${local_data_dir}/tags.json
-  # All encoders (m09a + m09c) now use the same auto-generated 75:5:20
+  # All encoders (m09a + m09c) now use the same auto-generated split (probe_split[mode] ratio)
   # video-disjoint stratified split from action_labels.json (iter16 M5 ratios).
   n_points: 30                    # kept for every_n_steps backward-compat (unused when cadence=saves_per_epoch).
   bwt_tolerance_pct: 0.5          # DEPRECATED — kept to not break older configs; unused when new keys present.

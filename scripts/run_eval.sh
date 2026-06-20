@@ -136,6 +136,25 @@ DEFAULT_OUTPUT_PREFIX=$(python "$EX" "$PIPELINE_YAML" "output_roots.${mode_key}"
 # ── Configurables (env-overridable; mode-gated defaults) ────────────────
 EVAL_SUBSET="${EVAL_SUBSET:-$DEFAULT_EVAL_SUBSET}"
 LOCAL_DATA="${LOCAL_DATA:-$LOCAL_DATA_M9}"
+# iter18 CI-reduction: 'stratified' (default) = normal train/val/test split; 'test-all' = every clip
+# → the TEST split (cross-set eval on a FULL disjoint corpus → n_test≈full set → ~2.3× tighter CIs).
+# test-all REQUIRES the probe-train stages (3,11) skipped (no train data) — guarded after SKIP_STAGES.
+PROBE_SPLIT="${PROBE_SPLIT:-stratified}"
+# iter18 head-reuse (Stage B): set EVAL_HEAD_REUSE_ROOT=<untagged eval_10k outputs root> (e.g.
+# outputs/poc) → the probe stages (3 action, 11 taxonomy) LOAD the eval_10k heads instead of training
+# (m12a --head-ckpt / m12c --head-ckpt-dir), so the 2 probe metrics also score on the full test-all
+# corpus. Empty (default) = no head-reuse (Stage A = frozen-13 only).
+EVAL_HEAD_REUSE_ROOT="${EVAL_HEAD_REUSE_ROOT:-}"
+# iter18 cross-set: CLASS_EDGES=<eval_10k probe_action/class_edges.json> → m04e labels THIS corpus
+# with eval_10k's motion-bin definition (so a reused action head scores against the SAME classes).
+CLASS_EDGES="${CLASS_EDGES:-}"
+CLASS_EDGES_FLAG=""
+if [ -n "$CLASS_EDGES" ]; then CLASS_EDGES_FLAG="--class-edges $CLASS_EDGES"; fi
+# KEEP_PROBE_HEADS=1 → m12c retains its per-dim probe_<dim>.pt (the SOURCE for cross-set taxonomy
+# head-reuse). Default cleans them. Set this on the eval_10k run to (re)generate the reuse source.
+KEEP_PROBE_HEADS="${KEEP_PROBE_HEADS:-}"
+KEEP_HEADS_FLAG=""
+if [ -n "$KEEP_PROBE_HEADS" ]; then KEEP_HEADS_FLAG="--keep-probe-heads"; fi
 TAGS_JSON="${TAGS_JSON:-${LOCAL_DATA}/tags.json}"
 ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
 OUTPUT_ACTION="${OUTPUT_ACTION:-${DEFAULT_OUTPUT_PREFIX}/probe_action}"
@@ -184,6 +203,25 @@ if [ -n "$_EXTRA_SKIP" ]; then
     SKIP_STAGES="${SKIP_STAGES:+$SKIP_STAGES,}${_EXTRA_SKIP}"
     echo "  [eval] RUNTIME extra skip-stages: +${_EXTRA_SKIP}  →  SKIP_STAGES=${SKIP_STAGES}"
 fi
+# iter18 CI-reduction guard: test-all has NO train split → the probe-TRAIN stages (3 = m12a action
+# probe, 11 = m12c taxonomy) and their paired-Δ (4,12,13) MUST be in SKIP_STAGES, else m12a/m12c
+# crash on an empty train set. FAIL LOUD early with the fix, rather than mid-run.
+if [ "$PROBE_SPLIT" = "test-all" ]; then
+    if [ -z "$EVAL_HEAD_REUSE_ROOT" ]; then
+        # Stage A (frozen-13): no head-reuse → the probe-TRAIN stages have no train data → must skip.
+        for _s in 3 11; do
+            if [[ ",${SKIP_STAGES}," != *",${_s},"* ]]; then
+                echo "FATAL: PROBE_SPLIT=test-all but probe-train stage ${_s} is not skipped." >&2
+                echo "  test-all has no train data → set SKIP_STAGES=3,11,4,12,13 (Stage-A: 13 frozen metrics)," >&2
+                echo "  or set EVAL_HEAD_REUSE_ROOT=<eval_10k outputs> to reuse the heads (Stage-B)." >&2
+                exit 2
+            fi
+        done
+        echo "  [eval] PROBE_SPLIT=test-all (Stage A) → every clip is TEST; probe-train skipped."
+    else
+        echo "  [eval] PROBE_SPLIT=test-all + head-reuse from $EVAL_HEAD_REUSE_ROOT (Stage B) → stages 3/11 LOAD heads (no train)."
+    fi
+fi
 NUM_FRAMES="${NUM_FRAMES:-16}"
 # iter18 (2026-06-12): mandated fragmentation guard (src/CLAUDE.md GPU rules) — only the LEGACY
 # wrappers (scripts/legacy/train_*.sh) exported it; BOTH live wrappers dropped it in refactors
@@ -226,8 +264,9 @@ esac
 # (.npy + .paths.npy + .meta.json + .m04d_checkpoint.npz) rides on
 # hf_outputs.py upload-data → fresh GPU instances download via download-data.
 MOTION_FEATURES="${MOTION_FEATURES:-${LOCAL_DATA}/m04d_motion_features/motion_features.npy}"
-# Mode-aware filter floors: FULL/POC use paper-grade thresholds (34 clips/class
-# → ≥5 per split at 70/15/15). SANITY relaxes them since 150-clip stratified
+# Mode-aware filter floors: FULL/POC use the paper-grade thresholds from
+# probe_action_labels.{min_clips_per_class,min_per_split}[mode] (sized so each
+# probe_split val class clears the min). SANITY relaxes them since small stratified
 # subsets give ~9 clips per motion-flow class (would crash stratified_split).
 if [ "$MODE" = "SANITY" ]; then
     # iter13 v13 (2026-05-07): floor=3 with greedy split (utils/action_labels.py
@@ -676,6 +715,7 @@ if ! should_skip 1; then
         --min-clips-per-class "$MIN_CLIPS_PER_CLASS" \
         --min-per-split "$MIN_PER_SPLIT" \
         --output-root "$OUTPUT_ACTION" \
+        --probe-split "$PROBE_SPLIT" $CLASS_EDGES_FLAG \
         --cache-policy "$P_ACTION" \
         --no-wandb \
         2>&1 | tee logs/m04e_action_labels.log
@@ -776,6 +816,17 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             MA_FLAG="--motion-aux-head $MA_CKPT"
             echo "  [motion_aux] head wired for $ENC: $MA_CKPT"
         fi
+        # iter18 head-reuse (Stage B): per-encoder eval_10k head paths (action probe.pt + taxonomy dir).
+        # Stage 3/3.5 then LOAD them (--head-ckpt / --head-ckpt-dir) instead of training. Empty → train.
+        HEAD_REUSE_ACTION_FLAG=""; HEAD_REUSE_TAX_FLAG=""
+        if [ -n "$EVAL_HEAD_REUSE_ROOT" ]; then
+            _hr_probe="${EVAL_HEAD_REUSE_ROOT}/probe_action/${ENC}/probe.pt"
+            if [ -f "$_hr_probe" ]; then HEAD_REUSE_ACTION_FLAG="--head-ckpt $_hr_probe"
+            else echo "  ⚠️  [head-reuse] $ENC: no action head at $_hr_probe (Stage 3 will train, or FAIL under test-all)"; fi
+            _hr_taxdir="${EVAL_HEAD_REUSE_ROOT}/probe_taxonomy/${ENC}"
+            if [ -d "$_hr_taxdir" ]; then HEAD_REUSE_TAX_FLAG="--head-ckpt-dir $_hr_taxdir"
+            else echo "  ⚠️  [head-reuse] $ENC: no taxonomy head dir at $_hr_taxdir (Stage 3.5 will train, or skip)"; fi
+        fi
 
         # ─── Stage 2: features for this encoder ──────────────────────────
         if ! should_skip 2; then
@@ -826,7 +877,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 python -u src/m12a_action_top1.py "--$MODE" \
                     --stage train \
                     --encoder "$ENC" \
-                    $EXTRA_CKPT $MA_FLAG \
+                    $EXTRA_CKPT $MA_FLAG $HEAD_REUSE_ACTION_FLAG \
                     --eval-subset "$EVAL_SUBSET" \
                     --local-data "$LOCAL_DATA" \
                     --num-frames "$NUM_FRAMES" \
@@ -877,7 +928,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             python -u src/m12c_taxonomy_f1.py "--$MODE" \
                 --stage train \
                 --encoder "$ENC" \
-                $EXTRA_CKPT $MA_FLAG \
+                $EXTRA_CKPT $MA_FLAG $HEAD_REUSE_TAX_FLAG $KEEP_HEADS_FLAG \
                 --local-data "$LOCAL_DATA" \
                 --num-frames "$NUM_FRAMES" \
                 --features-root "$OUTPUT_ACTION" \

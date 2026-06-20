@@ -32,7 +32,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.checkpoint import save_json_checkpoint, load_json_checkpoint
-from utils.config import get_pipeline_config   # iter17: single-source the split-threshold defaults
+from utils.config import get_pipeline_config, get_probe_split   # iter17: single-source the split-threshold defaults
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 
 # iter18 W7 (PLR2004): semantic named constants.
@@ -60,8 +60,14 @@ MOTION_SEPARATOR: str = "__"
 # probe_action_labels.{min_clips_per_class,min_per_split}.<mode> via the callers;
 # these mode-agnostic defaults back the CPU self-test (__main__) path.
 _PROBE_CFG = get_pipeline_config()["probe"]
-MIN_CLIPS_PER_CLASS_DEFAULT: int = _PROBE_CFG["min_clips_per_class"]   # ≥ this → ≥5/split @ 70/15/15
-MIN_PER_SPLIT_DEFAULT: int = _PROBE_CFG["min_per_split"]               # BCa CI floor per split
+# iter18 (2026-06-20): the module fallback defaults read the CANONICAL mode-keyed
+# probe_action_labels[*].full (100/5 = paper). The old scalar probe.min_clips_per_class:34 /
+# min_per_split:5 was a STALE duplicate that conflicted with the mode-keyed block (it failed a
+# standalone m04e SANITY run) and is deleted from pipeline.yaml. Production callers (m04e,
+# probe_labels, run_eval) pass the per-MODE value explicitly; this is only the bare fallback.
+_PAL_CFG = get_pipeline_config()["probe_action_labels"]
+MIN_CLIPS_PER_CLASS_DEFAULT: int = _PAL_CFG["min_clips_per_class"]["full"]   # 100 (paper); callers pass mode-keyed
+MIN_PER_SPLIT_DEFAULT: int = _PAL_CFG["min_per_split"]["full"]               # 5; BCa CI floor per split
 
 
 # ── Public API ───────────────────────────────────────────────────────
@@ -157,15 +163,16 @@ def parse_optical_flow_class(clip_key, flow_features_by_key, magnitude_quartiles
 
 def load_subset_with_labels(subset_path, motion_features_path, *,
                              min_clips_per_class=MIN_CLIPS_PER_CLASS_DEFAULT,
-                             clip_keys=None):
+                             clip_keys=None, magnitude_quartiles=None,
+                             class_names_override=None, edges_out=None):
     """Load eval subset + m04d motion features, return per-clip records with
     optical-flow-derived motion-class labels.
 
     Args:
         subset_path:           data/eval_*.json with "clip_keys" list
         motion_features_path:  <local_data>/m04d_motion_features/motion_features.npy from m04d (23D × N_clips, post-Phase-0)
-        min_clips_per_class:   drop classes with fewer than this many clips (default 34
-                               → ≥5 per split at 70/15/15)
+        min_clips_per_class:   drop classes with fewer than this many clips (default → the
+                               mode-keyed probe_action_labels.min_clips_per_class[mode])
         clip_keys:             iter16 M1 — when supplied, OVERRIDES the clip_keys read
                                from subset_path. Used by probe_action to inject a
                                clip_pool_ratio-derived subsample WITHOUT writing a
@@ -211,11 +218,18 @@ def load_subset_with_labels(subset_path, motion_features_path, *,
     flow_features_by_key = {str(k): flow_features[i]
                             for i, k in enumerate(flow_paths)}
 
-    # Compute global magnitude quartiles over the FULL motion-features set (not
-    # just the eval subset) so the bin cut-points are dataset-wide stable.
-    quartiles = compute_magnitude_quartiles(flow_features)
-    print(f"  [motion-flow] magnitude quartiles: "
-          f"Q1={quartiles[0]:.3f}  Q2={quartiles[1]:.3f}  Q3={quartiles[2]:.3f}")
+    # Compute global magnitude quartiles over the FULL motion-features set (not just the eval
+    # subset) so the bin cut-points are dataset-wide stable. iter18 cross-set: when
+    # magnitude_quartiles is supplied (eval_10k's edges via --class-edges), REUSE them so subset_10k
+    # bins 'still/slow/medium/fast' on the SAME boundaries the reused head was trained on.
+    if magnitude_quartiles is not None:
+        quartiles = list(magnitude_quartiles)
+        print(f"  [motion-flow] REUSING supplied magnitude quartiles (cross-set): "
+              f"Q1={quartiles[0]:.3f}  Q2={quartiles[1]:.3f}  Q3={quartiles[2]:.3f}")
+    else:
+        quartiles = compute_magnitude_quartiles(flow_features)
+        print(f"  [motion-flow] magnitude quartiles: "
+              f"Q1={quartiles[0]:.3f}  Q2={quartiles[1]:.3f}  Q3={quartiles[2]:.3f}")
 
     # Pass 1 — derive flow class per clip (None means no m04d record → filter)
     raw = []
@@ -230,25 +244,37 @@ def load_subset_with_labels(subset_path, motion_features_path, *,
         print(f"  [motion-flow] {n_no_record}/{len(clip_keys)} clip_keys had no "
               f"motion_features record (m04d may not have processed them yet)")
 
-    # Pass 2 — filter sparse classes (>= min_clips_per_class)
     counts = Counter(cls for _, cls in raw)
-    surviving = {cls for cls, n in counts.items() if n >= min_clips_per_class}
-    if not surviving:
-        sys.exit(f"FATAL: no flow class has >= {min_clips_per_class} clips. "
-                 f"All counts: {dict(counts)}")
-
-    # Pass 3 — alphabetical class_id assignment (deterministic across runs)
-    class_names = sorted(surviving)
+    if class_names_override is not None:
+        # iter18 cross-set: use eval_10k's FIXED class set + ID ORDER (preserve, do NOT re-sort) so
+        # the reused head's output index i ↔ the SAME class. Drop subset clips whose class isn't in
+        # eval_10k's set (the head can't score them). The min_clips filter is bypassed (set is fixed).
+        class_names = list(class_names_override)
+        surviving = set(class_names)
+        print(f"  [motion-flow] REUSING supplied class set (cross-set, {len(class_names)} classes, "
+              f"fixed ID order): {class_names}")
+    else:
+        # Pass 2 — filter sparse classes (>= min_clips_per_class)
+        surviving = {cls for cls, n in counts.items() if n >= min_clips_per_class}
+        if not surviving:
+            sys.exit(f"FATAL: no flow class has >= {min_clips_per_class} clips. "
+                     f"All counts: {dict(counts)}")
+        # Pass 3 — alphabetical class_id assignment (deterministic across runs)
+        class_names = sorted(surviving)
     class_to_id = {c: i for i, c in enumerate(class_names)}
     records = [{"clip_key": k, "class": cls, "class_id": class_to_id[cls]}
                for k, cls in raw if cls in surviving]
+    if not records:
+        sys.exit(f"FATAL: 0 clips matched the class set {sorted(surviving)} "
+                 f"(class_names_override={class_names_override is not None}). "
+                 f"Observed classes: {dict(counts)}")
     n_dropped = len(raw) - len(records)
-    print(f"  [motion-flow] {len(class_names)} classes after >= "
-          f"{min_clips_per_class}-clip filter: {class_names}")
+    print(f"  [motion-flow] {len(class_names)} classes: {class_names}")
     print(f"  [motion-flow] kept {len(records)} clips, dropped {n_dropped} "
-          f"in {len(counts) - len(surviving)} sparse classes "
-          f"(dropped counts: "
-          f"{dict((c, n) for c, n in counts.items() if c not in surviving)})")
+          f"(dropped counts: {dict((c, n) for c, n in counts.items() if c not in surviving)})")
+    if edges_out is not None:
+        edges_out["magnitude_quartiles"] = list(quartiles)
+        edges_out["class_names"] = list(class_names)
     return records, class_names
 
 
@@ -341,11 +367,11 @@ def subsample_manifest_for_mode(mode: str, clip_keys: list,
 
 def stratified_split(records, train_pct=None, val_pct=None, seed=None,
                      *, min_per_split=MIN_PER_SPLIT_DEFAULT,
-                     mode="full"):
+                     mode="full", test_all=False):
     """Class-stratified train/val/test split.
 
-    iter18 H6: None → pipeline.yaml eval.action_split_* (single source; the
-    0.70/0.15/99 literals defined THE paper splits from a signature default).
+    iter18 (2026-06-20): None → the canonical probe_split[mode] (configs/pipeline.yaml);
+    the old eval.action_split_* fallback was a stale duplicate, now deleted.
 
     Returns ``{clip_key: "train"|"val"|"test"}``.
 
@@ -376,10 +402,29 @@ def stratified_split(records, train_pct=None, val_pct=None, seed=None,
     FAIL LOUD on infeasibility (per src/CLAUDE.md): if any class has <
     min_per_split clips in any split, ValueError with per-class diagnostic.
     POC↔FULL parity rule applies to POC↔FULL, NOT to SANITY.
+
+    iter18 CI-reduction: ``test_all=True`` → EVERY clip → the 'test' split (train/val empty),
+    bypassing the SGKF split + the min_per_split asserts. For cross-set eval on a FULL disjoint
+    corpus where NO head is trained here (it is loaded from the eval_10k run); the caller MUST skip
+    the probe-training stages (this mode has no train data).
     """
+    if test_all:
+        clip_keys = [r["clip_key"] for r in records]
+        n_v = len({_extract_video_id(k) for k in clip_keys})
+        n_c = len({r["class_id"] for r in records})
+        print(f"[stratified_split] TEST-ALL (cross-set eval): every clip → test; "
+              f"N_clips={len(records)}, N_videos={n_v}, N_classes={n_c}; train/val/test = "
+              f"0/0/{len(records)}")
+        return {r["clip_key"]: "test" for r in records}
     _e = get_pipeline_config()["eval"]
-    train_pct = _e["action_split_train_pct"] if train_pct is None else train_pct
-    val_pct = _e["action_split_val_pct"] if val_pct is None else val_pct
+    # iter18 (2026-06-20): the None-default for train/val reads the CANONICAL probe_split[mode]
+    # (configs/pipeline.yaml) — the SAME source get_probe_split / m04e uses. The old
+    # eval.action_split_train_pct/val_pct was a STALE duplicate ratio that conflicted with it; it's
+    # deleted from pipeline.yaml. seed + k_tolerance stay under eval.action_split_*.
+    if train_pct is None or val_pct is None:
+        _ps = get_probe_split(mode)
+        train_pct = _ps["train_pct"] if train_pct is None else train_pct
+        val_pct = _ps["val_pct"] if val_pct is None else val_pct
     seed = _e["action_split_seed"] if seed is None else seed
     # SANITY fast path — clip-level stratified shuffle (no video-disjoint).
     if mode == "sanity":

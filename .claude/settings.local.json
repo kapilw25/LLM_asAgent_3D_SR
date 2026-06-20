@@ -311,7 +311,10 @@
       "Bash(nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv,noheader)",
       "Bash(/venv/main/bin/python -u scripts/legacy/tests_streaming/test_tube_cache.py)",
       "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml clip_pool_ratio.sanity)",
-      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml clip_pool_ratio.poc)"
+      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml clip_pool_ratio.poc)",
+      "Bash(grep -rnA12 \"def get_probe_split\" src/utils/config.py)",
+      "Bash(grep -n 'EVAL_HEAD_REUSE_ROOT=\"\\\\${EVAL_HEAD_REUSE_ROOT' scripts/run_eval.sh)",
+      "Bash(grep -n -- '--probe-split \"\\\\$PROBE_SPLIT\"' scripts/run_eval.sh)"
     ]
   }
 }
