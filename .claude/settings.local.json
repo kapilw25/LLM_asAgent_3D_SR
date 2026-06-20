@@ -314,7 +314,25 @@
       "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml clip_pool_ratio.poc)",
       "Bash(grep -rnA12 \"def get_probe_split\" src/utils/config.py)",
       "Bash(grep -n 'EVAL_HEAD_REUSE_ROOT=\"\\\\${EVAL_HEAD_REUSE_ROOT' scripts/run_eval.sh)",
-      "Bash(grep -n -- '--probe-split \"\\\\$PROBE_SPLIT\"' scripts/run_eval.sh)"
+      "Bash(grep -n -- '--probe-split \"\\\\$PROBE_SPLIT\"' scripts/run_eval.sh)",
+      "Bash(ITER18_EVAL_TAG=subset10k python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --dry-run --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder)",
+      "Bash(ITER18_EVAL_TAG=subset10k python -)",
+      "Bash(PYTHONPATH=src python -u src/utils/output_paths.py selftest)",
+      "Bash(PYTHONPATH=src python -u src/utils/output_paths.py train-dir poc vjepa_2_1_vitG)",
+      "Bash(echo \"train-dir poc vitG : $\\(PYTHONPATH=src python -u src/utils/output_paths.py train-dir poc vjepa_2_1_vitG\\)\")",
+      "Bash(PYTHONPATH=src python -u src/utils/output_paths.py eval-dir poc vjepa_2_1_vitg subset_10k predictor_temporal)",
+      "Bash(echo \"eval-dir  poc vitg subset_10k predictor_temporal : $\\(PYTHONPATH=src python -u src/utils/output_paths.py eval-dir poc vjepa_2_1_vitg subset_10k predictor_temporal\\)\")",
+      "Bash(echo \"bash-style \\(no PYTHONPATH\\): $\\(python src/utils/output_paths.py train-dir poc vjepa_2_1_vitG\\)\")",
+      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml data.master_manifest_name)",
+      "Bash(echo \"master_manifest_name: $\\(scripts/lib/yaml_extract.py configs/pipeline.yaml data.master_manifest_name\\)\")",
+      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir)",
+      "Bash(echo \"local_data_dir:       $\\(scripts/lib/yaml_extract.py configs/pipeline.yaml data.local_data_dir\\)\")",
+      "Bash(echo \"→ TRAIN_CORPUS would be: $\\(scripts/lib/yaml_extract.py configs/pipeline.yaml data.master_manifest_name)",
+      "Bash(EVAL_CORPUS=subset_10k ITER18_BACKBONE=vjepa_2_1_vitG python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --dry-run --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder)",
+      "Bash(EVAL_CORPUS=subset_10k python -)",
+      "Bash(grep -vE '/$')",
+      "Bash(grep -rnE 'outputs/\\\\{mtag\\\\}/\\(probe|predictor|encoder\\)|outputs/\\\\$\\\\{?mode' scripts/iter18_poc_ngpu.py scripts/iter18_poc_status.py scripts/run_eval.sh scripts/run_train.sh)",
+      "Bash(ITER18_BACKBONE=vjepa_2_1_vitG python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --dry-run --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder)"
     ]
   }
 }

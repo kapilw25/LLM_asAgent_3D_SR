@@ -39,11 +39,19 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))   # iter18 (2026-06-14): arm roster single-source (configs/arm_registry.yaml)
 from utils.arm_registry import (  # noqa: E402
     arm2enc as _arm2enc, arm2dir as _arm2dir, merge_arms as _merge_arms, merge_recipe)
+from utils.output_paths import eval_dir as _eval_dir, train_dir as _train_dir  # noqa: E402
 # iter18 2026-06-08: BACKBONE is the run's encoder family, switchable via env so the SAME scheduler
 # runs the 2B champion (vjepa_2_1_vitG, default) or the 1B scale-axis backbone (vjepa_2_1_vitg). The
 # status tool reads it back from the run banner (or this same env) so its job-ids match. Set it once
 # in BOTH the launch and the watch panes (or rely on the banner parse in the status tool).
 BACKBONE = os.environ.get("ITER18_BACKBONE", "vjepa_2_1_vitG")
+# iter18 (2026-06-20) backbone-first tree (plan_output_restructure.md): eval outputs land under
+# outputs/<mode>/<backbone>_<size>/eval/<corpus>/ and encoder reads under .../train/, all via
+# src/utils/output_paths.py. EVAL_CORPUS (eval_10k default; subset_10k for the cross-set retest) is
+# exported by the operator + inherited by each run_eval.sh subprocess; the scheduler reads it too so its
+# resume markers check the matching eval/<corpus>/ dir. The cross-set INPUTS (LOCAL_DATA / EVAL_SUBSET /
+# PROBE_SPLIT / CLASS_EDGES / EVAL_HEAD_REUSE_ROOT) are likewise inherited by run_eval.
+EVAL_CORPUS = os.environ.get("EVAL_CORPUS", "eval_10k")
 
 
 def enc_prefix():
@@ -176,14 +184,14 @@ def build_jobs(mode):
         ejid = f"E:{encn}"
         jobs[ejid] = dict(
             id=ejid, kind="eval", deps=set(deps), needs_labels=True,
-            cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_PERENC_NO8B} "
+            cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_PERENC_NO8B} "
                  f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
             log=f"logs/iter18_ngpu_{mtag}_eval_{encn}_{{ts}}.log")
         for m in PT_METRICS:
             pjid = f"P:{encn}:{m}"
             jobs[pjid] = dict(
                 id=pjid, kind="eval", deps=set(deps), needs_labels=True,
-                cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8B} PT_METRIC={m} "
+                cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8B} PT_METRIC={m} "
                      f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
                 log=f"logs/iter18_ngpu_{mtag}_pt_{encn}_{m}_{{ts}}.log")
         # iter18 m12f revival (#1): Stage 8c fans into 4 F: jobs (one encoder_temporal metric
@@ -195,15 +203,15 @@ def build_jobs(mode):
             fjid = f"F:{encn}:{m}"
             jobs[fjid] = dict(
                 id=fjid, kind="eval", deps=set(deps), needs_labels=True,
-                cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8C} ET_METRIC={m} "
+                cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8C} ET_METRIC={m} "
                      f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
                 log=f"logs/iter18_ngpu_{mtag}_et_{encn}_{m}_{{ts}}.log")
     return jobs, mtag
 
 
 def labels_ready(mtag):
-    return ((REPO / f"outputs/{mtag}/probe_action/action_labels.json").exists()
-            and (REPO / f"outputs/{mtag}/probe_taxonomy/taxonomy_labels.json").exists())
+    return ((REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_action')}/action_labels.json").exists()
+            and (REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_taxonomy')}/taxonomy_labels.json").exists())
 
 
 def main():
@@ -273,12 +281,15 @@ def main():
 
     done, failed, running = set(), {}, {}   # running: gpu→(jid, Popen, logfile)
 
+    # iter18 (2026-06-20) backbone-first tree: a cross-set corpus (EVAL_CORPUS=subset_10k) reuses the
+    # encoders at <bb>/train/ — with --cache 1 the train-resume below finds them and skips training, while
+    # the P:/F: resume markers check eval/<corpus>/ so a fresh corpus is never falsely skipped.
     if args.cache == "1":
         for jid, j in jobs.items():
             if j["kind"] != "train":
                 continue
             _, bb, arm = jid.split(":")
-            if (REPO / f"outputs/{mtag}/{bb}/{ARM2DIR[arm]}/student_encoder.pt").exists():
+            if (REPO / f"{_train_dir(args.mode, bb)}/{ARM2DIR[arm]}/student_encoder.pt").exists():
                 done.add(jid)
         n_train_done = len(done)
         if n_train_done:
@@ -292,7 +303,7 @@ def main():
             if not jid.startswith("P:"):
                 continue
             enc_nm, metric = jid[2:].rsplit(":", 1)   # NOT 'enc_name' — that's the module helper; a main()-local shadows it → UnboundLocalError at the skip-arms block
-            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_nm}/aggregate_{metric}.json").exists():
+            if (REPO / f"{_eval_dir(args.mode, BACKBONE, EVAL_CORPUS, 'predictor_temporal')}/{enc_nm}/aggregate_{metric}.json").exists():
                 done.add(jid)
                 pt_done += 1
         if pt_done:
@@ -305,7 +316,7 @@ def main():
             if not jid.startswith("F:"):
                 continue
             enc_nm, metric = jid[2:].rsplit(":", 1)
-            if (REPO / f"outputs/{mtag}/encoder_temporal/{enc_nm}/aggregate_{metric}.json").exists():
+            if (REPO / f"{_eval_dir(args.mode, BACKBONE, EVAL_CORPUS, 'encoder_temporal')}/{enc_nm}/aggregate_{metric}.json").exists():
                 done.add(jid)
                 et_done += 1
         if et_done:
@@ -427,13 +438,13 @@ def main():
     all_encs = " ".join([enc_name("frozen")]
                         + [enc_name(e) for a, e in ARM2ENC.items() if a not in _skip])
     s3_log = f"logs/iter18_ngpu_{mtag}_s3_{ts()}.log"
-    s3 = (f"SKIP_STAGES={S3_SKIP_PERENC} CACHE_POLICY_ALL=1 "
+    s3 = (f"EVAL_CORPUS={EVAL_CORPUS} SKIP_STAGES={S3_SKIP_PERENC} CACHE_POLICY_ALL=1 "
           f"./scripts/run_eval.sh --{args.mode} --encoders \"{all_encs}\"")
     print(f"═══ all jobs PASSED — §3 finale (shared paired-Δ + m13) → {s3_log} ═══", flush=True)
     rc = subprocess.call(f"set -o pipefail ; ( {s3} ) 2>&1 | tee {s3_log}",
                          shell=True, executable="/bin/bash", cwd=str(REPO))
-    print(f"═══ §3 rc={rc} · total wall {el:.1f}h + §3 · plots → outputs/{mtag}/probe_plot/eval/ ═══",
-          flush=True)
+    print(f"═══ §3 rc={rc} · total wall {el:.1f}h + §3 · plots → "
+          f"{_eval_dir(args.mode, BACKBONE, EVAL_CORPUS, 'probe_plot')}/eval/ ═══", flush=True)
     sys.exit(rc)
 
 

@@ -846,6 +846,21 @@ output_roots:
   poc: "outputs/poc"
   full: "outputs/full"
 
+# iter18 (2026-06-20) output-tree restructure (plan_output_restructure.md): the 3-dial tree
+#   outputs/<mode>/<backbone>_<size>/{train, eval/<corpus>/<metric>/<arm>}.
+# backbone_size_labels = the eyeball-clear size suffix on the <backbone> dir (dial 2). Read by
+# src/utils/output_paths.py; an unlisted backbone FATALs (no silent default).
+backbone_size_labels:
+  vjepa_2_1_vitG: "2B"
+  vjepa_2_1_vitg: "1B"
+  vjepa_2_1_vitL: "300M"
+  vjepa_2_0_vitg: "1B"
+# eval_corpora = the registered SCORE corpora (dial 3); output_paths FATALs on an unregistered corpus.
+eval_corpora:
+  - eval_10k
+  - subset_10k
+  - subset_10k_smoke   # 200-clip code-path validator (separate dir → never contaminates the real subset_10k retest)
+
 # -- Motion features (m04d_motion_features.py) --
 motion:
   feature_dim:         23            # was FEATURE_DIM: 13 global + 10 fg-camera-subtracted (Phase 0, iter15)

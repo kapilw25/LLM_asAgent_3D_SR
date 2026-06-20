@@ -87,6 +87,16 @@ echo "[M9] LOCAL_DATA=$LOCAL_DATA · MASTER_MANIFEST=$MASTER_MANIFEST"
 FACTOR_SUBDIR=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data.factor_subdir)
 FACTOR_DIR_CANONICAL="${LOCAL_DATA}/${FACTOR_SUBDIR}"
 
+# iter18 (2026-06-20) backbone-first tree (plan_output_restructure.md): encoders → <bb>_<size>/train/<arm>;
+# eval-corpus labels → <bb>_<size>/eval/<corpus>/probe_{action,taxonomy}. BACKBONE is set HERE (same default
+# as L192, idempotent) so the pre-train label bootstrap below can resolve these. TRAIN_CORPUS = the master
+# manifest's corpus (config-derived; == the corpus run_eval scores on by default). All paths via output_paths.
+BACKBONE="${BACKBONE:-vjepa_2_1_vitG}"
+TRAIN_CORPUS="${MASTER_MANIFEST_NAME%.json}"
+TRAIN_ROOT="$(python src/utils/output_paths.py train-dir "$mode_dir" "$BACKBONE")"
+LABEL_ACTION_ROOT="$(python src/utils/output_paths.py eval-dir "$mode_dir" "$BACKBONE" "$TRAIN_CORPUS" probe_action)"
+LABEL_TAX_ROOT="$(python src/utils/output_paths.py eval-dir "$mode_dir" "$BACKBONE" "$TRAIN_CORPUS" probe_taxonomy)"
+
 # ── Probe Stage 1 (action_labels.json) — auto-bootstrap before split ─────
 # iter14 recipe-v3 (2026-05-09): TECH-DEBT — this shell-level bootstrap is
 # REDUNDANT with src/utils/probe_labels.ensure_probe_labels_for_mode(cfg=cfg),
@@ -98,7 +108,7 @@ FACTOR_DIR_CANONICAL="${LOCAL_DATA}/${FACTOR_SUBDIR}"
 # (via in-process split_subset() calls) so this shell block can be deleted.
 # Until then: this shell calls probe_labels-equivalent logic via the same
 # CLI surface (subprocess to probe_action.py + eval_subset.py) for parity.
-ACTION_LABELS="outputs/${mode_dir}/probe_action/action_labels.json"
+ACTION_LABELS="${LABEL_ACTION_ROOT}/action_labels.json"
 if [ ! -f "$ACTION_LABELS" ]; then
     echo "  [run_probe_train] $ACTION_LABELS missing — auto-bootstrapping via m04e_action_labels.py (CPU, ~1 min)"
     MOTION_FEATURES_BOOTSTRAP="${LOCAL_DATA}/m04d_motion_features/motion_features.npy"
@@ -129,7 +139,7 @@ if [ ! -f "$ACTION_LABELS" ]; then
         --motion-features "$MOTION_FEATURES_BOOTSTRAP" \
         --min-clips-per-class "$MIN_CLIPS_BOOTSTRAP" \
         --min-per-split "$MIN_SPLIT_BOOTSTRAP" \
-        --output-root "outputs/${mode_dir}/probe_action" \
+        --output-root "${LABEL_ACTION_ROOT}" \
         --cache-policy "${CACHE_POLICY_ALL:-1}" \
         --no-wandb \
         2>&1 | tee "logs/m04e_action_labels_${mode_dir}.log"
@@ -218,7 +228,7 @@ P_M09="${CACHE_POLICY_ALL:-1}"
 #     bash scripts/run_train.sh surgery_3stage_DI_encoder --POC
 PRETRAIN_NS=$(scripts/lib/yaml_extract.py configs/pipeline.yaml surgery_init.pretrain_namespace)
 PRETRAIN_CKPT=$(scripts/lib/yaml_extract.py configs/pipeline.yaml surgery_init.ckpt_filename)
-SURGERY_INIT="${SURGERY_INIT:-outputs/${mode_dir}/${BACKBONE}/${PRETRAIN_NS}/${PRETRAIN_CKPT}}"
+SURGERY_INIT="${SURGERY_INIT:-${TRAIN_ROOT}/${PRETRAIN_NS}/${PRETRAIN_CKPT}}"
 
 # ── Multi-task probe-loss labels (iter13) ────────────────────────────────
 # When base_optimization.yaml `multi_task_probe.enabled` is true for this
@@ -230,7 +240,7 @@ SURGERY_INIT="${SURGERY_INIT:-outputs/${mode_dir}/${BACKBONE}/${PRETRAIN_NS}/${P
 # labels is CPU-only (~30 s on FULL); the inputs (eval_subset, tags.json,
 # tag_taxonomy.json) are already on disk for any working repo. If sources
 # are missing, we fall back to silent-disable + a fix-it hint.
-TAXONOMY_LABELS="outputs/${mode_dir}/probe_taxonomy/taxonomy_labels.json"
+TAXONOMY_LABELS="${LABEL_TAX_ROOT}/taxonomy_labels.json"
 TAG_TAXONOMY=$(scripts/lib/yaml_extract.py configs/pipeline.yaml config_paths.tag_taxonomy)   # iter18 H7: yaml pointer
 # iter16 M9 (2026-05-21): master manifest for all modes; M1 Option X
 # subsamples in-process. No more per-mode pre-made JSONs.
@@ -244,7 +254,7 @@ if [ ! -f "$TAXONOMY_LABELS" ]; then
             --eval-subset "$EVAL_SUBSET_TX" \
             --tags-json "$TAGS_JSON_TX" \
             --tag-taxonomy "$TAG_TAXONOMY" \
-            --output-root "outputs/${mode_dir}/probe_taxonomy" \
+            --output-root "${LABEL_TAX_ROOT}" \
             --cache-policy "$P_M09" \
             --no-wandb \
             2>&1 | tee "logs/m04f_taxonomy_labels_${mode_dir}.log"
@@ -278,7 +288,7 @@ case "$_KIND" in
         # 4/10). SANITY left at single-epoch since it's a code-path validator.
         TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.pretrain_encoder)
         if [ "$SUBCMD" = "pretrain_2X_encoder" ]; then
-            OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_2X_encoder"
+            OUT_DIR="${TRAIN_ROOT}/m09a_pretrain_2X_encoder"
             EPOCHS_OVERRIDE_FLAG=""
             if [ "$MODE" = "POC" ] || [ "$MODE" = "FULL" ]; then
                 _BASE_EP=$(scripts/lib/yaml_extract.py "$TRAIN_CFG" "optimization.max_epochs.${mode_dir}")
@@ -286,7 +296,7 @@ case "$_KIND" in
             fi
         else
             # iter17: single source with surgery read-path (pipeline.yaml surgery_init.pretrain_namespace)
-            OUT_DIR="outputs/${mode_dir}/${BACKBONE}/${PRETRAIN_NS}"
+            OUT_DIR="${TRAIN_ROOT}/${PRETRAIN_NS}"
             EPOCHS_OVERRIDE_FLAG=""
         fi
         # Read lambda_reg from YAML so it stays the single source of truth.
@@ -318,7 +328,7 @@ case "$_KIND" in
             --probe-subset "$VAL_SPLIT" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "${LOCAL_DATA}/tags.json" \
-            --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-action-labels "${LABEL_ACTION_ROOT}/action_labels.json" \
             --motion-features-path "${LOCAL_DATA}/m04d_motion_features/motion_features.npy" \
             "${TAXONOMY_ARGS[@]}" \
             --no-wandb \
@@ -383,7 +393,7 @@ case "$_KIND" in
         esac
         # iter13 v12+ (2026-05-06): renamed probe_surgery_* → m09c_surgery_* to
         # match m09c1_surgery_encoder.py module name. Mirror in run_eval.sh.
-        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/${MODULE_PREFIX}_${VARIANT_TAG}"
+        OUT_DIR="${TRAIN_ROOT}/${MODULE_PREFIX}_${VARIANT_TAG}"
         # iter13 v12+ Task 3 (2026-05-06): m11 outputs co-located with input
         # under <--local-data>/m11_factor_datasets/. m11 derives this default
         # itself; this consumer just mirrors the same convention.
@@ -448,7 +458,7 @@ case "$_KIND" in
             --output-dir "$OUT_DIR" \
             --cache-policy "$P_M09" \
             --init-from-ckpt "$SURGERY_INIT" \
-            --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-action-labels "${LABEL_ACTION_ROOT}/action_labels.json" \
             --motion-features-path "${LOCAL_DATA}/m04d_motion_features/motion_features.npy" \
             "${TAXONOMY_ARGS[@]}" \
             "${RECIPE_V2_ARGS[@]}" \
@@ -458,7 +468,7 @@ case "$_KIND" in
     pretrain_head)
         # iter15 Phase 4 (2026-05-14): head-only m09a2. Frozen encoder + frozen
         # predictor; only the ~432K motion_aux head trains. 24 GB sufficient.
-        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09a_pretrain_head"
+        OUT_DIR="${TRAIN_ROOT}/m09a_pretrain_head"
         TRAIN_CFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml arm_train_configs.pretrain_head)
         echo "═══ $(date '+%H:%M:%S') · m09a2 HEAD-ONLY continual SSL (${MODE}) ═══"
         echo "  config:    $TRAIN_CFG"
@@ -478,7 +488,7 @@ case "$_KIND" in
             --probe-subset "$VAL_SPLIT" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "${LOCAL_DATA}/tags.json" \
-            --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-action-labels "${LABEL_ACTION_ROOT}/action_labels.json" \
             --motion-features-path "${LOCAL_DATA}/m04d_motion_features/motion_features.npy" \
             "${TAXONOMY_ARGS[@]}" \
             --no-wandb \
@@ -498,7 +508,7 @@ case "$_KIND" in
                 VARIANT_TAG="noDI_head"
                 ;;
         esac
-        OUT_DIR="outputs/${mode_dir}/${BACKBONE}/m09c_surgery_${VARIANT_TAG}"
+        OUT_DIR="${TRAIN_ROOT}/m09c_surgery_${VARIANT_TAG}"
         FACTOR_DIR="$FACTOR_DIR_CANONICAL"   # iter17: yaml-derived (data.factor_subdir), single source
         VAL_TAGS="${LOCAL_DATA}/tags.json"
         if [ ! -d "$FACTOR_DIR" ]; then
@@ -527,7 +537,7 @@ case "$_KIND" in
             --probe-subset "$VAL_SPLIT" \
             --probe-local-data "$LOCAL_DATA" \
             --probe-tags "$VAL_TAGS" \
-            --probe-action-labels "outputs/${mode_dir}/probe_action/action_labels.json" \
+            --probe-action-labels "${LABEL_ACTION_ROOT}/action_labels.json" \
             --motion-features-path "${LOCAL_DATA}/m04d_motion_features/motion_features.npy" \
             "${TAXONOMY_ARGS[@]}" \
             --no-wandb \

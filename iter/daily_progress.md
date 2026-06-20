@@ -4,6 +4,11 @@
 ## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
 
 
+## Sat, June 20, 2026
+- Reorganized every result by model, so each size (2B, 1B) gets its own clean scorecard.
+- Wired the fresh-batch retest to score into its own slot — original scores stay untouched.
+- Next: run the retest; confirm surgery's future-frame win with tighter bands; pick two best.
+
 ## Fri, June 19, 2026
 - Built the fresh-batch retest: reuse every trained model, test on the full unseen batch.
 - Hardened the result backups, then wired the retest so confidence bands tighten about twofold.

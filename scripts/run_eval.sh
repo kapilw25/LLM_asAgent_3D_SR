@@ -132,6 +132,20 @@ MASTER_MANIFEST_NAME_M9=$(scripts/lib/yaml_extract.py configs/pipeline.yaml data
 DEFAULT_EVAL_SUBSET="${LOCAL_DATA_M9}/${MASTER_MANIFEST_NAME_M9}"
 # iter18 H7: mode→root from pipeline.yaml output_roots (was 3 inline literals).
 DEFAULT_OUTPUT_PREFIX=$(python "$EX" "$PIPELINE_YAML" "output_roots.${mode_key}")
+# iter18 (2026-06-20) backbone-first tree (plan_output_restructure.md): eval OUTPUTS land under
+# outputs/<mode>/<backbone>_<size>/eval/<corpus>/  while encoder READS come from .../<backbone>_<size>/train/.
+# EVAL_BACKBONE mirrors the scheduler's ITER18_BACKBONE default; EVAL_CORPUS is the score corpus (eval_10k
+# default; subset_10k for the cross-set retest). All paths via src/utils/output_paths.py (single source).
+EVAL_BACKBONE="${ITER18_BACKBONE:-vjepa_2_1_vitG}"
+EVAL_CORPUS="${EVAL_CORPUS:-eval_10k}"
+EVAL_PREFIX="$(python src/utils/output_paths.py eval-root "$mode_key" "$EVAL_BACKBONE" "$EVAL_CORPUS")"
+declare -A _TRAIN_ROOT_CACHE                     # memoize the per-backbone train dir (1 python call per distinct bb)
+_train_root_for() {                              # …/<bb>_<size>/train — the corpus-INDEPENDENT encoder source
+    if [ -z "${_TRAIN_ROOT_CACHE[$1]:-}" ]; then
+        _TRAIN_ROOT_CACHE[$1]="$(python src/utils/output_paths.py train-dir "$mode_key" "$1")"
+    fi
+    echo "${_TRAIN_ROOT_CACHE[$1]}"
+}
 
 # ── Configurables (env-overridable; mode-gated defaults) ────────────────
 EVAL_SUBSET="${EVAL_SUBSET:-$DEFAULT_EVAL_SUBSET}"
@@ -157,15 +171,15 @@ KEEP_HEADS_FLAG=""
 if [ -n "$KEEP_PROBE_HEADS" ]; then KEEP_HEADS_FLAG="--keep-probe-heads"; fi
 TAGS_JSON="${TAGS_JSON:-${LOCAL_DATA}/tags.json}"
 ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
-OUTPUT_ACTION="${OUTPUT_ACTION:-${DEFAULT_OUTPUT_PREFIX}/probe_action}"
-OUTPUT_COS="${OUTPUT_COS:-${DEFAULT_OUTPUT_PREFIX}/probe_motion_cos}"
-OUTPUT_MSE="${OUTPUT_MSE:-${DEFAULT_OUTPUT_PREFIX}/probe_future_mse}"
+OUTPUT_ACTION="${OUTPUT_ACTION:-${EVAL_PREFIX}/probe_action}"
+OUTPUT_COS="${OUTPUT_COS:-${EVAL_PREFIX}/probe_motion_cos}"
+OUTPUT_MSE="${OUTPUT_MSE:-${EVAL_PREFIX}/probe_future_mse}"
 # iter16 §3.3: predictor-temporal metric suite (m12e, 6 metrics) — Stages 8b/9b.
-OUTPUT_PREDTEMP="${OUTPUT_PREDTEMP:-${DEFAULT_OUTPUT_PREFIX}/predictor_temporal}"
+OUTPUT_PREDTEMP="${OUTPUT_PREDTEMP:-${EVAL_PREFIX}/predictor_temporal}"
 PT_BATCH="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.predictor_temporal.batch_size)"
 # iter18: encoder-temporal suite REVIVED (m12f, aot/tov/pace/tcc) — Stages 8c/9c, speedups #1-#8.
 # All knobs single-sourced from configs/pipeline.yaml probe.encoder_temporal (no inline values).
-OUTPUT_ENCTEMP="${OUTPUT_ENCTEMP:-${DEFAULT_OUTPUT_PREFIX}/encoder_temporal}"
+OUTPUT_ENCTEMP="${OUTPUT_ENCTEMP:-${EVAL_PREFIX}/encoder_temporal}"
 _ET_Y() { scripts/lib/yaml_extract.py configs/pipeline.yaml "probe.encoder_temporal.$1"; }
 ET_BATCH="$(_ET_Y batch_size)"
 ET_TUBELET="$(_ET_Y tubelet_size)"
@@ -180,8 +194,8 @@ ET_HEAD_EPOCHS="$(_ET_Y head_epochs)"
 ET_HEAD_WD="$(_ET_Y head_weight_decay)"
 ET_HEAD_BS="$(_ET_Y head_batch_size)"
 ET_HEAD_CAP="$(_ET_Y head_train_cap)"
-OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${DEFAULT_OUTPUT_PREFIX}/probe_taxonomy}"
-OUTPUT_PLOTS="${OUTPUT_PLOTS:-${DEFAULT_OUTPUT_PREFIX}/probe_plot}"
+OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${EVAL_PREFIX}/probe_taxonomy}"
+OUTPUT_PLOTS="${OUTPUT_PLOTS:-${EVAL_PREFIX}/probe_plot}"
 TAG_TAXONOMY="${TAG_TAXONOMY:-configs/tag_taxonomy.json}"
 # Priority: --encoders CLI > ENCODERS env > default list.
 if [ -n "$ENCODERS_CLI" ]; then
@@ -351,23 +365,23 @@ frozen_ckpt_for() {                             # external frozen ckpt; "" → H
 encoder_ckpt_for() {                            # encoder-only — Stages 2/3
     local bb arm; read -r bb arm <<<"$(_split_enc "$1")"
     { [ "$arm" = frozen ] || [ -z "$arm" ]; } && { frozen_ckpt_for "$bb"; return; }   # frozen / bare HF name
-    echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/$(_arm_dir "$arm")/student_encoder.pt"
+    echo "$(_train_root_for "$bb")/$(_arm_dir "$arm")/student_encoder.pt"
 }
 # motion_aux head resolver (head-vs-encoder paired-Δ). Frozen / bare HF → "" → encoder-only path.
 motion_aux_head_for() {
     local bb arm; read -r bb arm <<<"$(_split_enc "$1")"
     { [ "$arm" = frozen ] || [ -z "$arm" ]; } && { echo ""; return; }
-    echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/$(_arm_dir "$arm")/motion_aux_head.pt"
+    echo "$(_train_root_for "$bb")/$(_arm_dir "$arm")/motion_aux_head.pt"
 }
 encoder_predictor_ckpt_for() {                  # encoder+predictor — Stage 8 future_mse
     local bb arm d; read -r bb arm <<<"$(_split_enc "$1")"
     { [ "$arm" = frozen ] || [ -z "$arm" ]; } && { frozen_ckpt_for "$bb"; return; }
     d="$(_arm_dir "$arm")"
     case "$d" in
-        m09a_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09a_ckpt_best.pt" ;;
+        m09a_*) echo "$(_train_root_for "$bb")/${d}/m09a_ckpt_best.pt" ;;
         # iter18 baselines (m09b/d/e/f) were cp'd from m09c1 → they inherit CHECKPOINT_PREFIX
         # "m09c_ckpt" and write m09c_ckpt_best.pt (verified: every baseline SANITY dir has it).
-        m09b_*|m09c_*|m09d_*|m09e_*|m09f_*) echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09c_ckpt_best.pt" ;;
+        m09b_*|m09c_*|m09d_*|m09e_*|m09f_*) echo "$(_train_root_for "$bb")/${d}/m09c_ckpt_best.pt" ;;
         *)      echo "" ;;
     esac
 }
@@ -429,7 +443,8 @@ echo "  ✓ min_per_split:        $MIN_PER_SPLIT"
 echo "  ✓ encoders:             $ENCODERS"
 echo "  ✓ skip_stages:          ${SKIP_STAGES:-<none>}"
 echo "  ✓ cache_policy:         ${CACHE_POLICY_ALL:-prompt-per-module}"
-echo "  ✓ output_prefix:        $DEFAULT_OUTPUT_PREFIX"
+echo "  ✓ eval_prefix:          $EVAL_PREFIX  (corpus=$EVAL_CORPUS · backbone=$EVAL_BACKBONE)"
+echo "  ✓ train_root:           $(_train_root_for "$EVAL_BACKBONE")"
 
 # ── Cache-policy gather (UPFRONT — per scripts/delete_protection_for_each_variant.md) ──
 # MUST: collect ALL decisions BEFORE compute starts. Mirrors run_train.sh:43-89.
@@ -652,9 +667,9 @@ if [ "${EVAL_KEEP_LATEST:-0}" != "1" ]; then
         local bb arm d; read -r bb arm <<<"$(_split_enc "$1")"; d="$(_arm_dir "$arm")"
         case "$d" in
             m09a_pretrain_encoder|m09a_pretrain_2X_encoder)
-                echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09a_ckpt_latest.pt" ;;
+                echo "$(_train_root_for "$bb")/${d}/m09a_ckpt_latest.pt" ;;
             m09c_surgery_3stage_DI_encoder|m09c_surgery_noDI_encoder)
-                echo "${DEFAULT_OUTPUT_PREFIX}/${bb}/${d}/m09c_ckpt_latest.pt" ;;
+                echo "$(_train_root_for "$bb")/${d}/m09c_ckpt_latest.pt" ;;
             *) echo "" ;;
         esac
     }

@@ -41,10 +41,12 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "src"))
 import json  # noqa: E402
 from iter18_poc_ngpu import (  # noqa: E402  (canonical DAG — single source for naming + jobs)
-    ARM2DIR, ARM2ENC, BACKBONE, ET_METRICS, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name,
+    ARM2DIR, ARM2ENC, BACKBONE, ET_METRICS, EVAL_CORPUS, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name,
     enc_prefix)
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 from utils.arm_registry import display_arms              # noqa: E402  (single-source arm roster)
+from utils.output_paths import (  # noqa: E402  (single source for the backbone-first tree)
+    eval_dir as _eval_dir, eval_root as _eval_root, train_dir as _train_dir)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
 _MIN_EVAL_POINTS = 5     # eval rate needs a few clips before extrapolating
@@ -189,7 +191,7 @@ _FINALIZE_PAD_S = 35 * 60
 def _newest_stage_ckpt_mtime(arm, mtag):
     """mtime (epoch) of the arm's newest *ckpt_stage*.pt — written immediately before
     finalize starts, so (✓stamp − it) = measured finalize, (now − it) = time IN finalize."""
-    d = REPO / f"outputs/{mtag}/{BACKBONE}/{ARM2DIR[arm]}"
+    d = REPO / f"{_train_dir(mtag, BACKBONE)}/{ARM2DIR[arm]}"
     cks = sorted((p for p in d.glob("*ckpt_stage*.pt") if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling/cleared ckpt symlinks
     return cks[-1].stat().st_mtime if cks else None
 
@@ -246,7 +248,7 @@ def _eval_plan_for(jid, mtag):
     if enc == "frozen":
         return plan               # Meta ckpt always carries the predictor
     arm = next(a for a, e in ARM2ENC.items() if e == enc)
-    d = REPO / f"outputs/{mtag}/{BACKBONE}/{ARM2DIR[arm]}"
+    d = REPO / f"{_train_dir(mtag, BACKBONE)}/{ARM2DIR[arm]}"
     best = "m09a_ckpt_best.pt" if ARM2DIR[arm].startswith("m09a_") else "m09c_ckpt_best.pt"
     if (d / "student_encoder.pt").exists() and not (d / best).exists():
         return [s for s in plan if s != "8"]
@@ -594,13 +596,13 @@ def maybe_plot(mtag, mode):
     last = REPO / "logs" / ".plot_preview.LAST"
     lock = REPO / "logs" / ".plot_preview.LOCK"
     now_ts = datetime.now(timezone.utc).timestamp()
-    hero = REPO / f"outputs/{mtag}/probe_plot/eval/m13_hero_table.png"
+    hero = REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/eval/m13_hero_table.png"
     if lock.exists() and (now_ts - lock.stat().st_mtime) > 2 * PLOT_EVERY_MIN * 60:
         lock.unlink(missing_ok=True)
     age_min = (now_ts - last.stat().st_mtime) / 60 if last.exists() else 1e9
     if age_min < PLOT_EVERY_MIN:
         return (f"  🖼  preview: rebuilt {int(age_min)}m ago · next in ~{max(int(PLOT_EVERY_MIN - age_min), 0)}m"
-                f" → outputs/{mtag}/probe_plot/eval/m13_hero_table.png")
+                f" → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/eval/m13_hero_table.png")
     try:
         _fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         os.close(_fd)
@@ -616,7 +618,7 @@ def maybe_plot(mtag, mode):
             rc = subprocess.run(chain, shell=True, executable="/bin/bash", cwd=str(REPO),
                                 stdout=fh, stderr=subprocess.STDOUT).returncode
         if hero.exists():
-            return f"  🖼  preview REBUILT (rc={rc}) → outputs/{mtag}/probe_plot/eval/ · next in ~{PLOT_EVERY_MIN}m"
+            return f"  🖼  preview REBUILT (rc={rc}) → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/eval/ · next in ~{PLOT_EVERY_MIN}m"
         return f"  🖼  preview rc={rc} — partial/blocked, see {plog.name} · next in ~{PLOT_EVERY_MIN}m"
     finally:
         lock.unlink(missing_ok=True)
@@ -627,16 +629,16 @@ def maybe_metrics_plots(mtag, mode):
     --metrics-watch refresh (so `iter18_poc_status.py --plots` = one command for status + every figure).
     Reuses THIS process's ITER18_BACKBONE / ITER18_SKIP_ARMS env (m13 reads the same vars: _MW_BACKBONE +
     _mw_skip_arms). Read-only on the eval/train artifacts; safe next to a live run."""
-    out = REPO / f"outputs/{mtag}"
+    out = REPO / _eval_root(mtag, BACKBONE, EVAL_CORPUS)
     cmd = [sys.executable, "-u", "src/m13_eval_plot.py", f"--{mode}",
-           "--output-dir", f"outputs/{mtag}/probe_plot",
-           "--outputs-root", f"outputs/{mtag}",
-           "--metrics-watch-out", f"outputs/{mtag}/probe_plot/metrics_watch",
+           "--output-dir", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}",
+           "--outputs-root", _eval_root(mtag, BACKBONE, EVAL_CORPUS),
+           "--metrics-watch-out", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch",
            "--metrics-watch-only"]
     print(f"\n  📊 --plots: refreshing metrics_watch figures+data → {out}/probe_plot/metrics_watch/{BACKBONE}/")
     rc = subprocess.run(cmd, cwd=str(REPO), env=os.environ.copy()).returncode
     if rc == 0:
-        print(f"  📊 metrics_watch refreshed (rc=0) → outputs/{mtag}/probe_plot/metrics_watch/{BACKBONE}/")
+        print(f"  📊 metrics_watch refreshed (rc=0) → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch/{BACKBONE}/")
     else:
         print(f"  📊 metrics_watch refresh rc={rc} — partial/blocked (partial json under a live run is normal)")
 
@@ -700,11 +702,11 @@ def main():
     for jid in jobs:
         if jid.startswith("P:"):
             enc_nm, metric = jid[2:].rsplit(":", 1)   # NOT 'enc_name' — that's the imported helper (shadowing it makes it a main()-local → UnboundLocalError)
-            if (REPO / f"outputs/{mtag}/predictor_temporal/{enc_nm}/aggregate_{metric}.json").exists():
+            if (REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'predictor_temporal')}/{enc_nm}/aggregate_{metric}.json").exists():
                 done.setdefault(jid, "resume")
         elif jid.startswith("F:"):    # Stage-8c (m12f encoder_temporal) — same done-marker pattern
             enc_nm, metric = jid[2:].rsplit(":", 1)
-            if (REPO / f"outputs/{mtag}/encoder_temporal/{enc_nm}/aggregate_{metric}.json").exists():
+            if (REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'encoder_temporal')}/{enc_nm}/aggregate_{metric}.json").exists():
                 done.setdefault(jid, "resume")
     # iter18 2026-06-08: drop any log-parsed jid NOT in THIS run's job set. A watch pane reading a
     # DIFFERENT-backbone or OLD (pre-banner) log carries foreign jids (e.g. T:vjepa_2_1_vitG:… while
@@ -1019,7 +1021,7 @@ def main():
     backup_msg = maybe_backup(fully_done, mtag)
     if fully_done:
         print("\a\n" + "█" * 78)
-        print(f"  🏁 RUN COMPLETE — plots in outputs/{mtag}/probe_plot/eval/"
+        print(f"  🏁 RUN COMPLETE — plots in {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/eval/"
               if not only_complete else "  🏁 --only RUN COMPLETE (no evals/finale by design)")
         print(backup_msg)
         print("█" * 78)
