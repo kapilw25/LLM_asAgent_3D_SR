@@ -1,5 +1,6 @@
-"""Shared wandb helpers. All functions are no-ops when run is None (--no-wandb)."""
+"""Shared wandb helpers. All functions are no-ops when run is None (--no-wandb OR wandb not opted-in)."""
 import argparse
+import os
 
 
 def add_wandb_args(parser: argparse.ArgumentParser):
@@ -19,7 +20,12 @@ def init_wandb(module_name: str, mode: str, config: dict = None,
         config: dict of run config (args, etc.)
         enabled: False when --no-wandb is passed
     """
-    if not enabled:
+    # iter18 (2026-06-20): wandb is OPT-IN, OFF by DEFAULT for every src/*.py. A standalone module run
+    # (not via run_train.sh / run_eval.sh, which pass --no-wandb) used to silently sync to wandb.ai. Now
+    # wandb only starts when the caller didn't pass --no-wandb AND WANDB_ENABLED is truthy. The early
+    # return below fires BEFORE any `import wandb` / wandb.login, so a default run touches wandb zero times.
+    # Opt back in for a tracked run with:  WANDB_ENABLED=1 python -u src/<module>.py ...
+    if not enabled or os.environ.get("WANDB_ENABLED", "").strip().lower() not in ("1", "true", "yes", "on"):
         return None
     try:
         from dotenv import load_dotenv
