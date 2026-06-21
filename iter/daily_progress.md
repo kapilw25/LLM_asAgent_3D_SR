@@ -6,9 +6,9 @@
 
 
 ## Sun, June 21, 2026
-- Rebuilding the read-off scorers the first run never saved: scene-attribute ones (taxonomy) done in ~16h on 1X 96GB vRAM GPU.
-- Time-ordering scorers (arrow-of-time, frame-order, pace) now rebuilding, ~12h on 4X 96GB vRAM GPU; every trained model reused, none retrained.
-- Next: score the unseen 10k-clip batch — ~10h per model (2k clips took ~2h), ~13 models across 4X 96GB vRAM GPU ≈ ~33 hours.
+- Retraining each trained encoder's read-off heads, which the first run never saved: scene-attribute ones (taxonomy) done in ~16h on 1X 96GB vRAM GPU.
+- Time-ordering scorers (arrow-of-time, frame-order, pace) now retraining, ~12h on 4X 96GB vRAM GPU; every trained model reused, none retrained.
+- Next (advisor pivot): stop the 10k ablation; restart full training + evaluation on the smaller V-JEPA 2.1 1B model, reproduce the wins.
 
 ## Sat, June 20, 2026
 - Re-testing every model on a fresh, disjoint 10k-clip batch — 5× the old 2k — to tighten the confidence bands and prove the wins aren't noise.

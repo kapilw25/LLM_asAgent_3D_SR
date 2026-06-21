@@ -1,5 +1,10 @@
 # iter18 — Runbook · 🎯 cross-set 10k retest (`subset_10k`) — tighten the 17 trained 2B arms' CIs ~2×
 
+> ⛔ **STOPPED — advisor pivot (2026-06-21).** The 2B 10k-clip ablation/retest below is PAUSED. New
+> direction: full **training + evaluation on the V-JEPA 2.1 _1B_ backbone**, reproducing the same
+> surgery-vs-baseline comparison at 1B scale. The 2B artifacts already produced stay on HF as the
+> reference; the 1B runbook will be authored on a cheaper instance, not this costly 4× node.
+
 ## 🟢 Box 1 · 2060 8 GB — CPU only
 
 ```bash
