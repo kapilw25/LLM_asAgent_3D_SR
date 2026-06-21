@@ -66,7 +66,7 @@ python -u scripts/iter18_poc_ngpu.py --mode POC \
 
 # HF UPLOAD >> motion_features.npy
 python -u src/utils/hf_outputs.py upload-data data/subset_10k_local \
-2>&1 | tee logs/upload_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
+2>&1 | tee logs/upload_data_subset_10k_local_$(date +%Y%m%d_%H%M%S).log
 
 # HF UPLOAD >> outputs/poc/
 set -a; . .env; set +a

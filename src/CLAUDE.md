@@ -125,6 +125,9 @@ Shared `utils/wandb_utils.py`. `--no-wandb` on every module. All functions no-op
    ```
 **Teardown gate:** the box is safe to kill ONLY after all 3 succeed — code reconstructable from GitHub, outputs from HF, sessions/memory on the Mac. Regenerable caches (`*/m12_frame_cache`, `outputs/poc/**/*.pt` once mirrored on HF) do NOT need backup — they rebuild. NEVER bake `${WORKSPACE}/.env` (live HF/OpenAI/GitHub/WANDB secrets) into any uploaded/public artifact — the `--exclude "**/.*"` above is what keeps it out.
 
+## HF PUSH/PULL — COMPLETE ONLY (never partial)
+Always `download-data <dir>` and `upload-large-folder … --include "outputs/poc/**"` the FULL tree — NEVER `--ext`/narrow filters. A partial local ≠ HF hides stale/orphaned remote files undetectably + makes `verify` FAIL. Only sanctioned exclude: `--exclude "**/.*"` (regenerable scratch dotfiles). 2026-06-21 incident.
+
 ## OUTPUT FORMATTING — TABLES, NOT LISTS  (with emojis for scannability)
 **Default to ASCII box-drawing tables** (`┌─┬─┐` `│` `├─┼─┤` `└─┴─┘`) for ANY comparison spanning ≥2 columns × ≥2 rows. Markdown pipe tables (`| col | col |`) and bullet lists are BANNED for comparison data — Claude Code's CommonMark renderer flattens them into unaligned single-column "lists" in the user's terminal, which breaks the comparison and frustrates the user. **Use emojis LIBERALLY** in column headers, row identifiers, and status/marker columns for visual scannability — the user explicitly chose "eyeballable with emojis" over "perfectly aligned plain ASCII". Keep emojis OUT of pure-numeric cells (where width drift matters most) but in headers / status / verdict columns they're encouraged. Box-drawing borders MUST still be present so the table structure is visible even if cell widths drift slightly with emoji rendering. Always declare a marker legend below the table. POC ablation sweeps (Cell A/B/C/D × N metrics) MUST be a single box-drawn grid, not N grouped lists.
 
