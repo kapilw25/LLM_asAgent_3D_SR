@@ -1,11 +1,17 @@
-# Instruction: Date & daily udpate in 2 line for daily progress && 1 line for next step. Each line covers max 15 words
-# AUDIENCE: Research leads focussed on > ## 🎯 Paper goal:  `vjepa_surgery` [X_epochs(surgery) +X_epochs(pretrain)] ≫ `vjepa_pretrain` [2X epochs] ≫ `vjepa_frozen` on motion / temporal features
+# Instruction: Date & daily udpate in 2 line for daily progress && 1 line for next step. Each line covers max 25 words
+# AUDIENCE: Research leads focussed on > ## 🎯 Paper goal:  `vjepa_surgery` outperforming ≫ `vjepa_frozen` and `other FT techniques` on motion / temporal features
 # AUDIENCE has knowledge about ONLY plots from @iter/iter15_trainHead_freezeEncoder/result_outputs/v15a/poc/probe_plot/eval/
-## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells),
+## Note: do NOT write pipeline jargon (SANITY/POC/eval_10k/Δ5/cells), 
+## Note: but, /eli5 all technical failures faced and solutions built 
 
+
+## Sun, June 21, 2026
+- Rebuilding the read-off scorers the first run never saved: scene-attribute ones (taxonomy) done in ~16h on 1X 96GB vRAM GPU.
+- Time-ordering scorers (arrow-of-time, frame-order, pace) now rebuilding, ~12h on 4X 96GB vRAM GPU; every trained model reused, none retrained.
+- Next: score the unseen 10k-clip batch — ~10h per model (2k clips took ~2h), ~13 models across 4X 96GB vRAM GPU ≈ ~33 hours.
 
 ## Sat, June 20, 2026
-- Reorganized every score by model (2B, 1B) so each gets its own clean scorecard.
+- Re-testing every model on a fresh, disjoint 10k-clip batch — 5× the old 2k — to tighten the confidence bands and prove the wins aren't noise.
 - Infrastructure day; no new model numbers — readied the retest to score beside the old, not over.
 - Next: run the retest; confirm surgery's future-frame win holds with tighter bands.
 

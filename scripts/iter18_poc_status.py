@@ -266,8 +266,8 @@ def _eval_calibrate(jobs, mtag, now_s):
       bar can never masquerade as the current one's)."""
     walls, projs, state, plans = {}, {}, {}, {}
     for jid, j in jobs.items():
-        if _arm_of(jid) != "eval" or jid.startswith(("P:", "F:")):
-            continue                  # P:/F: (Stage-8b/8c metric) jobs use _pt_total, not the stage ledger
+        if _arm_of(jid) != "eval" or jid.startswith(("P:", "F:", "Y:", "X:")):
+            continue                  # P:/F: metric + Y:/X: regen jobs use their own ETA, not the E: stage ledger
         plans[jid] = _eval_plan_for(jid, mtag)
         cands = sorted((p for p in REPO.glob(j["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
         for p in cands:
@@ -324,6 +324,11 @@ _PT_COLD_PRIOR = {"poc": 20 * 60, "sanity": 60}
 # ETA showed 3h for ~8h of work. Self-corrects per metric on the first completion, and pending
 # jobs borrow a RUNNING sibling's live projection (see the _proj seeding below) even sooner.
 _ET_COLD_PRIOR = {"poc": 75 * 60, "sanity": 3 * 60}
+# COLD prior for ONE regen job (--etheads-only Y: = 4-metric Stage-8c m12f, multi-phase ~2.5h; --taxheads-only
+# X: = Stage-11 only, ~50m/enc = ~15h/17). A single clip bar under-reads the multi-phase m12f, so price from the
+# measured median of completed peers; this is just the cold seed before the first wave lands (iter18 2026-06-21).
+_REGEN_COLD_PRIOR = {"etheads": {"poc": 150 * 60, "sanity": 4 * 60},
+                     "taxheads": {"poc": 53 * 60, "sanity": 3 * 60}}
 
 # Back up outputs/poc to HF this often (minutes) WHILE the run goes, so the final backup at the end
 # is tiny and the paid node can be killed right away. Driven by the 60s `watch` refresh + a stamp file.
@@ -451,6 +456,38 @@ def _pt_total(jobs, jid, elapsed, prior, pt_med):
         cur, tot, rate = int(cp[-1][0]), int(cp[-1][1]), float(rr[-1])
         return elapsed + (tot - cur) * rate
     return max(pt_med.get(metric, prior), elapsed + 300)
+
+
+_RE_M12F_BAR = re.compile(r"m12f\[([\w/+-]+)\]:\s*\d+%\|[^|]*\|\s*(\d+)/(\d+)")
+
+
+def _regen_running_total(jobs, jid, elapsed, cold):
+    """Live TOTAL-wall projection for a RUNNING --etheads-only Y: job from its own m12f bars. An et-job is
+    a fixed 4-phase chain (aot-tov-tcc/test · aot-tov/train · pace/test · pace/train), so
+    progress = (phases-at-100% + current-phase fraction) / 4 and total ≈ elapsed / progress — the phases
+    are near-equal (test ~40m, train ~44m). A --taxheads-only X: job has a NON-linear dim bar (dim-1
+    carries the one-time feature extraction), so it keeps the cold prior. Prior until the first bar prints
+    (iter18 2026-06-21)."""
+    if not jid.startswith("Y:"):
+        return max(cold, elapsed + 300)
+    cands = sorted((p for p in REPO.glob(jobs[jid]["log"].format(ts="*")) if p.exists()),
+                   key=lambda p: p.stat().st_mtime)
+    if not cands:
+        return max(cold, elapsed + 300)
+    try:
+        txt = cands[-1].read_text(errors="replace")
+    except OSError:
+        txt = _tail(cands[-1], 20000)
+    bars = _RE_M12F_BAR.findall(txt)
+    if not bars:
+        return max(cold, elapsed + 300)
+    done = {lbl for lbl, c, t in bars if int(c) >= int(t)}      # phase labels that reached 100%
+    _lbl, cur, tot = bars[-1]
+    progress = (len(done) / 4 if int(cur) >= int(tot)
+                else (len(done) + int(cur) / max(int(tot), 1)) / 4)
+    if progress < 0.02:
+        return max(cold, elapsed + 300)
+    return max(elapsed / progress, elapsed + 300)
 
 
 def _running_total(jobs, jid, elapsed, prior, calib, ecalib):
@@ -663,6 +700,16 @@ def main():
 
     text = log.read_text(errors="replace")
 
+    # regen runs (--taxheads-only / --etheads-only) emit per-encoder X:/Y: jobs — a DIFFERENT job set
+    # than the full DAG. Detect from the launch markers + rebuild jobs to match, else every X:/Y: marker
+    # is filtered out below and the table reads all-pending on stale priors (iter18 2026-06-21).
+    _marker_ids = re.findall(r"GPU\d+ ◀ (\S+)", text)
+    taxheads_only = any(j.startswith("X:") for j in _marker_ids)
+    etheads_only = any(j.startswith("Y:") for j in _marker_ids)
+    regen = taxheads_only or etheads_only
+    if regen:
+        jobs, mtag = build_jobs(args.mode, taxheads_only=taxheads_only, etheads_only=etheads_only)
+
     # iter18 2026-06-08: the run's backbone is in the banner (backbone=…). If THIS watch pane was
     # launched without the matching ITER18_BACKBONE, our imported BACKBONE (+ all job-ids/paths)
     # are for the wrong family → every cell would read pending. Warn LOUDLY rather than mislead.
@@ -685,7 +732,9 @@ def main():
         drop = ({f"T:{BACKBONE}:{a}" for a in skip}
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}
                 | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS}
-                | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in ET_METRICS})
+                | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in ET_METRICS}
+                | {f"X:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}   # --taxheads-only regen
+                | {f"Y:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC})  # --etheads-only regen
         jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
 
     launched = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ◀ (\S+)", text)}
@@ -735,10 +784,17 @@ def main():
         return (now_s - _sod(launched[jid])) % 86400 if jid in launched else 0
 
     # ── REAL-ETA inputs (iter18 2026-06-07): static workload ledger + calibration ──
-    try:
-        ledger = _build_ledger(mtag)
-    except Exception as e:   # the watch must survive a ledger failure — fall back LOUDLY
-        print(f"  ⚠️  workload ledger FAILED ({type(e).__name__}: {e}) — ETA on priors", flush=True)
+    # The step-ledger prices only RUNNING/PENDING train arms (reads train_pool.json + factor_manifest).
+    # An eval-only run — the cross-set retest (all train resume-skipped) or a --taxheads/--etheads regen
+    # (0 train jobs) — needs no ledger and has no train_pool.json on the box, so skip it (building it would
+    # just FileNotFoundError → priors), iter18 2026-06-21.
+    if any(j.startswith("T:") and classify(j) not in ("done", "failed") for j in jobs):
+        try:
+            ledger = _build_ledger(mtag)
+        except Exception as e:   # the watch must survive a ledger failure — fall back LOUDLY
+            print(f"  ⚠️  workload ledger FAILED ({type(e).__name__}: {e}) — ETA on priors", flush=True)
+            ledger = None
+    else:
         ledger = None
     calib = _calibrate(jobs, done, launched, mtag, ledger)
     # eval REAL-ETA: per-stage medians + running-eval stage state + per-job stage plans.
@@ -756,6 +812,19 @@ def main():
     # Σ secs per jid across all log segments — reused for the P: per-metric medians here and the
     # table's consumed/✅ cells + Σ TOTAL row below.
     consumed = _arm_consumed(jobs, mtag)
+    # regen (Y:/X:) jobs are multi-phase per-encoder run_evals. Price the PENDING ones from the MEASURED
+    # per-job time — the median over completed peers' walls + the live total-wall the RUNNING peers project
+    # from their own m12f phase bars (_regen_running_total). No hardcoded warm-cache factor: as later waves
+    # run on the warm frame-cache, their live projections come in shorter, so this median self-corrects DOWN
+    # on its own (iter18 2026-06-21).
+    _regen_kind = "taxheads" if taxheads_only else "etheads"
+    _regen_cold = _REGEN_COLD_PRIOR[_regen_kind].get(mtag, 90 * 60)
+    _regen_perjob = sorted(
+        [consumed[j] for j in jobs
+         if j.startswith(("Y:", "X:")) and classify(j) == "done" and j in consumed]
+        + [_regen_running_total(jobs, j, elapsed(j), _regen_cold) for j in jobs
+           if j.startswith(("Y:", "X:")) and classify(j) == "running"])
+    _regen_perjob_med = _regen_perjob[len(_regen_perjob) // 2] if _regen_perjob else None
     # P: (Stage-8b single-metric) per-metric medians from COMPLETED P: jobs → priors for pending P:
     # (metrics differ a lot in cost — teacher_free ≫ causal — so keep them per-metric).
     _pt_by = {}
@@ -794,6 +863,15 @@ def main():
             prior = _MERGE_PRIOR.get(mtag, 3 * 60)
         if st in ("done", "failed"):
             remaining[jid] = 0.0
+        elif jid.startswith(("Y:", "X:")):
+            # regen job. RUNNING → live multi-phase projection from its OWN m12f bars (elapsed / progress).
+            # PENDING → the measured per-job median (completed walls + running projections), which already
+            # reflects the warm-cache speedup once warm waves are live — no hardcoded factor.
+            if st == "running":
+                tot = _regen_running_total(jobs, jid, elapsed(jid), _regen_cold)
+                remaining[jid] = max(tot - elapsed(jid), 60)
+            else:
+                remaining[jid] = _regen_perjob_med or _regen_cold
         elif jid.startswith(("P:", "F:")):
             # Stage-8b/8c single-metric job — estimated from its OWN clip bar (running) or the
             # per-metric median (pending), NOT the stage ledger. Cold prior is per-FAMILY
@@ -873,6 +951,66 @@ def main():
     counts = {"done": 0, "running": 0, "pending": 0, "failed": 0}
     for jid in jobs:
         counts[classify(jid)] += 1
+
+    # ── regen runs (--taxheads-only X: / --etheads-only Y:) get a dedicated compact table: one row per
+    #    encoder (state · ET-metric heads saved · ETA). The train|eval grid + 8b/8c fan below don't apply
+    #    (a regen DAG has no T:/E:/P:/F: jobs), so render this and return (iter18 2026-06-21). ──
+    if regen:
+        kind_label = ("et-heads · Stage 8c (aot·tov·pace·tcc)" if etheads_only else "tax-heads · Stage 11")
+        prefix = "Y" if etheads_only else "X"
+        order = [enc_name(e) for _a, e in [("frozen", "frozen")] + list(ARM2ENC.items())]
+        SW2, MW2, CW2 = 40, 12, 24
+        print(f"═══ iter18 {args.mode} REGEN: {kind_label} · {log.name} · now {now_hms} UTC · {gpus} GPU ═══")
+        print("┌" + "─" * SW2 + "┬" + "─" * MW2 + "┬" + "─" * CW2 + "┐")
+        print("│" + " encoder".ljust(SW2) + "│" + (" heads" if etheads_only else " stage").ljust(MW2)
+              + "│" + " state".ljust(CW2) + "│")
+        print("├" + "─" * SW2 + "┼" + "─" * MW2 + "┼" + "─" * CW2 + "┤")
+        for enc in order:
+            jid = f"{prefix}:{enc}"
+            if jid not in jobs:
+                continue
+            st = classify(jid)
+            if etheads_only:
+                # the regen's PRODUCT is the reuse HEADS (head_<metric>.pt for aot/tov/pace; tcc is
+                # training-free → no head). Count those — NOT aggregate_*.json, which may pre-exist from
+                # the original eval and would show a stale "done" on a not-yet-run encoder.
+                _etd = REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'encoder_temporal')}/{enc}"
+                _hm = ("aot", "tov", "pace")
+                nd = sum(1 for m in _hm if (_etd / f"head_{m}.pt").exists())
+                mcell = f"{nd}✓/{len(_hm)}"
+            else:
+                mcell = "—"
+            if st == "done":
+                scell = f"✅ {_dur(consumed.get(jid, 0))}"
+            elif st == "failed":
+                scell = "❌ FAILED"
+            elif st == "running":
+                scell = f"🔄 {_dur(elapsed(jid))}·~{_dur(finish.get(jid, remaining[jid]))}"
+            else:
+                scell = f"⬚ ~{_dur(finish.get(jid, remaining[jid]))}"
+            short = enc.replace(f"{enc_prefix()}_", "")
+            print("│ " + short.ljust(SW2 - 1) + "│ " + mcell.ljust(MW2 - 1) + "│ " + scell.ljust(CW2 - 1) + "│")
+        print("└" + "─" * SW2 + "┴" + "─" * MW2 + "┴" + "─" * CW2 + "┘")
+        regen_eta = max(finish.values()) if finish else 0.0    # no §3 finale in a regen run
+        print(f"\n  {counts['done']}✅  {counts['running']}🔄  {counts['pending']}⬚  "
+              f"{counts['failed']}❌  / {len(jobs)} {prefix}: jobs")
+        settled = counts["done"] + counts["failed"] == len(jobs)
+        if settled and not counts["failed"]:
+            print(f"  🏁 all {len(jobs)} regen jobs DONE — heads saved on disk. "
+                  f"Next: the 200-clip smoke, then the full retest.")
+        elif settled and counts["failed"]:
+            flag = "--etheads-only" if etheads_only else "--taxheads-only"
+            print(f"  ⚠️  {counts['failed']}❌ FAILED — recover: python -u scripts/iter18_poc_ngpu.py "
+                  f"--mode {args.mode} --gpus {gpus} {flag} --cache 1 --skip-arms $SKIP")
+            print("  ❌ failed: " + ", ".join(j for j in jobs if classify(j) == "failed"))
+        else:
+            _end = datetime.now(timezone.utc) + timedelta(seconds=regen_eta)
+            print(f"  🏁 regen ETA  ~{_dur(regen_eta)} from now  →  {_end:%H:%M} UTC · "
+                  f"{(_end - timedelta(hours=7)):%H:%M} PDT")
+        print("\n  legend: ✅ done · 🔄 running · ⬚ pending · ❌ failed"
+              + ("  ·  heads ✓ = reuse head saved (head_{aot,tov,pace}.pt; tcc is training-free)"
+                 if etheads_only else ""))
+        return
 
     # `consumed` (Σ GPU-seconds per jid across ALL log segments) was computed above for pt_med.
 
