@@ -1,0 +1,781 @@
+============================================
+WalkIndia-200K Environment Setup (UV)
+============================================
+Detected OS: Linux
+
+Installing:  tree
+Hit:1 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:3 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64  InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following NEW packages will be installed:
+  tree
+0 upgraded, 1 newly installed, 0 to remove and 34 not upgraded.
+Need to get 47.4 kB of archives.
+After this operation, 111 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 tree amd64 2.1.1-2ubuntu3.24.04.2 [47.4 kB]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 47.4 kB in 0s (572 kB/s)
+Selecting previously unselected package tree.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 44187 files and directories currently installed.)
+Preparing to unpack .../tree_2.1.1-2ubuntu3.24.04.2_amd64.deb ...
+Unpacking tree (2.1.1-2ubuntu3.24.04.2) ...
+Setting up tree (2.1.1-2ubuntu3.24.04.2) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Python 3.12: Python 3.12.3
+UV: uv 0.11.19 (x86_64-unknown-linux-gnu)
+
+Creating virtual environment (Python 3.12)...
+Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+Creating virtual environment at: venv_walkindia
+Activate with: source venv_walkindia/bin/activate
+
+Installing base requirements (UV - fast)...
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 75 packages in 1.82s
+Downloading pillow (6.8MiB)
+Downloading pyarrow (46.6MiB)
+Downloading llvmlite (53.7MiB)
+Downloading py-spy (2.8MiB)
+Downloading matplotlib (9.6MiB)
+Downloading openai (1.3MiB)
+Downloading kiwisolver (1.4MiB)
+Downloading pymupdf (23.8MiB)
+Downloading fonttools (4.8MiB)
+Downloading scikit-learn (8.7MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading scipy (33.7MiB)
+Downloading numpy (15.8MiB)
+Downloading pygments (1.2MiB)
+Downloading ruff (11.0MiB)
+Downloading pandas (10.4MiB)
+Downloading numba (3.6MiB)
+Downloading hf-xet (4.3MiB)
+Downloading yt-dlp (3.0MiB)
+Downloading opencv-python (69.5MiB)
+Downloading aiohttp (1.7MiB)
+ Downloaded pygments
+ Downloaded openai
+ Downloaded kiwisolver
+ Downloaded aiohttp
+ Downloaded pydantic-core
+ Downloaded py-spy
+ Downloaded yt-dlp
+ Downloaded numba
+ Downloaded hf-xet
+ Downloaded fonttools
+ Downloaded pillow
+ Downloaded scikit-learn
+ Downloaded matplotlib
+ Downloaded pandas
+ Downloaded ruff
+ Downloaded numpy
+ Downloaded pymupdf
+ Downloaded scipy
+ Downloaded llvmlite
+ Downloaded pyarrow
+ Downloaded opencv-python
+Prepared 75 packages in 12.54s
+Installed 75 packages in 656ms
+ + aiohappyeyeballs==2.6.2
+ + aiohttp==3.14.1
+ + aiosignal==1.4.0
+ + annotated-doc==0.0.4
+ + annotated-types==0.7.0
+ + anyio==4.14.0
+ + attrs==26.1.0
+ + certifi==2026.6.17
+ + charset-normalizer==3.4.7
+ + click==8.4.1
+ + contourpy==1.3.3
+ + cycler==0.12.1
+ + datasets==5.0.0
+ + dill==0.4.1
+ + distro==1.9.0
+ + filelock==3.29.4
+ + fonttools==4.63.0
+ + frozenlist==1.8.0
+ + fsspec==2026.4.0
+ + h11==0.16.0
+ + hf-xet==1.5.1
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + huggingface-hub==1.20.1
+ + idna==3.18
+ + jiter==0.15.0
+ + joblib==1.5.3
+ + kiwisolver==1.5.0
+ + llvmlite==0.47.0
+ + markdown-it-py==4.2.0
+ + matplotlib==3.11.0
+ + mdurl==0.1.2
+ + multidict==6.7.1
+ + multiprocess==0.70.19
+ + narwhals==2.22.1
+ + numba==0.65.1
+ + numpy==2.3.5
+ + openai==2.43.0
+ + opencv-python==4.13.0.92
+ + packaging==26.2
+ + pandas==3.0.3
+ + pillow==12.2.0
+ + platformdirs==4.10.0
+ + propcache==0.5.2
+ + py-spy==0.4.2
+ + pyarrow==24.0.0
+ + pydantic==2.13.4
+ + pydantic-core==2.46.4
+ + pygments==2.20.0
+ + pymupdf==1.27.2.3
+ + pynndescent==0.6.0
+ + pyparsing==3.3.2
+ + python-dateutil==2.9.0.post0
+ + python-dotenv==1.2.2
+ + pyyaml==6.0.3
+ + requests==2.34.2
+ + rich==15.0.0
+ + ruff==0.15.18
+ + scenedetect==0.7
+ + scikit-learn==1.9.0
+ + scipy==1.18.0
+ + seaborn==0.13.2
+ + shellingham==1.5.4
+ + six==1.17.0
+ + sniffio==1.3.1
+ + threadpoolctl==3.6.0
+ + tqdm==4.68.3
+ + typer==0.25.1
+ + typing-extensions==4.15.0
+ + typing-inspection==0.4.2
+ + umap-learn==0.5.12
+ + urllib3==2.7.0
+ + xxhash==3.7.0
+ + yarl==1.24.2
+ + yt-dlp==2026.6.9
+
+Creating directories...
+
+Base setup complete.
+
+============================================
+GPU Setup (Linux + Nvidia ONLY)
+============================================
+Loaded .env (HF_TOKEN set)
+
+Cloning facebookresearch/vjepa2 (contains V-JEPA 2.0 + 2.1)...
+Cloning into 'deps/vjepa2'...
+vjepa2 cloned to deps/vjepa2/
+vjepa2 RoPE dtype patch applied (#44)
+Checkpoint download [group=trainable] → checkpoints/ : 1 file(s)
+  - vjepa2_1_vitG_384.pt  ←  https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt
+[1/1]   Downloading vjepa2_1_vitG_384.pt ← https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt
+
+06/21 06:10:34 [[1;32mNOTICE[0m] Downloading 1 item(s)
+[#4bdb06 64MiB/28GiB(0%) CN:16 DL:121MiB ETA:3m55s]
+[#4bdb06 278MiB/28GiB(0%) CN:16 DL:178MiB ETA:2m39s]
+[#4bdb06 510MiB/28GiB(1%) CN:16 DL:200MiB ETA:2m21s]
+[#4bdb06 717MiB/28GiB(2%) CN:16 DL:202MiB ETA:2m18s]
+[#4bdb06 0.9GiB/28GiB(3%) CN:16 DL:205MiB ETA:2m15s]
+[#4bdb06 1.1GiB/28GiB(3%) CN:16 DL:206MiB ETA:2m13s]
+[#4bdb06 1.3GiB/28GiB(4%) CN:16 DL:207MiB ETA:2m12s]
+[#4bdb06 1.5GiB/28GiB(5%) CN:16 DL:209MiB ETA:2m10s]
+[#4bdb06 1.7GiB/28GiB(6%) CN:16 DL:208MiB ETA:2m9s]
+[#4bdb06 1.9GiB/28GiB(6%) CN:16 DL:209MiB ETA:2m7s]
+[#4bdb06 2.1GiB/28GiB(7%) CN:16 DL:214MiB ETA:2m4s]
+[#4bdb06 2.3GiB/28GiB(8%) CN:16 DL:214MiB ETA:2m3s]
+[#4bdb06 2.5GiB/28GiB(9%) CN:16 DL:213MiB ETA:2m2s]
+[#4bdb06 2.7GiB/28GiB(9%) CN:16 DL:211MiB ETA:2m3s]
+[#4bdb06 2.9GiB/28GiB(10%) CN:16 DL:212MiB ETA:2m1s]
+[#4bdb06 3.1GiB/28GiB(11%) CN:16 DL:209MiB ETA:2m2s]
+[#4bdb06 3.3GiB/28GiB(11%) CN:16 DL:208MiB ETA:2m2s]
+[#4bdb06 3.5GiB/28GiB(12%) CN:16 DL:209MiB ETA:2m]
+[#4bdb06 3.7GiB/28GiB(13%) CN:16 DL:207MiB ETA:2m]
+[#4bdb06 3.9GiB/28GiB(14%) CN:16 DL:206MiB ETA:2m]
+[#4bdb06 4.1GiB/28GiB(14%) CN:16 DL:205MiB ETA:1m59s]
+[#4bdb06 4.2GiB/28GiB(15%) CN:16 DL:200MiB ETA:2m1s]
+[#4bdb06 4.4GiB/28GiB(15%) CN:16 DL:196MiB ETA:2m3s]
+[#4bdb06 4.6GiB/28GiB(16%) CN:16 DL:191MiB ETA:2m5s]
+[#4bdb06 4.7GiB/28GiB(16%) CN:16 DL:189MiB ETA:2m6s]
+[#4bdb06 4.9GiB/28GiB(17%) CN:16 DL:188MiB ETA:2m5s]
+[#4bdb06 5.1GiB/28GiB(18%) CN:16 DL:189MiB ETA:2m3s]
+[#4bdb06 5.4GiB/28GiB(19%) CN:16 DL:190MiB ETA:2m2s]
+[#4bdb06 5.6GiB/28GiB(19%) CN:16 DL:194MiB ETA:1m58s]
+[#4bdb06 5.8GiB/28GiB(20%) CN:16 DL:192MiB ETA:1m59s]
+[#4bdb06 6.0GiB/28GiB(21%) CN:16 DL:197MiB ETA:1m54s]
+[#4bdb06 6.2GiB/28GiB(22%) CN:16 DL:205MiB ETA:1m49s]
+[#4bdb06 6.4GiB/28GiB(22%) CN:16 DL:212MiB ETA:1m44s]
+[#4bdb06 6.6GiB/28GiB(23%) CN:16 DL:217MiB ETA:1m41s]
+[#4bdb06 6.9GiB/28GiB(24%) CN:16 DL:221MiB ETA:1m38s]
+[#4bdb06 7.1GiB/28GiB(25%) CN:16 DL:222MiB ETA:1m36s]
+[#4bdb06 7.3GiB/28GiB(26%) CN:16 DL:223MiB ETA:1m35s]
+[#4bdb06 7.5GiB/28GiB(26%) CN:16 DL:221MiB ETA:1m35s]
+[#4bdb06 7.7GiB/28GiB(27%) CN:16 DL:224MiB ETA:1m32s]
+[#4bdb06 7.9GiB/28GiB(28%) CN:16 DL:222MiB ETA:1m32s]
+[#4bdb06 8.2GiB/28GiB(29%) CN:16 DL:223MiB ETA:1m31s]
+[#4bdb06 8.4GiB/28GiB(29%) CN:16 DL:224MiB ETA:1m29s]
+[#4bdb06 8.6GiB/28GiB(30%) CN:16 DL:225MiB ETA:1m28s]
+[#4bdb06 8.8GiB/28GiB(31%) CN:16 DL:221MiB ETA:1m29s]
+[#4bdb06 9.0GiB/28GiB(32%) CN:16 DL:220MiB ETA:1m28s]
+[#4bdb06 9.2GiB/28GiB(32%) CN:16 DL:213MiB ETA:1m30s]
+[#4bdb06 9.3GiB/28GiB(33%) CN:16 DL:208MiB ETA:1m32s]
+[#4bdb06 9.5GiB/28GiB(33%) CN:16 DL:205MiB ETA:1m32s]
+[#4bdb06 9.7GiB/28GiB(34%) CN:16 DL:201MiB ETA:1m33s]
+[#4bdb06 9.8GiB/28GiB(35%) CN:16 DL:190MiB ETA:1m38s]
+[#4bdb06 10GiB/28GiB(35%) CN:16 DL:184MiB ETA:1m40s]
+[#4bdb06 10GiB/28GiB(36%) CN:16 DL:178MiB ETA:1m42s]
+[#4bdb06 10GiB/28GiB(36%) CN:16 DL:180MiB ETA:1m40s]
+[#4bdb06 10GiB/28GiB(37%) CN:16 DL:174MiB ETA:1m42s]
+[#4bdb06 10GiB/28GiB(38%) CN:16 DL:175MiB ETA:1m41s]
+[#4bdb06 10GiB/28GiB(38%) CN:16 DL:175MiB ETA:1m40s]
+[#4bdb06 11GiB/28GiB(39%) CN:16 DL:172MiB ETA:1m41s]
+[#4bdb06 11GiB/28GiB(39%) CN:16 DL:171MiB ETA:1m41s]
+[#4bdb06 11GiB/28GiB(40%) CN:16 DL:178MiB ETA:1m36s]
+[#4bdb06 11GiB/28GiB(41%) CN:16 DL:177MiB ETA:1m35s]
+ *** Download Progress Summary as of Sun Jun 21 06:11:35 2026 *** 
+===============================================================================
+[#4bdb06 11GiB/28GiB(41%) CN:16 DL:175MiB ETA:1m36s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#4bdb06 11GiB/28GiB(41%) CN:16 DL:175MiB ETA:1m36s]
+[#4bdb06 11GiB/28GiB(42%) CN:16 DL:176MiB ETA:1m34s]
+[#4bdb06 12GiB/28GiB(42%) CN:16 DL:175MiB ETA:1m33s]
+[#4bdb06 12GiB/28GiB(43%) CN:16 DL:175MiB ETA:1m32s]
+[#4bdb06 12GiB/28GiB(44%) CN:16 DL:174MiB ETA:1m32s]
+[#4bdb06 12GiB/28GiB(44%) CN:16 DL:170MiB ETA:1m33s]
+[#4bdb06 12GiB/28GiB(45%) CN:16 DL:172MiB ETA:1m31s]
+[#4bdb06 12GiB/28GiB(45%) CN:16 DL:173MiB ETA:1m29s]
+[#4bdb06 13GiB/28GiB(46%) CN:16 DL:173MiB ETA:1m29s]
+[#4bdb06 13GiB/28GiB(47%) CN:16 DL:173MiB ETA:1m27s]
+[#4bdb06 13GiB/28GiB(47%) CN:16 DL:177MiB ETA:1m24s]
+[#4bdb06 13GiB/28GiB(48%) CN:16 DL:175MiB ETA:1m24s]
+[#4bdb06 13GiB/28GiB(48%) CN:16 DL:175MiB ETA:1m23s]
+[#4bdb06 13GiB/28GiB(49%) CN:16 DL:176MiB ETA:1m22s]
+[#4bdb06 14GiB/28GiB(50%) CN:16 DL:178MiB ETA:1m20s]
+[#4bdb06 14GiB/28GiB(50%) CN:16 DL:181MiB ETA:1m18s]
+[#4bdb06 14GiB/28GiB(51%) CN:16 DL:177MiB ETA:1m18s]
+[#4bdb06 14GiB/28GiB(51%) CN:16 DL:177MiB ETA:1m17s]
+[#4bdb06 14GiB/28GiB(52%) CN:16 DL:176MiB ETA:1m17s]
+[#4bdb06 14GiB/28GiB(53%) CN:16 DL:176MiB ETA:1m16s]
+[#4bdb06 15GiB/28GiB(53%) CN:16 DL:176MiB ETA:1m15s]
+[#4bdb06 15GiB/28GiB(54%) CN:16 DL:178MiB ETA:1m13s]
+[#4bdb06 15GiB/28GiB(55%) CN:16 DL:177MiB ETA:1m13s]
+[#4bdb06 15GiB/28GiB(55%) CN:16 DL:177MiB ETA:1m11s]
+[#4bdb06 15GiB/28GiB(56%) CN:16 DL:179MiB ETA:1m10s]
+[#4bdb06 16GiB/28GiB(57%) CN:16 DL:182MiB ETA:1m8s]
+[#4bdb06 16GiB/28GiB(57%) CN:16 DL:179MiB ETA:1m8s]
+[#4bdb06 16GiB/28GiB(58%) CN:16 DL:181MiB ETA:1m6s]
+[#4bdb06 16GiB/28GiB(58%) CN:16 DL:182MiB ETA:1m4s]
+[#4bdb06 16GiB/28GiB(59%) CN:16 DL:184MiB ETA:1m3s]
+[#4bdb06 16GiB/28GiB(60%) CN:16 DL:184MiB ETA:1m2s]
+[#4bdb06 17GiB/28GiB(60%) CN:16 DL:184MiB ETA:1m1s]
+[#4bdb06 17GiB/28GiB(61%) CN:16 DL:173MiB ETA:1m4s]
+[#4bdb06 17GiB/28GiB(61%) CN:16 DL:164MiB ETA:1m7s]
+[#4bdb06 17GiB/28GiB(61%) CN:16 DL:155MiB ETA:1m11s]
+[#4bdb06 17GiB/28GiB(62%) CN:16 DL:145MiB ETA:1m15s]
+[#4bdb06 17GiB/28GiB(62%) CN:16 DL:140MiB ETA:1m17s]
+[#4bdb06 17GiB/28GiB(62%) CN:16 DL:132MiB ETA:1m21s]
+[#4bdb06 17GiB/28GiB(63%) CN:16 DL:121MiB ETA:1m27s]
+[#4bdb06 17GiB/28GiB(63%) CN:16 DL:119MiB ETA:1m27s]
+[#4bdb06 18GiB/28GiB(64%) CN:16 DL:117MiB ETA:1m27s]
+[#4bdb06 18GiB/28GiB(64%) CN:16 DL:122MiB ETA:1m22s]
+[#4bdb06 18GiB/28GiB(65%) CN:16 DL:133MiB ETA:1m14s]
+[#4bdb06 18GiB/28GiB(66%) CN:16 DL:140MiB ETA:1m9s]
+[#4bdb06 18GiB/28GiB(66%) CN:16 DL:148MiB ETA:1m4s]
+[#4bdb06 18GiB/28GiB(67%) CN:16 DL:156MiB ETA:1m]
+[#4bdb06 19GiB/28GiB(67%) CN:16 DL:162MiB ETA:56s]
+[#4bdb06 19GiB/28GiB(68%) CN:16 DL:170MiB ETA:53s]
+[#4bdb06 19GiB/28GiB(69%) CN:16 DL:176MiB ETA:50s]
+[#4bdb06 19GiB/28GiB(69%) CN:16 DL:177MiB ETA:49s]
+[#4bdb06 19GiB/28GiB(70%) CN:16 DL:175MiB ETA:48s]
+[#4bdb06 19GiB/28GiB(70%) CN:16 DL:175MiB ETA:47s]
+[#4bdb06 20GiB/28GiB(71%) CN:16 DL:176MiB ETA:46s]
+[#4bdb06 20GiB/28GiB(72%) CN:16 DL:177MiB ETA:45s]
+[#4bdb06 20GiB/28GiB(72%) CN:16 DL:165MiB ETA:47s]
+[#4bdb06 20GiB/28GiB(72%) CN:16 DL:157MiB ETA:49s]
+[#4bdb06 20GiB/28GiB(73%) CN:16 DL:151MiB ETA:50s]
+[#4bdb06 20GiB/28GiB(73%) CN:16 DL:144MiB ETA:52s]
+[#4bdb06 20GiB/28GiB(73%) CN:16 DL:134MiB ETA:56s]
+[#4bdb06 20GiB/28GiB(74%) CN:16 DL:127MiB ETA:58s]
+[#4bdb06 20GiB/28GiB(74%) CN:16 DL:118MiB ETA:1m1s]
+ *** Download Progress Summary as of Sun Jun 21 06:12:35 2026 *** 
+===============================================================================
+[#4bdb06 21GiB/28GiB(74%) CN:16 DL:109MiB ETA:1m5s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#4bdb06 21GiB/28GiB(74%) CN:16 DL:109MiB ETA:1m5s]
+[#4bdb06 21GiB/28GiB(75%) CN:16 DL:102MiB ETA:1m9s]
+[#4bdb06 21GiB/28GiB(75%) CN:16 DL:102MiB ETA:1m8s]
+[#4bdb06 21GiB/28GiB(75%) CN:16 DL:102MiB ETA:1m7s]
+[#4bdb06 21GiB/28GiB(76%) CN:16 DL:103MiB ETA:1m6s]
+[#4bdb06 21GiB/28GiB(76%) CN:16 DL:103MiB ETA:1m4s]
+[#4bdb06 21GiB/28GiB(77%) CN:16 DL:105MiB ETA:1m2s]
+[#4bdb06 21GiB/28GiB(77%) CN:16 DL:109MiB ETA:59s]
+[#4bdb06 22GiB/28GiB(78%) CN:16 DL:116MiB ETA:54s]
+[#4bdb06 22GiB/28GiB(78%) CN:16 DL:123MiB ETA:49s]
+[#4bdb06 22GiB/28GiB(79%) CN:16 DL:131MiB ETA:45s]
+[#4bdb06 22GiB/28GiB(79%) CN:16 DL:139MiB ETA:41s]
+[#4bdb06 22GiB/28GiB(80%) CN:16 DL:148MiB ETA:37s]
+[#4bdb06 22GiB/28GiB(81%) CN:16 DL:156MiB ETA:34s]
+[#4bdb06 23GiB/28GiB(81%) CN:16 DL:160MiB ETA:32s]
+[#4bdb06 23GiB/28GiB(82%) CN:16 DL:168MiB ETA:30s]
+[#4bdb06 23GiB/28GiB(83%) CN:16 DL:175MiB ETA:27s]
+[#4bdb06 23GiB/28GiB(83%) CN:16 DL:176MiB ETA:26s]
+[#4bdb06 23GiB/28GiB(84%) CN:16 DL:176MiB ETA:25s]
+[#4bdb06 23GiB/28GiB(84%) CN:16 DL:179MiB ETA:24s]
+[#4bdb06 24GiB/28GiB(85%) CN:16 DL:179MiB ETA:23s]
+[#4bdb06 24GiB/28GiB(86%) CN:16 DL:176MiB ETA:22s]
+[#4bdb06 24GiB/28GiB(86%) CN:16 DL:177MiB ETA:21s]
+[#4bdb06 24GiB/28GiB(87%) CN:16 DL:181MiB ETA:20s]
+[#4bdb06 24GiB/28GiB(87%) CN:16 DL:178MiB ETA:19s]
+[#4bdb06 24GiB/28GiB(88%) CN:16 DL:176MiB ETA:18s]
+[#4bdb06 25GiB/28GiB(89%) CN:16 DL:176MiB ETA:17s]
+[#4bdb06 25GiB/28GiB(89%) CN:16 DL:177MiB ETA:16s]
+[#4bdb06 25GiB/28GiB(90%) CN:16 DL:172MiB ETA:16s]
+[#4bdb06 25GiB/28GiB(90%) CN:16 DL:171MiB ETA:15s]
+[#4bdb06 25GiB/28GiB(91%) CN:16 DL:173MiB ETA:14s]
+[#4bdb06 25GiB/28GiB(92%) CN:16 DL:174MiB ETA:13s]
+[#4bdb06 26GiB/28GiB(92%) CN:16 DL:172MiB ETA:12s]
+[#4bdb06 26GiB/28GiB(93%) CN:16 DL:175MiB ETA:11s]
+[#4bdb06 26GiB/28GiB(93%) CN:16 DL:177MiB ETA:9s]
+[#4bdb06 26GiB/28GiB(94%) CN:16 DL:176MiB ETA:8s]
+[#4bdb06 26GiB/28GiB(95%) CN:16 DL:178MiB ETA:7s]
+[#4bdb06 26GiB/28GiB(95%) CN:16 DL:179MiB ETA:6s]
+[#4bdb06 27GiB/28GiB(96%) CN:16 DL:182MiB ETA:5s]
+[#4bdb06 27GiB/28GiB(97%) CN:16 DL:184MiB ETA:4s]
+[#4bdb06 27GiB/28GiB(97%) CN:16 DL:183MiB ETA:3s]
+[#4bdb06 27GiB/28GiB(98%) CN:16 DL:181MiB ETA:2s]
+[#4bdb06 27GiB/28GiB(98%) CN:13 DL:182MiB ETA:1s]
+[#4bdb06 27GiB/28GiB(99%) CN:10 DL:176MiB ETA:1s]
+[#4bdb06 28GiB/28GiB(99%) CN:3 DL:173MiB]
+
+06/21 06:13:21 [[1;32mNOTICE[0m] Download complete: checkpoints/vjepa2_1_vitG_384.pt
+
+Download Results:
+gid   |stat|avg speed  |path/URI
+======+====+===========+=======================================================
+4bdb06|OK  |   175MiB/s|checkpoints/vjepa2_1_vitG_384.pt
+
+Status Legend:
+(OK):download completed.
+Done [group=trainable]: 1 downloaded, 0 already present (1 total ckpt files in checkpoints/).
+
+=== Downloading prebuilt wheels ===
+Downloading prebuilt sm_120 wheels from: github.com/kapilw25/factorjepa/releases/tag/sm120-cu128-py312
+  Downloading: faiss-1.14.1-cp312-cp312-linux_x86_64.whl
+  Downloading: flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl
+Downloaded 2 wheel(s) to wheels/
+
+Detected GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+[1/10] Installing PyTorch 2.12.0.dev20260408+cu128 (Blackwell — pinned)...
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 29 packages in 1.61s
+Downloading nvidia-nccl-cu12 (280.0MiB)
+Downloading setuptools (1.2MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (84.0MiB)
+Downloading nvidia-curand-cu12 (60.7MiB)
+Downloading sympy (6.0MiB)
+Downloading networkx (2.0MiB)
+Downloading nvidia-cusparse-cu12 (274.9MiB)
+Downloading nvidia-cublas-cu12 (566.8MiB)
+Downloading torch (794.0MiB)
+Downloading triton (278.0MiB)
+Downloading nvidia-cufile-cu12 (1.1MiB)
+Downloading nvidia-cusparselt-cu12 (273.9MiB)
+Downloading nvidia-nvjitlink-cu12 (37.4MiB)
+Downloading nvidia-cudnn-cu12 (627.4MiB)
+Downloading nvidia-cufft-cu12 (184.2MiB)
+Downloading nvidia-nvshmem-cu12 (132.7MiB)
+Downloading nvidia-cuda-cupti-cu12 (9.8MiB)
+ Downloaded setuptools
+Downloading nvidia-cusolver-cu12 (255.1MiB)
+ Downloaded nvidia-cufile-cu12
+Downloading cuda-bindings (11.6MiB)
+ Downloaded cuda-bindings
+ Downloaded networkx
+ Downloaded nvidia-cuda-cupti-cu12
+ Downloaded sympy
+ Downloaded nvidia-nvjitlink-cu12
+ Downloaded triton
+ Downloaded nvidia-curand-cu12
+ Downloaded nvidia-cuda-nvrtc-cu12
+ Downloaded nvidia-nccl-cu12
+ Downloaded nvidia-nvshmem-cu12
+ Downloaded nvidia-cufft-cu12
+ Downloaded nvidia-cusparse-cu12
+ Downloaded torch
+ Downloaded nvidia-cusolver-cu12
+ Downloaded nvidia-cusparselt-cu12
+ Downloaded nvidia-cublas-cu12
+ Downloaded nvidia-cudnn-cu12
+Prepared 26 packages in 29.71s
+Installed 26 packages in 815ms
+ + cuda-bindings==12.9.4
+ + cuda-pathfinder==1.2.2
+ + cuda-toolkit==12.8.1
+ + jinja2==3.1.6
+ + markupsafe==3.0.2
+ + mpmath==1.3.0
+ + networkx==3.6.1
+ + nvidia-cublas-cu12==12.8.4.1
+ + nvidia-cuda-cupti-cu12==12.8.90
+ + nvidia-cuda-nvrtc-cu12==12.8.93
+ + nvidia-cuda-runtime-cu12==12.8.90
+ + nvidia-cudnn-cu12==9.20.0.48
+ + nvidia-cufft-cu12==11.3.3.83
+ + nvidia-cufile-cu12==1.13.1.3
+ + nvidia-curand-cu12==10.3.9.90
+ + nvidia-cusolver-cu12==11.7.3.90
+ + nvidia-cusparse-cu12==12.5.8.93
+ + nvidia-cusparselt-cu12==0.7.1
+ + nvidia-nccl-cu12==2.29.7
+ + nvidia-nvjitlink-cu12==12.8.93
+ + nvidia-nvshmem-cu12==3.4.5
+ + nvidia-nvtx-cu12==12.8.90
+ + setuptools==78.1.0
+ + sympy==1.14.0
+ + torch==2.12.0.dev20260408+cu128
+ + triton==3.7.0+git282c8251
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 1 package in 342ms
+Downloading torchvision (7.9MiB)
+ Downloaded torchvision
+Prepared 1 package in 354ms
+Installed 1 package in 26ms
+ + torchvision==0.27.0.dev20260407+cu128
+
+[2/10] Verifying PyTorch + CUDA...
+PyTorch: 2.12.0.dev20260408+cu128, CUDA: 12.8, GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+torchvision: 0.27.0.dev20260407+cu128 (installed --no-deps, ABI import OK)
+
+[3/10] Installing GPU requirements (UV - fast)...
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 135 packages in 2.72s
+Downloading nvidia-cufile (1.2MiB)
+Downloading nvidia-nvshmem-cu13 (57.6MiB)
+Downloading sentencepiece (1.3MiB)
+Downloading triton (188.6MiB)
+Downloading torchcodec (2.8MiB)
+Downloading timm (2.5MiB)
+Downloading transformers (9.8MiB)
+Downloading nvidia-cusparselt-cu13 (162.3MiB)
+Downloading nvidia-cuda-nvrtc (86.0MiB)
+Downloading hf-transfer (3.4MiB)
+Downloading nvidia-nvjitlink (38.8MiB)
+Downloading nvidia-cusparse (139.2MiB)
+Downloading nvidia-cudnn-cu13 (349.2MiB)
+Downloading cuda-bindings (6.3MiB)
+Downloading nvidia-cuda-runtime (2.1MiB)
+Downloading nvidia-cublas (403.5MiB)
+Downloading torchvision (7.3MiB)
+Downloading nvidia-cufft (204.2MiB)
+Downloading nvidia-cuda-cupti (10.2MiB)
+Downloading torch (507.6MiB)
+Downloading bitsandbytes (57.8MiB)
+Downloading av (33.7MiB)
+Downloading nvidia-nccl-cu13 (196.4MiB)
+Downloading nvidia-curand (56.8MiB)
+Downloading decord (13.0MiB)
+Downloading wandb (25.2MiB)
+Downloading tokenizers (3.1MiB)
+Downloading nvidia-cusolver (191.6MiB)
+   Building iopath==0.1.10
+      Built iopath==0.1.10
+ Downloaded nvidia-cufile
+ Downloaded sentencepiece
+ Downloaded nvidia-cuda-runtime
+ Downloaded timm
+ Downloaded torchcodec
+ Downloaded tokenizers
+ Downloaded hf-transfer
+ Downloaded cuda-bindings
+ Downloaded torchvision
+ Downloaded transformers
+ Downloaded nvidia-cuda-cupti
+ Downloaded decord
+ Downloaded wandb
+ Downloaded av
+ Downloaded nvidia-nvjitlink
+ Downloaded nvidia-curand
+ Downloaded bitsandbytes
+ Downloaded nvidia-nvshmem-cu13
+ Downloaded nvidia-cuda-nvrtc
+ Downloaded nvidia-cusparse
+ Downloaded nvidia-cusparselt-cu13
+ Downloaded triton
+ Downloaded nvidia-cusolver
+ Downloaded nvidia-nccl-cu13
+ Downloaded nvidia-cufft
+ Downloaded nvidia-cudnn-cu13
+ Downloaded nvidia-cublas
+ Downloaded torch
+Prepared 54 packages in 45.92s
+Uninstalled 6 packages in 328ms
+Installed 54 packages in 979ms
+ + accelerate==1.14.0
+ + av==17.1.0
+ + bitsandbytes==0.49.2
+ - cuda-bindings==12.9.4
+ + cuda-bindings==13.3.1
+ - cuda-pathfinder==1.2.2
+ + cuda-pathfinder==1.5.5
+ - cuda-toolkit==12.8.1
+ + cuda-toolkit==13.0.2
+ + decord==0.6.0
+ + einops==0.8.2
+ + ffmpeg-python==0.2.0
+ + ftfy==6.3.1
+ + future==1.0.0
+ + gitdb==4.0.12
+ + gitpython==3.1.50
+ + hf-transfer==0.1.9
+ + imageio==2.37.3
+ + iniconfig==2.3.0
+ + iopath==0.1.10
+ + nvidia-cublas==13.1.1.3
+ + nvidia-cuda-cupti==13.0.85
+ + nvidia-cuda-nvrtc==13.0.88
+ + nvidia-cuda-runtime==13.0.96
+ + nvidia-cudnn-cu13==9.20.0.48
+ + nvidia-cufft==12.0.0.61
+ + nvidia-cufile==1.15.1.6
+ + nvidia-curand==10.4.0.35
+ + nvidia-cusolver==12.0.4.66
+ + nvidia-cusparse==12.6.3.3
+ + nvidia-cusparselt-cu13==0.8.1
+ + nvidia-nccl-cu13==2.29.7
+ + nvidia-nvjitlink==13.0.88
+ + nvidia-nvshmem-cu13==3.4.5
+ + nvidia-nvtx==13.0.85
+ + peft==0.19.1
+ + pluggy==1.6.0
+ + portalocker==3.2.0
+ + protobuf==7.35.1
+ + psutil==7.2.2
+ + pycocotools==2.0.11
+ + pytest==9.1.1
+ + qwen-vl-utils==0.0.14
+ + regex==2026.5.9
+ + safetensors==0.8.0
+ + sentencepiece==0.2.1
+ + sentry-sdk==2.63.0
+ + smmap==5.0.3
+ + timm==1.0.27
+ + tokenizers==0.22.2
+ - torch==2.12.0.dev20260408+cu128
+ + torch==2.12.1
+ + torchcodec==0.14.0
+ - torchvision==0.27.0.dev20260407+cu128
+ + torchvision==0.27.1
+ + transformers==5.5.4
+ - triton==3.7.0+git282c8251
+ + triton==3.7.1
+ + wandb==0.27.2
+ + wcwidth==0.8.1
+
+[4/10] Installing Flash-Attention 2...
+GPU compute capability: sm_120
+Installing FA2 from prebuilt wheel...
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 31 packages in 278ms
+Prepared 1 package in 818ms
+Installed 1 package in 76ms
+ + flash-attn==2.8.3 (from file:///workspace/factorjepa/wheels/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl)
+
+[5/10] Installing FAISS-GPU (CUDA 12)...
+Installing libopenblas-dev (FAISS runtime dependency)...
+Installing FAISS-GPU from prebuilt wheel...
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 3 packages in 267ms
+Prepared 1 package in 67ms
+Installed 1 package in 21ms
+ + faiss==1.14.1 (from file:///workspace/factorjepa/wheels/faiss-1.14.1-cp312-cp312-linux_x86_64.whl)
+Fixed RPATH for FAISS .so files in /workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/faiss
+
+[6/10] Installing cuML (GPU UMAP)...
+Using Python 3.12.3 environment at: venv_walkindia
+Resolved 55 packages in 1.38s
+Downloading nvidia-cuda-cccl-cu12 (3.0MiB)
+Downloading cudf-cu12 (2.6MiB)
+Downloading nvidia-cusolver-cu12 (322.5MiB)
+Downloading nvidia-libnvcomp-cu12 (30.8MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (85.4MiB)
+Downloading nvidia-cublas-cu12 (554.3MiB)
+Downloading nvidia-cuda-runtime-cu12 (3.3MiB)
+Downloading libnvforest-cu12 (77.6MiB)
+Downloading nvidia-cuda-nvcc-cu12 (38.7MiB)
+Downloading cuda-core (29.4MiB)
+Downloading cupy-cuda12x (127.3MiB)
+Downloading cuda-bindings (7.3MiB)
+Downloading pandas (11.8MiB)
+Downloading nvidia-nvjitlink-cu12 (37.9MiB)
+Downloading cuml-cu12 (5.3MiB)
+Downloading pylibcudf-cu12 (7.9MiB)
+Downloading librmm-cu12 (4.3MiB)
+Downloading nvidia-cufft-cu12 (191.6MiB)
+Downloading libcudf-cu12 (684.1MiB)
+Downloading nvidia-curand-cu12 (65.1MiB)
+Downloading nvidia-cusparse-cu12 (349.5MiB)
+Downloading libkvikio-cu12 (2.3MiB)
+Downloading libcuml-cu12 (362.4MiB)
+Downloading libraft-cu12 (21.6MiB)
+Downloading llvmlite (53.7MiB)
+Downloading numba-cuda (1.8MiB)
+Downloading numba (3.6MiB)
+Downloading pyarrow (45.4MiB)
+ Downloaded cudf-cu12
+ Downloaded nvidia-cuda-cccl-cu12
+ Downloaded libkvikio-cu12
+ Downloaded nvidia-cuda-runtime-cu12
+ Downloaded numba-cuda
+ Downloaded librmm-cu12
+ Downloaded cuml-cu12
+ Downloaded cuda-bindings
+ Downloaded numba
+ Downloaded pylibcudf-cu12
+ Downloaded cuda-core
+ Downloaded pandas
+ Downloaded nvidia-libnvcomp-cu12
+ Downloaded pyarrow
+ Downloaded llvmlite
+ Downloaded cupy-cuda12x
+ Downloaded nvidia-cuda-nvrtc-cu12
+ Downloaded nvidia-cuda-nvcc-cu12
+ Downloaded nvidia-nvjitlink-cu12
+ Downloaded libraft-cu12
+ Downloaded libnvforest-cu12
+ Downloaded nvidia-cusolver-cu12
+ Downloaded nvidia-curand-cu12
+ Downloaded nvidia-cufft-cu12
+ Downloaded nvidia-cublas-cu12
+ Downloaded nvidia-cusparse-cu12
+ Downloaded libcuml-cu12
+ Downloaded libcudf-cu12
+Prepared 39 packages in 1m 18s
+Uninstalled 14 packages in 190ms
+Installed 39 packages in 1.06s
+ + cachetools==7.1.4
+ - cuda-bindings==13.3.1
+ + cuda-bindings==12.9.7
+ + cuda-core==0.7.0
+ + cuda-python==12.9.7
+ - cuda-toolkit==13.0.2
+ + cuda-toolkit==12.9.2.0
+ + cudf-cu12==26.6.0
+ + cuml-cu12==26.6.0
+ + cupy-cuda12x==14.1.1
+ + libcudf-cu12==26.6.0
+ + libcuml-cu12==26.6.0
+ + libkvikio-cu12==26.6.0
+ + libnvforest-cu12==26.6.0
+ + libraft-cu12==26.6.0
+ + librmm-cu12==26.6.0
+ - llvmlite==0.47.0
+ + llvmlite==0.46.0
+ - numba==0.65.1
+ + numba==0.64.0
+ + numba-cuda==0.28.2
+ + nvforest-cu12==26.6.0
+ - nvidia-cublas-cu12==12.8.4.1
+ + nvidia-cublas-cu12==12.9.2.10
+ + nvidia-cuda-cccl-cu12==12.9.27
+ + nvidia-cuda-nvcc-cu12==12.9.86
+ - nvidia-cuda-nvrtc-cu12==12.8.93
+ + nvidia-cuda-nvrtc-cu12==12.9.86
+ - nvidia-cuda-runtime-cu12==12.8.90
+ + nvidia-cuda-runtime-cu12==12.9.79
+ - nvidia-cufft-cu12==11.3.3.83
+ + nvidia-cufft-cu12==11.4.1.4
+ - nvidia-curand-cu12==10.3.9.90
+ + nvidia-curand-cu12==10.3.10.19
+ - nvidia-cusolver-cu12==11.7.3.90
+ + nvidia-cusolver-cu12==11.7.5.82
+ - nvidia-cusparse-cu12==12.5.8.93
+ + nvidia-cusparse-cu12==12.5.10.65
+ + nvidia-libnvcomp-cu12==5.2.0.13
+ - nvidia-nvjitlink-cu12==12.8.93
+ + nvidia-nvjitlink-cu12==12.9.86
+ + nvtx==0.2.15
+ - pandas==3.0.3
+ + pandas==2.3.3
+ - pyarrow==24.0.0
+ + pyarrow==23.0.1
+ + pylibcudf-cu12==26.6.0
+ + pylibraft-cu12==26.6.0
+ + pytz==2026.2
+ + rapids-logger==0.2.3
+ + rmm-cu12==26.6.0
+ + treelite==4.7.0
+ + tzdata==2026.2
+
+[7/10] Installing wandb...
+Using Python 3.12.3 environment at: venv_walkindia
+Checked 1 package in 47ms
+
+[8/10] Installing SAM 3.1 from source (--no-deps to preserve numpy>=2.3)...
+Using Python 3.12.3 environment at: venv_walkindia
+   Updating https://github.com/facebookresearch/sam3.git (HEAD)
+    Updated https://github.com/facebookresearch/sam3.git (5dd401d1c5c1d5c3eedff06d41b77af824517619)
+Resolved 1 package in 4.45s
+   Building sam3 @ git+https://github.com/facebookresearch/sam3.git@5dd401d1c5c1d5c3eedff06d41b77af824517619
+      Built sam3 @ git+https://github.com/facebookresearch/sam3.git@5dd401d1c5c1d5c3eedff06d41b77af824517619
+Prepared 1 package in 266ms
+Installed 1 package in 16ms
+ + sam3==0.1.0 (from git+https://github.com/facebookresearch/sam3.git@5dd401d1c5c1d5c3eedff06d41b77af824517619)
+
+[9/10] Pre-downloading Grounding DINO (IDEA-Research/grounding-dino-base, ~1.8 GB)...
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files:  10%|█         | 1/10 [00:00<00:02,  3.72it/s]Fetching 10 files:  40%|████      | 4/10 [00:10<00:16,  2.73s/it]Fetching 10 files: 100%|██████████| 10/10 [00:10<00:00,  1.02s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/volume/hf_cache/hub/models--IDEA-Research--grounding-dino-base/snapshots/12bdfa3120f3e7ec7b434d90674b3396eccf88eb
+Grounding DINO cached at /workspace/volume/hf_cache/hub/models--IDEA-Research--grounding-dino-base
+
+[10/11] Pre-downloading HF SAM 3 (facebook/sam3, ~12 GB, HF_TRANSFER parallel)...
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:   8%|▊         | 1/12 [00:00<00:01,  5.83it/s]Fetching 12 files:  17%|█▋        | 2/12 [00:00<00:01,  6.47it/s]Fetching 12 files:  50%|█████     | 6/12 [00:38<00:44,  7.44s/it]Fetching 12 files: 100%|██████████| 12/12 [00:38<00:00,  3.23s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/volume/hf_cache/hub/models--facebook--sam3/snapshots/3c879f39826c281e95690f02c7821c4de09afae7
+HF SAM 3 cached at /workspace/volume/hf_cache/hub/models--facebook--sam3
+
+[11/11] Pre-downloading SAM 3.1 checkpoint (facebook/sam3.1, future-upgrade path, non-fatal)...
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:   8%|▊         | 1/12 [00:00<00:02,  4.84it/s]Fetching 12 files:  25%|██▌       | 3/12 [00:05<00:17,  1.93s/it]Fetching 12 files:  33%|███▎      | 4/12 [00:06<00:12,  1.52s/it]Fetching 12 files:  67%|██████▋   | 8/12 [00:22<00:13,  3.27s/it]Fetching 12 files: 100%|██████████| 12/12 [00:22<00:00,  1.89s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/volume/hf_cache/hub/models--facebook--sam3.1/snapshots/daa63191845a41281374e725f4c9e51c7a824460
+SAM 3.1 cached at /workspace/volume/hf_cache/hub/models--facebook--sam3.1
+
+Verifying GPU setup...
+PyTorch:        2.12.1+cu130
+CUDA:           13.0
+GPU:            NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+GPU Arch:       sm_120
+VRAM:           102 GB
+FAISS:          1.14.1 (4 GPU(s) available)
+Flash-Attn:     2.8.3
+Transformers:   5.5.4
+cuML:           26.06.00
+wandb:          0.27.2
+Datasets:       OK
+Grounding DINO: cached (fast tokenizer=True)
+HF SAM 3:       cached (TrackerVideo + Video processors loadable)
+
+SUCCESS: All GPU components verified
+
+[Dependency health] uv pip check...
+OK — 5 known-OK incompatibilities (allowlist: numpy/ftfy/cuda-bindings/cuda-toolkit/decord), 0 unexpected
+
+vLLM: SKIPPED (transformers 2.5x faster for offline batch, see vLLM_plan_Blackwell.md)
+
+============================================
+GPU Setup Complete! (UV)
+============================================
+
+Venv:
+  source venv_walkindia/bin/activate   # m00-m11 pipeline (FAISS, cuML, V-JEPA, SAM 3.1)
+
+Usage:
+  ./scripts/run_evaluate.sh --FULL            # transformers VLM tagging (m04)
+

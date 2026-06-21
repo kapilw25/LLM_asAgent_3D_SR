@@ -1,0 +1,17 @@
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'surgery_3stage_DI_head', 'surgery_noDI_head', 'surgical_3stage_DI_wiseft_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] free=478G · required≈250G
+  [cpu-preflight] 240 cores ≥ ~24 (gpus×6) — OK
+  [cpuset] GPU slots pinned: GPU0→0..59(60t) · GPU1→60..119(60t) · GPU2→120..179(60t) · GPU3→180..239(60t)
+═══ iter18 N-GPU scheduler · mode=POC · backbone=vjepa_2_1_vitG · gpus=4 · cache=2 · 17 jobs (0 train + 17 eval) ═══
+[07:01:54] GPU0 ◀ Y:vjepa_2_1_frozen  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_frozen_20260621_070154.log
+[07:01:54] GPU1 ◀ Y:vjepa_2_1_pretrain_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_pretrain_encoder_20260621_070154.log
+[07:01:54] GPU2 ◀ Y:vjepa_2_1_surgical_3stage_DI_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_surgical_3stage_DI_encoder_20260621_070154.log
+[07:01:54] GPU3 ◀ Y:vjepa_2_1_surgical_noDI_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_surgical_noDI_encoder_20260621_070154.log
+[09:04:54] GPU0 ✓ Y:vjepa_2_1_frozen  (1/17 done)
+[09:04:54] GPU1 ✓ Y:vjepa_2_1_pretrain_encoder  (2/17 done)
+[09:04:54] GPU2 ✓ Y:vjepa_2_1_surgical_3stage_DI_encoder  (3/17 done)
+[09:05:04] GPU0 ◀ Y:vjepa_2_1_surgical_autorgn_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_surgical_autorgn_encoder_20260621_090504.log
+[09:05:04] GPU1 ◀ Y:vjepa_2_1_surgery_raw_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_surgery_raw_encoder_20260621_090504.log
+[09:05:04] GPU2 ◀ Y:vjepa_2_1_full_ft_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_full_ft_encoder_20260621_090504.log
+[09:05:14] GPU3 ✓ Y:vjepa_2_1_surgical_noDI_encoder  (4/17 done)
+[09:05:24] GPU3 ◀ Y:vjepa_2_1_lpft_encoder  → logs/iter18_ngpu_poc_etheads_vjepa_2_1_lpft_encoder_20260621_090524.log

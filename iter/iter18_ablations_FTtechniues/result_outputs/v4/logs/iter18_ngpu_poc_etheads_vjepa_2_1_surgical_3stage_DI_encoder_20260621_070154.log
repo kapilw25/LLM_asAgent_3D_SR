@@ -1,0 +1,343 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 07:01:56 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 21 06:13 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_surgical_3stage_DI_encoder
+  ✓ skip_stages:          1,2,3,4,5,6,7,8,8b,9,9b,9c,10,11,12,13
+  ✓ cache_policy:         2
+  ✓ eval_prefix:          outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitG)
+  ✓ train_root:           outputs/poc/vjepa_2_1_vitG_2B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/action_labels.json → policy=2 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json → policy=2 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json → policy=2 (CACHE_POLICY_ALL)
+  → ACTION=2  COS=2  MSE=2
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitG_2B/train/m09c_surgery_3stage_DI_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_surgical_3stage_DI_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitG_2B/train/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_surgical_3stage_DI_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitG_2B/train/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_surgical_3stage_DI_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_surgical_3stage_DI_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 07:01:56 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_surgical_3stage_DI_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitG_2B/train/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt
+
+═══ 07:01:59 ·   STAGE 8c · encoder_temporal (metric=all) for vjepa_2_1_surgical_3stage_DI_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 512.6 GB / 512.7 GB (100%)
+[m12f_encoder_temporal]   pids:   1577 / 29440 (5%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 512.6 GB / 512.7 GB (100.0%) — kernel may SIGKILL any moment
+  [cache-policy=2/recompute] deleted per_clip_aot.npy: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_aot.npy
+  [cache-policy=2/recompute] deleted aggregate_aot.json: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_aot.json
+  [cache-policy=2/recompute] deleted per_clip_tov.npy: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_tov.npy
+  [cache-policy=2/recompute] deleted aggregate_tov.json: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_tov.json
+  [cache-policy=2/recompute] deleted per_clip_pace.npy: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_pace.npy
+  [cache-policy=2/recompute] deleted aggregate_pace.json: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_pace.json
+  [cache-policy=2/recompute] deleted per_clip_tcc_clip_ids.npy: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_tcc_clip_ids.npy
+  [cache-policy=2/recompute] deleted per_clip_tcc_tau.npy: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_tcc_tau.npy
+  [cache-policy=2/recompute] deleted per_clip_tcc_cycle.npy: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/per_clip_tcc_cycle.npy
+  [cache-policy=2/recompute] deleted aggregate_tcc.json: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/aggregate_tcc.json
+  [cache-policy=2/recompute] deleted .m12f_ckpt_test.npz: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12f_ckpt_test.npz
+  [cache-policy=2/recompute] deleted .m12f_ckpt_train.npz: outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/.m12f_ckpt_train.npz
+  [head-train-cap] train 6854 → 2000 (head-fit only; test/CI unaffected)
+  splits: train=2000  test=1825  metrics=['aot', 'tov', 'pace', 'tcc']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=6656; encoder-only — no predictor build)
+  [share-features] test: off — cache shape (1825, 16, 1712) mismatches (N, T_eff=8, D=6656) — pooling parity not guaranteed
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[aot-tov-tcc/test]:   0%|          | 0/1825 [00:00<?, ?clip/s]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.8 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:   2%|▏         | 32/1825 [01:02<58:07,  1.95s/clip]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.0 GB / 512.7 GB (98.3%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:   4%|▎         | 64/1825 [01:46<48:50,  1.66s/clip, recent=1.4s/clip ETA0.7h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.1 GB / 512.7 GB (98.1%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:   5%|▌         | 96/1825 [02:27<44:12,  1.53s/clip, recent=1.4s/clip ETA0.7h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.0 GB / 512.7 GB (97.7%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:   7%|▋         | 128/1825 [03:07<41:27,  1.47s/clip, recent=1.3s/clip ETA0.6h]m12f[aot-tov-tcc/test]:   9%|▉         | 160/1825 [03:47<39:26,  1.42s/clip, recent=1.3s/clip ETA0.6h]m12f[aot-tov-tcc/test]:  11%|█         | 192/1825 [04:26<37:49,  1.39s/clip, recent=1.2s/clip ETA0.6h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 506.1 GB / 512.7 GB (98.7%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  12%|█▏        | 224/1825 [05:06<36:31,  1.37s/clip, recent=1.2s/clip ETA0.6h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.9 GB / 512.7 GB (98.3%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  14%|█▍        | 256/1825 [05:46<35:24,  1.35s/clip, recent=1.2s/clip ETA0.6h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.9 GB / 512.7 GB (98.3%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  16%|█▌        | 288/1825 [06:27<34:28,  1.35s/clip, recent=1.2s/clip ETA0.5h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.5 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  18%|█▊        | 320/1825 [07:08<33:33,  1.34s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  19%|█▉        | 352/1825 [07:48<32:40,  1.33s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  21%|██        | 384/1825 [08:29<31:50,  1.33s/clip, recent=1.3s/clip ETA0.5h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 500.2 GB / 512.7 GB (97.6%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  23%|██▎       | 416/1825 [09:09<31:01,  1.32s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  25%|██▍       | 448/1825 [09:50<30:13,  1.32s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  26%|██▋       | 480/1825 [10:30<29:27,  1.31s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  28%|██▊       | 512/1825 [11:11<28:42,  1.31s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  30%|██▉       | 544/1825 [11:51<27:56,  1.31s/clip, recent=1.3s/clip ETA0.5h]m12f[aot-tov-tcc/test]:  32%|███▏      | 576/1825 [12:32<27:11,  1.31s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  33%|███▎      | 608/1825 [13:13<26:27,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  35%|███▌      | 640/1825 [13:54<25:45,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  37%|███▋      | 672/1825 [14:35<25:02,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  39%|███▊      | 704/1825 [15:16<24:19,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  40%|████      | 736/1825 [15:57<23:36,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  42%|████▏     | 768/1825 [16:38<22:53,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  44%|████▍     | 800/1825 [17:18<22:11,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  46%|████▌     | 832/1825 [18:00<21:29,  1.30s/clip, recent=1.3s/clip ETA0.4h]  [tar reader] subset-00003.tar: emitted=138, dropped=0 (missing_part=0, empty_mp4=0), filtered=862 (subset=862, resume=0)
+m12f[aot-tov-tcc/test]:  47%|████▋     | 864/1825 [18:41<20:47,  1.30s/clip, recent=1.3s/clip ETA0.4h]m12f[aot-tov-tcc/test]:  49%|████▉     | 896/1825 [19:21<20:04,  1.30s/clip, recent=1.3s/clip ETA0.3h]m12f[aot-tov-tcc/test]:  51%|█████     | 928/1825 [20:02<19:22,  1.30s/clip, recent=1.3s/clip ETA0.3h]m12f[aot-tov-tcc/test]:  53%|█████▎    | 960/1825 [20:42<18:39,  1.29s/clip, recent=1.3s/clip ETA0.3h]  [tar reader] subset-00004.tar: emitted=137, dropped=0 (missing_part=0, empty_mp4=0), filtered=863 (subset=863, resume=0)
+m12f[aot-tov-tcc/test]:  54%|█████▍    | 992/1825 [21:24<17:58,  1.29s/clip, recent=1.3s/clip ETA0.3h]  [tar reader] subset-00000.tar: emitted=144, dropped=0 (missing_part=0, empty_mp4=0), filtered=856 (subset=856, resume=0)
+m12f[aot-tov-tcc/test]:  56%|█████▌    | 1024/1825 [22:04<17:16,  1.29s/clip, recent=1.3s/clip ETA0.3h]m12f[aot-tov-tcc/test]:  58%|█████▊    | 1056/1825 [22:45<16:34,  1.29s/clip, recent=1.3s/clip ETA0.3h]m12f[aot-tov-tcc/test]:  60%|█████▉    | 1088/1825 [23:26<15:52,  1.29s/clip, recent=1.3s/clip ETA0.3h]  [tar reader] subset-00009.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=277 (subset=277, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.6 GB / 512.7 GB (98.6%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  61%|██████▏   | 1120/1825 [24:06<15:10,  1.29s/clip, recent=1.3s/clip ETA0.3h]m12f[aot-tov-tcc/test]:  63%|██████▎   | 1152/1825 [24:47<14:29,  1.29s/clip, recent=1.3s/clip ETA0.2h]m12f[aot-tov-tcc/test]:  65%|██████▍   | 1184/1825 [25:28<13:47,  1.29s/clip, recent=1.3s/clip ETA0.2h]m12f[aot-tov-tcc/test]:  67%|██████▋   | 1216/1825 [26:08<13:05,  1.29s/clip, recent=1.3s/clip ETA0.2h]m12f[aot-tov-tcc/test]:  68%|██████▊   | 1248/1825 [26:48<12:23,  1.29s/clip, recent=1.3s/clip ETA0.2h]m12f[aot-tov-tcc/test]:  70%|███████   | 1280/1825 [27:29<11:42,  1.29s/clip, recent=1.3s/clip ETA0.2h]m12f[aot-tov-tcc/test]:  72%|███████▏  | 1312/1825 [28:10<11:00,  1.29s/clip, recent=1.3s/clip ETA0.2h]  [tar reader] subset-00001.tar: emitted=199, dropped=0 (missing_part=0, empty_mp4=0), filtered=801 (subset=801, resume=0)
+m12f[aot-tov-tcc/test]:  74%|███████▎  | 1344/1825 [28:51<10:19,  1.29s/clip, recent=1.3s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.3 GB / 512.7 GB (97.8%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  75%|███████▌  | 1376/1825 [29:31<09:38,  1.29s/clip, recent=1.3s/clip ETA0.2h]  [tar reader] subset-00006.tar: emitted=204, dropped=0 (missing_part=0, empty_mp4=0), filtered=796 (subset=796, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.8 GB / 512.7 GB (97.9%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  77%|███████▋  | 1408/1825 [30:13<08:57,  1.29s/clip, recent=1.3s/clip ETA0.2h]  [tar reader] subset-00005.tar: emitted=231, dropped=0 (missing_part=0, empty_mp4=0), filtered=769 (subset=769, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.2 GB / 512.7 GB (98.0%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  79%|███████▉  | 1440/1825 [30:54<08:15,  1.29s/clip, recent=1.3s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.9 GB / 512.7 GB (98.1%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  81%|████████  | 1472/1825 [31:35<07:34,  1.29s/clip, recent=1.3s/clip ETA0.1h]  [tar reader] subset-00002.tar: emitted=244, dropped=0 (missing_part=0, empty_mp4=0), filtered=756 (subset=756, resume=0)
+m12f[aot-tov-tcc/test]:  82%|████████▏ | 1504/1825 [32:16<06:53,  1.29s/clip, recent=1.3s/clip ETA0.1h]  [tar reader] subset-00007.tar: emitted=336, dropped=0 (missing_part=0, empty_mp4=0), filtered=664 (subset=664, resume=0)
+m12f[aot-tov-tcc/test]:  84%|████████▍ | 1536/1825 [32:57<06:12,  1.29s/clip, recent=1.3s/clip ETA0.1h]m12f[aot-tov-tcc/test]:  86%|████████▌ | 1568/1825 [33:38<05:30,  1.29s/clip, recent=1.3s/clip ETA0.1h]  [tar reader] subset-00008.tar: emitted=172, dropped=0 (missing_part=0, empty_mp4=0), filtered=828 (subset=828, resume=0)
+m12f[aot-tov-tcc/test]:  88%|████████▊ | 1600/1825 [34:19<04:49,  1.29s/clip, recent=1.3s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.8 GB / 512.7 GB (98.3%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  89%|████████▉ | 1632/1825 [34:59<04:08,  1.29s/clip, recent=1.3s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.4 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  91%|█████████ | 1664/1825 [35:39<03:27,  1.29s/clip, recent=1.3s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.8 GB / 512.7 GB (98.3%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  93%|█████████▎| 1696/1825 [36:21<02:45,  1.29s/clip, recent=1.3s/clip ETA0.1h]m12f[aot-tov-tcc/test]:  95%|█████████▍| 1728/1825 [37:02<02:04,  1.29s/clip, recent=1.3s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.1 GB / 512.7 GB (97.9%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  96%|█████████▋| 1760/1825 [37:45<01:23,  1.29s/clip, recent=1.3s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.7 GB / 512.7 GB (98.0%) — kernel may SIGKILL any moment
+m12f[aot-tov-tcc/test]:  98%|█████████▊| 1792/1825 [38:28<00:42,  1.29s/clip, recent=1.3s/clip ETA0.0h]m12f[aot-tov-tcc/test]: 100%|█████████▉| 1824/1825 [39:07<00:01,  1.29s/clip, recent=1.3s/clip ETA0.0h]m12f[aot-tov-tcc/test]: 100%|██████████| 1825/1825 [39:08<00:00,  1.29s/clip, recent=1.2s/clip ETA0.0h]m12f[aot-tov-tcc/test]: 100%|██████████| 1825/1825 [39:08<00:00,  1.29s/clip, recent=1.2s/clip ETA0.0h]
+  [share-features] train: off — probe_action cache missing at outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/vjepa_2_1_surgical_3stage_DI_encoder
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[aot-tov/train]:   0%|          | 0/2000 [00:00<?, ?clip/s]  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[aot-tov/train]:   2%|▏         | 32/2000 [39:51<40:50:52, 74.72s/clip]m12f[aot-tov/train]:   3%|▎         | 64/2000 [40:29<20:24:42, 37.96s/clip, recent=1.3s/clip ETA0.7h]m12f[aot-tov/train]:   5%|▍         | 96/2000 [41:05<13:34:53, 25.68s/clip, recent=1.2s/clip ETA0.6h]m12f[aot-tov/train]:   6%|▋         | 128/2000 [41:40<10:09:34, 19.54s/clip, recent=1.1s/clip ETA0.6h]m12f[aot-tov/train]:   8%|▊         | 160/2000 [42:16<8:06:08, 15.85s/clip, recent=1.1s/clip ETA0.6h] m12f[aot-tov/train]:  10%|▉         | 192/2000 [42:52<6:43:40, 13.40s/clip, recent=1.1s/clip ETA0.6h]m12f[aot-tov/train]:  11%|█         | 224/2000 [43:27<5:44:34, 11.64s/clip, recent=1.1s/clip ETA0.6h]m12f[aot-tov/train]:  13%|█▎        | 256/2000 [44:04<5:00:15, 10.33s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  14%|█▍        | 288/2000 [44:39<4:25:30,  9.31s/clip, recent=1.1s/clip ETA0.6h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.6 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  16%|█▌        | 320/2000 [45:16<3:57:39,  8.49s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  18%|█▊        | 352/2000 [45:52<3:34:47,  7.82s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  19%|█▉        | 384/2000 [46:27<3:15:31,  7.26s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  21%|██        | 416/2000 [47:03<2:59:11,  6.79s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  22%|██▏       | 448/2000 [47:39<2:45:07,  6.38s/clip, recent=1.1s/clip ETA0.5h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.6 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  24%|██▍       | 480/2000 [48:15<2:32:49,  6.03s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  26%|██▌       | 512/2000 [48:52<2:22:01,  5.73s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  27%|██▋       | 544/2000 [49:28<2:12:25,  5.46s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  29%|██▉       | 576/2000 [50:04<2:03:47,  5.22s/clip, recent=1.1s/clip ETA0.5h]m12f[aot-tov/train]:  30%|███       | 608/2000 [50:40<1:56:00,  5.00s/clip, recent=1.1s/clip ETA0.4h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.5 GB / 512.7 GB (98.2%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  32%|███▏      | 640/2000 [51:15<1:48:56,  4.81s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  34%|███▎      | 672/2000 [51:51<1:42:28,  4.63s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  35%|███▌      | 704/2000 [52:27<1:36:33,  4.47s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  37%|███▋      | 736/2000 [53:03<1:31:07,  4.33s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  38%|███▊      | 768/2000 [53:39<1:26:04,  4.19s/clip, recent=1.1s/clip ETA0.4h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.2 GB / 512.7 GB (98.0%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  40%|████      | 800/2000 [54:15<1:21:23,  4.07s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  42%|████▏     | 832/2000 [54:51<1:17:00,  3.96s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  43%|████▎     | 864/2000 [55:27<1:12:54,  3.85s/clip, recent=1.1s/clip ETA0.4h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.5 GB / 512.7 GB (98.2%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  45%|████▍     | 896/2000 [56:03<1:09:04,  3.75s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  46%|████▋     | 928/2000 [56:39<1:05:27,  3.66s/clip, recent=1.1s/clip ETA0.4h]m12f[aot-tov/train]:  48%|████▊     | 960/2000 [57:16<1:02:02,  3.58s/clip, recent=1.1s/clip ETA0.3h]m12f[aot-tov/train]:  50%|████▉     | 992/2000 [57:52<58:48,  3.50s/clip, recent=1.1s/clip ETA0.3h]  m12f[aot-tov/train]:  51%|█████     | 1024/2000 [58:28<55:43,  3.43s/clip, recent=1.1s/clip ETA0.3h]m12f[aot-tov/train]:  53%|█████▎    | 1056/2000 [59:01<52:46,  3.35s/clip, recent=1.1s/clip ETA0.3h]m12f[aot-tov/train]:  54%|█████▍    | 1088/2000 [59:35<49:57,  3.29s/clip, recent=1.0s/clip ETA0.3h]m12f[aot-tov/train]:  56%|█████▌    | 1120/2000 [1:00:09<47:16,  3.22s/clip, recent=1.1s/clip ETA0.3h]m12f[aot-tov/train]:  58%|█████▊    | 1152/2000 [1:00:44<44:42,  3.16s/clip, recent=1.1s/clip ETA0.3h]m12f[aot-tov/train]:  59%|█████▉    | 1184/2000 [1:01:18<42:15,  3.11s/clip, recent=1.1s/clip ETA0.3h]m12f[aot-tov/train]:  61%|██████    | 1216/2000 [1:01:53<39:54,  3.05s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  62%|██████▏   | 1248/2000 [1:02:27<37:37,  3.00s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  64%|██████▍   | 1280/2000 [1:03:01<35:26,  2.95s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  66%|██████▌   | 1312/2000 [1:03:37<33:21,  2.91s/clip, recent=1.1s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.0 GB / 512.7 GB (98.5%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  67%|██████▋   | 1344/2000 [1:04:13<31:20,  2.87s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  69%|██████▉   | 1376/2000 [1:04:49<29:23,  2.83s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  70%|███████   | 1408/2000 [1:05:26<27:30,  2.79s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  72%|███████▏  | 1440/2000 [1:06:02<25:40,  2.75s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  74%|███████▎  | 1472/2000 [1:06:38<23:54,  2.72s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  75%|███████▌  | 1504/2000 [1:07:14<22:10,  2.68s/clip, recent=1.1s/clip ETA0.2h]m12f[aot-tov/train]:  77%|███████▋  | 1536/2000 [1:07:51<20:29,  2.65s/clip, recent=1.1s/clip ETA0.2h]  [tar reader] subset-00002.tar: emitted=594, dropped=0 (missing_part=0, empty_mp4=0), filtered=406 (subset=406, resume=0)
+m12f[aot-tov/train]:  78%|███████▊  | 1568/2000 [1:08:26<18:51,  2.62s/clip, recent=1.1s/clip ETA0.1h]m12f[aot-tov/train]:  80%|████████  | 1600/2000 [1:09:03<17:15,  2.59s/clip, recent=1.1s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.7 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  82%|████████▏ | 1632/2000 [1:09:39<15:42,  2.56s/clip, recent=1.1s/clip ETA0.1h]m12f[aot-tov/train]:  83%|████████▎ | 1664/2000 [1:10:15<14:11,  2.53s/clip, recent=1.1s/clip ETA0.1h]m12f[aot-tov/train]:  85%|████████▍ | 1696/2000 [1:10:51<12:42,  2.51s/clip, recent=1.1s/clip ETA0.1h]  [tar reader] subset-00000.tar: emitted=709, dropped=0 (missing_part=0, empty_mp4=0), filtered=291 (subset=291, resume=0)
+m12f[aot-tov/train]:  86%|████████▋ | 1728/2000 [1:11:27<11:14,  2.48s/clip, recent=1.1s/clip ETA0.1h]  [tar reader] subset-00001.tar: emitted=697, dropped=0 (missing_part=0, empty_mp4=0), filtered=303 (subset=303, resume=0)
+m12f[aot-tov/train]:  88%|████████▊ | 1760/2000 [1:12:03<09:49,  2.46s/clip, recent=1.1s/clip ETA0.1h]m12f[aot-tov/train]:  90%|████████▉ | 1792/2000 [1:12:40<08:26,  2.43s/clip, recent=1.1s/clip ETA0.1h]m12f[aot-tov/train]:  91%|█████████ | 1824/2000 [1:13:17<07:04,  2.41s/clip, recent=1.2s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.2 GB / 512.7 GB (98.3%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  93%|█████████▎| 1856/2000 [1:13:54<05:44,  2.39s/clip, recent=1.1s/clip ETA0.1h]m12f[aot-tov/train]:  94%|█████████▍| 1888/2000 [1:14:31<04:25,  2.37s/clip, recent=1.2s/clip ETA0.0h]m12f[aot-tov/train]:  96%|█████████▌| 1920/2000 [1:15:09<03:07,  2.35s/clip, recent=1.2s/clip ETA0.0h]m12f[aot-tov/train]:  98%|█████████▊| 1952/2000 [1:15:46<01:51,  2.33s/clip, recent=1.2s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.1 GB / 512.7 GB (97.7%) — kernel may SIGKILL any moment
+m12f[aot-tov/train]:  99%|█████████▉| 1984/2000 [1:16:22<00:36,  2.31s/clip, recent=1.2s/clip ETA0.0h]m12f[aot-tov/train]: 100%|██████████| 2000/2000 [1:16:40<00:00,  2.30s/clip, recent=1.1s/clip ETA0.0h]m12f[aot-tov/train]: 100%|██████████| 2000/2000 [1:16:40<00:00,  2.30s/clip, recent=1.1s/clip ETA0.0h]
+  [share-features] test: off — n/a (no aot/tov in group)
+  [resume] .m12f_ckpt_test.npz holds metrics=['aot', 'tov', 'tcc'] ≠ current ['pace'] — discarding (full re-extract)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[pace/test]:   0%|          | 0/1825 [00:00<?, ?clip/s]m12f[pace/test]:   2%|▏         | 32/1825 [1:17:12<72:06:22, 144.78s/clip]m12f[pace/test]:   4%|▎         | 64/1825 [1:17:36<35:35:38, 72.76s/clip, recent=1.0s/clip ETA0.5h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.0 GB / 512.7 GB (97.7%) — kernel may SIGKILL any moment
+m12f[pace/test]:   5%|▌         | 96/1825 [1:18:00<23:25:01, 48.76s/clip, recent=0.9s/clip ETA0.4h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 500.7 GB / 512.7 GB (97.7%) — kernel may SIGKILL any moment
+m12f[pace/test]:   7%|▋         | 128/1825 [1:18:24<17:19:32, 36.75s/clip, recent=0.7s/clip ETA0.4h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.4 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/test]:   9%|▉         | 160/1825 [1:18:49<13:40:18, 29.56s/clip, recent=0.7s/clip ETA0.4h]m12f[pace/test]:  11%|█         | 192/1825 [1:19:15<11:14:05, 24.77s/clip, recent=0.8s/clip ETA0.4h]m12f[pace/test]:  12%|█▏        | 224/1825 [1:19:37<9:29:09, 21.33s/clip, recent=0.8s/clip ETA0.4h] m12f[pace/test]:  14%|█▍        | 256/1825 [1:20:00<8:10:24, 18.75s/clip, recent=0.8s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.9 GB / 512.7 GB (98.7%) — kernel may SIGKILL any moment
+m12f[pace/test]:  16%|█▌        | 288/1825 [1:20:23<7:08:59, 16.75s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  18%|█▊        | 320/1825 [1:20:45<6:19:49, 15.14s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  19%|█▉        | 352/1825 [1:21:08<5:39:31, 13.83s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  21%|██        | 384/1825 [1:21:30<5:05:51, 12.74s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.3 GB / 512.7 GB (99.1%) — kernel may SIGKILL any moment
+m12f[pace/test]:  23%|██▎       | 416/1825 [1:21:52<4:37:19, 11.81s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  25%|██▍       | 448/1825 [1:22:16<4:12:52, 11.02s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  26%|██▋       | 480/1825 [1:22:39<3:51:36, 10.33s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.6 GB / 512.7 GB (97.8%) — kernel may SIGKILL any moment
+m12f[pace/test]:  28%|██▊       | 512/1825 [1:23:01<3:32:56,  9.73s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  30%|██▉       | 544/1825 [1:23:25<3:16:25,  9.20s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/test]:  32%|███▏      | 576/1825 [1:23:47<3:01:42,  8.73s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.2 GB / 512.7 GB (97.8%) — kernel may SIGKILL any moment
+m12f[pace/test]:  33%|███▎      | 608/1825 [1:24:10<2:48:28,  8.31s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/test]:  35%|███▌      | 640/1825 [1:24:33<2:36:33,  7.93s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/test]:  37%|███▋      | 672/1825 [1:24:57<2:25:45,  7.58s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/test]:  39%|███▊      | 704/1825 [1:25:19<2:15:52,  7.27s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 500.8 GB / 512.7 GB (97.7%) — kernel may SIGKILL any moment
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.8 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/test]:  40%|████      | 736/1825 [1:25:42<2:06:49,  6.99s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/test]:  42%|████▏     | 768/1825 [1:26:05<1:58:29,  6.73s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.1 GB / 512.7 GB (97.9%) — kernel may SIGKILL any moment
+m12f[pace/test]:  44%|████▍     | 800/1825 [1:26:28<1:50:48,  6.49s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.0 GB / 512.7 GB (99.1%) — kernel may SIGKILL any moment
+m12f[pace/test]:  46%|████▌     | 832/1825 [1:26:51<1:43:40,  6.26s/clip, recent=0.7s/clip ETA0.2h]  [tar reader] subset-00000.tar: emitted=144, dropped=0 (missing_part=0, empty_mp4=0), filtered=856 (subset=856, resume=0)
+m12f[pace/test]:  47%|████▋     | 864/1825 [1:27:14<1:37:02,  6.06s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 510.6 GB / 512.7 GB (99.6%) — kernel may SIGKILL any moment
+m12f[pace/test]:  49%|████▉     | 896/1825 [1:27:37<1:30:51,  5.87s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.8 GB / 512.7 GB (98.5%) — kernel may SIGKILL any moment
+m12f[pace/test]:  51%|█████     | 928/1825 [1:27:59<1:25:03,  5.69s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/test]:  53%|█████▎    | 960/1825 [1:28:23<1:19:38,  5.52s/clip, recent=0.7s/clip ETA0.2h]  [tar reader] subset-00004.tar: emitted=137, dropped=0 (missing_part=0, empty_mp4=0), filtered=863 (subset=863, resume=0)
+  [tar reader] subset-00003.tar: emitted=138, dropped=0 (missing_part=0, empty_mp4=0), filtered=862 (subset=862, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.8 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  54%|█████▍    | 992/1825 [1:28:45<1:14:31,  5.37s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.1 GB / 512.7 GB (99.1%) — kernel may SIGKILL any moment
+m12f[pace/test]:  56%|█████▌    | 1024/1825 [1:29:07<1:09:42,  5.22s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 510.0 GB / 512.7 GB (99.5%) — kernel may SIGKILL any moment
+m12f[pace/test]:  58%|█████▊    | 1056/1825 [1:29:30<1:05:10,  5.09s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/test]:  60%|█████▉    | 1088/1825 [1:29:53<1:00:53,  4.96s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00009.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=277 (subset=277, resume=0)
+m12f[pace/test]:  61%|██████▏   | 1120/1825 [1:30:16<56:49,  4.84s/clip, recent=0.7s/clip ETA0.1h]  
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.4 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  63%|██████▎   | 1152/1825 [1:30:38<52:57,  4.72s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.6 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  65%|██████▍   | 1184/1825 [1:31:01<49:16,  4.61s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/test]:  67%|██████▋   | 1216/1825 [1:31:24<45:46,  4.51s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00006.tar: emitted=204, dropped=0 (missing_part=0, empty_mp4=0), filtered=796 (subset=796, resume=0)
+  [tar reader] subset-00001.tar: emitted=199, dropped=0 (missing_part=0, empty_mp4=0), filtered=801 (subset=801, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.7 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/test]:  68%|██████▊   | 1248/1825 [1:31:45<42:25,  4.41s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.5 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/test]:  70%|███████   | 1280/1825 [1:32:08<39:13,  4.32s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.5 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  72%|███████▏  | 1312/1825 [1:32:31<36:10,  4.23s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00002.tar: emitted=244, dropped=0 (missing_part=0, empty_mp4=0), filtered=756 (subset=756, resume=0)
+m12f[pace/test]:  74%|███████▎  | 1344/1825 [1:32:53<33:14,  4.15s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00005.tar: emitted=231, dropped=0 (missing_part=0, empty_mp4=0), filtered=769 (subset=769, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.7 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/test]:  75%|███████▌  | 1376/1825 [1:33:17<30:26,  4.07s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 507.7 GB / 512.7 GB (99.0%) — kernel may SIGKILL any moment
+m12f[pace/test]:  77%|███████▋  | 1408/1825 [1:33:41<27:45,  3.99s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/test]:  79%|███████▉  | 1440/1825 [1:34:04<25:09,  3.92s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.2 GB / 512.7 GB (99.3%) — kernel may SIGKILL any moment
+m12f[pace/test]:  81%|████████  | 1472/1825 [1:34:28<22:39,  3.85s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.5 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  82%|████████▏ | 1504/1825 [1:34:50<20:14,  3.78s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00008.tar: emitted=172, dropped=0 (missing_part=0, empty_mp4=0), filtered=828 (subset=828, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.6 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  84%|████████▍ | 1536/1825 [1:35:13<17:55,  3.72s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/test]:  86%|████████▌ | 1568/1825 [1:35:35<15:40,  3.66s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00007.tar: emitted=336, dropped=0 (missing_part=0, empty_mp4=0), filtered=664 (subset=664, resume=0)
+m12f[pace/test]:  88%|████████▊ | 1600/1825 [1:35:57<13:29,  3.60s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/test]:  89%|████████▉ | 1632/1825 [1:36:17<11:23,  3.54s/clip, recent=0.7s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.5 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/test]:  91%|█████████ | 1664/1825 [1:36:40<09:21,  3.49s/clip, recent=0.7s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.9 GB / 512.7 GB (99.3%) — kernel may SIGKILL any moment
+m12f[pace/test]:  93%|█████████▎| 1696/1825 [1:37:05<07:23,  3.43s/clip, recent=0.7s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 507.4 GB / 512.7 GB (99.0%) — kernel may SIGKILL any moment
+m12f[pace/test]:  95%|█████████▍| 1728/1825 [1:37:30<05:28,  3.39s/clip, recent=0.7s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.9 GB / 512.7 GB (98.7%) — kernel may SIGKILL any moment
+m12f[pace/test]:  96%|█████████▋| 1760/1825 [1:37:55<03:37,  3.34s/clip, recent=0.8s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.6 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/test]:  98%|█████████▊| 1792/1825 [1:38:19<01:48,  3.29s/clip, recent=0.8s/clip ETA0.0h]m12f[pace/test]: 100%|█████████▉| 1824/1825 [1:38:39<00:03,  3.25s/clip, recent=0.8s/clip ETA0.0h]m12f[pace/test]: 100%|██████████| 1825/1825 [1:38:40<00:00,  3.24s/clip, recent=0.7s/clip ETA0.0h]m12f[pace/test]: 100%|██████████| 1825/1825 [1:38:40<00:00,  3.24s/clip, recent=0.7s/clip ETA0.0h]
+  [share-features] train: off — n/a (no aot/tov in group)
+  [resume] .m12f_ckpt_train.npz holds metrics=['aot', 'tov'] ≠ current ['pace'] — discarding (full re-extract)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[pace/train]:   0%|          | 0/2000 [00:00<?, ?clip/s]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 500.1 GB / 512.7 GB (97.5%) — kernel may SIGKILL any moment
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.7 GB / 512.7 GB (98.2%) — kernel may SIGKILL any moment
+m12f[pace/train]:   2%|▏         | 32/2000 [1:39:04<101:32:40, 185.75s/clip]m12f[pace/train]:   3%|▎         | 64/2000 [1:39:26<50:08:02, 93.22s/clip, recent=0.7s/clip ETA0.4h]m12f[pace/train]:   5%|▍         | 96/2000 [1:39:47<32:59:11, 62.37s/clip, recent=0.7s/clip ETA0.4h]m12f[pace/train]:   6%|▋         | 128/2000 [1:40:07<24:24:24, 46.94s/clip, recent=0.7s/clip ETA0.4h]m12f[pace/train]:   8%|▊         | 160/2000 [1:40:27<19:15:21, 37.67s/clip, recent=0.6s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 507.4 GB / 512.7 GB (99.0%) — kernel may SIGKILL any moment
+m12f[pace/train]:  10%|▉         | 192/2000 [1:40:48<15:49:16, 31.50s/clip, recent=0.6s/clip ETA0.3h]m12f[pace/train]:  11%|█         | 224/2000 [1:41:08<13:21:56, 27.09s/clip, recent=0.6s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.6 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[pace/train]:  13%|█▎        | 256/2000 [1:41:28<11:31:20, 23.78s/clip, recent=0.6s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.6 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/train]:  14%|█▍        | 288/2000 [1:41:52<10:05:36, 21.22s/clip, recent=0.6s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.6 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/train]:  16%|█▌        | 320/2000 [1:42:14<8:56:45, 19.17s/clip, recent=0.7s/clip ETA0.3h] m12f[pace/train]:  18%|█▊        | 352/2000 [1:42:36<8:00:22, 17.49s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  19%|█▉        | 384/2000 [1:42:58<7:13:22, 16.09s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.0 GB / 512.7 GB (97.9%) — kernel may SIGKILL any moment
+m12f[pace/train]:  21%|██        | 416/2000 [1:43:20<6:33:30, 14.91s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  22%|██▏       | 448/2000 [1:43:42<5:59:16, 13.89s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  24%|██▍       | 480/2000 [1:44:04<5:29:34, 13.01s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.7 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/train]:  26%|██▌       | 512/2000 [1:44:26<5:03:32, 12.24s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  27%|██▋       | 544/2000 [1:44:48<4:40:31, 11.56s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.8 GB / 512.7 GB (98.1%) — kernel may SIGKILL any moment
+m12f[pace/train]:  29%|██▉       | 576/2000 [1:45:11<4:20:04, 10.96s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  30%|███       | 608/2000 [1:45:34<4:01:42, 10.42s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  32%|███▏      | 640/2000 [1:45:57<3:45:10,  9.93s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 511.2 GB / 512.7 GB (99.7%) — kernel may SIGKILL any moment
+m12f[pace/train]:  34%|███▎      | 672/2000 [1:46:21<3:30:10,  9.50s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  35%|███▌      | 704/2000 [1:46:45<3:16:31,  9.10s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.4 GB / 512.7 GB (97.8%) — kernel may SIGKILL any moment
+m12f[pace/train]:  37%|███▋      | 736/2000 [1:47:08<3:04:00,  8.73s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 501.8 GB / 512.7 GB (97.9%) — kernel may SIGKILL any moment
+m12f[pace/train]:  38%|███▊      | 768/2000 [1:47:32<2:52:30,  8.40s/clip, recent=0.7s/clip ETA0.3h]m12f[pace/train]:  40%|████      | 800/2000 [1:47:55<2:41:52,  8.09s/clip, recent=0.7s/clip ETA0.3h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 503.2 GB / 512.7 GB (98.1%) — kernel may SIGKILL any moment
+m12f[pace/train]:  42%|████▏     | 832/2000 [1:48:18<2:32:03,  7.81s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  43%|████▎     | 864/2000 [1:48:42<2:22:55,  7.55s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  45%|████▍     | 896/2000 [1:49:06<2:14:26,  7.31s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 506.0 GB / 512.7 GB (98.7%) — kernel may SIGKILL any moment
+m12f[pace/train]:  46%|████▋     | 928/2000 [1:49:29<2:06:28,  7.08s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  48%|████▊     | 960/2000 [1:49:52<1:59:02,  6.87s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 510.1 GB / 512.7 GB (99.5%) — kernel may SIGKILL any moment
+m12f[pace/train]:  50%|████▉     | 992/2000 [1:50:16<1:52:03,  6.67s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 506.2 GB / 512.7 GB (98.7%) — kernel may SIGKILL any moment
+m12f[pace/train]:  51%|█████     | 1024/2000 [1:50:39<1:45:28,  6.48s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  53%|█████▎    | 1056/2000 [1:51:03<1:39:16,  6.31s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.8 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/train]:  54%|█████▍    | 1088/2000 [1:51:26<1:33:25,  6.15s/clip, recent=0.7s/clip ETA0.2h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.5 GB / 512.7 GB (98.6%) — kernel may SIGKILL any moment
+m12f[pace/train]:  56%|█████▌    | 1120/2000 [1:51:49<1:27:52,  5.99s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  58%|█████▊    | 1152/2000 [1:52:11<1:22:35,  5.84s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  59%|█████▉    | 1184/2000 [1:52:33<1:17:34,  5.70s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  61%|██████    | 1216/2000 [1:52:55<1:12:48,  5.57s/clip, recent=0.7s/clip ETA0.2h]m12f[pace/train]:  62%|██████▏   | 1248/2000 [1:53:17<1:08:15,  5.45s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/train]:  64%|██████▍   | 1280/2000 [1:53:39<1:03:56,  5.33s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.5 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/train]:  66%|██████▌   | 1312/2000 [1:54:01<59:47,  5.21s/clip, recent=0.7s/clip ETA0.1h]  m12f[pace/train]:  67%|██████▋   | 1344/2000 [1:54:24<55:50,  5.11s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/train]:  69%|██████▉   | 1376/2000 [1:54:45<52:02,  5.00s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/train]:  70%|███████   | 1408/2000 [1:55:07<48:24,  4.91s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.7 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/train]:  72%|███████▏  | 1440/2000 [1:55:30<44:55,  4.81s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.2 GB / 512.7 GB (99.1%) — kernel may SIGKILL any moment
+m12f[pace/train]:  74%|███████▎  | 1472/2000 [1:55:52<41:33,  4.72s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00002.tar: emitted=594, dropped=0 (missing_part=0, empty_mp4=0), filtered=406 (subset=406, resume=0)
+m12f[pace/train]:  75%|███████▌  | 1504/2000 [1:56:15<38:20,  4.64s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 500.4 GB / 512.7 GB (97.6%) — kernel may SIGKILL any moment
+m12f[pace/train]:  77%|███████▋  | 1536/2000 [1:56:38<35:14,  4.56s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/train]:  78%|███████▊  | 1568/2000 [1:57:02<32:14,  4.48s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/train]:  80%|████████  | 1600/2000 [1:57:25<29:21,  4.40s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 502.7 GB / 512.7 GB (98.0%) — kernel may SIGKILL any moment
+m12f[pace/train]:  82%|████████▏ | 1632/2000 [1:57:48<26:33,  4.33s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 499.6 GB / 512.7 GB (97.4%) — kernel may SIGKILL any moment
+m12f[pace/train]:  83%|████████▎ | 1664/2000 [1:58:11<23:51,  4.26s/clip, recent=0.7s/clip ETA0.1h]m12f[pace/train]:  85%|████████▍ | 1696/2000 [1:58:35<21:15,  4.20s/clip, recent=0.7s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 504.4 GB / 512.7 GB (98.4%) — kernel may SIGKILL any moment
+m12f[pace/train]:  86%|████████▋ | 1728/2000 [1:58:59<18:43,  4.13s/clip, recent=0.7s/clip ETA0.1h]  [tar reader] subset-00001.tar: emitted=697, dropped=0 (missing_part=0, empty_mp4=0), filtered=303 (subset=303, resume=0)
+  [tar reader] subset-00000.tar: emitted=709, dropped=0 (missing_part=0, empty_mp4=0), filtered=291 (subset=291, resume=0)
+m12f[pace/train]:  88%|████████▊ | 1760/2000 [1:59:23<16:16,  4.07s/clip, recent=0.8s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.9 GB / 512.7 GB (99.3%) — kernel may SIGKILL any moment
+m12f[pace/train]:  90%|████████▉ | 1792/2000 [1:59:48<13:54,  4.01s/clip, recent=0.8s/clip ETA0.1h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.0 GB / 512.7 GB (98.5%) — kernel may SIGKILL any moment
+m12f[pace/train]:  91%|█████████ | 1824/2000 [2:00:14<11:36,  3.96s/clip, recent=0.8s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.5 GB / 512.7 GB (99.4%) — kernel may SIGKILL any moment
+m12f[pace/train]:  93%|█████████▎| 1856/2000 [2:00:40<09:21,  3.90s/clip, recent=0.8s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 505.6 GB / 512.7 GB (98.6%) — kernel may SIGKILL any moment
+m12f[pace/train]:  94%|█████████▍| 1888/2000 [2:01:04<07:10,  3.85s/clip, recent=0.8s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 508.7 GB / 512.7 GB (99.2%) — kernel may SIGKILL any moment
+m12f[pace/train]:  96%|█████████▌| 1920/2000 [2:01:30<05:03,  3.80s/clip, recent=0.8s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 510.4 GB / 512.7 GB (99.6%) — kernel may SIGKILL any moment
+m12f[pace/train]:  98%|█████████▊| 1952/2000 [2:01:56<02:59,  3.75s/clip, recent=0.8s/clip ETA0.0h]
+[m12f_encoder_temporal]-oom-watchdog 🔥 IMMINENT SIGKILL: memory 509.2 GB / 512.7 GB (99.3%) — kernel may SIGKILL any moment
+m12f[pace/train]:  99%|█████████▉| 1984/2000 [2:02:20<00:59,  3.70s/clip, recent=0.8s/clip ETA0.0h]m12f[pace/train]: 100%|██████████| 2000/2000 [2:02:34<00:00,  3.68s/clip, recent=0.8s/clip ETA0.0h]m12f[pace/train]: 100%|██████████| 2000/2000 [2:02:34<00:00,  3.68s/clip, recent=0.8s/clip ETA0.0h]
+[keep-heads] aot: saved head → outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/head_aot.pt
+  aot: mean=0.9312 std=0.1903 N=1825 (1s)
+[keep-heads] tov: saved head → outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/head_tov.pt
+  tov: mean=0.9386 std=0.1279 N=1825 (1s)
+[keep-heads] pace: saved head → outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_surgical_3stage_DI_encoder/head_pace.pt
+  pace: mean=0.7291 std=0.2710 N=1825 (1s)
+  [tcc] pair-chunk auto → 36245  (free=54.5G × target=0.85 ÷ 1.28MB/pair, n_pairs=226571)
+  [tcc] 31991/226571 pairs degenerate (collinear features) → τ=NaN, excluded from per-clip τ mean (cycle-back kept).
+  tcc: cycle=2.2605±0.2064  τ=0.2680±0.1204 N=1825 pairs=226571 (10s)
+forward stage: 7367s
+  [post-stage8-cleanup] removed outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/vjepa_2_1_surgical_3stage_DI_encoder/features_test.npy (96M)
+  [post-stage8-cleanup] removed outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/vjepa_2_1_surgical_3stage_DI_encoder/clip_keys_test.npy (100K)
+  [post-stage8-cleanup] removed outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/vjepa_2_1_surgical_3stage_DI_encoder/.probe_features_test_ckpt.npz (93M)
+
+═══ 09:04:49 · DONE · total wall = 122 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/vjepa_2_1_surgical_3stage_DI_encoder/probe.pt
