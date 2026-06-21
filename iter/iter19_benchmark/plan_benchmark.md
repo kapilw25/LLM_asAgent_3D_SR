@@ -100,6 +100,17 @@
 > ⚠️ **Domain caveat:** most 8-board models are **out-of-domain** for WalkIndia (game / robot / driving / 3D) → expect domain-shifted rows. That's an **informative result**, not a bug — and exactly what a cross-domain benchmark surfaces.
 > 🚫 **Excluded (closed weights):** Genie 3 (DeepMind), Marble (World Labs), Sora, GAIA-2 (Wayve) — out of scope by construction (a *feature* of "open-system"). *(Vista, OpenViGA, LingBot-World = open driving-WMs → optional 8-board candidates.)*
 
+> 💡 **What "no training" means — the per-model cost is cheap (the field-standard probe protocol, NOT a retrain):**
+
+```text
+per new model:  ONE feature extraction (encoder forward over the corpus)  ← the real cost, done ONCE, SHARED across all metrics
+                + a tiny linear-head fit per LEARNED metric (act · tax · aot · tov · pace)  ← seconds each, on the already-extracted features
+                + tcc  ← no head at all (training-free)
+the world model is NEVER retrained — "no training" = no WM retraining, NOT "no probe fit"
+```
+
+> 🧷 The linear/attentive probe is a single layer fit in seconds on frozen features; the one-time encoder forward dominates. (Our own ~12–18 h temporal-head pass is *only* because we must re-extract eval_10k features — the original runs discarded the heads — not because head-fitting is slow.)
+
 ---
 
 ## 🧾 §1b — Our reference rows: 16 arms on **V-JEPA 2.1 2B** (eval-only on `subset_10k_local`)

@@ -51,7 +51,8 @@ BACKBONE = os.environ.get("ITER18_BACKBONE", "vjepa_2_1_vitG")
 # exported by the operator + inherited by each run_eval.sh subprocess; the scheduler reads it too so its
 # resume markers check the matching eval/<corpus>/ dir. The cross-set INPUTS (LOCAL_DATA / EVAL_SUBSET /
 # PROBE_SPLIT / CLASS_EDGES / EVAL_HEAD_REUSE_ROOT) are likewise inherited by run_eval.
-EVAL_CORPUS = os.environ.get("EVAL_CORPUS", "eval_10k")
+TRAINED_CORPUS = "eval_10k"   # the corpus run_train labels; EVAL_CORPUS != this ⇒ cross-set (needs the L: label-bootstrap)
+EVAL_CORPUS = os.environ.get("EVAL_CORPUS", TRAINED_CORPUS)
 
 
 def enc_prefix():
@@ -97,6 +98,17 @@ ET_METRICS = ["aot", "tov", "pace", "tcc"]                   # mirrors m12f.METR
 # cross-set EVAL_HEAD_REUSE_ROOT source — fanned one-encoder-per-GPU, turning the ~10 h single-GPU
 # `run_eval.sh --encoders <all-17>` taxheads pass into a ~gpus-wide one. No train, no §3 finale.
 TAXHEADS_SKIP = "1,2,3,4,5,6,7,8,8b,8c,9,9b,9c,10,12,13"
+# iter18 (2026-06-21) --etheads-only: build the ENCODER-TEMPORAL head reuse source (Stage 8c only).
+# m12f runs ALL metrics (aot/tov/pace fit a tiny linear head; tcc is training-free) with KEEP_PROBE_HEADS=1
+# → m12f --keep-heads saves head_{aot,tov,pace}.pt — the cross-set EVAL_HEAD_REUSE_ROOT source for Stage 8c.
+# Fanned one-encoder-per-GPU (the single-GPU run_eval pass was ~12-18 h → ~5 h on 4 GPUs). No §3 finale.
+ETHEADS_SKIP = "1,2,3,4,5,6,7,8,8b,9,9b,9c,10,11,12,13"
+# iter18 (2026-06-21) cross-set label-bootstrap (L: job, see build_jobs): a FRESH eval corpus has NO
+# action/taxonomy labels, and with all arms cache-skipped no run_train bootstraps them → the per-encoder
+# eval jobs (needs_labels) stay blocked and the §3 finale FATALs at stage-4. L: runs Stage 1 ONLY, first.
+# Stage-1-only = skip everything but 1. Gated to EVAL_CORPUS != TRAINED_CORPUS so the normal eval_10k flow
+# (where run_train already writes the labels) never double-writes them.
+LABELS_ONLY_SKIP = "2,3,4,5,6,7,8,8b,8c,9,9b,9c,10,11,12,13"
 
 
 def cpu_slots(n):
@@ -143,7 +155,7 @@ def now():
     return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
-def build_jobs(mode, taxheads_only=False):
+def build_jobs(mode, taxheads_only=False, etheads_only=False):
     """dict id→job. job = {id,kind,cmd,deps:set,needs_labels:bool,log}."""
     mflag, mtag = f"--{mode}", mode.lower()
     jobs = {}
@@ -160,6 +172,20 @@ def build_jobs(mode, taxheads_only=False):
                 cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={TAXHEADS_SKIP} "
                      f"KEEP_PROBE_HEADS=1 CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
                 log=f"logs/iter18_ngpu_{mtag}_taxheads_{encn}_{{ts}}.log")
+        return jobs, mtag
+    if etheads_only:
+        # Encoder-temporal reuse-source build (mirror of taxheads_only): one Stage-8c-only job per encoder,
+        # ET_METRIC unset (=all → decode shared across aot/tov/tcc; only pace re-decodes), KEEP_PROBE_HEADS=1
+        # → m12f --keep-heads saves head_{aot,tov,pace}.pt (tcc training-free). No train deps; fans across GPUs.
+        # Runs on the TRAINED corpus (eval_10k defaults) — DO NOT export the cross-set EVAL_CORPUS/LOCAL_DATA first.
+        for arm, enc in [("frozen", "frozen")] + list(ARM2ENC.items()):
+            encn = enc_name(enc)
+            yjid = f"Y:{encn}"
+            jobs[yjid] = dict(
+                id=yjid, kind="eval", deps=set(), needs_labels=True,
+                cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={ETHEADS_SKIP} "
+                     f"KEEP_PROBE_HEADS=1 CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
+                log=f"logs/iter18_ngpu_{mtag}_etheads_{encn}_{{ts}}.log")
         return jobs, mtag
     seed_id = f"T:{BACKBONE}:pretrain_encoder"   # seeds shared labels + everyone's init ckpt
     for arm in ARM2ENC:
@@ -192,6 +218,15 @@ def build_jobs(mode, taxheads_only=False):
             cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} NGPU_CONCURRENCY={{conc}} BACKBONE={BACKBONE} CACHE_POLICY_ALL={{cache}} "
                  f"{{pin}}./scripts/run_train.sh {arm} {mflag}"),
             log=f"logs/iter18_ngpu_{mtag}_train_{arm}_{{ts}}.log")
+    # iter18 (2026-06-21): cross-set label-bootstrap (see LABELS_ONLY_SKIP). Added ONLY for a non-default
+    # corpus (the cross-set retest, where no training runs to bootstrap labels). No deps → runs first; each
+    # eval job's labels_ready gate unblocks once L: writes the labels. Cache no-op if labels already exist.
+    if EVAL_CORPUS != TRAINED_CORPUS:
+        jobs["L:labels"] = dict(
+            id="L:labels", kind="eval", deps=set(), needs_labels=False,
+            cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={LABELS_ONLY_SKIP} "
+                 f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders vjepa_2_1_frozen"),
+            log=f"logs/iter18_ngpu_{mtag}_labels_{{ts}}.log")
     # eval jobs (iter18 2026-06-07 metric-parallel): per encoder = ONE E: job (stages 2-8) + 6 P:
     # jobs (Stage 8b, one predictor_temporal metric each, fanned across GPUs). E: and all 6 P: gate
     # on the SAME dep (the encoder's TRAIN job, or none for frozen) — NOT on E: — so Stage 8b runs
@@ -256,11 +291,19 @@ def main():
                          "no train + no other stages + no §3 finale. Replaces the ~10 h single-GPU "
                          "`run_eval.sh --encoders <all-17>` taxheads pass. Use --cache 2 for a fresh "
                          "build; --cache 1 resumes (run_eval skips encoders already done in the tree).")
+    ap.add_argument("--etheads-only", action="store_true",
+                    help="iter18 (2026-06-21): build ONLY the encoder-temporal head reuse source — one "
+                         "Stage-8c (KEEP_PROBE_HEADS=1) eval job per encoder, fanned across --gpus, no "
+                         "train + no other stages + no §3 finale. Runs on the TRAINED corpus (eval_10k "
+                         "defaults — do NOT export the cross-set env first). Replaces the ~12-18 h single-GPU "
+                         "8c pass. Use --cache 2 for a fresh build; --cache 1 resumes.")
     args = ap.parse_args()
-    if args.taxheads_only and args.only:
-        sys.exit("FATAL: --taxheads-only and --only are mutually exclusive.")
+    if args.taxheads_only and args.etheads_only:
+        sys.exit("FATAL: --taxheads-only and --etheads-only are mutually exclusive.")
+    if (args.taxheads_only or args.etheads_only) and args.only:
+        sys.exit("FATAL: --taxheads-only/--etheads-only and --only are mutually exclusive.")
 
-    jobs, mtag = build_jobs(args.mode, taxheads_only=args.taxheads_only)
+    jobs, mtag = build_jobs(args.mode, taxheads_only=args.taxheads_only, etheads_only=args.etheads_only)
 
     if args.only:
         bad = [a for a in args.only if a not in ARM2ENC]
@@ -282,6 +325,7 @@ def main():
             sys.exit("FATAL: cannot skip pretrain_encoder — it is every arm's init dependency.")
         drop = ({f"T:{BACKBONE}:{a}" for a in args.skip_arms}
                 | {f"X:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --taxheads-only jobs
+                | {f"Y:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --etheads-only jobs
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}
                 | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in PT_METRICS}
                 | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in ET_METRICS})
@@ -460,6 +504,11 @@ def main():
 
     if args.taxheads_only:
         print(f"═══ --taxheads-only complete — {len(done)}/{len(jobs)} taxonomy-head job(s) done · "
+              f"§3 finale skipped (reuse-source build only) ═══", flush=True)
+        return
+
+    if args.etheads_only:
+        print(f"═══ --etheads-only complete — {len(done)}/{len(jobs)} encoder-temporal head job(s) done · "
               f"§3 finale skipped (reuse-source build only) ═══", flush=True)
         return
 

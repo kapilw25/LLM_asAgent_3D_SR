@@ -345,7 +345,9 @@
       "Bash(echo \"  clips 32→64 took 55s for 32 clips = 1.7s/clip = 0.59 clip/s → 9566 clips ≈ $\\(python -c \"print\\(f'{9566/0.59/3600:.1f} h'\\)\"\\)\")",
       "Bash(grep -nA12 \"^streaming:\" configs/pipeline.yaml)",
       "Bash(PYTHONPATH=src python -c \"from utils.config import get_motion_decode_config; d=get_motion_decode_config\\(\\); print\\('  → m04d will use       :', d\\)\")",
-      "Bash(echo \"═══ RAM check: new in-flight = 6 flushes × 64 clips = 384 vs old 16×32 = 512 → $\\(python -c \"print\\(f'{\\(1-384/512\\)*100:.0f}% LESS'\\)\"\\) ═══\")"
+      "Bash(echo \"═══ RAM check: new in-flight = 6 flushes × 64 clips = 384 vs old 16×32 = 512 → $\\(python -c \"print\\(f'{\\(1-384/512\\)*100:.0f}% LESS'\\)\"\\) ═══\")",
+      "Bash(EVAL_CORPUS=subset_10k_smoke python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 1 --cache 1 --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder --dry-run)",
+      "Bash(awk '{print \"  L:labels count =\", $1, \"\\(expect 0\\)\"}')"
     ]
   }
 }

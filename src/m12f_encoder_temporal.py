@@ -365,9 +365,10 @@ def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir
     return out
 
 
-def _train_eval_classifier(metric, train_feats, train_labels, test_feats, test_labels, args, embed_dim):
+def _train_eval_classifier(metric, train_feats, train_labels, test_feats, test_labels, args, embed_dim, out_dir):
     """Trainable-head metrics (aot/tov/pace): train head on train split, evaluate per-example
-    on test split, return per-test-example correctness."""
+    on test split, return per-test-example correctness. iter18 cross-set: --head-ckpt-dir loads the
+    eval_10k head + skips training (test-all has train=0); --keep-heads saves the fresh head for reuse."""
     device = "cuda"
     # per-metric, NOT a dict literal — a dict eagerly evaluates pace_strides.split() even for
     # aot/tov (where --pace-strides is legitimately None) → AttributeError.
@@ -380,6 +381,16 @@ def _train_eval_classifier(metric, train_feats, train_labels, test_feats, test_l
     else:
         raise SystemExit(f"FATAL: _train_eval_classifier got non-head metric {metric!r}")
     mod = {"aot": et_aot, "tov": et_tov, "pace": et_pace}[metric]
+    # iter18 head-reuse (Stage B): load the eval_10k head (nn.Linear), skip training, eval TEST only.
+    if args.head_ckpt_dir is not None:
+        head_path = args.head_ckpt_dir / f"head_{metric}.pt"
+        if not head_path.exists():
+            raise SystemExit(f"FATAL: --head-ckpt-dir head {head_path} missing — run the eval_10k gen with --keep-heads first")
+        head = torch.nn.Linear(embed_dim, n_classes)
+        head.load_state_dict(torch.load(head_path, map_location="cpu", weights_only=True))
+        head = head.to(device)
+        print(f"[head-reuse] {metric}: loaded {head_path} → Linear({embed_dim},{n_classes}); training SKIPPED")
+        return mod.eval_head(head, test_feats, test_labels, device=device, batch_size=args.head_batch_size)
     kwargs = dict(embed_dim=embed_dim, lr=args.head_lr, epochs=args.head_epochs,
                   weight_decay=args.head_weight_decay, batch_size=args.head_batch_size,
                   device=device, seed=args.seed)
@@ -387,6 +398,9 @@ def _train_eval_classifier(metric, train_feats, train_labels, test_feats, test_l
         head = mod.train_head(train_feats, train_labels, **kwargs)
     else:
         head = mod.train_head(train_feats, train_labels, n_classes=n_classes, **kwargs)
+    if args.keep_heads:   # save the fresh head as the cross-set reuse SOURCE (mirrors m12c probe_<dim>.pt)
+        torch.save(head.state_dict(), out_dir / f"head_{metric}.pt")
+        print(f"[keep-heads] {metric}: saved head → {out_dir / f'head_{metric}.pt'}")
     return mod.eval_head(head, test_feats, test_labels, device=device, batch_size=args.head_batch_size)
 
 
@@ -525,7 +539,7 @@ def run_forward_stage(args, wb):
                                         decode_T, smap_test)
         head_ms = [m for m in ms if m in ("aot", "tov", "pace")]
         train_res = {}
-        if head_ms:
+        if head_ms and args.head_ckpt_dir is None:   # head-reuse skips training → no train split needed (test-all has train=0)
             smap_tr, why_tr = (_load_share_map(args, "train", train_keys, embed_concat)
                                if share_eligible else (None, "n/a (no aot/tov in group)"))
             print(f"  [share-features] train: {'ON' if smap_tr else f'off — {why_tr}'}")
@@ -538,9 +552,10 @@ def run_forward_stage(args, wb):
         t0 = time.time()
         test_feats, test_labels, test_ids = by_metric[m]["test"]
         if m in ("aot", "tov", "pace"):
-            tr_feats, tr_labels, _tr_ids = by_metric[m]["train"]
+            _tr = by_metric[m]["train"]   # None under head-reuse (train split not extracted)
+            tr_feats, tr_labels = (_tr[0], _tr[1]) if _tr is not None else (None, None)
             per_example = _train_eval_classifier(m, tr_feats, tr_labels, test_feats, test_labels,
-                                                 args, embed_dim=embed_concat)
+                                                 args, embed_dim=embed_concat, out_dir=out_dir)
             # collapse per-example (K per clip) to per-clip mean
             k = per_example.size // len(test_keys)
             per_clip = per_example.reshape(-1, k).mean(axis=1) if k > 1 else per_example
@@ -737,6 +752,12 @@ def build_parser():
     p.add_argument("--head-train-cap", type=int, default=None,
                    help="Cap head-fit TRAIN clips to this many (linear head saturates ~1.5-2k). "
                         "TEST split + BCa CI are UNTOUCHED. None = full train. yaml encoder_temporal.head_train_cap.")
+    # iter18 cross-set head-reuse (Stage B) — mirrors m12a --head-ckpt / m12c --head-ckpt-dir:
+    p.add_argument("--keep-heads", action="store_true",
+                   help="save each trained aot/tov/pace head to <out_dir>/head_<metric>.pt (the reuse SOURCE).")
+    p.add_argument("--head-ckpt-dir", type=Path, default=None,
+                   help="load per-metric head_<metric>.pt from here, SKIP training, eval TEST only "
+                        "(pairs with PROBE_SPLIT=test-all where train=0).")
     add_cache_policy_arg(p)
     add_wandb_args(p)
     return p

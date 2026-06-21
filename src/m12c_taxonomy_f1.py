@@ -375,6 +375,7 @@ def run_train_stage(args, wb) -> None:
             except (RuntimeError, KeyError) as e:
                 sys.exit(f"FATAL: --head-ckpt-dir head {head_path} does not fit (embed_dim={d_in}, "
                          f"n_classes={spec['n_classes']}) — encoder/class-set/motion_aux mismatch. Error: {e}")
+            probe = probe.to("cuda")   # head-reuse skips _train_one_dim (which moves probe→cuda); _eval_test feeds cuda features, so move it here too
             best_val = 0.0
         else:
             y_tr = np.array([labels_by_clip[keys_train[i]][dim_name] for i in ti], dtype=_ydtype)

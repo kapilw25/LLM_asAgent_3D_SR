@@ -33,6 +33,7 @@ USAGE:
   python -u src/utils/wiseft_merge.py --alpha 0.7 ... --out-dir <arm dir>   # → <arm dir>/student_encoder.pt
 """
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
@@ -166,6 +167,13 @@ def main():
         sub.mkdir(parents=True, exist_ok=True)
         torch.save(payload, str(sub / "student_encoder.pt"))
         line = f"  [wiseft] α={al:g} → student_encoder.pt ({len(inter)} enc keys)"
+        # WiSE-FT convention: the blended model reuses the FINE-TUNED head. Surgery trained a motion_aux
+        # head (sits next to --surgery-ckpt); carry it over so eval gets head-augmented future_mse instead
+        # of the encoder-only fallback. Transferred head (fit on surgery feats) — footnote in the paper.
+        _aux = a.surgery_ckpt.parent / "motion_aux_head.pt"
+        if _aux.exists():
+            shutil.copy2(_aux, sub / "motion_aux_head.pt")
+            line += " + motion_aux_head.pt"
         if pred_inter is not None:
             # combined ckpt Stage 8/8b reads: encoder under 'student', predictor under 'predictor'
             merged_pred = _blend(pred_fro, pred_sur, pred_inter, al)

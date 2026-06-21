@@ -539,6 +539,7 @@ def run_train_stage(args, wb) -> None:
                      f"encoder/class-set, or feature dim mismatch (motion_aux?). Error: {e}")
         print(f"[head-reuse] loaded {args.head_ckpt} → AttentiveClassifier(embed_dim={d_in}, "
               f"n_classes={n_classes}); training SKIPPED, eval on TEST (n={len(keys_test)})")
+        probe = probe.to("cuda")   # head-reuse skips _train_attentive_classifier (which moves probe→cuda); _eval_per_clip feeds cuda features, so move it here too
         X_test_t = torch.from_numpy(feats_test).float()
         y_test_t = torch.from_numpy(y_test).long()
         test_correct, test_acc, test_ci = _eval_per_clip(probe, X_test_t, y_test_t, args.train_batch_size)

@@ -168,10 +168,11 @@ if [ -n "$CLASS_EDGES" ]; then CLASS_EDGES_FLAG="--class-edges $CLASS_EDGES"; fi
 # (2026-06-20): defaults to ON so the heads always persist next to their scores (earlier runs scored
 # taxonomy but cleaned the heads, leaving no reuse source). Set KEEP_PROBE_HEADS=0 to clean them.
 KEEP_PROBE_HEADS="${KEEP_PROBE_HEADS:-1}"
-KEEP_HEADS_FLAG=""
+KEEP_HEADS_FLAG=""            # m12a/m12c: --keep-probe-heads
+KEEP_ET_HEADS_FLAG=""         # m12f: --keep-heads (the encoder-temporal aot/tov/pace reuse source)
 case "${KEEP_PROBE_HEADS,,}" in
     0|off|false|no) ;;
-    *) KEEP_HEADS_FLAG="--keep-probe-heads" ;;
+    *) KEEP_HEADS_FLAG="--keep-probe-heads"; KEEP_ET_HEADS_FLAG="--keep-heads" ;;
 esac
 TAGS_JSON="${TAGS_JSON:-${LOCAL_DATA}/tags.json}"
 ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
@@ -835,9 +836,10 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             MA_FLAG="--motion-aux-head $MA_CKPT"
             echo "  [motion_aux] head wired for $ENC: $MA_CKPT"
         fi
-        # iter18 head-reuse (Stage B): per-encoder eval_10k head paths (action probe.pt + taxonomy dir).
-        # Stage 3/3.5 then LOAD them (--head-ckpt / --head-ckpt-dir) instead of training. Empty → train.
-        HEAD_REUSE_ACTION_FLAG=""; HEAD_REUSE_TAX_FLAG=""
+        # iter18 head-reuse (Stage B): per-encoder eval_10k head paths (action probe.pt + taxonomy dir
+        # + encoder-temporal dir). Stage 3/3.5/8c then LOAD them (--head-ckpt / --head-ckpt-dir) instead
+        # of training. Empty → train.
+        HEAD_REUSE_ACTION_FLAG=""; HEAD_REUSE_TAX_FLAG=""; HEAD_REUSE_ET_FLAG=""
         if [ -n "$EVAL_HEAD_REUSE_ROOT" ]; then
             _hr_probe="${EVAL_HEAD_REUSE_ROOT}/probe_action/${ENC}/probe.pt"
             if [ -f "$_hr_probe" ]; then HEAD_REUSE_ACTION_FLAG="--head-ckpt $_hr_probe"
@@ -845,6 +847,9 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             _hr_taxdir="${EVAL_HEAD_REUSE_ROOT}/probe_taxonomy/${ENC}"
             if [ -d "$_hr_taxdir" ]; then HEAD_REUSE_TAX_FLAG="--head-ckpt-dir $_hr_taxdir"
             else echo "  ⚠️  [head-reuse] $ENC: no taxonomy head dir at $_hr_taxdir (Stage 3.5 will train, or skip)"; fi
+            _hr_etdir="${EVAL_HEAD_REUSE_ROOT}/encoder_temporal/${ENC}"
+            if [ -d "$_hr_etdir" ]; then HEAD_REUSE_ET_FLAG="--head-ckpt-dir $_hr_etdir"
+            else echo "  ⚠️  [head-reuse] $ENC: no encoder-temporal head dir at $_hr_etdir (Stage 8c aot/tov/pace will train, or FAIL under test-all)"; fi
         fi
 
         # ─── Stage 2: features for this encoder ──────────────────────────
@@ -1112,6 +1117,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 --head-lr "$ET_HEAD_LR" --head-epochs "$ET_HEAD_EPOCHS" \
                 --head-weight-decay "$ET_HEAD_WD" --head-batch-size "$ET_HEAD_BS" \
                 --head-train-cap "$ET_HEAD_CAP" \
+                $HEAD_REUSE_ET_FLAG $KEEP_ET_HEADS_FLAG \
                 --cache-policy "$P_MSE" \
                 --no-wandb \
                 2>&1 | tee "logs/m12f_encoder_temporal_forward_${ENC}_${ET_METRIC}.log"
