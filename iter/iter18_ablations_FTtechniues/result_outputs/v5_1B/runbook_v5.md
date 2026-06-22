@@ -81,7 +81,10 @@ hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset \
 
 ---
 
-## 🔵 Box C · 4× RTX 6000 96 GB (Blackwell) — train remaining 12 arms + eval 17 encoders
+## 🔵 Box C · 4× RTX 6000 96 GB (Blackwell) — train remaining arms + eval all encoders
+<!-- dry-run verified: 263 jobs = 21 train + 242 eval (22 encoders × 11 metric-jobs); pretrain resume-skipped -->
+<!-- this is the SAME full registry roster the 2B v3 run used (surgery×N + FT baselines + improvements + wiseft merges + heads) -->
+
 
 ```bash
 bash setup_env_uv.sh --gpu --from-wheels 2>&1 | tee logs/setup_env_gpu_$(date +%Y%m%d_%H%M%S).log
