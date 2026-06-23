@@ -36,17 +36,31 @@ _MIN_TREND_POINTS = 2    # can't draw a trajectory from fewer points
 # on the axis label/title. Single source of the rule — used by m13 _bar_with_ci, the
 # metrics_watch scorecards (iter18_poc_metrics + m13's regen copy), and the paper scorecard.
 def common_exponent(values, errs=None):
-    """Pick scale=10^p so the largest |value|+err lands in [100, 1000) (≈3-digit mantissa).
-    Returns (scale, exp): plot/label value*scale; axis tag is ×10^exp with exp = -p (≤0 here).
-    No real positive value → (1.0, 0) = leave the axis untouched."""
+    """Pick scale=10^p for the bar mantissas. Base: largest |value|+err lands in [100, 1000) (≈3-digit
+    mantissa). iter18 (2026-06-23, user order): then go FINER (more zeros) until the formatted labels of
+    DISTINCT values stop colliding — e.g. 0.4955 & 0.4959 both render "496" at 10^-3, so bump to 10^-4 →
+    "4955"/"4959". Capped at +3 extra digits (truly-tied bars then legitimately share a label).
+    Returns (scale, exp = -p): plot/label value*scale; axis tag is ×10^exp. No real positive → (1.0, 0)."""
     errs = errs if errs is not None else [0.0] * len(values)
+    reals = [v for v, e in zip(values, errs)
+             if v is not None and not (isinstance(v, float) and math.isnan(v))]
     mags = [abs(v) + (e or 0.0) for v, e in zip(values, errs)
             if v is not None and not (isinstance(v, float) and math.isnan(v))]
     mags = [m for m in mags if m > 0]
     if not mags:
         return 1.0, 0
-    p = 2 - math.floor(math.log10(max(mags)))      # max*10^p ∈ [100, 1000)
-    return 10.0 ** p, -p
+    p0 = 2 - math.floor(math.log10(max(mags)))     # base: max*10^p ∈ [100, 1000)
+    for p in range(p0, p0 + 4):                    # base, then +1/+2/+3 finer until labels are distinct
+        seen, collide = {}, False
+        for v in reals:
+            lab = fmt_mantissa(v * 10.0 ** p)
+            key = round(v, 12)
+            if seen.setdefault(lab, key) != key:   # this label already taken by a DIFFERENT value
+                collide = True
+                break
+        if not collide:
+            return 10.0 ** p, -p
+    return 10.0 ** (p0 + 3), -(p0 + 3)             # cap: best effort within +3 extra digits
 
 
 def exp_axis_tag(exp):

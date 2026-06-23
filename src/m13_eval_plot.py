@@ -141,7 +141,7 @@ _SURGERY_GREEN_ENCODERS = {e for _a, e, _g, k in display_arms(include_merge=True
                            if k in ("surgery", "surgery_head", "merge")}
 # every OTHER arm gets its OWN distinct colour, keyed by NAME (stable across all metric panels —
 # the old code keyed off enc.startswith("vjepa") so ALL 14 encoders rendered in one identical blue).
-# (surgery_raw is intentionally absent — it is surgery-green via _SURGERY_GREEN_ENCODERS, not a brown control.)
+# (surgery_raw is intentionally absent here — _color_for gives it its OWN light-green #81C784: surgery-family but the ablation/control, NOT the novelty green.)
 _ITER18_ENC_COLOR = {
     "frozen":                   "#616161",  # gray   — frozen baseline
     "pretrain_encoder":         "#1565C0",  # blue   — vanilla cont-SSL anchor
@@ -169,8 +169,14 @@ def _color_for(enc: str, idx: int) -> str:
     """Per-encoder colour: EVERY surgery-novelty arm → one GREEN; every other arm → its own distinct colour
     keyed by name (stable across panels). Legacy/cross-arch encoders fall back to the canonical map."""
     short = enc.replace("vjepa_2_1_", "")
+    # surgery_raw = the surgery TECHNIQUE on RAW clips (no factorization) — OUR ablation/control, a
+    # COMPETITOR (group=surgery_ablation → already OTHER in the verdict _MW_FAM_OURS). LIGHT green: reads
+    # as "surgery family" yet visibly distinct from the novelty dark-green → "a surgery variant, but the
+    # ablation" (user 2026-06-23). MUST precede the green check below (which would otherwise dark-green it).
+    if short == "surgery_raw_encoder":
+        return "#81C784"                                 # LIGHT green — surgery-on-raw ablation/control
     if short in _OURS_GREEN or short in _SURGERY_GREEN_ENCODERS:
-        return "#2E7D32"                                  # GREEN — our surgery novelty (incl. raw + improvement + wiseft)
+        return "#2E7D32"                                  # GREEN — our surgery novelty (factor surgery + improvement + wiseft)
     if short in _ITER18_ENC_COLOR:
         return _ITER18_ENC_COLOR[short]
     if enc in ENCODER_COLORS:
@@ -263,6 +269,12 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
                 fontweight="bold", color="#E65100", va="top", ha="left",
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="#FFF3E0",
                           edgecolor="#E65100", linewidth=1.0, alpha=0.85))
+    elif direction == "signed":
+        # signed = a DIAGNOSTIC with no "better" direction (e.g. frame-order sensitivity) — neutral badge
+        ax.text(0.98, 0.97, "± signed (diagnostic)", transform=ax.transAxes, fontsize=10,
+                fontweight="bold", color="#6A1B9A", va="top", ha="right",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#F3E5F5",
+                          edgecolor="#6A1B9A", linewidth=1.0, alpha=0.85))
 
 
 def _sort_by_metric(encoders: list, vals: list, errs: list, na_set: set, direction: str):
@@ -2266,14 +2278,17 @@ _MW_TRAIN_METRICS = [
     ("maskratio",     "mask-ratio",    "lower"),
     ("val_jepa_loss", "val JEPA loss", "lower"),
 ]
-_MW_EVAL_METRICS = [
-    ("act", "action top-1", "higher"), ("tax", "taxonomy F1", "higher"),
-    ("mcos", "motion-cos", "higher"), ("fut", "future MSE", "lower"),
-    ("rollout", "rollout drift", "lower"), ("causal", "causal L1", "lower"),
-    ("tdist", "t-dist", "lower"), ("maskratio", "mask-ratio slope", "lower"),
-    ("teacher_free", "teacher-free", "lower"),
-    ("aot", "arrow-of-time acc", "higher"), ("tov", "temporal-order acc", "higher"),
-    ("pace", "pace acc", "higher"), ("tcc_cycle", "TCC cycle-back", "lower"),
+_MW_EVAL_METRICS = [   # titles = the CLAUDE.md glossary FULL names (prose-canonical, not the short keys)
+    ("act", "Action top-1 accuracy", "higher"), ("tax", "taxonomy F1", "higher"),
+    ("mcos", "motion-cosine separation", "higher"), ("fut", "future-frame MSE", "lower"),
+    ("rollout", "rollout drift slope", "lower"), ("causal", "causal future-block L1", "lower"),
+    ("tdist", "L1-vs-Δt decay slope", "lower"), ("maskratio", "mask-ratio robustness slope", "lower"),
+    # order: the SCORECARD treats higher ΔL1 = relies MORE on frame order = USES time = better (so it gets a
+    # real ↑ badge + rotation, not "± diagnostic"). _CATALOG keeps order 'signed' for hero/validity win-counting.
+    ("order", "frame-order sensitivity", "higher"),
+    ("teacher_free", "free-running exposure-bias gap", "lower"),
+    ("aot", "Arrow-of-Time accuracy", "higher"), ("tov", "temporal-order (frame-permutation) acc", "higher"),
+    ("pace", "playback-pace accuracy", "higher"), ("tcc_cycle", "TCC cycle-back error", "lower"),
     ("tcc_tau", "TCC Kendall τ", "higher"),
 ]
 _MW_EVAL_RAW_KEYS = ["act", "tax", "mcos", "fut", "rollout", "causal", "tdist", "maskratio",
@@ -2420,7 +2435,7 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
     save_fig(fig, str(out_dir / "kept_scorecard"))
     plt.close(fig)
 
-    # ── F3: EVAL scorecard (14 panels on a 4×4 grid) ──
+    # ── F3: EVAL scorecard (15 panels on a 4×4 grid — incl. the signed 'order' diagnostic; 1 cell blank) ──
     have_any = any(r["_raw"][k][0] is not None for r in ev for k, _, _ in _MW_EVAL_METRICS)
     if not have_any:
         fig, ax = plt.subplots(figsize=(12, 4))
@@ -2549,11 +2564,20 @@ def main():
                         "subdirs live under it. Required by --metrics-watch-out.")
     p.add_argument("--metrics-watch-only", action="store_true",
                    help="Exit after the metrics_watch regeneration (skip the m13 eval/ plots).")
+    p.add_argument("--skip-arms", default="",
+                   help="Comma/space-separated arm (or encoder) names to HIDE from the GRAPHS — same "
+                        "names as the run's --skip-arms (e.g. 'surgery_3stage_DI_head, cassle_encoder'). "
+                        "The train/eval csv+json still keep EVERY arm; only the figures drop them. Merged "
+                        "into the single-source ITER18_SKIP_ARMS env.")
     add_wandb_args(p)
     args = p.parse_args()
     if not (args.SANITY or args.POC or args.FULL):
         sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
     mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
+    if args.skip_arms:                          # CLI --skip-arms ∪ existing ITER18_SKIP_ARMS env (single source)
+        _toks = [t for t in re.split(r"[,\s]+", args.skip_arms) if t]
+        os.environ["ITER18_SKIP_ARMS"] = " ".join(
+            dict.fromkeys(os.environ.get("ITER18_SKIP_ARMS", "").split() + _toks))
 
     # ── metrics_watch regeneration (self-contained; see the _mw_* section above) ──
     if args.metrics_watch_out is not None:
