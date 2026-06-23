@@ -1,20 +1,35 @@
-# 🗂️ 263 jobs = 🏋️ 21 train + 📊 242 eval
+# 🗂️ 1B run roster — 💰 167 jobs (money-saver; full DAG = 263)
 
-## 🏋️ A · 21 TRAIN jobs
+> Picked from the **2B results** (`eval_metrics`): keep the COMPETITORs + the **hero-covering** OURs, drop the
+> redundant / non-hero arms. **NOT overtuned** — we reproduce the existing winners, we don't double-down a
+> within-CI knob (inverted-U / overtuning risk — see the runbook audit).
 
-| 🏷️ group | # | arms |
-|---|:--:|---|
-| 🌱 pretrain (SEED) | 1 | `pretrain_encoder` &nbsp; ✅ resume-skipped |
-| 🔬 surgery novelty | 2 | `surgery_3stage_DI_encoder`, `surgery_noDI_encoder` |
-| 🧪 surgery control | 1 | `surgery_raw_encoder` |
-| 🎯 surgery heads | 2 | `surgery_3stage_DI_head`, `surgery_noDI_head` |
-| 🚀 surgery improvements | 4 | `…_replay25`, `…_diheavy`, `…_tccaux`, `…_intervene` |
-| ⚙️ autorgn baseline | 1 | `surgical_autorgn_encoder` |
-| 🔩 FT baselines | 6 | `full_ft`, `lpft`, `peft_lora`, `peft_dora`, `cassle`, `ewc` |
-| 🔀 wiseft merges (no GPU) | 4 | `3stage_DI_wiseft`, `intervene_wiseft_{f30,f50,f70}` |
-| **Σ TRAIN** | **21** | |
+## 🏆 OURs kept — by 2B hero metric
 
-## 📊 B · 11 metric-jobs PER encoder
+| keep | OUR | role | 🥇/🥈 2B hero metric |
+|:--:|---|---|---|
+| ✅ | 🔬 `surgery_3stage_DI_encoder` | **FLAGSHIP** (base / Δ-anchor) | — (the baseline every Δ is measured against) |
+| ✅ | 🚀 `surgery_3stage_DI_intervene_encoder` | best improvement + wiseft base | 🥇 future-MSE · 🥈 causal-L1 |
+| ✅ | ⬆️ `surgery_3stage_DI_diheavy_encoder` | improvement | 🥇 mask-ratio slope |
+| ✅ | ✨ `surgical_intervene_wiseft_f30/f50/f70` | eval-only merge (FREE, no train) | 🥇 taxonomy·AoT·ToV·TCC · 🥈 rollout·t-dist·teacher-free·pace |
+| ❌ | `surgery_noDI` · `…_tccaux` · `…_replay25` | non-hero / within-CI redundant | — (dropped: no distinct win) |
+
+## ✅ KEPT roster — 14 encoders
+
+| | 🏋️ Trained & Eval | 👁️ Eval-only |
+|---|---|---|
+| 🆚 **COMPETITORs** (8) | `pretrain`*, `autorgn`, `raw`, `full_ft`, `lpft`, `peft_lora`, `peft_dora` (7) | 🧊 `frozen` (1) |
+| 🏆 **OURs** (6) | `flagship` · `intervene` · `diheavy` (3) | `wiseft_f30` · `wiseft_f50` · `wiseft_f70` (3, merge) |
+
+> `*` `pretrain_encoder` = ✅ resume-skipped (1B seed already exists & matches the POC recipe)
+
+## ❌ DROPPED via `--skip-arms` (8 arms)
+
+| 🚫 always-skip (5) | 🚫 non-hero surgery (3) |
+|---|---|
+| `surgery_3stage_DI_head`, `surgery_noDI_head`, `cassle_encoder`, `ewc_encoder`, `surgical_3stage_DI_wiseft_encoder` | `surgery_noDI_encoder`, `surgery_3stage_DI_tccaux_encoder`, `surgery_3stage_DI_replay25_encoder` |
+
+## 📊 11 metric-jobs PER encoder
 
 | 🏷️ tag | # | stage / suite | metrics |
 |:--:|:--:|---|---|
@@ -23,35 +38,11 @@
 | 🟪 `F:` | 4 | 8c encoder_temporal | aot · tov · pace · tcc |
 | **Σ** | **11** | | per encoder |
 
-## 🎬 C · 22 eval encoders
+## 🧮 job count
 
-> 🧊 `frozen` ➕ the 21 trained arms from **A** — all named `vjepa_2_1_vitg_<arm>`
+| roster | 🏋️ train | 📊 eval (×11) | 🟰 total |
+|---|:--:|:--:|:--:|
+| 💰 **1B kept** | 13 | 14 × 11 = **154** | **167** |
+| (full DAG) | 21 | 242 | 263 |
 
-| # | encoder | # | encoder |
-|:--:|---|:--:|---|
-| 1 | 🧊 `frozen` | 12 | ⚙️ `surgical_autorgn_encoder` |
-| 2 | 🌱 `pretrain_encoder` | 13 | 🔩 `full_ft_encoder` |
-| 3 | 🔬 `surgery_3stage_DI_encoder` | 14 | 🔩 `lpft_encoder` |
-| 4 | 🔬 `surgery_noDI_encoder` | 15 | 🔩 `peft_lora_encoder` |
-| 5 | 🧪 `surgery_raw_encoder` | 16 | 🔩 `peft_dora_encoder` |
-| 6 | 🎯 `surgery_3stage_DI_head` | 17 | 🔩 `cassle_encoder` |
-| 7 | 🎯 `surgery_noDI_head` | 18 | 🔩 `ewc_encoder` |
-| 8 | 🚀 `…_replay25_encoder` | 19 | 🔀 `…_3stage_DI_wiseft_encoder` |
-| 9 | 🚀 `…_diheavy_encoder` | 20 | 🔀 `…_intervene_wiseft_f30_encoder` |
-| 10 | 🚀 `…_tccaux_encoder` | 21 | 🔀 `…_intervene_wiseft_f50_encoder` |
-| 11 | 🚀 `…_intervene_encoder` | 22 | 🔀 `…_intervene_wiseft_f70_encoder` |
-
-## 🧮 D · 242 EVAL jobs = 22 encoders × 11
-
-| 🏷️ tag | per-encoder | total |
-|:--:|:--:|:--:|
-| 🟦 `E:` | 22 × 1 | 22 |
-| 🟨 `P:` | 22 × 6 | 132 &nbsp; *(6 frozen ✅ done)* |
-| 🟪 `F:` | 22 × 4 | 88 |
-| **Σ EVAL** | | **242** |
-
-## 🏁 GRAND TOTAL
-
-| 🏋️ train | 📊 eval | 🟰 total | ➕ finale |
-|:--:|:--:|:--:|---|
-| 21 | 242 | **263** | §3 paired-Δ + m13 plots (after all 263 settle) |
+> → **~37% fewer jobs**; GPU-training drops from ~16 → ~9 arms (`pretrain` resume-skipped in both). `🏁 §3 finale` (paired-Δ + m13 plots) runs after the 167 settle.

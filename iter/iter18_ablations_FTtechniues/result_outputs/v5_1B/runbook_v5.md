@@ -81,9 +81,10 @@ hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset \
 
 ---
 
-## 🔵 Box C · 4× RTX 6000 96 GB (Blackwell) — train remaining arms + eval all encoders
-<!-- dry-run verified: 263 jobs = 21 train + 242 eval (22 encoders × 11 metric-jobs); pretrain resume-skipped -->
-<!-- this is the SAME full registry roster the 2B v3 run used (surgery×N + FT baselines + improvements + wiseft merges + heads) -->
+## 🔵 Box C · 4× RTX 6000 96 GB (Blackwell) — train kept arms + eval kept encoders
+<!-- full DAG = 263 jobs (21 train + 242 eval, 22 enc). MONEY-SAVER (hero-covering, NOT overtuned) → 167 jobs -->
+<!-- (13 train + 154 eval, 14 enc): keep flagship base + intervene (future-MSE/causal hero, wiseft base) + diheavy -->
+<!-- (mask-ratio hero); wiseft f30/f50/f70 stay (eval-only, free). --skip-arms drops the 5 always-skip + noDI/tccaux/replay25. See jobs.md. -->
 
 
 ```bash
@@ -96,16 +97,21 @@ python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee l
 python -u src/utils/hf_outputs.py download-data outputs/poc/vjepa_2_1_vitg_1B 2>&1 | tee logs/download_outputs_poc_1B_$(date +%Y%m%d_%H%M%S).log
 ls -la checkpoints/vjepa2_1_vitg_384.pt
 
+# MONEY-SAVER --skip-arms (hero-covering, NOT overtuned): drop the 5 always-skip arms + the 3 non-hero
+# surgery variants (noDI/tccaux/replay25). KEEP flagship + intervene (future-MSE/causal hero + wiseft base)
+# + diheavy (mask-ratio hero); wiseft f30/f50/f70 stay (eval-only, free). → 167 jobs (was 263). See jobs.md.
+SKIP="surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder surgery_noDI_encoder surgery_3stage_DI_tccaux_encoder surgery_3stage_DI_replay25_encoder"
+
 # (1) SANITY — fresh-node re-validate (multi-GPU wiring), ~5-10 min
 ITER18_BACKBONE=vjepa_2_1_vitg \
-python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 2 \
+python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 2 --skip-arms $SKIP \
 2>&1 | tee logs/iter18_ngpu_sanity_1B_$(date +%Y%m%d_%H%M%S).log
 
-# (2) POC — full DAG. --cache 1 resume-skips the downloaded pretrain seed, so this trains the 12
-# remaining arms (all init from pretrain's m09a_ckpt_best.pt) + evals all 17 encoders + §3 finale.
-# EVAL_CORPUS defaults to eval_10k. ~0.5-1 day on 4× (1B ≈ half the 2B wall).
+# (2) POC — --cache 1 resume-skips the pretrain seed → trains the kept arms (init from pretrain's
+# m09a_ckpt_best.pt) + evals all kept encoders + §3 finale. EVAL_CORPUS defaults to eval_10k.
+# ~0.3-0.6 day on 4× (reduced roster; 1B ≈ half the 2B wall).
 ITER18_BACKBONE=vjepa_2_1_vitg \
-python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 \
+python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms $SKIP \
 2>&1 | tee logs/iter18_ngpu_poc_1B_$(date +%Y%m%d_%H%M%S).log
 
 # live status (separate pane — ITER18_BACKBONE must match or all cells read pending)
@@ -142,8 +148,8 @@ python -u src/utils/hf_outputs.py verify outputs/poc 2>&1 | tee logs/verify_outp
 ├────┼──────────────────────────────┼──────────────────────────────────────────────┼──────────────┤
 │ A  │ 1× RTX 3060 12 GB (cheap)    │ code mod + audit + push (NO training; FA2 N/A)│ minutes       │
 │ B  │ 1× RTX 6000 96 GB (SKIPPED)  │ SKIP — 1B pretrain seed exists & matches POC  │ —            │
-│ C  │ 4× RTX 6000 96 GB (Blackwell)│ SANITY → POC (--cache 1 reuses seed; trains   │ ~0:10 + ~0.5-1d│
-│    │                              │ the rest + 17-encoder eval) → metrics_watch    │              │
+│ C  │ 4× RTX 6000 96 GB (Blackwell)│ SANITY → POC (--cache 1 reuses seed; trains   │ ~0:10+~0.3-0.6d│
+│    │                              │ kept arms + 14-encoder eval) → metrics_watch  │              │
 └────┴──────────────────────────────┴──────────────────────────────────────────────┴──────────────┘
 # Box B (the serial-seed box) is SKIPPED: the 1B pretrain seed already exists at the matching POC recipe
 # (epochs=2) → Box C reuses it via --cache 1 and fans the remaining arms + eval 4-wide. Run Box B ONLY

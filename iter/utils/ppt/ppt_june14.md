@@ -182,6 +182,13 @@ flowchart LR
 | ➕ Intervene | predictive lead can go further | future-MSE / causal-L1 ↓ past current surgery floor | **Hide a moving object's whole path** and make the robot predict it | Mask a spatio-temporal **object tube** as the JEPA prediction target (Causal-JEPA) | target $M=\mathrm{tube}(o)$ over frames $t$; predict $\hat z$ on $M$ |
 | ✨ WiSE-FT | adaptation lost frozen's coherence | AoT / ToV / pace / TCC ↑ while keeping ~70% of the prediction lead | **Average the trained brain with the original frozen brain** | Post-hoc weight-space interpolation of the surgery and frozen encoders — **no training** (Wortsman CVPR'22) | $\theta=\alpha\,\theta_{\text{ours}}+(1-\alpha)\,\theta_{\text{frozen}},\ \ \alpha=0.7$ |
 
+flagship  =  surgery_3stage_DI_encoder              ← the proposed method (the base)
+├─ noDI    = flagship MINUS the D_I stage           (ablation: is D_I needed?)
+├─ intervene = flagship + object-tube masking       (improvement)
+├─ diheavy   = flagship + w_DI 0.30→0.45            (improvement)
+├─ tccaux/replay25 = flagship + their tweak         (improvements)
+└─ wiseft_*  = flagship-derived (intervene) ⊕ frozen (post-hoc merge)
+
 
 ## § 5 — 📚 Metric reference · all 15 eval metrics (9 suite + signed `order` + 5 iter18 m12f encoder-temporal)
 
