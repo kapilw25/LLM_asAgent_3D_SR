@@ -126,8 +126,11 @@ ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/iter18_poc_status.py --log logs
 find outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy -name 'probe_*.pt' | head
 find outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal -name 'head_*.pt' | head
 
-# (3) generate the metrics_watch GOAL files (--plots → m13 --metrics-watch under the 1B backbone)
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/iter18_poc_status.py --plots --log logs/iter18_ngpu_poc_1B_<ts>.log
+# (3) generate the metrics_watch GOAL files (--plots → m13 --metrics-watch under the 1B backbone).
+# ITER18_SKIP_ARMS="$SKIP" → m13 HIDES the 8 non-roster arms from the FIGURES (so the 1B eval_scorecard
+# has NO N/A bars + the clean 14-encoder roster); the csv/json still keep every arm. The scheduler's
+# --skip-arms drops them from the DAG but does NOT export this env, so it must be set here for the plots.
+ITER18_BACKBONE=vjepa_2_1_vitg ITER18_SKIP_ARMS="$SKIP" python -u scripts/iter18_poc_status.py --plots --log logs/iter18_ngpu_poc_1B_<ts>.log
 ls outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/   # ← the goal
 
 # (4) back up to HF (additive, whole-folder) + verify
