@@ -354,7 +354,9 @@
       "Bash(awk -F, 'NR==1{for\\(i=1;i<=NF;i++\\)h[i]=$i} NR==2{for\\(i=1;i<=NF;i++\\) if\\(h[i]~/^\\(fut|rollout|causal|tdist\\)$/\\) print \"    \"h[i]\"=\"$i}' outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.csv)",
       "Bash(ITER18_BACKBONE=vjepa_2_1_vitg ITER18_SKIP_ARMS='cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_3stage_DI_replay25_encoder surgery_3stage_DI_tccaux_encoder surgery_noDI_encoder surgery_noDI_head surgical_3stage_DI_wiseft_encoder' venv_walkindia/bin/python -)",
       "Bash(ITER18_BACKBONE=vjepa_2_1_vitG venv_walkindia/bin/python -c ' *)",
-      "Bash(ITER18_BACKBONE=vjepa_2_1_vitg venv_walkindia/bin/python -c ' *)"
+      "Bash(ITER18_BACKBONE=vjepa_2_1_vitg venv_walkindia/bin/python -c ' *)",
+      "Bash(awk '{print \"  \"$5\"B  \"$6\"  \"$NF}')",
+      "Bash(hf upload-large-folder *)"
     ]
   }
 }
