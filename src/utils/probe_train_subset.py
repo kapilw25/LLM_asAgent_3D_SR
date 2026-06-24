@@ -19,6 +19,7 @@ USAGE (called by scripts/run_train.sh; also a standalone CLI):
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -60,7 +61,11 @@ def main():
         sys.exit(f"FATAL: 0 clips in split={args.split!r} — labels file may be empty or split name mismatched")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(out, indent=2))
+    # per-PID tmp + atomic os.replace → concurrency-safe (4 parallel POC trains rebuild this shared split
+    # when the pretrain seed is resume-skipped; a raw write_text raced read-vs-write). 2026-06-23.
+    _tmp = args.output.with_suffix(f".tmp{os.getpid()}{args.output.suffix}")
+    _tmp.write_text(json.dumps(out, indent=2))
+    os.replace(_tmp, args.output)
     print(f"Generated {args.output}: {out['n_clips']} clips (split={args.split})")
 
 

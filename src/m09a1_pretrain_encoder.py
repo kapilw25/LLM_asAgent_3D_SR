@@ -699,7 +699,7 @@ def train(cfg: dict, args):
             print(f"❌ FATAL [probe]: action_labels.json not found at {action_labels_path}", file=sys.stderr)
             print("   probe.enabled=true requires action_labels.json — top-1 accuracy is paper-grade,", file=sys.stderr)
             print("   not optional telemetry. To run without probe, set yaml `probe.enabled: false`.", file=sys.stderr)
-            print("   To regenerate labels: python -u src/probe_action.py --<MODE> --stage labels ...", file=sys.stderr)
+            print("   To regenerate labels: python -u src/m04e_action_labels.py --<MODE> ...", file=sys.stderr)
             sys.exit(3)
         probe_labels = load_action_labels(Path(action_labels_path))
         try:

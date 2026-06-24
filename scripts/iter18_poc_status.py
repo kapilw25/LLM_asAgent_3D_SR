@@ -266,8 +266,8 @@ def _eval_calibrate(jobs, mtag, now_s):
       bar can never masquerade as the current one's)."""
     walls, projs, state, plans = {}, {}, {}, {}
     for jid, j in jobs.items():
-        if _arm_of(jid) != "eval" or jid.startswith(("P:", "F:", "Y:", "X:")):
-            continue                  # P:/F: metric + Y:/X: regen jobs use their own ETA, not the E: stage ledger
+        if _arm_of(jid) != "eval" or jid.startswith(("P:", "F:", "Y:", "X:", "L:")):
+            continue                  # P:/F: metric + Y:/X: regen + L: label-bootstrap use their own ETA, not the E: stage ledger
         plans[jid] = _eval_plan_for(jid, mtag)
         cands = sorted((p for p in REPO.glob(j["log"].format(ts="*")) if p.exists()), key=lambda p: p.stat().st_mtime)  # if p.exists(): skip dangling symlinks
         for p in cands:
@@ -624,6 +624,22 @@ def maybe_backup(fully_done, mtag):
         lock.unlink(missing_ok=True)
 
 
+def _metrics_watch_cmd(mtag, mode):
+    """m13 --metrics-watch-only argv → regenerates metrics_watch/<bb>/ (eval_scorecard.pdf/png + the
+    kept/paper/tcc/validity figures + eval_metrics.csv/json) from the eval JSONs finished so far (CPU
+    re-read + re-render, no GPU). Single source for both the --plots path and the auto-preview."""
+    # The status tool may be launched with the SYSTEM python (no matplotlib); m13 imports matplotlib, so run
+    # it with the project venv's python explicitly, NOT sys.executable. 2026-06-24: sys.executable was the bug
+    # that left metrics_watch 4.5h stale under `python …status.py` (ModuleNotFoundError: No module 'matplotlib').
+    _venv_py = REPO / "venv_walkindia" / "bin" / "python"
+    py = str(_venv_py) if _venv_py.exists() else sys.executable
+    return [py, "-u", "src/m13_eval_plot.py", f"--{mode}",
+            "--output-dir", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}",
+            "--outputs-root", _eval_root(mtag, BACKBONE, EVAL_CORPUS),
+            "--metrics-watch-out", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch",
+            "--metrics-watch-only"]
+
+
 def maybe_plot(mtag, mode):
     """Every PLOT_EVERY_MIN min, rebuild the shared paired-Δ + m13 plots from the evals done SO FAR —
     a live partial hero table to screen-share while the run finishes. Mirrors the scheduler's §3
@@ -652,11 +668,21 @@ def maybe_plot(mtag, mode):
                  f"./scripts/run_eval.sh --{mode} --encoders \"{all_encs}\"")
         plog = REPO / "logs" / f"plot_preview_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.log"
         with open(plog, "wb") as fh:
+            # 2026-06-24: refresh the metrics_watch set (eval_scorecard.pdf/png + kept/paper/tcc/validity +
+            # eval_metrics.csv/json) FIRST + via the venv python — so a plain `iter18_poc_status.py` (system
+            # python, no --plots) keeps the live scorecard fresh for whatever eval has finished, and the slow
+            # §3 hero-table chain below can never block/stale it. m13 reads JSONs → no GPU.
+            fh.write(b"=== metrics_watch refresh (eval_scorecard + eval_metrics.csv) ===\n"); fh.flush()
+            mw_rc = subprocess.run(_metrics_watch_cmd(mtag, mode), cwd=str(REPO), env=os.environ.copy(),
+                                   stdout=fh, stderr=subprocess.STDOUT).returncode
+            fh.write(b"\n=== S3 hero-table preview ===\n"); fh.flush()
             rc = subprocess.run(chain, shell=True, executable="/bin/bash", cwd=str(REPO),
                                 stdout=fh, stderr=subprocess.STDOUT).returncode
-        if hero.exists():
-            return f"  🖼  preview REBUILT (rc={rc}) → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/eval/ · next in ~{PLOT_EVERY_MIN}m"
-        return f"  🖼  preview rc={rc} — partial/blocked, see {plog.name} · next in ~{PLOT_EVERY_MIN}m"
+        scard = REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch/{BACKBONE}/eval_scorecard.png"
+        if scard.exists() or hero.exists():
+            return (f"  🖼  preview REBUILT (metrics_watch rc={mw_rc} · hero rc={rc}) → "
+                    f"metrics_watch/{BACKBONE}/{{eval_scorecard.png/pdf, eval_metrics.csv}} · next in ~{PLOT_EVERY_MIN}m")
+        return f"  🖼  preview rc={rc}/{mw_rc} — partial/blocked, see {plog.name} · next in ~{PLOT_EVERY_MIN}m"
     finally:
         lock.unlink(missing_ok=True)
 
@@ -667,11 +693,7 @@ def maybe_metrics_plots(mtag, mode):
     Reuses THIS process's ITER18_BACKBONE / ITER18_SKIP_ARMS env (m13 reads the same vars: _MW_BACKBONE +
     _mw_skip_arms). Read-only on the eval/train artifacts; safe next to a live run."""
     out = REPO / _eval_root(mtag, BACKBONE, EVAL_CORPUS)
-    cmd = [sys.executable, "-u", "src/m13_eval_plot.py", f"--{mode}",
-           "--output-dir", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}",
-           "--outputs-root", _eval_root(mtag, BACKBONE, EVAL_CORPUS),
-           "--metrics-watch-out", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch",
-           "--metrics-watch-only"]
+    cmd = _metrics_watch_cmd(mtag, mode)
     print(f"\n  📊 --plots: refreshing metrics_watch figures+data → {out}/probe_plot/metrics_watch/{BACKBONE}/")
     rc = subprocess.run(cmd, cwd=str(REPO), env=os.environ.copy()).returncode
     if rc == 0:
@@ -729,6 +751,13 @@ def main():
     sm = re.search(r"\[--skip-arms\] dropped \[(.*?)\]", text)
     if sm:
         skip = set(re.findall(r"'([^']+)'", sm.group(1)))
+        # 2026-06-24: forward the run's dropped arms to the metrics_watch regen so the AUTO-rendered
+        # eval_scorecard hides them too. m13 (maybe_plot / --plots) reads ITER18_SKIP_ARMS via
+        # _mw_skip_arms() (whitespace-split arm names). The watch command sets ITER18_BACKBONE but NOT
+        # ITER18_SKIP_ARMS, so without this the 8 --skip-arms showed up as empty N/A bars. Single source
+        # = the log (what the run actually skipped); setdefault honors an explicit operator override
+        # (the runbook --plots path that sets ITER18_SKIP_ARMS="$SKIP" itself).
+        os.environ.setdefault("ITER18_SKIP_ARMS", " ".join(sorted(skip)))
         drop = ({f"T:{BACKBONE}:{a}" for a in skip}
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}
                 | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS}
@@ -739,7 +768,12 @@ def main():
 
     launched = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ◀ (\S+)", text)}
     done = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ✓ (\S+)", text)}
-    failed = {m.group(2): m.group(1) for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ✗ (\S+)", text)}
+    # The scheduler's one-shot RETRY (2026-06-24) prints a non-terminal "✗ <jid> … RETRY 1/1" on the FIRST
+    # failure before re-queueing; only a SECOND failure ("retry also failed") is terminal. Exclude the RETRY
+    # marker so a job mid-retry classifies as running (re-launched ◀) → done/failed by its OUTCOME, not ❌.
+    failed = {m.group(2): m.group(1)
+              for m in re.finditer(r"\[(\d\d:\d\d:\d\d)\] GPU\d+ ✗ (\S+)([^\n]*)", text)
+              if "RETRY" not in m.group(3)}
     rm = re.search(r"\[resume --cache 1\] skipping \d+ already-trained arms: \[(.*?)\]", text)
     if rm:
         # iter18 prints BARE arm names (iter17 printed bb:arm) → rebuild the full jid.

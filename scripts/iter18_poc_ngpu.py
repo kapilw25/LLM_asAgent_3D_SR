@@ -201,14 +201,19 @@ def build_jobs(mode, taxheads_only=False, etheads_only=False):
             _wf_dir = ARM2DIR[arm]
             _yx = "scripts/lib/yaml_extract.py"
             _frozen = f"$({_yx} $({_yx} configs/pipeline.yaml backbone_model_configs.{BACKBONE}) model.checkpoint_path)"
-            _pred = (f"--surgery-pred-ckpt outputs/{mtag}/{BACKBONE}/{_base_dir}/m09c_ckpt_best.pt "
+            # 2026-06-23: route through output_paths.train_dir — the 2026-06-20 backbone-first restructure
+            # moved encoders to <bb>_<size>/train/<arm>; the old outputs/<mtag>/<BACKBONE>/<arm> dropped BOTH
+            # the size suffix (_1B) AND the train/ level, so the merge couldn't find intervene's surgery ckpt
+            # on the 1B fresh node (matches the resume-check at the T:-train block, single source).
+            _tr = _train_dir(mtag, BACKBONE)
+            _pred = (f"--surgery-pred-ckpt {_tr}/{_base_dir}/m09c_ckpt_best.pt "
                      if _rec["predictor"] else "")
             jobs[jid] = dict(
                 id=jid, kind="train", deps={f"T:{BACKBONE}:{_rec['base']}"}, needs_labels=False,
                 cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} {{pin}}python -u src/utils/wiseft_merge.py "
                      f"--alpha {_rec['alpha']} --frozen-ckpt {_frozen} "
-                     f"--surgery-ckpt outputs/{mtag}/{BACKBONE}/{_base_dir}/student_encoder.pt "
-                     f"{_pred}--out-dir outputs/{mtag}/{BACKBONE}/{_wf_dir}"),
+                     f"--surgery-ckpt {_tr}/{_base_dir}/student_encoder.pt "
+                     f"{_pred}--out-dir {_tr}/{_wf_dir}"),
                 log=f"logs/iter18_ngpu_{mtag}_merge_{arm}_{{ts}}.log")
             continue
         # iter18: EVERY non-pretrain arm inits from pretrain's m09a_ckpt_best.pt → all dep on it.
@@ -218,15 +223,19 @@ def build_jobs(mode, taxheads_only=False, etheads_only=False):
             cmd=(f"CUDA_VISIBLE_DEVICES={{gpu}} NGPU_CONCURRENCY={{conc}} BACKBONE={BACKBONE} CACHE_POLICY_ALL={{cache}} "
                  f"{{pin}}./scripts/run_train.sh {arm} {mflag}"),
             log=f"logs/iter18_ngpu_{mtag}_train_{arm}_{{ts}}.log")
-    # iter18 (2026-06-21): cross-set label-bootstrap (see LABELS_ONLY_SKIP). Added ONLY for a non-default
-    # corpus (the cross-set retest, where no training runs to bootstrap labels). No deps → runs first; each
-    # eval job's labels_ready gate unblocks once L: writes the labels. Cache no-op if labels already exist.
-    if EVAL_CORPUS != TRAINED_CORPUS:
-        jobs["L:labels"] = dict(
-            id="L:labels", kind="eval", deps=set(), needs_labels=False,
-            cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={LABELS_ONLY_SKIP} "
-                 f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders vjepa_2_1_frozen"),
-            log=f"logs/iter18_ngpu_{mtag}_labels_{{ts}}.log")
+    # iter18 (2026-06-21): standalone label-bootstrap via run_eval (see LABELS_ONLY_SKIP). No deps → runs
+    # FIRST; every label-gated job's labels_ready gate unblocks once L: writes action+taxonomy labels.
+    # 2026-06-23: ALWAYS add it (was gated on the cross-set retest only). The labels used to come as a
+    # SIDE-EFFECT of the pretrain TRAIN job — but POC --cache 1 resume-skips that pre-existing seed, so the
+    # labels were NEVER generated → every label-gated job stayed un-ready → the run "settled" with done=7
+    # and §3 ran on 0 evaled encoders (FATAL). Decoupling labels from training covers the skipped-seed path.
+    # Cache no-op when labels already exist. Frozen name is backbone-scoped via enc_name (1B keeps its vitg
+    # tag; the 2B champion drops it) — the old hardcoded vjepa_2_1_frozen was 2B-only.
+    jobs["L:labels"] = dict(
+        id="L:labels", kind="eval", deps=set(), needs_labels=False,
+        cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={LABELS_ONLY_SKIP} "
+             f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {enc_name('frozen')}"),
+        log=f"logs/iter18_ngpu_{mtag}_labels_{{ts}}.log")
     # eval jobs (iter18 2026-06-07 metric-parallel): per encoder = ONE E: job (stages 2-8) + 6 P:
     # jobs (Stage 8b, one predictor_temporal metric each, fanned across GPUs). E: and all 6 P: gate
     # on the SAME dep (the encoder's TRAIN job, or none for frozen) — NOT on E: — so Stage 8b runs
@@ -443,6 +452,7 @@ def main():
     # failures only at the very end, then skip §3) buried the first failure under ~80 later launches,
     # which read as "still making progress" — misleading. Now the run stops AT the first ✗.
     abort = None
+    retried = set()   # one-shot retry bookkeeping: a jid here has already burned its single retry
     while len(done) + len(failed) < len(jobs):
         for jid in list(jobs):
             if abort or not free or not ready(jid):
@@ -469,10 +479,26 @@ def main():
                 done.add(jid)
                 print(f"[{now()}] GPU{g} ✓ {jid}  ({len(done)}/{len(jobs)} done)", flush=True)
             else:
-                failed[jid] = rc
-                print(f"[{now()}] GPU{g} ✗ {jid} rc={rc} — see its log", flush=True)
-                if abort is None:
-                    abort = jid          # first failure → trip the fail-fast abort
+                # ONE-SHOT RETRY (iter18 2026-06-24, user order): a transient stall/hang — e.g. a CUDA or
+                # decode hiccup near the end of m12f feature extraction (the peft_dora:pace 91%-freeze that
+                # aborted a 17.5h run) — must NOT waste the whole multi-hour run. On a job's FIRST non-zero
+                # exit, re-queue it ONCE: it is not added to done/failed and is already removed from
+                # running above, so ready(jid) is True again and the dispatch loop re-launches it next
+                # iteration — a FRESH timestamped log, and --cache reuses any partial m12f/checkpoint so the
+                # retry RESUMES, not restarts. Only a SECOND failure of the SAME job trips the fail-fast
+                # abort below, so a deterministic bug still stops the run after one confirming retry while a
+                # one-off blip self-heals. Keeps the user's fail-fast intent (broken run stops fast) without
+                # punishing transient flakiness on a costly box.
+                if jid not in retried:
+                    retried.add(jid)
+                    print(f"[{now()}] GPU{g} ✗ {jid} rc={rc} — RETRY 1/1 (transient?), re-queueing "
+                          f"(deps intact; --cache {args.cache} resumes any partial work)", flush=True)
+                else:
+                    failed[jid] = rc
+                    print(f"[{now()}] GPU{g} ✗ {jid} rc={rc} (retry also failed) — see its log",
+                          flush=True)
+                    if abort is None:
+                        abort = jid      # second failure of the same job → trip the fail-fast abort
         if abort is not None:
             if running:
                 print(f"  ⛔ FAIL-FAST: {abort} failed (rc={failed[abort]}) — SIGTERM "

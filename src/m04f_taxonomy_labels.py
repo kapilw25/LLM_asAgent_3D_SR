@@ -3,7 +3,7 @@
 Strict pipeline direction (iter16 §3.2): the `--stage labels` step of the old
 probe_taxonomy.py is an ANNOTATION step (derives taxonomy_labels.json from VLM tags +
 the tag_taxonomy spec) — homed here in the m04 band. The downstream EVAL probe
-(train/paired_delta/plot over 15 taxonomy dims) lives in src/m12c_taxonomy.py. Both
+(train/paired_delta/plot over 15 taxonomy dims) lives in src/m12c_taxonomy_f1.py. Both
 single-source the derivation via utils.taxonomy_labels — this module is a thin
 orchestrator, NOT a re-implementation.
 

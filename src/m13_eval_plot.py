@@ -168,7 +168,17 @@ _WINNER_MODE = os.environ.get("HERO_WINNER_MODE", "coleader_set")
 def _color_for(enc: str, idx: int) -> str:
     """Per-encoder colour: EVERY surgery-novelty arm → one GREEN; every other arm → its own distinct colour
     keyed by name (stable across panels). Legacy/cross-arch encoders fall back to the canonical map."""
-    short = enc.replace("vjepa_2_1_", "")
+    # Normalize to the arm-encoder token for ANY trained backbone, so the 1B (vjepa_2_1_vitg_<arm>) and the
+    # 2B champion (legacy vjepa_2_1_<arm> → vjepa_2_1_vitG_<arm> via _canon) key into the SAME colour maps.
+    # 2026-06-24: before this, the 1B's surviving "vitg_" prefix missed every map → index fallback (all bars
+    # got arbitrary colours), while the 2B matched. Now both reduce identically → 2B output is unchanged.
+    short = _canon(enc)
+    for _pre, *_rest in _BB_TAG:
+        if short.startswith(_pre):
+            short = short[len(_pre):]
+            break
+    else:
+        short = enc.replace("vjepa_2_1_", "")            # frozen-9 / dinov2 / non-backbone names: legacy strip
     # surgery_raw = the surgery TECHNIQUE on RAW clips (no factorization) — OUR ablation/control, a
     # COMPETITOR (group=surgery_ablation → already OTHER in the verdict _MW_FAM_OURS). LIGHT green: reads
     # as "surgery family" yet visibly distinct from the novelty dark-green → "a surgery variant, but the
@@ -802,13 +812,23 @@ _PS_SUPPORT = [
 ]
 
 
+def _ps_bb_key(enc_2b):
+    """Re-prefix a 2B-champion _PS_ARMS key (vjepa_2_1_<arm_enc>) to the CURRENT backbone's encoder name
+    via _mw_enc_name — so the paper scorecard matches the 1B (vjepa_2_1_vitg_*) and 2.0 (vjepa_2_0_vitg_*)
+    json keys, not only the 2B champion. 2B champion → identity (unchanged). 2026-06-24: _PS_ARMS keys were
+    hardcoded to the bare 2B prefix, so on the 1B backbone NONE matched the json → a BLANK paper scorecard
+    (the '[warn] arms absent from json' listing every arm)."""
+    return _mw_enc_name(enc_2b[len("vjepa_2_1_"):])
+
+
 def _ps_load(metrics_json: Path):
     rows = {}
+    keymap = {_ps_bb_key(e): e for e in _PS_ARMS}   # backbone-correct json key → the canonical 2B _PS_ARMS key
     for d in json.load(open(metrics_json)):
         enc = d["encoder"]
-        if enc not in _PS_ARMS:
+        if enc not in keymap:
             continue
-        rows[enc] = d
+        rows[keymap[enc]] = d            # store under the _PS_ARMS key so _ps_panel's iteration matches
     missing = [a for a in _PS_ARMS if a not in rows]
     if missing:
         print(f"  [warn] arms absent from json (skipped): {missing}")
@@ -826,6 +846,12 @@ def _ps_panel(ax, rows, key, title, direction, annotate_family=False):
             continue
         items.append((short, grp, cell["mean"], cell["ci_half"] or 0.0))
     items.sort(key=lambda t: -t[2] if hi else t[2])     # best first (top of chart)
+    if not items:                       # partial LIVE run: no encoder has this metric scored yet → blank panel
+        ax.text(0.5, 0.5, "awaiting data", transform=ax.transAxes, ha="center", va="center",
+                fontsize=10, color="#999", fontweight="bold")
+        ax.set_title(title, fontweight="bold", fontsize=11.5, loc="left")
+        ax.set_xticks([]); ax.set_yticks([])
+        return
     ys = np.arange(len(items))[::-1]
     # iter18 (2026-06-13, user order): auto common-exponent so clustered small decimals
     # separate — rescale the value axis + bar labels and tag the exponent in the title.

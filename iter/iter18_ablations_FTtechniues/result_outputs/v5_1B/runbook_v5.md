@@ -90,12 +90,16 @@ hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset \
 ```bash
 bash setup_env_uv.sh --gpu --from-wheels 2>&1 | tee logs/setup_env_gpu_$(date +%Y%m%d_%H%M%S).log
 source venv_walkindia/bin/activate
+# confirm the 1B model arrived 
+ls -la checkpoints/vjepa2_1_vitg_384.pt
 
 # data + 1B ckpt + the EXISTING pretrain seed (just the 1B tree ~22 GB — NOT the 491 GB 2B outputs/poc).
 # --cache 1 (step 2) resume-skips pretrain (seed present + matches) + any surgery arms whose .pt downloaded.
 python -u src/utils/hf_outputs.py download-data data/eval_10k_local 2>&1 | tee logs/download_data_eval_10k_local_$(date +%Y%m%d_%H%M%S).log
 python -u src/utils/hf_outputs.py download-data outputs/poc/vjepa_2_1_vitg_1B 2>&1 | tee logs/download_outputs_poc_1B_$(date +%Y%m%d_%H%M%S).log
-ls -la checkpoints/vjepa2_1_vitg_384.pt
+# confirm the seed arrived (should show m09a_ckpt_best.pt ~4.0G + student_encoder.pt ~3.8G)
+ls -la outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/*.pt
+
 
 # MONEY-SAVER --skip-arms (hero-covering, NOT overtuned): drop the 5 always-skip arms + the 3 non-hero
 # surgery variants (noDI/tccaux/replay25). KEEP flagship + intervene (future-MSE/causal hero + wiseft base)
@@ -110,6 +114,9 @@ python -u scripts/iter18_poc_ngpu.py --mode SANITY --gpus 4 --cache 2 --skip-arm
 # (2) POC — --cache 1 resume-skips the pretrain seed → trains the kept arms (init from pretrain's
 # m09a_ckpt_best.pt) + evals all kept encoders + §3 finale. EVAL_CORPUS defaults to eval_10k.
 # ~0.3-0.6 day on 4× (reduced roster; 1B ≈ half the 2B wall).
+rm -rf outputs/sanity/
+SKIP="surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder surgery_noDI_encoder surgery_3stage_DI_tccaux_encoder surgery_3stage_DI_replay25_encoder"
+
 ITER18_BACKBONE=vjepa_2_1_vitg \
 python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 4 --cache 1 --skip-arms $SKIP \
 2>&1 | tee logs/iter18_ngpu_poc_1B_$(date +%Y%m%d_%H%M%S).log
@@ -135,9 +142,11 @@ ls outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_
 
 # (4) back up to HF (additive, whole-folder) + verify
 set -a; . .env; set +a
+
 hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset \
 --include "outputs/poc/vjepa_2_1_vitg_1B/**" --exclude "**/.*" \
 2>&1 | tee logs/upload_outputs_poc_1B_$(date +%Y%m%d_%H%M%S).log
+
 python -u src/utils/hf_outputs.py verify outputs/poc 2>&1 | tee logs/verify_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 ```
 

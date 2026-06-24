@@ -81,7 +81,7 @@ def save_array_checkpoint(array: np.ndarray, checkpoint_file: Path) -> None:
     """
     checkpoint_file = Path(checkpoint_file)
     checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
-    tmp_file = checkpoint_file.with_suffix(".tmp" + checkpoint_file.suffix)
+    tmp_file = checkpoint_file.with_suffix(f".tmp{os.getpid()}" + checkpoint_file.suffix)  # per-PID → concurrency-safe (see save_json_checkpoint)
     np.save(tmp_file, array)
     os.replace(tmp_file, checkpoint_file)
 
@@ -94,7 +94,10 @@ def save_json_checkpoint(data: dict | list, checkpoint_file: Path) -> None:
     """
     checkpoint_file = Path(checkpoint_file)
     checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
-    tmp_file = checkpoint_file.with_suffix(".tmp" + checkpoint_file.suffix)
+    # per-PID tmp → concurrency-safe: when N processes regenerate the SAME shared file (e.g. the 4 parallel
+    # POC trains all bootstrapping taxonomy_labels.json once the pretrain seed is resume-skipped), a single
+    # shared ".tmp.json" raced on os.replace — one process moved it, the rest hit FileNotFoundError (2026-06-23).
+    tmp_file = checkpoint_file.with_suffix(f".tmp{os.getpid()}" + checkpoint_file.suffix)
     with open(tmp_file, "w") as f:
         json.dump(data, f, indent=2)
         f.flush()

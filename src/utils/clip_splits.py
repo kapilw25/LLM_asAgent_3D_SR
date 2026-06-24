@@ -12,6 +12,7 @@
 # identically by all trainers. FAIL LOUD on missing/overlapping splits.
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -152,7 +153,12 @@ def main() -> None:
               f"{n_full} → {n_target} (seed={args.seed}, deterministic)", flush=True)
     pool = build_training_pool(universe_keys, val_keys, test_keys,
                                universe_label=label, log_prefix="  ")
-    Path(args.out).write_text(json.dumps({"clip_keys": pool}, indent=2))
+    # per-PID tmp + atomic os.replace → concurrency-safe: the 4 parallel POC trains each rebuild this shared
+    # pool when the pretrain seed is resume-skipped; a raw write_text raced read-vs-write (2026-06-23).
+    _out = Path(args.out)
+    _tmp = _out.with_suffix(f".tmp{os.getpid()}{_out.suffix}")
+    _tmp.write_text(json.dumps({"clip_keys": pool}, indent=2))
+    os.replace(_tmp, _out)
     print(f"  [clip_splits] wrote {len(pool)} train-pool keys → {args.out}", flush=True)
     sys.stdout.flush()
 

@@ -996,10 +996,13 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
             # share-cache is ABSENT (e.g. cleaned, or a fresh run), m12b falls back to
             # _fresh_extract_pooled which FATALs without it ("fresh-extract path for V-JEPA requires
             # --encoder-ckpt"). It's a no-op when share-features succeeds. Bit the 1B frozen SANITY.
+            # iter18 2026-06-23: the SAME fallback ALSO FATALs without --local-data (m12b line 110) —
+            # the 06-08 fix threaded --encoder-ckpt but missed it; thread it too (no-op on share-cache hit).
             python -u src/m12b_motion_cos.py "--$MODE" \
                 --stage features \
                 --encoder "$ENC" \
                 $EXTRA_CKPT \
+                --local-data "$LOCAL_DATA" \
                 $MA_FLAG \
                 --action-probe-root "$OUTPUT_ACTION" \
                 --output-root "$OUTPUT_COS" \

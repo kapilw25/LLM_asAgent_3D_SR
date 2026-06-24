@@ -75,7 +75,7 @@ def ensure_probe_labels_for_mode(
     Args:
         mode_flag:        argparse mode (--SANITY | --POC | --FULL).
         project_root:     repo root (Path); paths in cfg resolved relative to it.
-        cache_policy:     int or str, forwarded to probe_taxonomy.py subprocess.
+        cache_policy:     int or str, forwarded to m04f_taxonomy_labels.py subprocess.
         cfg:              merged yaml config dict.
         motion_features:  optional override for the motion_features.npy path.
                           Defaults to <local_data>/m04d_motion_features/motion_features.npy.
@@ -87,7 +87,7 @@ def ensure_probe_labels_for_mode(
     Raises:
         ValueError: unknown mode_flag.
         FileNotFoundError: missing required input (eval_subset, motion_features, etc.).
-        subprocess.CalledProcessError: probe_taxonomy.py exits non-zero.
+        subprocess.CalledProcessError: m04f_taxonomy_labels.py exits non-zero.
     """
     mode_dir = _mode_dir_from_flag(mode_flag)
     project_root = Path(project_root).resolve()
@@ -227,20 +227,22 @@ def ensure_probe_labels_for_mode(
         print("    → multi_task_probe will auto-disable for this run")
         return result
 
-    # Taxonomy stage still uses subprocess for parity with run_eval.sh.
+    # Taxonomy stage still uses subprocess for parity with run_eval.sh. The old probe_taxonomy.py
+    # `--stage labels` step was split out into src/m04f_taxonomy_labels.py (iter16 §3.2) — call THAT
+    # (it IS the labels step, so there is no --stage; same args otherwise + --no-wandb for the CPU helper).
     print(
         f"  [probe_labels] missing: {taxonomy_path} — auto-generating "
-        f"via probe_taxonomy.py --stage labels (CPU, ~30 s)"
+        f"via m04f_taxonomy_labels.py (CPU, ~30 s)"
     )
     cmd = [
-        sys.executable, "-u", str(project_root / "src" / "probe_taxonomy.py"),
+        sys.executable, "-u", str(project_root / "src" / "m04f_taxonomy_labels.py"),
         mode_flag,
-        "--stage", "labels",
         "--eval-subset", str(eval_subset),
         "--tags-json", str(tags_json),
         "--tag-taxonomy", str(tag_taxonomy),
         "--output-root", str(output_taxonomy_dir),
         "--cache-policy", str(cache_policy),
+        "--no-wandb",
     ]
     subprocess.run(cmd, check=True, cwd=str(project_root))
     result["taxonomy_generated"] = True

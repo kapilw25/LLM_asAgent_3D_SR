@@ -82,7 +82,7 @@ def load_taxonomy_labels_for_training(labels_path: Path) -> tuple:
     if not p.exists():
         raise FileNotFoundError(
             f"taxonomy_labels.json not found at {p}. Run "
-            f"`probe_taxonomy.py --stage labels` first.")
+            f"`m04f_taxonomy_labels.py` first.")
     data = json.loads(p.read_text())
     return data["labels"], data["dims"]
 
@@ -132,7 +132,8 @@ def compute_multi_task_probe_loss(pooled_feats: torch.Tensor,
         print(f"❌ FATAL [multi-task]: {len(unlabeled)}/{B} clips missing from labels_by_clip "
               f"(label-file mismatch, not multi-label sparseness)", file=sys.stderr)
         print(f"   Sample missing keys: {unlabeled[:3]}", file=sys.stderr)
-        print("   Regenerate labels: python -u src/probe_taxonomy.py --<MODE> --stage labels ...", file=sys.stderr)
+        print("   Regenerate labels: python -u src/m04f_taxonomy_labels.py --<MODE> --tags-json <tags.json> "
+              "--tag-taxonomy <taxonomy.json> --eval-subset <subset.json> --output-root <dir> ...", file=sys.stderr)
         sys.exit(3)
 
     logits_dict = head(pooled_feats)               # {dim_name: (B, n_classes_d)}
@@ -282,7 +283,8 @@ def build_multi_task_head_from_cfg(cfg: dict, device) -> tuple:
     if not mt_labels_path.exists():
         print(f"❌ FATAL [multi-task]: labels file missing: {mt_labels_path}", file=sys.stderr)
         print("   To proceed without multi-task probe, set yaml `multi_task_probe.enabled: false` explicitly.", file=sys.stderr)
-        print("   To regenerate: python -u src/probe_taxonomy.py --<MODE> --stage labels ...", file=sys.stderr)
+        print("   To regenerate: python -u src/m04f_taxonomy_labels.py --<MODE> --tags-json <tags.json> "
+              "--tag-taxonomy <taxonomy.json> --eval-subset <subset.json> --output-root <dir> ...", file=sys.stderr)
         sys.exit(3)
     mt_labels_by_clip, mt_dims_spec = load_taxonomy_labels_for_training(mt_labels_path)
     d_encoder = cfg["model"]["embed_dim"]

@@ -348,7 +348,11 @@
       "Bash(echo \"═══ RAM check: new in-flight = 6 flushes × 64 clips = 384 vs old 16×32 = 512 → $\\(python -c \"print\\(f'{\\(1-384/512\\)*100:.0f}% LESS'\\)\"\\) ═══\")",
       "Bash(EVAL_CORPUS=subset_10k_smoke python -u scripts/iter18_poc_ngpu.py --mode POC --gpus 1 --cache 1 --skip-arms surgery_3stage_DI_head surgery_noDI_head cassle_encoder ewc_encoder surgical_3stage_DI_wiseft_encoder --dry-run)",
       "Bash(awk '{print \"  L:labels count =\", $1, \"\\(expect 0\\)\"}')",
-      "Bash(nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader)"
+      "Bash(nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader)",
+      "Bash(scripts/lib/yaml_extract.py configs/pipeline.yaml backbone_size_labels)",
+      "Bash(grep -nA4 \"backbone_size_labels\" configs/pipeline.yaml)",
+      "Bash(awk -F, 'NR==1{for\\(i=1;i<=NF;i++\\)h[i]=$i} NR==2{for\\(i=1;i<=NF;i++\\) if\\(h[i]~/^\\(fut|rollout|causal|tdist\\)$/\\) print \"    \"h[i]\"=\"$i}' outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.csv)",
+      "Bash(ITER18_BACKBONE=vjepa_2_1_vitg ITER18_SKIP_ARMS='cassle_encoder ewc_encoder surgery_3stage_DI_head surgery_3stage_DI_replay25_encoder surgery_3stage_DI_tccaux_encoder surgery_noDI_encoder surgery_noDI_head surgical_3stage_DI_wiseft_encoder' venv_walkindia/bin/python -)"
     ]
   }
 }
