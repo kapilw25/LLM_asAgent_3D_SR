@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_vitg_peft_dora_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.595979,
+  "mse_std": 0.026205,
+  "mse_ci": {
+    "mean": 0.595979,
+    "ci_lo": 0.594753,
+    "ci_hi": 0.597174,
+    "ci_half": 0.00121
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_dora_encoder/m09c_ckpt_best.pt"
+}

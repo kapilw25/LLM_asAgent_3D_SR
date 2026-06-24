@@ -1,0 +1,1 @@
+  [keep] Stage 3 cached for vjepa_2_1_vitg_peft_lora_encoder: probe.pt, test_predictions.npy, test_clip_keys.npy, test_metrics.json all present in outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_peft_lora_encoder — skipping (--cache-policy 2 to redo)

@@ -1,0 +1,618 @@
+[
+ {
+  "encoder": "vjepa_2_1_vitg_frozen",
+  "n_test": "1825",
+  "act": {
+   "mean": 0.4246575342465753,
+   "ci_half": 0.02274
+  },
+  "tax": {
+   "mean": 0.8015572666666666,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": 0.007001,
+   "ci_half": 0.000688
+  },
+  "fut": {
+   "mean": 0.636863,
+   "ci_half": 0.001246
+  },
+  "rollout": {
+   "mean": 0.007262,
+   "ci_half": 0.000237
+  },
+  "causal": {
+   "mean": 0.655149,
+   "ci_half": 0.001569
+  },
+  "tdist": {
+   "mean": 0.007439,
+   "ci_half": 0.000372
+  },
+  "maskratio": {
+   "mean": 0.06511,
+   "ci_half": 0.000654
+  },
+  "order": {
+   "mean": 0.022689,
+   "ci_half": 0.001474
+  },
+  "teacher_free": {
+   "mean": 0.043995,
+   "ci_half": 0.000513
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_pretrain_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_surgical_3stage_DI_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_surgical_noDI_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_surgical_3stage_DI_head",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_surgical_noDI_head",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_surgical_autorgn_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_surgery_raw_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_full_ft_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_lpft_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_peft_lora_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_peft_dora_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_cassle_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ },
+ {
+  "encoder": "vjepa_2_1_vitg_ewc_encoder",
+  "n_test": "\u2014",
+  "act": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tax": {
+   "mean": null,
+   "ci_half": null
+  },
+  "mcos": {
+   "mean": null,
+   "ci_half": null
+  },
+  "fut": {
+   "mean": null,
+   "ci_half": null
+  },
+  "rollout": {
+   "mean": null,
+   "ci_half": null
+  },
+  "causal": {
+   "mean": null,
+   "ci_half": null
+  },
+  "tdist": {
+   "mean": null,
+   "ci_half": null
+  },
+  "maskratio": {
+   "mean": null,
+   "ci_half": null
+  },
+  "order": {
+   "mean": null,
+   "ci_half": null
+  },
+  "teacher_free": {
+   "mean": null,
+   "ci_half": null
+  }
+ }
+]

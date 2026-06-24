@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_vitg_lpft_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.408632,
+    "std": 0.207485,
+    "ci": {
+      "mean": 2.408632,
+      "ci_lo": 2.398934,
+      "ci_hi": 2.418418,
+      "ci_half": 0.009742
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.289546,
+    "std": 0.11395,
+    "ci": {
+      "mean": 0.289546,
+      "ci_lo": 0.28423,
+      "ci_hi": 0.294646,
+      "ci_half": 0.005208
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09f_lpft_encoder/student_encoder.pt"
+}

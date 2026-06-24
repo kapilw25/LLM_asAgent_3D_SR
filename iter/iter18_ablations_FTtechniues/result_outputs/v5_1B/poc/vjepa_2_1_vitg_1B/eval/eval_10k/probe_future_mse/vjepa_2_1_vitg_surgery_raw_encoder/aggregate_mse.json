@@ -1,0 +1,14 @@
+{
+  "variant": "vjepa_2_1_vitg_surgery_raw_encoder",
+  "n_test": 1825,
+  "mse_mean": 0.587182,
+  "mse_std": 0.028484,
+  "mse_ci": {
+    "mean": 0.587182,
+    "ci_lo": 0.585803,
+    "ci_hi": 0.588466,
+    "ci_half": 0.001331
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/m09c_ckpt_best.pt"
+}

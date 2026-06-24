@@ -1,0 +1,3618 @@
+[33mWarning: You are about to upload a large folder to the Hub using `hf upload-large-folder`. This is a new feature so feedback is very welcome!
+
+A few things to keep in mind:
+  - Repository limits still apply: https://huggingface.co/docs/hub/repositories-recommendations
+  - Do not start several processes in parallel.
+  - You can interrupt and resume the process at any time. The script will pick up where it left off except for partially uploaded files that would have to be entirely reuploaded.
+  - Do not upload the same folder to several repositories. If you need to do so, you must delete the `./.cache/huggingface/` folder first.
+
+Some temporary metadata will be stored under `./.cache/huggingface`.
+  - You must not modify those files manually.
+  - You must not delete the `./.cache/huggingface/` folder while a process is running.
+  - You can delete the `./.cache/huggingface/` folder to reinitialize the upload state when process is not running. Files will have to be hashed and preuploaded again, except for already committed files.
+
+If the process output is too verbose, you can disable the progress bars with `--no-bars`. You can also entirely disable the status report with `--no-report`.
+
+For more details, run `hf upload-large-folder --help` or check the documentation at https://huggingface.co/docs/huggingface_hub/guides/upload#upload-a-large-folder.[0m
+Repo created: https://huggingface.co/datasets/anonymousML123/factorjepa-outputs
+
+================================================================================
+WARNING: This repository has 701 commits.
+Repositories with a large number of commits can experience performance issues.
+
+Consider squashing your commit history using `super_squash_history()`.
+To do so, you need to stop this process, run the snippet below and restart the upload command.  from huggingface_hub import super_squash_history
+  super_squash_history(repo_id='anonymousML123/factorjepa-outputs', repo_type='dataset')
+
+Note: This is a non-revertible operation. See the documentation for more details:
+https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.super_squash_history
+================================================================================
+
+Found 1849 candidate files to upload
+Running validation checks on files to upload...
+Validation checks complete.
+Starting upload...
+Recovering from metadata files:   0%|          | 0/1849 [00:00<?, ?it/s]Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/predictor_temporal/predictor_temporal_per_variant.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/per_dim_acc.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/probe_taxonomy_per_dim.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/probe_taxonomy_per_dim.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json' (outdated). Will re-compute hash.
+Recovering from metadata files:  16%|█▌        | 300/1849 [00:00<00:00, 2996.74it/s]Recovering from metadata files:  32%|███▏      | 600/1849 [00:00<00:00, 2939.67it/s]Recovering from metadata files:  48%|████▊     | 895/1849 [00:00<00:00, 2935.76it/s]Recovering from metadata files:  65%|██████▍   | 1193/1849 [00:00<00:00, 2952.57it/s]Recovering from metadata files:  81%|████████  | 1492/1849 [00:00<00:00, 2962.27it/s]Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/m13_hero_raw_values.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/m13_hero_raw_values.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/m13_paired_diff_heatmap.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/m13_paired_diff_heatmap.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_metrics.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_metrics.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_metrics.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_metrics.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_trajectories.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_trajectories.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/kept_scorecard.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/kept_scorecard.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/wiseft_sweep_table.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/wiseft_sweep_table.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard_paper.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard_paper.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/m13_metric_validity.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/m13_metric_validity.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/m13_metric_validity.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_action_acc_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_action_acc_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_motion_cos_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_motion_cos_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/m13_taxonomy_f1_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/m13_taxonomy_f1_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_future_mse_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_future_mse_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_rollout_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_rollout_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_causal_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_causal_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_tdist_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_tdist_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_teacher_free_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_teacher_free_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_maskratio_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_maskratio_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_aot_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_aot_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tov_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tov_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_pace_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_pace_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_tau_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_tau_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_cycle_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_cycle_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_table.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_table.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_table.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_raw_values.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_raw_values.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_scoreboard_surgery_vs_pretrain.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_scoreboard_surgery_vs_pretrain.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_grouped_winner_surgery_vs_pretrain.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_grouped_winner_surgery_vs_pretrain.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_paired_forest_surgery_vs_pretrain.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_paired_forest_surgery_vs_pretrain.pdf' (outdated). Will re-compute hash.
+Recovering from metadata files:  97%|█████████▋| 1800/1849 [00:00<00:00, 3001.54it/s]Recovering from metadata files: 100%|██████████| 1849/1849 [00:00<00:00, 2983.34it/s]
+
+
+
+---------- 2026-06-24 12:16:19 (0:00:00) ----------
+Files:   hashed 1847/1849 (210.3G/210.6G) | pre-uploaded: 1436/1441 (210.1G/210.6G) (+77 unsure) | committed: 1766/1849 (210.1G/210.6G) | ignored: 0
+Workers: hashing: 4 | get upload mode: 39 | pre-uploading: 1 | committing: 0 | waiting: 20
+---------------------------------------------------
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[AProcessing Files (1 / 5)      :   0%|          | 64.1kB /  181MB,   ???B/s  
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  607kB /  607kB,   ???B/s  
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  595kB /  595kB,   ???B/s  
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   0%|          | 57.0kB /  180MB            [A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   0%|          | 57.0kB /  180MB            [A[A[AProcessing Files (1 / 5)      :   0%|          |  121kB /  181MB, 2.77kB/s  
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  648kB /  648kB, 15.2kB/s  Processing Files (1 / 1)      : 100%|██████████|  575kB /  575kB, 13.4kB/s  
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[A
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[AProcessing Files (0 / 1)      :  92%|█████████▏|  556kB /  602kB, 13.0kB/s  
+New Data Upload               :  92%|█████████▏|  556kB /  602kB, 13.0kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   0%|          |  206kB /  180MB            [A[A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[AProcessing Files (1 / 5)      :   0%|          |  270kB /  181MB, 6.23kB/s  
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[AProcessing Files (0 / 1)      :  10%|▉         | 57.9kB /  597kB, 1.36kB/s  
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  607kB /  607kB, 13.7kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            
+
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   0%|          |  238kB /  180MB            [A[A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[AProcessing Files (1 / 5)      :   0%|          |  302kB /  181MB, 6.98kB/s  
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   0%|          |  238kB /  180MB            [A[A[A
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[A
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...3_paired_diff_heatmap.png:  20%|██        | 66.2kB /  330kB            [A[A[A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...g/m13_hero_raw_values.png:  27%|██▋       |  559kB / 2.06MB            [A[A
+
+  ...g/m13_hero_raw_values.png:  27%|██▋       |  559kB / 2.06MB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[AProcessing Files (0 / 1)      :  27%|██▋       |  559kB / 2.06MB, 13.3kB/s  
+New Data Upload               :  27%|██▋       |  559kB / 2.06MB, 13.3kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   1%|          |  913kB /  180MB            [A[A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[AProcessing Files (0 / 1)      :  93%|█████████▎|  558kB /  600kB, 13.2kB/s  
+New Data Upload               :  93%|█████████▎|  558kB /  600kB, 13.2kB/s  [A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  620kB /  620kB, 14.7kB/s  
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (1 / 5)      :   1%|          |  977kB /  181MB, 22.9kB/s  
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  600kB /  600kB, 14.2kB/s  Processing Files (1 / 1)      : 100%|██████████|  572kB /  572kB, 13.6kB/s  Processing Files (1 / 1)      : 100%|██████████|  591kB /  591kB, 14.0kB/s  
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[AProcessing Files (1 / 1)      : 100%|██████████|  594kB /  594kB, 14.1kB/s  
+New Data Upload               :   1%|          |  540kB / 67.0MB, 12.8kB/s  [A
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...3_paired_diff_heatmap.png:  20%|██        | 66.2kB /  330kB            [A[A[A[A
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[AProcessing Files (4 / 17)     :  13%|█▎        | 1.91MB / 15.1MB, 45.4kB/s  
+
+  ...coder/pace_test_feats.npy:   0%|          |  537kB /  123MB            [A[A
+
+  ...coder/pace_test_feats.npy:   0%|          |  537kB /  123MB            [A[AProcessing Files (0 / 1)      :   0%|          |  537kB /  123MB, 12.8kB/s  
+New Data Upload               :   0%|          |  537kB /  123MB, 12.8kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎|  559kB /  603kB, 13.3kB/s  
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  543kB / 1.58MB            [A[A
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  543kB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  45%|████▌     |  550kB / 1.22MB            [A[AProcessing Files (0 / 1)      :  34%|███▍      |  543kB / 1.58MB, 12.9kB/s  
+
+  ...1_vitg/m13_hero_table.png:  49%|████▉     |  552kB / 1.12MB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  49%|████▉     |  552kB / 1.12MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  45%|████▌     |  550kB / 1.22MB            [A[A
+New Data Upload               :  34%|███▍      |  543kB / 1.58MB, 12.9kB/s  [A
+New Data Upload               :  93%|█████████▎|  559kB /  603kB, 13.3kB/s  [AProcessing Files (0 / 1)      :  49%|████▉     |  552kB / 1.12MB, 13.2kB/s  Processing Files (0 / 1)      :  45%|████▌     |  550kB / 1.22MB, 13.1kB/s  
+New Data Upload               :  49%|████▉     |  552kB / 1.12MB, 13.2kB/s  [A
+New Data Upload               :  45%|████▌     |  550kB / 1.22MB, 13.1kB/s  [A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...g/m13_hero_raw_values.png:  27%|██▋       |  559kB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   1%|          |  940kB /  180MB            [A[A[AProcessing Files (1 / 5)      :   1%|          | 1.00MB /  181MB, 23.5kB/s  
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A[A[A[A
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...3_paired_diff_heatmap.png:  20%|██        | 66.2kB /  330kB            [A[A[A[A
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  20%|██        | 3.06MB / 15.1MB, 72.9kB/s  
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[A
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  307kB /  307kB, 7.35kB/s  
+New Data Upload               : 100%|██████████|  307kB /  307kB, 7.35kB/s  [A
+
+  ...coder/pace_test_feats.npy:   0%|          |  537kB /  123MB            [A[A
+
+  ...r/m13_tcc_tau_compare.png:  92%|█████████▏|  556kB /  602kB            [A[A
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  543kB / 1.58MB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  49%|████▉     |  552kB / 1.12MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  45%|████▌     |  550kB / 1.22MB            [A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...g/m13_hero_raw_values.png:  27%|██▋       |  559kB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   1%|          | 1.03MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   1%|          | 1.10MB /  181MB, 25.7kB/s  
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...3_paired_diff_heatmap.png:  20%|██        | 66.2kB /  330kB            [A[A[A[A
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A[A[A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  648kB /  648kB, 14.9kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            
+
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  595kB /  595kB, 13.3kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            
+
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[A
+
+  ...coder/pace_test_feats.npy:   1%|          | 1.07MB /  123MB            [A[AProcessing Files (0 / 1)      :   1%|          | 1.07MB /  123MB, 25.7kB/s  
+New Data Upload               :   1%|          | 1.07MB /  123MB, 25.7kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  602kB /  602kB, 14.0kB/s  
+New Data Upload               : 100%|██████████|  602kB /  602kB, 14.0kB/s  [A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  185kB /  185kB, 4.46kB/s  
+New Data Upload               : 100%|██████████|  185kB /  185kB, 4.46kB/s  [A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  365kB /  365kB, 8.78kB/s  
+New Data Upload               : 100%|██████████|  365kB /  365kB, 8.78kB/s  [A
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  543kB / 1.58MB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  49%|████▉     |  552kB / 1.12MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  45%|████▌     |  550kB / 1.22MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  575kB /  575kB, 13.1kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            
+
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png:  54%|█████▍    | 1.12MB / 2.06MB            [A[AProcessing Files (0 / 1)      :  54%|█████▍    | 1.12MB / 2.06MB, 26.7kB/s  
+New Data Upload               :  54%|█████▍    | 1.12MB / 2.06MB, 26.7kB/s  [A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   1%|          | 2.11MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   1%|          | 2.18MB /  181MB, 51.6kB/s  
+New Data Upload               :   1%|          | 1.62MB /  180MB, 38.6kB/s  [A
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...3_paired_diff_heatmap.png:  20%|██        | 66.2kB /  330kB            [A[A[A[A
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A[A[A[A
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[A
+
+  ...coder/pace_test_feats.npy:   1%|▏         | 1.61MB /  123MB            [A[AProcessing Files (0 / 1)      :   1%|▏         | 1.61MB /  123MB, 38.6kB/s  
+New Data Upload               :   1%|▏         | 1.61MB /  123MB, 38.6kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[A
+
+  ...oder/pace_train_feats.npy:   3%|▎         | 3.76MB /  135MB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▉   | 1.09MB / 1.58MB            [A[A
+
+  ...oder/pace_train_feats.npy:   3%|▎         | 3.76MB /  135MB            [A[AProcessing Files (0 / 1)      :  69%|██████▉   | 1.09MB / 1.58MB, 25.9kB/s  
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  98%|█████████▊| 1.10MB / 1.12MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 3.76MB /  135MB, 91.0kB/s  
+
+  ...r_surgery_vs_pretrain.png:  90%|█████████ | 1.10MB / 1.22MB            [A[A
+New Data Upload               :  69%|██████▉   | 1.09MB / 1.58MB, 25.9kB/s  [AProcessing Files (0 / 1)      :  98%|█████████▊| 1.10MB / 1.12MB, 26.4kB/s  
+New Data Upload               :  98%|█████████▊| 1.10MB / 1.12MB, 26.4kB/s  [AProcessing Files (0 / 1)      :  90%|█████████ | 1.10MB / 1.22MB, 26.3kB/s  
+New Data Upload               :  90%|█████████ | 1.10MB / 1.22MB, 26.3kB/s  [A
+New Data Upload               :   3%|▎         | 3.76MB /  135MB, 91.0kB/s  [A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png:  81%|████████  | 1.68MB / 2.06MB            [A[AProcessing Files (0 / 1)      :  81%|████████  | 1.68MB / 2.06MB, 40.2kB/s  
+New Data Upload               :  81%|████████  | 1.68MB / 2.06MB, 40.2kB/s  [A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   1%|          | 2.11MB /  180MB            [A[A[A
+
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.png:   5%|▍         | 93.2kB / 1.92MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  ...encoder/per_clip_pace.npy:   5%|▍         |   361B / 7.43kB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...3_paired_diff_heatmap.png:  24%|██▍       | 79.0kB /  330kB            [A[A[A[A
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.png:   5%|▍         | 93.2kB / 1.92MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :   5%|▍         |  482kB / 9.90MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  24%|██▍       | 3.65MB / 15.1MB, 86.6kB/s  
+New Data Upload               :   5%|▍         |  588kB / 12.1MB, 14.3kB/s  [A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  591kB /  591kB, 13.9kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            
+
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  600kB /  600kB, 14.1kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            
+
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[A
+
+  ...coder/pace_test_feats.npy:   2%|▏         | 2.68MB /  123MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 2.68MB /  123MB, 64.6kB/s  
+New Data Upload               :   2%|▏         | 2.68MB /  123MB, 64.6kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▉   | 1.09MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  90%|█████████ | 1.10MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  98%|█████████▊| 1.10MB / 1.12MB            [A[A
+
+  ...oder/pace_train_feats.npy:   4%|▍         | 5.90MB /  135MB            [A[A
+
+  ...coder/m13_tov_compare.png:  10%|▉         | 57.9kB /  597kB            [A[AProcessing Files (0 / 1)      :   4%|▍         | 5.90MB /  135MB,  143kB/s  
+New Data Upload               :   4%|▍         | 5.90MB /  135MB,  143kB/s  [A
+
+  ...g/m13_hero_raw_values.png:  81%|████████  | 1.68MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png:  93%|█████████▎|  558kB /  600kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   2%|▏         | 3.20MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   2%|▏         | 3.26MB /  181MB, 77.5kB/s  
+New Data Upload               :   2%|▏         | 2.70MB /  180MB, 64.6kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  24%|██▍       | 79.0kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:   5%|▍         | 93.2kB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:   5%|▍         |   361B / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:   5%|▍         |  317kB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:   5%|▍         | 3.38kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:   5%|▍         | 5.67kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:   5%|▍         | 25.3kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:   5%|▍         |  116kB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:   5%|▍         | 8.02kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  96%|█████████▌| 3.00MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  594kB /  594kB, 14.0kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            
+
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[A
+
+  ...coder/pace_test_feats.npy:   3%|▎         | 3.76MB /  123MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 3.76MB /  123MB, 90.7kB/s  
+New Data Upload               :   3%|▎         | 3.76MB /  123MB, 90.7kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  368kB /  368kB, 8.97kB/s  
+New Data Upload               : 100%|██████████|  368kB /  368kB, 8.97kB/s  [A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  620kB /  620kB, 14.5kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            
+
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▉   | 1.09MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  90%|█████████ | 1.10MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  98%|█████████▊| 1.10MB / 1.12MB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  ...oder/pace_train_feats.npy:   6%|▌         | 7.51MB /  135MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  597kB /  597kB, 14.5kB/s  Processing Files (1 / 1)      : 100%|██████████|  572kB /  572kB, 13.4kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            
+
+New Data Upload               : 100%|██████████|  539kB /  539kB, 13.2kB/s  [AProcessing Files (0 / 1)      :   6%|▌         | 7.51MB /  135MB,  182kB/s  
+
+  ...g/m13_hero_raw_values.png:  81%|████████  | 1.68MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+New Data Upload               :   6%|▌         | 7.51MB /  135MB,  182kB/s  [AProcessing Files (1 / 1)      : 100%|██████████|  600kB /  600kB, 14.1kB/s  
+New Data Upload               : 100%|██████████|  600kB /  600kB, 14.1kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   3%|▎         | 5.90MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   3%|▎         | 5.96MB /  181MB,  143kB/s  
+New Data Upload               :   3%|▎         | 5.40MB /  180MB,  130kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  24%|██▍       | 79.0kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:   5%|▍         | 93.2kB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:   5%|▍         |   361B / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:   5%|▍         |  317kB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:   5%|▍         | 3.38kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:   5%|▍         | 5.67kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:   5%|▍         | 25.3kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:   5%|▍         |  116kB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:   5%|▍         | 8.02kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  96%|█████████▌| 3.00MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  307kB /  307kB, 7.27kB/s  
+New Data Upload               : 100%|██████████|  307kB /  307kB, 7.27kB/s  
+  ...g/m13_hero_raw_values.pdf: 100%|██████████|  307kB /  307kB            
+
+
+  ...coder/pace_test_feats.npy:   5%|▌         | 6.44MB /  123MB            [A[AProcessing Files (0 / 1)      :   5%|▌         | 6.44MB /  123MB,  156kB/s  
+New Data Upload               :   5%|▌         | 6.44MB /  123MB,  156kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[A
+
+  ...oder/m13_pace_compare.png:  93%|█████████▎|  559kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▉   | 1.09MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png:  90%|█████████ | 1.10MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png:  98%|█████████▊| 1.10MB / 1.12MB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png:  81%|████████  | 1.68MB / 2.06MB            [A[A
+
+  ...oder/pace_train_feats.npy:   9%|▊         | 11.8MB /  135MB            [A[AProcessing Files (0 / 1)      :   9%|▊         | 11.8MB /  135MB,  287kB/s  
+New Data Upload               :   9%|▊         | 11.8MB /  135MB,  287kB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  365kB /  365kB, 8.69kB/s  
+New Data Upload               : 100%|██████████|  365kB /  365kB, 8.69kB/s  
+  ...d_surgery_vs_pretrain.png: 100%|██████████|  365kB /  365kB            
+
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   4%|▎         | 6.44MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   4%|▎         | 6.50MB /  181MB,  156kB/s  
+New Data Upload               :   3%|▎         | 5.94MB /  180MB,  143kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  28%|██▊       | 91.9kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  10%|▉         |  186kB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  10%|▉         |   722B / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  10%|▉         |  633kB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  10%|▉         | 6.76kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  10%|▉         | 11.3kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  10%|▉         | 50.5kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  10%|▉         |  232kB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  10%|▉         | 16.0kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  96%|█████████▋| 3.01MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  28%|██▊       | 4.24MB / 15.1MB,  100kB/s  
+New Data Upload               :  10%|▉         | 1.18MB / 12.1MB, 28.6kB/s  [A
+
+  ...coder/pace_test_feats.npy:   7%|▋         | 8.59MB /  123MB            [A[A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 8.59MB /  123MB,  209kB/s  
+New Data Upload               :   7%|▋         | 8.59MB /  123MB,  209kB/s  [A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[A
+
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  603kB /  603kB, 14.2kB/s  
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.58MB / 1.58MB, 37.7kB/s  
+New Data Upload               : 100%|██████████|  603kB /  603kB, 14.2kB/s  [A
+
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.22MB / 1.22MB, 29.0kB/s  
+New Data Upload               : 100%|██████████| 1.58MB / 1.58MB, 37.7kB/s  [AProcessing Files (1 / 1)      : 100%|██████████| 1.12MB / 1.12MB, 26.6kB/s  
+New Data Upload               : 100%|██████████| 1.22MB / 1.22MB, 29.0kB/s  [A
+New Data Upload               : 100%|██████████| 1.12MB / 1.12MB, 26.6kB/s  [A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 2.06MB / 2.06MB, 49.3kB/s  
+New Data Upload               : 100%|██████████| 2.06MB / 2.06MB, 49.3kB/s  [A
+
+  ...oder/pace_train_feats.npy:  12%|█▏        | 16.6MB /  135MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[AProcessing Files (0 / 1)      :  12%|█▏        | 16.6MB /  135MB,  406kB/s  
+New Data Upload               :  12%|█▏        | 16.6MB /  135MB,  406kB/s  [A
+
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  602kB /  602kB, 13.8kB/s  
+New Data Upload               : 100%|██████████|  602kB /  602kB, 13.8kB/s  
+  ...r/m13_tcc_tau_compare.png: 100%|██████████|  602kB /  602kB            
+
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   6%|▌         | 10.2MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   6%|▌         | 10.3MB /  181MB,  248kB/s  
+New Data Upload               :   5%|▌         | 9.72MB /  180MB,  235kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  36%|███▌      |  118kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  19%|█▉        |  373kB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  19%|█▉        | 1.45kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  19%|█▉        | 1.27MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  19%|█▉        | 13.5kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  19%|█▉        | 22.7kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  19%|█▉        |  101kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  19%|█▉        |  465kB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  19%|█▉        | 32.1kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  97%|█████████▋| 3.02MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  36%|███▌      | 5.41MB / 15.1MB,  129kB/s  
+New Data Upload               :  19%|█▉        | 2.35MB / 12.1MB, 57.6kB/s  [A
+
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  185kB /  185kB, 4.40kB/s  
+New Data Upload               : 100%|██████████|  185kB /  185kB, 4.40kB/s  
+  ...r_surgery_vs_pretrain.pdf: 100%|██████████|  185kB /  185kB            
+
+
+  ...coder/pace_test_feats.npy:  12%|█▏        | 15.0MB /  123MB            [A[AProcessing Files (0 / 1)      :  12%|█▏        | 15.0MB /  123MB,  368kB/s  
+New Data Upload               :  12%|█▏        | 15.0MB /  123MB,  368kB/s  [A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[A
+
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  16%|█▋        | 22.0MB /  135MB            [A[AProcessing Files (0 / 1)      :  16%|█▋        | 22.0MB /  135MB,  538kB/s  
+New Data Upload               :  16%|█▋        | 22.0MB /  135MB,  538kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:   9%|▉         | 16.7MB /  180MB            [A[A[AProcessing Files (1 / 5)      :   9%|▉         | 16.8MB /  181MB,  407kB/s  
+New Data Upload               :   9%|▉         | 16.2MB /  180MB,  395kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  47%|████▋     |  156kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  34%|███▍      |  653kB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  34%|███▍      | 2.53kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  34%|███▍      | 2.22MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  34%|███▍      | 23.7kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  34%|███▍      | 39.7kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  34%|███▍      |  177kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  34%|███▍      |  813kB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  34%|███▍      | 56.1kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  97%|█████████▋| 3.04MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  47%|████▋     | 7.17MB / 15.1MB,  173kB/s  
+New Data Upload               :  34%|███▍      | 4.11MB / 12.1MB,  101kB/s  [A
+
+  ...coder/pace_test_feats.npy:  14%|█▍        | 17.7MB /  123MB            [A[AProcessing Files (0 / 1)      :  14%|█▍        | 17.7MB /  123MB,  434kB/s  
+New Data Upload               :  14%|█▍        | 17.7MB /  123MB,  434kB/s  [A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[A
+
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  21%|██        | 27.9MB /  135MB            [A[AProcessing Files (0 / 1)      :  21%|██        | 27.9MB /  135MB,  683kB/s  
+New Data Upload               :  21%|██        | 27.9MB /  135MB,  683kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  12%|█▏        | 21.0MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  12%|█▏        | 21.1MB /  181MB,  514kB/s  
+New Data Upload               :  11%|█▏        | 20.5MB /  180MB,  501kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  63%|██████▎   |  207kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  54%|█████▎    | 1.03MB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  54%|█████▎    | 3.97kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  54%|█████▎    | 3.48MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  54%|█████▎    | 37.2kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  54%|█████▎    | 62.4kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  54%|█████▎    |  278kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  54%|█████▎    | 1.28MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  54%|█████▎    | 88.2kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  98%|█████████▊| 3.06MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  63%|██████▎   | 9.52MB / 15.1MB,  231kB/s  
+New Data Upload               :  54%|█████▎    | 6.46MB / 12.1MB,  160kB/s  [A
+
+  ...coder/pace_test_feats.npy:  20%|██        | 24.7MB /  123MB            [A[AProcessing Files (0 / 1)      :  20%|██        | 24.7MB /  123MB,  607kB/s  
+New Data Upload               :  20%|██        | 24.7MB /  123MB,  607kB/s  [A
+
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  368kB /  368kB, 8.86kB/s  
+New Data Upload               : 100%|██████████|  368kB /  368kB, 8.86kB/s  
+  ...t_surgery_vs_pretrain.png: 100%|██████████|  368kB /  368kB            
+
+
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  25%|██▌       | 33.8MB /  135MB            [A[AProcessing Files (0 / 1)      :  25%|██▌       | 33.8MB /  135MB,  829kB/s  
+New Data Upload               :  25%|██▌       | 33.8MB /  135MB,  829kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  15%|█▍        | 26.4MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  15%|█▍        | 26.5MB /  181MB,  647kB/s  
+New Data Upload               :  14%|█▍        | 25.9MB /  180MB,  634kB/s  [A
+
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  597kB /  597kB, 14.3kB/s  
+New Data Upload               : 100%|██████████|  539kB /  539kB, 13.0kB/s  
+  ...coder/m13_tov_compare.png: 100%|██████████|  597kB /  597kB            
+
+
+  ...3_paired_diff_heatmap.png:  75%|███████▍  |  246kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  68%|██████▊   | 1.31MB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  68%|██████▊   | 5.06kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  68%|██████▊   | 4.43MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  68%|██████▊   | 47.3kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  68%|██████▊   | 79.4kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  68%|██████▊   |  354kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  68%|██████▊   | 1.63MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  68%|██████▊   |  112kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 :  99%|█████████▊| 3.08MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  75%|███████▍  | 11.3MB / 15.1MB,  274kB/s  
+New Data Upload               :  68%|██████▊   | 8.23MB / 12.1MB,  203kB/s  [A
+
+  ...coder/pace_test_feats.npy:  27%|██▋       | 32.7MB /  123MB            [A[AProcessing Files (0 / 1)      :  27%|██▋       | 32.7MB /  123MB,  807kB/s  
+New Data Upload               :  27%|██▋       | 32.7MB /  123MB,  807kB/s  [A
+
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[A
+
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            [A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  28%|██▊       | 38.1MB /  135MB            [A[AProcessing Files (0 / 1)      :  28%|██▊       | 38.1MB /  135MB,  935kB/s  
+New Data Upload               :  28%|██▊       | 38.1MB /  135MB,  935kB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  19%|█▉        | 35.1MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  19%|█▉        | 35.1MB /  181MB,  861kB/s  
+New Data Upload               :  19%|█▉        | 34.6MB /  180MB,  848kB/s  [A
+
+  ...3_paired_diff_heatmap.png:  98%|█████████▊|  323kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  97%|█████████▋| 1.86MB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  97%|█████████▋| 7.23kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  97%|█████████▋| 6.33MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  97%|█████████▋| 67.6kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  97%|█████████▋|  113kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  97%|█████████▋|  505kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  97%|█████████▋| 2.32MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  97%|█████████▋|  160kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|█████████▉| 3.12MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (7 / 17)     :  98%|█████████▊| 14.8MB / 15.1MB,  362kB/s  
+New Data Upload               :  97%|█████████▋| 11.8MB / 12.1MB,  291kB/s  [A
+
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  603kB /  603kB, 14.0kB/s  
+New Data Upload               : 100%|██████████|  603kB /  603kB, 14.0kB/s  
+  ...oder/m13_pace_compare.png: 100%|██████████|  603kB /  603kB            
+
+
+  ...coder/pace_test_feats.npy:  32%|███▏      | 39.2MB /  123MB            [A[AProcessing Files (0 / 1)      :  32%|███▏      | 39.2MB /  123MB,  968kB/s  
+New Data Upload               :  32%|███▏      | 39.2MB /  123MB,  968kB/s  [A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.58MB / 1.58MB, 37.3kB/s  
+New Data Upload               : 100%|██████████| 1.58MB / 1.58MB, 37.3kB/s  
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            
+
+
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.12MB / 1.12MB, 26.3kB/s  
+New Data Upload               : 100%|██████████| 1.12MB / 1.12MB, 26.3kB/s  
+  ...1_vitg/m13_hero_table.png: 100%|██████████| 1.12MB / 1.12MB            
+
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  32%|███▏      | 43.5MB /  135MB            [A[AProcessing Files (0 / 1)      :  32%|███▏      | 43.5MB /  135MB, 1.07MB/s  
+New Data Upload               :  32%|███▏      | 43.5MB /  135MB, 1.07MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  24%|██▍       | 43.2MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  24%|██▍       | 43.2MB /  181MB, 1.06MB/s  
+New Data Upload               :  24%|██▎       | 42.7MB /  180MB, 1.05MB/s  [A
+
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.22MB / 1.22MB, 28.6kB/s  
+New Data Upload               : 100%|██████████| 1.22MB / 1.22MB, 28.6kB/s  
+  ...r_surgery_vs_pretrain.png: 100%|██████████| 1.22MB / 1.22MB            
+
+
+  ...3_paired_diff_heatmap.png:  98%|█████████▊|  323kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  97%|█████████▋| 1.86MB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  97%|█████████▋| 7.23kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  97%|█████████▋| 6.33MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  97%|█████████▋| 67.6kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  97%|█████████▋|  113kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  97%|█████████▋|  505kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  97%|█████████▋| 2.32MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  97%|█████████▋|  160kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|█████████▉| 3.12MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 2.06MB / 2.06MB, 48.7kB/s  
+New Data Upload               : 100%|██████████| 2.06MB / 2.06MB, 48.7kB/s  
+  ...g/m13_hero_raw_values.png: 100%|██████████| 2.06MB / 2.06MB            
+
+
+  ...coder/pace_test_feats.npy:  38%|███▊      | 46.7MB /  123MB            [A[AProcessing Files (0 / 1)      :  38%|███▊      | 46.7MB /  123MB, 1.16MB/s  
+New Data Upload               :  38%|███▊      | 46.7MB /  123MB, 1.16MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  39%|███▊      | 52.0MB /  135MB            [A[AProcessing Files (0 / 1)      :  39%|███▊      | 52.0MB /  135MB, 1.28MB/s  
+New Data Upload               :  39%|███▊      | 52.0MB /  135MB, 1.28MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  29%|██▊       | 51.8MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  29%|██▊       | 51.9MB /  181MB, 1.28MB/s  
+New Data Upload               :  29%|██▊       | 51.3MB /  180MB, 1.26MB/s  [A
+
+  ...3_paired_diff_heatmap.png:  98%|█████████▊|  323kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png:  97%|█████████▋| 1.86MB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy:  97%|█████████▋| 7.23kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png:  97%|█████████▋| 6.33MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt:  97%|█████████▋| 67.6kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy:  97%|█████████▋|  113kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png:  97%|█████████▋|  505kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf:  97%|█████████▋| 2.32MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf:  97%|█████████▋|  160kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|█████████▉| 3.12MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  45%|████▍     | 55.3MB /  123MB            [A[AProcessing Files (0 / 1)      :  45%|████▍     | 55.3MB /  123MB, 1.37MB/s  
+New Data Upload               :  45%|████▍     | 55.3MB /  123MB, 1.37MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  44%|████▍     | 59.6MB /  135MB            [A[AProcessing Files (0 / 1)      :  44%|████▍     | 59.6MB /  135MB, 1.47MB/s  
+New Data Upload               :  44%|████▍     | 59.6MB /  135MB, 1.47MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  32%|███▏      | 57.2MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  32%|███▏      | 57.3MB /  181MB, 1.41MB/s  
+New Data Upload               :  32%|███▏      | 56.7MB /  180MB, 1.40MB/s  [A
+
+  ...3_paired_diff_heatmap.png: 100%|██████████|  330kB /  330kB            [A[A
+
+
+  ...l/m13_hero_raw_values.png: 100%|██████████| 1.92MB / 1.92MB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  165kB /  165kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 3.12MB / 3.12MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (17 / 17)    : 100%|██████████| 15.1MB / 15.1MB,  368kB/s  
+New Data Upload               : 100%|██████████| 12.1MB / 12.1MB,  298kB/s  [A
+
+  ...coder/pace_test_feats.npy:  52%|█████▏    | 63.9MB /  123MB            [A[AProcessing Files (0 / 1)      :  52%|█████▏    | 63.9MB /  123MB, 1.59MB/s  
+New Data Upload               :  52%|█████▏    | 63.9MB /  123MB, 1.59MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  47%|████▋     | 63.8MB /  135MB            [A[AProcessing Files (0 / 1)      :  47%|████▋     | 63.8MB /  135MB, 1.58MB/s  
+New Data Upload               :  47%|████▋     | 63.8MB /  135MB, 1.58MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  35%|███▌      | 63.1MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  35%|███▌      | 63.2MB /  181MB, 1.56MB/s  
+New Data Upload               :  35%|███▍      | 62.6MB /  180MB, 1.55MB/s  [A
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A
+
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  165kB /  165kB            [A[A[A
+
+
+
+  ...r/pace_train_clip_ids.npy: 100%|██████████|  126kB /  126kB            [A[A[A[A
+
+
+
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A[A[A[A
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 10.1MB / 10.1MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  56%|█████▌    | 69.2MB /  123MB            [A[AProcessing Files (0 / 1)      :  56%|█████▌    | 69.2MB /  123MB, 1.72MB/s  
+New Data Upload               :  56%|█████▌    | 69.2MB /  123MB, 1.72MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  53%|█████▎    | 71.4MB /  135MB            [A[AProcessing Files (0 / 1)      :  53%|█████▎    | 71.4MB /  135MB, 1.77MB/s  
+New Data Upload               :  53%|█████▎    | 71.4MB /  135MB, 1.77MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  39%|███▊      | 69.6MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  39%|███▊      | 69.7MB /  181MB, 1.72MB/s  
+New Data Upload               :  38%|███▊      | 69.1MB /  180MB, 1.71MB/s  [A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A
+
+
+
+
+  ...l/m13_hero_raw_values.png: 100%|██████████| 1.92MB / 1.92MB            [A[A[A[A[A
+
+
+
+
+
+  ...encoder/per_clip_pace.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...3_paired_diff_heatmap.png: 100%|██████████|  330kB /  330kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 3.40MB / 3.40MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  63%|██████▎   | 77.8MB /  123MB            [A[AProcessing Files (0 / 1)      :  63%|██████▎   | 77.8MB /  123MB, 1.94MB/s  
+New Data Upload               :  63%|██████▎   | 77.8MB /  123MB, 1.94MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  58%|█████▊    | 78.3MB /  135MB            [A[AProcessing Files (0 / 1)      :  58%|█████▊    | 78.3MB /  135MB, 1.94MB/s  
+New Data Upload               :  58%|█████▊    | 78.3MB /  135MB, 1.94MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  41%|████      | 73.4MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  41%|████      | 73.5MB /  181MB, 1.81MB/s  
+New Data Upload               :  41%|████      | 72.9MB /  180MB, 1.80MB/s  [A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A
+
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A
+
+
+
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            [A[A[A[A
+
+
+
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  165kB /  165kB            [A[A[A[A[A
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...r/pace_train_clip_ids.npy: 100%|██████████|  126kB /  126kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 11.4MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  70%|██████▉   | 85.9MB /  123MB            [A[AProcessing Files (0 / 1)      :  70%|██████▉   | 85.9MB /  123MB, 2.14MB/s  
+New Data Upload               :  70%|██████▉   | 85.9MB /  123MB, 2.14MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  64%|██████▍   | 86.9MB /  135MB            [A[AProcessing Files (0 / 1)      :  64%|██████▍   | 86.9MB /  135MB, 2.16MB/s  
+New Data Upload               :  64%|██████▍   | 86.9MB /  135MB, 2.16MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  46%|████▌     | 82.0MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  45%|████▌     | 82.1MB /  181MB, 2.03MB/s  
+New Data Upload               :  45%|████▌     | 81.5MB /  180MB, 2.02MB/s  [A
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A
+
+
+  ...r/pace_train_clip_ids.npy: 100%|██████████|  126kB /  126kB            [A[A[A
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...3_paired_diff_heatmap.png: 100%|██████████|  330kB /  330kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...encoder/per_clip_pace.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.png: 100%|██████████| 1.92MB / 1.92MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 4.19MB / 4.19MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  75%|███████▌  | 92.9MB /  123MB            [A[AProcessing Files (0 / 1)      :  75%|███████▌  | 92.9MB /  123MB, 2.32MB/s  
+New Data Upload               :  75%|███████▌  | 92.9MB /  123MB, 2.32MB/s  [A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...oder/pace_train_feats.npy:  70%|███████   | 95.0MB /  135MB            [A[AProcessing Files (0 / 1)      :  70%|███████   | 95.0MB /  135MB, 2.36MB/s  
+New Data Upload               :  70%|███████   | 95.0MB /  135MB, 2.36MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  49%|████▉     | 88.0MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  49%|████▉     | 88.0MB /  181MB, 2.18MB/s  
+New Data Upload               :  49%|████▊     | 87.5MB /  180MB, 2.17MB/s  [A
+
+  ...l/m13_hero_raw_values.png: 100%|██████████| 1.92MB / 1.92MB            [A[A
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A
+
+
+
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  165kB /  165kB            [A[A[A[A[A
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 8.73MB / 8.73MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  600kB /  600kB, 13.6kB/s  
+New Data Upload               : 100%|██████████|  600kB /  600kB, 13.6kB/s  
+  ...m13_tcc_cycle_compare.png: 100%|██████████|  600kB /  600kB            
+
+
+  ...coder/pace_test_feats.npy:  81%|████████  | 99.3MB /  123MB            [A[AProcessing Files (0 / 1)      :  81%|████████  | 99.3MB /  123MB, 2.48MB/s  
+New Data Upload               :  81%|████████  | 99.3MB /  123MB, 2.48MB/s  [A
+
+  ...oder/pace_train_feats.npy:  77%|███████▋  |  104MB /  135MB            [A[AProcessing Files (0 / 1)      :  77%|███████▋  |  104MB /  135MB, 2.58MB/s  
+New Data Upload               :  77%|███████▋  |  104MB /  135MB, 2.58MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  54%|█████▎    | 96.6MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  54%|█████▎    | 96.7MB /  181MB, 2.40MB/s  
+New Data Upload               :  53%|█████▎    | 96.1MB /  180MB, 2.39MB/s  [A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A
+
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A[A
+
+
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A[A[A
+
+
+
+
+  ...encoder/per_clip_pace.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A
+
+
+
+
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...3_paired_diff_heatmap.png: 100%|██████████|  330kB /  330kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...r/pace_train_clip_ids.npy: 100%|██████████|  126kB /  126kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 5.64MB / 5.64MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  86%|████████▌ |  106MB /  123MB            [A[AProcessing Files (0 / 1)      :  86%|████████▌ |  106MB /  123MB, 2.64MB/s  
+New Data Upload               :  86%|████████▌ |  106MB /  123MB, 2.64MB/s  [A
+
+  ...oder/pace_train_feats.npy:  80%|████████  |  108MB /  135MB            [A[AProcessing Files (0 / 1)      :  80%|████████  |  108MB /  135MB, 2.70MB/s  
+New Data Upload               :  80%|████████  |  108MB /  135MB, 2.70MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  58%|█████▊    |  104MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  58%|█████▊    |  104MB /  181MB, 2.59MB/s  
+New Data Upload               :  58%|█████▊    |  104MB /  180MB, 2.58MB/s  [A
+
+  ...r/pace_train_clip_ids.npy: 100%|██████████|  126kB /  126kB            [A[A
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A
+
+
+
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  165kB /  165kB            [A[A[A[A[A
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.png: 100%|██████████| 1.92MB / 1.92MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 9.45MB / 9.45MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  94%|█████████▍|  116MB /  123MB            [A[AProcessing Files (0 / 1)      :  94%|█████████▍|  116MB /  123MB, 2.90MB/s  
+New Data Upload               :  94%|█████████▍|  116MB /  123MB, 2.90MB/s  [A
+
+  ...oder/pace_train_feats.npy:  83%|████████▎ |  113MB /  135MB            [A[AProcessing Files (0 / 1)      :  83%|████████▎ |  113MB /  135MB, 2.81MB/s  
+New Data Upload               :  83%|████████▎ |  113MB /  135MB, 2.81MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  62%|██████▏   |  112MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  62%|██████▏   |  112MB /  181MB, 2.79MB/s  
+New Data Upload               :  62%|██████▏   |  112MB /  180MB, 2.78MB/s  [A
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A
+
+
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            [A[A[A
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A
+
+
+
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            [A[A[A[A[A
+
+
+
+
+
+  ...3_paired_diff_heatmap.png: 100%|██████████|  330kB /  330kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 3.24MB / 3.24MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...coder/pace_test_feats.npy:  98%|█████████▊|  121MB /  123MB            [A[AProcessing Files (0 / 1)      :  98%|█████████▊|  121MB /  123MB, 3.04MB/s  
+New Data Upload               :  98%|█████████▊|  121MB /  123MB, 3.04MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  65%|██████▌   |  118MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy:  87%|████████▋ |  117MB /  135MB            [A[AProcessing Files (1 / 5)      :  65%|██████▌   |  118MB /  181MB, 2.93MB/s  Processing Files (0 / 1)      :  87%|████████▋ |  117MB /  135MB, 2.91MB/s  
+New Data Upload               :  65%|██████▌   |  117MB /  180MB, 2.92MB/s  [A
+New Data Upload               :  87%|████████▋ |  117MB /  135MB, 2.91MB/s  [A
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A
+
+
+  ...oder/pace_test_labels.npy: 100%|██████████| 43.9kB / 43.9kB            [A[A[A
+
+
+
+  ...encoder/per_clip_pace.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  165kB /  165kB            [A[A[A[A[A
+
+
+
+
+
+  ...r/pace_train_clip_ids.npy: 100%|██████████|  126kB /  126kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...l/m13_hero_raw_values.png: 100%|██████████| 1.92MB / 1.92MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 10.5MB / 10.5MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A
+
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A[A
+
+
+
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            [A[A[A[A
+
+
+
+
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            [A[A[A[A[A
+
+
+
+
+
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 7 files]                 : 100%|██████████| 4.26MB / 4.26MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (17 / 17)    : 100%|██████████| 15.1MB / 15.1MB,  359kB/s  
+New Data Upload               : 100%|██████████| 12.1MB / 12.1MB,  290kB/s  
+  ...er/pace_test_clip_ids.npy: 100%|██████████|  117kB /  117kB            
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            
+  ...der/pace_train_labels.npy: 100%|██████████| 48.1kB / 48.1kB            
+  ..._f70_encoder/head_pace.pt: 100%|██████████| 69.5kB / 69.5kB            
+  ...l/m13_hero_raw_values.pdf: 100%|██████████| 2.39MB / 2.39MB            
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  295kB /  295kB            
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.51MB / 6.51MB            
+  .../eval_scorecard_paper.png: 100%|██████████|  520kB /  520kB            
+  [+ 7 files]                 : 100%|██████████| 4.26MB / 4.26MB            
+
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[AProcessing Files (0 / 1)      :  99%|█████████▉|  122MB /  123MB, 3.05MB/s  
+New Data Upload               :  99%|█████████▉|  122MB /  123MB, 3.05MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  68%|██████▊   |  122MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy:  89%|████████▊ |  120MB /  135MB            [A[AProcessing Files (1 / 5)      :  68%|██████▊   |  122MB /  181MB, 3.04MB/s  Processing Files (0 / 1)      :  89%|████████▊ |  120MB /  135MB, 2.98MB/s  
+New Data Upload               :  68%|██████▊   |  122MB /  180MB, 3.02MB/s  [A
+New Data Upload               :  89%|████████▊ |  120MB /  135MB, 2.98MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  70%|███████   |  126MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy:  91%|█████████ |  123MB /  135MB            [A[AProcessing Files (1 / 5)      :  70%|███████   |  126MB /  181MB, 3.14MB/s  Processing Files (0 / 1)      :  91%|█████████ |  123MB /  135MB, 3.05MB/s  
+New Data Upload               :  70%|██████▉   |  126MB /  180MB, 3.13MB/s  [A
+New Data Upload               :  91%|█████████ |  123MB /  135MB, 3.05MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  72%|███████▏  |  131MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy:  93%|█████████▎|  126MB /  135MB            [A[AProcessing Files (1 / 5)      :  72%|███████▏  |  131MB /  181MB, 3.25MB/s  Processing Files (0 / 1)      :  93%|█████████▎|  126MB /  135MB, 3.13MB/s  
+New Data Upload               :  72%|███████▏  |  130MB /  180MB, 3.24MB/s  [A
+New Data Upload               :  93%|█████████▎|  126MB /  135MB, 3.13MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  73%|███████▎  |  132MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy:  93%|█████████▎|  126MB /  135MB            [A[AProcessing Files (1 / 5)      :  73%|███████▎  |  132MB /  181MB, 3.28MB/s  
+New Data Upload               :  73%|███████▎  |  132MB /  180MB, 3.27MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy:  96%|█████████▋|  130MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  73%|███████▎  |  132MB /  180MB            [A[A[AProcessing Files (0 / 1)      :  96%|█████████▋|  130MB /  135MB, 3.23MB/s  
+New Data Upload               :  96%|█████████▋|  130MB /  135MB, 3.23MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy:  99%|█████████▉|  134MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  74%|███████▍  |  134MB /  180MB            [A[A[AProcessing Files (0 / 1)      :  99%|█████████▉|  134MB /  135MB, 3.31MB/s  Processing Files (1 / 5)      :  74%|███████▍  |  134MB /  181MB, 3.31MB/s  
+New Data Upload               :  99%|█████████▉|  134MB /  135MB, 3.31MB/s  [A
+New Data Upload               :  74%|███████▍  |  133MB /  180MB, 3.30MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy:  99%|█████████▉|  134MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  75%|███████▍  |  134MB /  180MB            [A[A[AProcessing Files (1 / 5)      :  74%|███████▍  |  134MB /  181MB, 3.31MB/s  
+New Data Upload               :  74%|███████▍  |  134MB /  180MB, 3.30MB/s  [A
+
+  ...coder/pace_test_feats.npy:  99%|█████████▉|  122MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy:  99%|█████████▉|  134MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  75%|███████▍  |  134MB /  180MB            [A[A[A
+
+  ...coder/pace_test_feats.npy: 100%|█████████▉|  123MB /  123MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  123MB /  123MB, 3.00MB/s  
+New Data Upload               : 100%|█████████▉|  123MB /  123MB, 3.00MB/s  [A
+
+  ...oder/pace_train_feats.npy:  99%|█████████▉|  134MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  75%|███████▍  |  134MB /  180MB            [A[A[AProcessing Files (0 / 1)      :  99%|█████████▉|  134MB /  135MB, 3.29MB/s  
+New Data Upload               :  99%|█████████▉|  134MB /  135MB, 3.29MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  123MB /  123MB, 3.01MB/s  
+New Data Upload               : 100%|██████████|  123MB /  123MB, 3.01MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  75%|███████▍  |  134MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  135MB /  135MB, 3.30MB/s  
+New Data Upload               : 100%|█████████▉|  135MB /  135MB, 3.30MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  75%|███████▍  |  134MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  75%|███████▍  |  134MB /  180MB            [A[A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:   8%|▊         | 11.2kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:   8%|▊         | 7.61kB / 92.0kB            [A[A[A[A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:   8%|▊         |   614B / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  77%|███████▋  |  138MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:   8%|▊         | 11.2kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:   8%|▊         | 7.61kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:   8%|▊         |   614B / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  77%|███████▋  |  138MB /  181MB, 3.36MB/s  
+New Data Upload               :  77%|███████▋  |  138MB /  180MB, 3.35MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  77%|███████▋  |  138MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:   8%|▊         | 11.2kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:   8%|▊         | 7.61kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:   8%|▊         |   614B / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  77%|███████▋  |  138MB /  181MB, 3.36MB/s  
+New Data Upload               :  77%|███████▋  |  138MB /  180MB, 3.35MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  78%|███████▊  |  140MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  12%|█▏        | 16.0kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  12%|█▏        | 10.9kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  12%|█▏        |   877B / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  78%|███████▊  |  140MB /  181MB, 3.39MB/s  
+New Data Upload               :  78%|███████▊  |  140MB /  180MB, 3.38MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  79%|███████▉  |  142MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  17%|█▋        | 22.3kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  17%|█▋        | 15.2kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  17%|█▋        | 1.23kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  79%|███████▉  |  142MB /  181MB, 3.45MB/s  
+New Data Upload               :  79%|███████▊  |  142MB /  180MB, 3.43MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[A
+
+  ...oder/pace_train_feats.npy: 100%|█████████▉|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  81%|████████  |  145MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  24%|██▎       | 31.9kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  24%|██▎       | 21.7kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  24%|██▎       | 1.75kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  81%|████████  |  146MB /  181MB, 3.53MB/s  
+New Data Upload               :  81%|████████  |  145MB /  180MB, 3.52MB/s  [A
+
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  123MB /  123MB, 2.94MB/s  
+New Data Upload               : 100%|██████████|  123MB /  123MB, 2.94MB/s  
+  ...coder/pace_test_feats.npy: 100%|██████████|  123MB /  123MB            
+
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  135MB /  135MB, 3.24MB/s  
+New Data Upload               : 100%|██████████|  135MB /  135MB, 3.24MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  81%|████████▏ |  146MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  26%|██▌       | 35.1kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  26%|██▌       | 23.9kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  26%|██▌       | 1.93kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  81%|████████  |  147MB /  181MB, 3.55MB/s  
+New Data Upload               :  81%|████████  |  146MB /  180MB, 3.54MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  84%|████████▎ |  151MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  35%|███▌      | 47.9kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  35%|███▌      | 32.6kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  35%|███▌      | 2.63kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  84%|████████▎ |  151MB /  181MB, 3.66MB/s  
+New Data Upload               :  84%|████████▎ |  150MB /  180MB, 3.65MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  86%|████████▌ |  155MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  45%|████▍     | 60.6kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  45%|████▍     | 41.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  45%|████▍     | 3.33kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  86%|████████▌ |  155MB /  181MB, 3.78MB/s  
+New Data Upload               :  86%|████████▌ |  155MB /  180MB, 3.76MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  88%|████████▊ |  159MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  53%|█████▎    | 71.8kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  53%|█████▎    | 48.9kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  53%|█████▎    | 3.95kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  88%|████████▊ |  159MB /  181MB, 3.87MB/s  
+New Data Upload               :  88%|████████▊ |  158MB /  180MB, 3.86MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  88%|████████▊ |  159MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  53%|█████▎    | 71.8kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  53%|█████▎    | 48.9kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  53%|█████▎    | 3.95kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  91%|█████████ |  163MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  63%|██████▎   | 84.6kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  63%|██████▎   | 57.6kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  63%|██████▎   | 4.65kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  91%|█████████ |  163MB /  181MB, 3.98MB/s  
+New Data Upload               :  90%|█████████ |  163MB /  180MB, 3.97MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  92%|█████████▏|  166MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  70%|██████▉   | 94.1kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  70%|██████▉   | 64.1kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  70%|██████▉   | 5.17kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  92%|█████████▏|  167MB /  181MB, 4.06MB/s  
+New Data Upload               :  92%|█████████▏|  166MB /  180MB, 4.05MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  95%|█████████▍|  171MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  79%|███████▉  |  107kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  79%|███████▉  | 72.8kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  79%|███████▉  | 5.88kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  95%|█████████▍|  171MB /  181MB, 4.18MB/s  
+New Data Upload               :  95%|█████████▍|  170MB /  180MB, 4.16MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  97%|█████████▋|  175MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  89%|████████▊ |  120kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  89%|████████▊ | 81.5kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  89%|████████▊ | 6.58kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  97%|█████████▋|  175MB /  181MB, 4.29MB/s  
+New Data Upload               :  97%|█████████▋|  175MB /  180MB, 4.28MB/s  [A
+
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  135MB /  135MB, 3.16MB/s  
+New Data Upload               : 100%|██████████|  135MB /  135MB, 3.16MB/s  
+  ...oder/pace_train_feats.npy: 100%|██████████|  135MB /  135MB            
+
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  97%|█████████▋|  175MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  89%|████████▊ |  120kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  89%|████████▊ | 81.5kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  89%|████████▊ | 6.58kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy:  99%|█████████▉|  179MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  97%|█████████▋|  131kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  97%|█████████▋| 89.1kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  97%|█████████▋| 7.19kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      :  99%|█████████▉|  179MB /  181MB, 4.38MB/s  
+New Data Upload               :  99%|█████████▉|  179MB /  180MB, 4.37MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[AProcessing Files (1 / 5)      : 100%|█████████▉|  180MB /  181MB, 4.40MB/s  
+New Data Upload               : 100%|█████████▉|  180MB /  180MB, 4.39MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|█████████▉|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy:  99%|█████████▉|  134kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt:  99%|█████████▉| 91.3kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy:  99%|█████████▉| 7.37kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[AProcessing Files (5 / 5)      : 100%|██████████|  181MB /  181MB, 4.31MB/s  
+New Data Upload               : 100%|██████████|  180MB /  180MB, 4.30MB/s  [A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A
+
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            [A[A
+
+
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            [A[A[A
+
+
+
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            [A[A[A[A
+
+
+
+
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            [A[A[A[A[A
+
+
+
+
+
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[AProcessing Files (5 / 5)      : 100%|██████████|  181MB /  181MB, 4.20MB/s  
+New Data Upload               : 100%|██████████|  180MB /  180MB, 4.19MB/s  
+  ...oder/tov_train_labels.npy: 100%|██████████| 64.1kB / 64.1kB            
+  ...coder/tov_train_feats.npy: 100%|██████████|  180MB /  180MB            
+  ...er/tov_train_clip_ids.npy: 100%|██████████|  135kB /  135kB            
+  ...t_f70_encoder/head_tov.pt: 100%|██████████| 92.0kB / 92.0kB            
+  ..._encoder/per_clip_tov.npy: 100%|██████████| 7.43kB / 7.43kB            
+Removing 16 file(s) from commit that have not changed.
+Successfully committed 50 at once. Increasing the limit for next batch.
+Removing 4 file(s) from commit that have not changed.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+Is done: exiting main loop
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+
+---------- 2026-06-24 12:17:20 (0:01:00) ----------
+Files:   hashed 1849/1849 (210.6G/210.6G) | pre-uploaded: 1481/1481 (210.6G/210.6G) | committed: 1849/1849 (210.6G/210.6G) | ignored: 0
+Workers: hashing: 0 | get upload mode: 0 | pre-uploading: 0 | committing: 0 | waiting: 0
+---------------------------------------------------
+Upload is complete!

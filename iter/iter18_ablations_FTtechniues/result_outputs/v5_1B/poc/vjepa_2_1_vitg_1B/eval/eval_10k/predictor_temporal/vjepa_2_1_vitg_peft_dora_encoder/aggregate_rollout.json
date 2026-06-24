@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_peft_dora_encoder",
+  "metric": "rollout",
+  "n_test": 1825,
+  "mean": 0.005115,
+  "std": 0.005449,
+  "ci": {
+    "mean": 0.005115,
+    "ci_lo": 0.004874,
+    "ci_hi": 0.005374,
+    "ci_half": 0.00025
+  },
+  "lower_is_better": true,
+  "interpretation": "free-run drift slope; lower = stabler dynamics",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_dora_encoder/m09c_ckpt_best.pt"
+}

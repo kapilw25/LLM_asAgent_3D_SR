@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder",
+  "metric": "causal",
+  "n_test": 1825,
+  "mean": 0.621886,
+  "std": 0.037512,
+  "ci": {
+    "mean": 0.621886,
+    "ci_lo": 0.620155,
+    "ci_hi": 0.623638,
+    "ci_half": 0.001742
+  },
+  "lower_is_better": true,
+  "interpretation": "causal future-block L1; lower = better",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f30_encoder/m09c_ckpt_best.pt"
+}

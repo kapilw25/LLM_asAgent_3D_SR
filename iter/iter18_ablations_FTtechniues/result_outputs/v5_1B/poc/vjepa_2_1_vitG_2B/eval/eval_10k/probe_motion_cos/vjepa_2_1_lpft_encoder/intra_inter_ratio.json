@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_lpft_encoder",
+  "n_test": 1825,
+  "pos_mean": 0.759497,
+  "neg_mean": 0.640329,
+  "score_mean": 0.119167,
+  "score_ci": {
+    "mean": 0.119167,
+    "ci_lo": 0.114844,
+    "ci_hi": 0.123546,
+    "ci_half": 0.004351
+  },
+  "elapsed_sec": 0.05
+}

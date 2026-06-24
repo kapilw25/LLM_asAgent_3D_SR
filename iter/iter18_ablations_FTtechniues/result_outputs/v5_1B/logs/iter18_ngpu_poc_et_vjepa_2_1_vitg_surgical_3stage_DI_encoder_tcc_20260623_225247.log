@@ -1,0 +1,99 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 22:52:49 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_surgical_3stage_DI_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/poc/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_surgical_3stage_DI_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 22:52:50 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_surgical_3stage_DI_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt
+
+═══ 22:52:52 ·   STAGE 8c · encoder_temporal (metric=tcc) for vjepa_2_1_vitg_surgical_3stage_DI_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 590.2 GB / 1026.1 GB (58%)
+[m12f_encoder_temporal]   pids:   1102 / 15616 (7%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [head-train-cap] train 6854 → 2000 (head-fit only; test/CI unaffected)
+  splits: train=2000  test=1825  metrics=['tcc']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=5632; encoder-only — no predictor build)
+  [share-features] test: off — n/a (no aot/tov in group)
+  [resume] .m12f_ckpt_test.npz holds metrics=['tov'] ≠ current ['tcc'] — discarding (full re-extract)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[tcc/test]:   0%|          | 0/1825 [00:00<?, ?clip/s]m12f[tcc/test]:   2%|▏         | 32/1825 [00:16<15:18,  1.95clip/s]m12f[tcc/test]:   4%|▎         | 64/1825 [00:20<09:14,  3.17clip/s, recent=0.2s/clip ETA0.1h]m12f[tcc/test]:   5%|▌         | 96/1825 [00:23<07:08,  4.04clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:   7%|▋         | 128/1825 [00:27<06:03,  4.67clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:   9%|▉         | 160/1825 [00:31<05:24,  5.14clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:  11%|█         | 192/1825 [00:34<04:53,  5.56clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:  12%|█▏        | 224/1825 [00:38<04:33,  5.84clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:  14%|█▍        | 256/1825 [00:41<04:15,  6.15clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:  16%|█▌        | 288/1825 [00:45<04:01,  6.36clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:  18%|█▊        | 320/1825 [00:49<03:50,  6.53clip/s, recent=0.1s/clip ETA0.1h]m12f[tcc/test]:  19%|█▉        | 352/1825 [00:52<03:39,  6.71clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  21%|██        | 384/1825 [00:56<03:30,  6.83clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  23%|██▎       | 416/1825 [01:00<03:23,  6.92clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  25%|██▍       | 448/1825 [01:03<03:15,  7.06clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00003.tar: emitted=138, dropped=0 (missing_part=0, empty_mp4=0), filtered=862 (subset=862, resume=0)
+m12f[tcc/test]:  26%|██▋       | 480/1825 [01:07<03:08,  7.15clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  28%|██▊       | 512/1825 [01:10<03:01,  7.23clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  30%|██▉       | 544/1825 [01:14<02:54,  7.33clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  32%|███▏      | 576/1825 [01:18<02:49,  7.37clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  33%|███▎      | 608/1825 [01:22<02:44,  7.41clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  35%|███▌      | 640/1825 [01:25<02:39,  7.45clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00004.tar: emitted=137, dropped=0 (missing_part=0, empty_mp4=0), filtered=863 (subset=863, resume=0)
+m12f[tcc/test]:  37%|███▋      | 672/1825 [01:29<02:33,  7.51clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  39%|███▊      | 704/1825 [01:33<02:29,  7.52clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  40%|████      | 736/1825 [01:37<02:24,  7.55clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  42%|████▏     | 768/1825 [01:41<02:19,  7.58clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  44%|████▍     | 800/1825 [01:44<02:14,  7.62clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00009.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=277 (subset=277, resume=0)
+m12f[tcc/test]:  46%|████▌     | 832/1825 [01:48<02:09,  7.65clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  47%|████▋     | 864/1825 [01:52<02:05,  7.68clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  49%|████▉     | 896/1825 [01:56<02:00,  7.70clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  51%|█████     | 928/1825 [02:00<01:56,  7.71clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  53%|█████▎    | 960/1825 [02:04<01:51,  7.74clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00005.tar: emitted=231, dropped=0 (missing_part=0, empty_mp4=0), filtered=769 (subset=769, resume=0)
+m12f[tcc/test]:  54%|█████▍    | 992/1825 [02:07<01:47,  7.77clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  56%|█████▌    | 1024/1825 [02:11<01:43,  7.77clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  58%|█████▊    | 1056/1825 [02:15<01:38,  7.77clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  60%|█████▉    | 1088/1825 [02:19<01:34,  7.78clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00000.tar: emitted=144, dropped=0 (missing_part=0, empty_mp4=0), filtered=856 (subset=856, resume=0)
+m12f[tcc/test]:  61%|██████▏   | 1120/1825 [02:23<01:30,  7.80clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  63%|██████▎   | 1152/1825 [02:27<01:25,  7.84clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  65%|██████▍   | 1184/1825 [02:30<01:21,  7.87clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  67%|██████▋   | 1216/1825 [02:34<01:17,  7.88clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  68%|██████▊   | 1248/1825 [02:38<01:13,  7.88clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  70%|███████   | 1280/1825 [02:41<01:08,  7.90clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00006.tar: emitted=204, dropped=0 (missing_part=0, empty_mp4=0), filtered=796 (subset=796, resume=0)
+m12f[tcc/test]:  72%|███████▏  | 1312/1825 [02:45<01:04,  7.93clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  74%|███████▎  | 1344/1825 [02:49<01:00,  7.95clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00001.tar: emitted=199, dropped=0 (missing_part=0, empty_mp4=0), filtered=801 (subset=801, resume=0)
+m12f[tcc/test]:  75%|███████▌  | 1376/1825 [02:53<00:56,  7.95clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  77%|███████▋  | 1408/1825 [02:56<00:52,  7.96clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  79%|███████▉  | 1440/1825 [03:00<00:48,  7.98clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00008.tar: emitted=172, dropped=0 (missing_part=0, empty_mp4=0), filtered=828 (subset=828, resume=0)
+m12f[tcc/test]:  81%|████████  | 1472/1825 [03:03<00:44,  8.00clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00002.tar: emitted=244, dropped=0 (missing_part=0, empty_mp4=0), filtered=756 (subset=756, resume=0)
+m12f[tcc/test]:  82%|████████▏ | 1504/1825 [03:07<00:40,  8.02clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  84%|████████▍ | 1536/1825 [03:10<00:35,  8.04clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  86%|████████▌ | 1568/1825 [03:14<00:31,  8.05clip/s, recent=0.1s/clip ETA0.0h]  [tar reader] subset-00007.tar: emitted=336, dropped=0 (missing_part=0, empty_mp4=0), filtered=664 (subset=664, resume=0)
+m12f[tcc/test]:  88%|████████▊ | 1600/1825 [03:18<00:27,  8.07clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  89%|████████▉ | 1632/1825 [03:22<00:23,  8.07clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  91%|█████████ | 1664/1825 [03:25<00:19,  8.08clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  93%|█████████▎| 1696/1825 [03:29<00:15,  8.08clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  95%|█████████▍| 1728/1825 [03:33<00:12,  8.08clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  96%|█████████▋| 1760/1825 [03:37<00:08,  8.09clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]:  98%|█████████▊| 1792/1825 [03:41<00:04,  8.08clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]: 100%|█████████▉| 1824/1825 [03:45<00:00,  8.09clip/s, recent=0.1s/clip ETA0.0h]m12f[tcc/test]: 100%|██████████| 1825/1825 [03:45<00:00,  8.09clip/s, recent=0.1s/clip ETA0.0h]
+  [tcc] pair-chunk auto → 71278  (free=90.8G × target=0.85 ÷ 1.08MB/pair, n_pairs=226571)
+  [tcc] 40367/226571 pairs degenerate (collinear features) → τ=NaN, excluded from per-clip τ mean (cycle-back kept).
+  tcc: cycle=2.4125±0.2081  τ=0.2877±0.1132 N=1825 pairs=226571 (12s)
+forward stage: 238s
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_vitg_surgical_3stage_DI_encoder (mode=POC, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 22:56:53 · DONE · total wall = 4 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_encoder/probe.pt

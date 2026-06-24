@@ -1,0 +1,62 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+═══ 12:43:19 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 6854 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 451 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 1825 clips (split=test)
+═══ 12:43:19 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [POC]) ═══
+  [clip_splits] universe=broad_manifest: 10000 − val(451) − test(1825) = 7724 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 7724 train-pool keys → data/eval_10k_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json
+═══ 12:43:20 · m09c_surgery train [variant=3stage_DI_encoder] (POC) ═══
+  config:    configs/train/surgery_3stage_DI_encoder.yaml
+  subset:    data/eval_10k_local/train_pool.json  (leakage-safe: universe − val − test)
+  factor:    data/eval_10k_local/m11_factor_datasets
+  output:    outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder
+  init:      outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)
+  recipe (MANDATORY, resolved from configs/train/surgery_3stage_DI_encoder.yaml + optional env overrides): --teacher-mode FROZEN --lp-ft-stage0 on --warmup-mode single --subset-mode recipe_v3 --saliency on --spd on --replay on
+[live-debug] installed — pid=252682. Force a stack dump anytime via:
+[live-debug]   kill -USR1 252682   # signal-safe native dump
+[live-debug]   kill -USR2 252682   # Python dump with banner
+  [train-frame-cache] ON → data/eval_10k_local/m12_frame_cache (min_free=200G) — deterministic decode memoized; shared across epochs/stages/arms/evals
+  [stream-autotune m09c1_surgery_encoder] cores=32 (pinned cpuset) · concurrency=4 (src=env) · cgroup_ram=1026G → num_workers=20
+  [recipe-v3 receipts] saliency_weighting=True · spd.enabled=True · raw_pretrain_pct=0.5 · factor_streaming.enabled=True
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+  [probe_labels Opt X] mode=poc: subsampled 10,000/10,000 clips (100.00%)
+  [probe_labels] generating /workspace/factorjepa/outputs/poc/probe_action/action_labels.json  (eval_subset=eval_10k.json, min_clips_per_class=100, min_per_split=5)
+  [motion-flow] magnitude quartiles: Q1=112.219  Q2=169.959  Q3=256.442
+  [motion-flow] 703/10000 clip_keys had no motion_features record (m04d may not have processed them yet)
+  [motion-flow] 11 classes: ['fast__downward', 'fast__upward', 'medium__downward', 'medium__upward', 'slow__downward', 'slow__rightward', 'slow__upward', 'still__downward', 'still__leftward', 'still__rightward', 'still__upward']
+  [motion-flow] kept 9130 clips, dropped 167 (dropped counts: {'slow__leftward': 86, 'medium__rightward': 58, 'fast__rightward': 3, 'medium__leftward': 17, 'fast__leftward': 3})
+[stratified_split] video-disjoint iter16+ mode: N_clips=9130, N_videos=637, N_classes=11; train/val/test = 6854/451/1825
+  [probe_labels] wrote /workspace/factorjepa/outputs/poc/probe_action/action_labels.json: 9130 records · 11 classes
+  [probe_labels] missing: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json — auto-generating via m04f_taxonomy_labels.py (CPU, ~30 s)
+  derived labels for 10000/10000 clips (0 skipped — no tag record)
+
+❌ FATAL: m04f_taxonomy_labels.py crashed — see traceback below
+Traceback (most recent call last):
+  File "/workspace/factorjepa/src/m04f_taxonomy_labels.py", line 82, in <module>
+    main()
+  File "/workspace/factorjepa/src/m04f_taxonomy_labels.py", line 75, in main
+    run_labels(args, wb)
+  File "/workspace/factorjepa/src/m04f_taxonomy_labels.py", line 47, in run_labels
+    save_json_checkpoint({"dims": dims, "labels": labels_by_clip}, out_path)
+  File "/workspace/factorjepa/src/utils/checkpoint.py", line 102, in save_json_checkpoint
+    os.replace(tmp_file, checkpoint_file)
+FileNotFoundError: [Errno 2] No such file or directory: '/workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.tmp.json' -> '/workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json'
+
+FATAL (unhandled m09c exception): CalledProcessError: Command '['/workspace/factorjepa/venv_walkindia/bin/python', '-u', '/workspace/factorjepa/src/m04f_taxonomy_labels.py', '--POC', '--eval-subset', '/workspace/factorjepa/data/eval_10k_local/eval_10k.json', '--tags-json', '/workspace/factorjepa/data/eval_10k_local/tags.json', '--tag-taxonomy', '/workspace/factorjepa/configs/tag_taxonomy.json', '--output-root', '/workspace/factorjepa/outputs/poc/probe_taxonomy', '--cache-policy', '1', '--no-wandb']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "/workspace/factorjepa/src/m09c1_surgery_encoder.py", line 2044, in <module>
+    main()
+  File "/workspace/factorjepa/src/m09c1_surgery_encoder.py", line 2038, in main
+    train(cfg, args)
+  File "/workspace/factorjepa/src/m09c1_surgery_encoder.py", line 506, in train
+    ensure_probe_labels_for_mode(
+  File "/workspace/factorjepa/src/utils/probe_labels.py", line 247, in ensure_probe_labels_for_mode
+    subprocess.run(cmd, check=True, cwd=str(project_root))
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/factorjepa/venv_walkindia/bin/python', '-u', '/workspace/factorjepa/src/m04f_taxonomy_labels.py', '--POC', '--eval-subset', '/workspace/factorjepa/data/eval_10k_local/eval_10k.json', '--tags-json', '/workspace/factorjepa/data/eval_10k_local/tags.json', '--tag-taxonomy', '/workspace/factorjepa/configs/tag_taxonomy.json', '--output-root', '/workspace/factorjepa/outputs/poc/probe_taxonomy', '--cache-policy', '1', '--no-wandb']' returned non-zero exit status 1.
+
+❌ FATAL: run_train.sh aborted at line 466 (exit=1)

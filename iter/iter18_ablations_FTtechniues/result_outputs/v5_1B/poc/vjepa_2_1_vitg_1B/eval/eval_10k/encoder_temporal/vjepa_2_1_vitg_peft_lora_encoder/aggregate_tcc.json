@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_vitg_peft_lora_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.431989,
+    "std": 0.209111,
+    "ci": {
+      "mean": 2.431989,
+      "ci_lo": 2.422593,
+      "ci_hi": 2.441729,
+      "ci_half": 0.009568
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.284778,
+    "std": 0.112496,
+    "ci": {
+      "mean": 0.284778,
+      "ci_lo": 0.279579,
+      "ci_hi": 0.289958,
+      "ci_half": 0.00519
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt"
+}

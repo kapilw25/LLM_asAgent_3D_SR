@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_encoder",
+  "metric": "teacher_free",
+  "n_test": 1825,
+  "mean": 0.045383,
+  "std": 0.015819,
+  "ci": {
+    "mean": 0.045383,
+    "ci_lo": 0.044669,
+    "ci_hi": 0.046127,
+    "ci_half": 0.000729
+  },
+  "lower_is_better": true,
+  "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt"
+}

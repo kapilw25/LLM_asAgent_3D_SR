@@ -1,0 +1,16 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder",
+  "n_test": 1825,
+  "ma_l1_mean": 0.161834,
+  "ma_l1_std": 0.059594,
+  "ma_l1_ci": {
+    "mean": 0.161834,
+    "ci_lo": 0.159257,
+    "ci_hi": 0.164752,
+    "ci_half": 0.002748
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f70_encoder/m09c_ckpt_best.pt",
+  "motion_aux_head_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f70_encoder/motion_aux_head.pt",
+  "augment_space_dim": 34
+}

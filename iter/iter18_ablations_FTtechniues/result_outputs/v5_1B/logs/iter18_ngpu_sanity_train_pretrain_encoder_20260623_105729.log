@@ -1,0 +1,77 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+  [run_probe_train] outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json missing — auto-bootstrapping via m04e_action_labels.py (CPU, ~1 min)
+[M1 Opt X] mode=sanity: subsampled 100/10,000 clips (1.00%)
+  [motion-flow] magnitude quartiles: Q1=112.219  Q2=169.959  Q3=256.442
+  [motion-flow] 11 classes: ['fast__downward', 'fast__upward', 'medium__upward', 'slow__downward', 'slow__leftward', 'slow__rightward', 'slow__upward', 'still__downward', 'still__leftward', 'still__rightward', 'still__upward']
+  [motion-flow] kept 97 clips, dropped 3 (dropped counts: {'medium__downward': 2, 'medium__leftward': 1})
+Loaded 97 labeled clips from data/eval_10k_local/eval_10k.json (11 motion-flow classes)
+[stratified_split] SANITY clip-level (NOT video-disjoint): N_clips=97, N_videos=7, N_classes=11; train/val/test = 57/20/20
+  [class-edges] wrote outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/class_edges.json (quartiles + 11 class_names) — reuse via --class-edges for cross-set eval
+  WARN: class 'slow__upward' train=5 (recommended >=30)
+  WARN: class 'still__upward' train=6 (recommended >=30)
+  WARN: class 'still__rightward' train=7 (recommended >=30)
+  WARN: class 'slow__downward' train=3 (recommended >=30)
+  WARN: class 'medium__upward' train=6 (recommended >=30)
+  WARN: class 'slow__rightward' train=3 (recommended >=30)
+  WARN: class 'fast__upward' train=16 (recommended >=30)
+  WARN [SANITY]: class 'still__downward' val=0/test=1 (need >= 1 each for POC/FULL; SANITY only validates code paths)
+  WARN: class 'still__downward' train=2 (recommended >=30)
+  WARN [SANITY]: class 'fast__downward' val=1/test=0 (need >= 1 each for POC/FULL; SANITY only validates code paths)
+  WARN: class 'fast__downward' train=2 (recommended >=30)
+  WARN: class 'slow__leftward' train=2 (recommended >=30)
+  WARN: class 'still__leftward' train=5 (recommended >=30)
+Wrote: outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json  +  class_counts.json
+═══ 10:57:36 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 57 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 20 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 20 clips (split=test)
+═══ 10:57:36 · Building leakage-safe train pool (universe=broad_manifest · ratio=0.01 [SANITY]) ═══
+  [clip_splits] clip_pool_ratio=0.01: universe subsampled 10000 → 100 (seed=42, deterministic)
+  [clip_splits] universe=broad_manifest: 100 − val(0) − test(0) = 100 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 100 train-pool keys → data/eval_10k_local/train_pool.json
+  [multi-task] outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json missing — auto-generating via m04f_taxonomy_labels.py
+  derived labels for 10000/10000 clips (0 skipped — no tag record)
+Wrote: outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json  (15 dims, 10000 labeled clips)
+  [multi-task] Using taxonomy labels: outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json
+═══ 10:57:38 · m09a continual SSL pretrain_encoder (SANITY) ═══
+  config:    configs/train/pretrain_encoder.yaml
+  subset:    data/eval_10k_local/train_pool.json  (leakage-safe: universe − val − test)
+  val:       data/eval_10k_local/val_split.json
+  local:     data/eval_10k_local
+  output:    outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder
+  lambda:    0.0 (read from yaml; bypasses auto-ablation gate)
+[live-debug] installed — pid=16366. Force a stack dump anytime via:
+[live-debug]   kill -USR1 16366   # signal-safe native dump
+[live-debug]   kill -USR2 16366   # Python dump with banner
+  [train-frame-cache] ON → data/eval_10k_local/m12_frame_cache (min_free=200G) — deterministic decode memoized; shared across epochs/stages/arms/evals
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m09a1] cgroup envelope:
+[m09a1]   memory: 467.7 GB / 1026.1 GB (46%)
+[m09a1]   pids:   783 / 15616 (5%)
+[m09a1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [probe_labels Opt X] mode=sanity: subsampled 100/10,000 clips (1.00%)
+  [probe_labels] generating /workspace/factorjepa/outputs/sanity/probe_action/action_labels.json  (eval_subset=eval_10k.json, min_clips_per_class=5, min_per_split=1)
+  [motion-flow] magnitude quartiles: Q1=112.219  Q2=169.959  Q3=256.442
+  [motion-flow] 8 classes: ['fast__upward', 'medium__upward', 'slow__downward', 'slow__rightward', 'slow__upward', 'still__leftward', 'still__rightward', 'still__upward']
+  [motion-flow] kept 87 clips, dropped 13 (dropped counts: {'medium__downward': 2, 'still__downward': 3, 'fast__downward': 3, 'medium__leftward': 1, 'slow__leftward': 4})
+[stratified_split] SANITY clip-level (NOT video-disjoint): N_clips=87, N_videos=7, N_classes=8; train/val/test = 51/18/18
+  [probe_labels] wrote /workspace/factorjepa/outputs/sanity/probe_action/action_labels.json: 87 records · 8 classes
+  [probe_labels] missing: /workspace/factorjepa/outputs/sanity/probe_taxonomy/taxonomy_labels.json — auto-generating via probe_taxonomy.py --stage labels (CPU, ~30 s)
+/workspace/factorjepa/venv_walkindia/bin/python: can't open file '/workspace/factorjepa/src/probe_taxonomy.py': [Errno 2] No such file or directory
+
+FATAL (unhandled m09a exception): CalledProcessError: Command '['/workspace/factorjepa/venv_walkindia/bin/python', '-u', '/workspace/factorjepa/src/probe_taxonomy.py', '--SANITY', '--stage', 'labels', '--eval-subset', '/workspace/factorjepa/data/eval_10k_local/eval_10k.json', '--tags-json', '/workspace/factorjepa/data/eval_10k_local/tags.json', '--tag-taxonomy', '/workspace/factorjepa/configs/tag_taxonomy.json', '--output-root', '/workspace/factorjepa/outputs/sanity/probe_taxonomy', '--cache-policy', '2']' returned non-zero exit status 2.
+Traceback (most recent call last):
+  File "/workspace/factorjepa/src/m09a1_pretrain_encoder.py", line 1657, in <module>
+    main()
+  File "/workspace/factorjepa/src/m09a1_pretrain_encoder.py", line 1565, in main
+    train(cfg, args)
+  File "/workspace/factorjepa/src/m09a1_pretrain_encoder.py", line 405, in train
+    ensure_probe_labels_for_mode(
+  File "/workspace/factorjepa/src/utils/probe_labels.py", line 245, in ensure_probe_labels_for_mode
+    subprocess.run(cmd, check=True, cwd=str(project_root))
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/factorjepa/venv_walkindia/bin/python', '-u', '/workspace/factorjepa/src/probe_taxonomy.py', '--SANITY', '--stage', 'labels', '--eval-subset', '/workspace/factorjepa/data/eval_10k_local/eval_10k.json', '--tags-json', '/workspace/factorjepa/data/eval_10k_local/tags.json', '--tag-taxonomy', '/workspace/factorjepa/configs/tag_taxonomy.json', '--output-root', '/workspace/factorjepa/outputs/sanity/probe_taxonomy', '--cache-policy', '2']' returned non-zero exit status 2.
+
+❌ FATAL: run_train.sh aborted at line 335 (exit=1)

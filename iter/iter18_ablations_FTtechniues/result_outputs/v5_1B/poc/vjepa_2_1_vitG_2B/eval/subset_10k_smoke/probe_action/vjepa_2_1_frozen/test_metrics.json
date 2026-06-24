@@ -1,0 +1,27 @@
+{
+  "encoder": "vjepa_2_1_frozen",
+  "n_classes": 11,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__upward",
+    "slow__downward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 197,
+  "top1_acc": 0.4416243654822335,
+  "top1_ci": {
+    "mean": 0.441624,
+    "ci_lo": 0.370558,
+    "ci_hi": 0.51269,
+    "ci_half": 0.071066
+  },
+  "head_reuse_from": "outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_action/vjepa_2_1_frozen/probe.pt",
+  "epochs": 0
+}

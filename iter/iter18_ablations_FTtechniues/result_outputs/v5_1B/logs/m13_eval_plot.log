@@ -1,0 +1,33 @@
+  [m13_eval_plot] wiping eval/ — 43 stale file(s)
+m13_eval_plot:   0%|          | 0/15 [00:00<?, ?panel/s]  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_action_acc_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_motion_cos_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/m13_taxonomy_f1_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_future_mse_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_rollout_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_causal_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_tdist_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_teacher_free_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_maskratio_compare.png + .pdf
+  [skip] order: signed (no better/worse direction) — diagnostic only, kept in CSV not plotted
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_aot_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tov_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_pace_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_tau_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_cycle_compare.png + .pdf
+m13_eval_plot: 100%|██████████| 15/15 [00:09<00:00,  1.53panel/s]m13_eval_plot: 100%|██████████| 15/15 [00:09<00:00,  1.53panel/s]
+  14/15 bar panels written (14 plotted): ['action_top1', 'aot', 'causal', 'future_mse', 'maskratio', 'motion_cos', 'pace', 'rollout', 'taxonomy_f1', 'tcc_cycle', 'tcc_tau', 'tdist', 'teacher_free', 'tov']  ·  signed (CSV-only, not plotted): ['order']
+  [per-backbone] vjepa_2_1_vitg → eval/vjepa_2_1_vitg/  (14 arms vs g-frozen)
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_table.png + .pdf
+  [hero-table] m13_hero_table.{png,pdf,csv} — 13 metric rows drawn (+signed 'order' in CSV only) × 15 cols (transposed) · WINNER col = champion duel (ties shown)
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_raw_values.png + .pdf
+  [hero-heatmap] m13_hero_raw_values.{png,pdf} — 14 rows (frozen + 13 arms) × 13 (raw value CI)
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_scoreboard_surgery_vs_pretrain.png + .pdf
+  [scoreboard] m13_scoreboard_surgery_vs_pretrain — surgery 10 pretrain 0 tie 3
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_grouped_winner_surgery_vs_pretrain.png + .pdf
+  [grouped] m13_grouped_winner_surgery_vs_pretrain — surgery 10 pretrain 0 tie 3
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_paired_forest_surgery_vs_pretrain.png + .pdf
+  [forest] m13_paired_forest_surgery_vs_pretrain.{png,pdf} — 13 metrics · surgery 10 pretrain 0 tie 3
+  [stack] m13_hero_raw_values.{png,pdf} — vertical append of 1 LABELLED backbone panels (vjepa_2_1_vitg) · NO averaging
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/m13_paired_diff_heatmap.png + .pdf
+  [paired-heatmap] m13_paired_diff_heatmap.{png,pdf} — 13 metrics × 1 backbones
+  Plots written to: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval

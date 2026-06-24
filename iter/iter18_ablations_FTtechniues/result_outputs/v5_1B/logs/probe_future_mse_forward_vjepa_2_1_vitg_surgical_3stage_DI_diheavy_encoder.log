@@ -1,0 +1,8 @@
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12d_future_mse] cgroup envelope:
+[m12d_future_mse]   memory: 677.7 GB / 1026.1 GB (66%)
+[m12d_future_mse]   pids:   1125 / 15616 (7%)
+[m12d_future_mse]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [keep] outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder/per_clip_mse.npy present -- skipping (--cache-policy 2 to redo)
+forward stage: 0s

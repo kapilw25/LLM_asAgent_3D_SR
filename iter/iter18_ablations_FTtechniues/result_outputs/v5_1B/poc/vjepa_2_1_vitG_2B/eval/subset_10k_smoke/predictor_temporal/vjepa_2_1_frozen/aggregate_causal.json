@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_frozen",
+  "metric": "causal",
+  "n_test": 197,
+  "mean": 0.587802,
+  "std": 0.02537,
+  "ci": {
+    "mean": 0.587802,
+    "ci_lo": 0.584082,
+    "ci_hi": 0.591178,
+    "ci_half": 0.003548
+  },
+  "lower_is_better": true,
+  "interpretation": "causal future-block L1; lower = better",
+  "num_frames": 16,
+  "encoder_ckpt": "checkpoints/vjepa2_1_vitG_384.pt"
+}

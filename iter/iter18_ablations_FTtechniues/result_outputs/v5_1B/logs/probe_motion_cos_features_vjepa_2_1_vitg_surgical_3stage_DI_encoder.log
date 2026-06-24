@@ -1,0 +1,1 @@
+  [keep] outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/vjepa_2_1_vitg_surgical_3stage_DI_encoder/pooled_features_test.npy present -- skipping (--cache-policy 2 to redo)

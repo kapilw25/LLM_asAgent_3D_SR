@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_surgery_raw_encoder",
+  "metric": "tdist",
+  "n_test": 1825,
+  "mean": 0.009312,
+  "std": 0.008634,
+  "ci": {
+    "mean": 0.009312,
+    "ci_lo": 0.00892,
+    "ci_hi": 0.00971,
+    "ci_half": 0.000395
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-\u0394t slope; lower = slower decay w/ distance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/m09c_ckpt_best.pt"
+}

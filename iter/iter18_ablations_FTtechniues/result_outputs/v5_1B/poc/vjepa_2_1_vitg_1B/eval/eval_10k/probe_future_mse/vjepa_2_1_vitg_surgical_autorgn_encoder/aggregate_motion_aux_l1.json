@@ -1,0 +1,16 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_autorgn_encoder",
+  "n_test": 1825,
+  "ma_l1_mean": 0.431081,
+  "ma_l1_std": 0.196157,
+  "ma_l1_ci": {
+    "mean": 0.431081,
+    "ci_lo": 0.422428,
+    "ci_hi": 0.440393,
+    "ci_half": 0.008983
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/m09c_ckpt_best.pt",
+  "motion_aux_head_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/motion_aux_head.pt",
+  "augment_space_dim": 34
+}

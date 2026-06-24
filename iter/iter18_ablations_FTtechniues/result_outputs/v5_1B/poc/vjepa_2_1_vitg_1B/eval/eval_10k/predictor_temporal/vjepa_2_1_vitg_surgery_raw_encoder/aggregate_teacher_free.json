@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_surgery_raw_encoder",
+  "metric": "teacher_free",
+  "n_test": 1825,
+  "mean": 0.035267,
+  "std": 0.014317,
+  "ci": {
+    "mean": 0.035267,
+    "ci_lo": 0.034626,
+    "ci_hi": 0.035943,
+    "ci_half": 0.000658
+  },
+  "lower_is_better": true,
+  "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/m09c_ckpt_best.pt"
+}

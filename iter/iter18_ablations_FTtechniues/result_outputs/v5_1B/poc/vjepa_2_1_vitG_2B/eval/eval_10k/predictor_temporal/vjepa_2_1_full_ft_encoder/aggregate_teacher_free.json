@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_full_ft_encoder",
+  "metric": "teacher_free",
+  "n_test": 1825,
+  "mean": 0.049308,
+  "std": 0.014749,
+  "ci": {
+    "mean": 0.049308,
+    "ci_lo": 0.048644,
+    "ci_hi": 0.050005,
+    "ci_half": 0.000681
+  },
+  "lower_is_better": true,
+  "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09f_full_ft_encoder/m09c_ckpt_best.pt"
+}

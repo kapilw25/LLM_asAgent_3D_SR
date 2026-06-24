@@ -1,0 +1,40 @@
+Downloading anonymousML123/factorjepa-outputs/data/eval_10k_local/ → data/eval_10k_local/
+  144 files (20.9 GB) on HF — 8-way parallel HTTP GET
+download_data:   0%|          | 0/144 [00:00<?, ?file/s]download_data:   1%|          | 1/144 [00:00<02:19,  1.02file/s]download_data:   1%|▏         | 2/144 [00:18<21:34,  9.12s/file]download_data:   3%|▎         | 4/144 [00:20<11:40,  5.00s/file, recent=8.7s/file ETA0.3h]download_data:   4%|▍         | 6/144 [00:20<07:46,  3.38s/file, recent=4.8s/file ETA0.2h]download_data:   6%|▌         | 8/144 [00:20<05:47,  2.56s/file, recent=3.2s/file ETA0.1h]download_data:   7%|▋         | 10/144 [00:20<04:37,  2.07s/file, recent=2.5s/file ETA0.1h]download_data:   8%|▊         | 12/144 [00:21<03:52,  1.76s/file, recent=2.0s/file ETA0.1h]download_data:  10%|▉         | 14/144 [00:21<03:20,  1.54s/file, recent=1.7s/file ETA0.1h]download_data:  12%|█▏        | 17/144 [00:21<02:44,  1.29s/file, recent=1.4s/file ETA0.0h]download_data:  14%|█▍        | 20/144 [00:22<02:18,  1.11s/file, recent=1.2s/file ETA0.0h]download_data:  16%|█▌        | 23/144 [00:22<01:58,  1.02file/s, recent=1.0s/file ETA0.0h]download_data:  18%|█▊        | 26/144 [00:22<01:43,  1.14file/s, recent=0.9s/file ETA0.0h]download_data:  20%|██        | 29/144 [00:22<01:31,  1.26file/s, recent=0.8s/file ETA0.0h]download_data:  22%|██▏       | 32/144 [00:23<01:21,  1.38file/s, recent=0.7s/file ETA0.0h]download_data:  24%|██▍       | 35/144 [00:23<01:13,  1.48file/s, recent=0.7s/file ETA0.0h]download_data:  27%|██▋       | 39/144 [00:23<01:03,  1.65file/s, recent=0.6s/file ETA0.0h]download_data:  30%|██▉       | 43/144 [00:24<00:56,  1.78file/s, recent=0.6s/file ETA0.0h]download_data:  33%|███▎      | 47/144 [00:24<00:50,  1.92file/s, recent=0.5s/file ETA0.0h]download_data:  35%|███▌      | 51/144 [00:24<00:44,  2.07file/s, recent=0.5s/file ETA0.0h]download_data:  38%|███▊      | 55/144 [00:25<00:40,  2.20file/s, recent=0.4s/file ETA0.0h]download_data:  41%|████      | 59/144 [00:33<00:47,  1.78file/s, recent=0.6s/file ETA0.0h]download_data:  44%|████▍     | 63/144 [00:39<00:51,  1.58file/s, recent=0.6s/file ETA0.0h]download_data:  47%|████▋     | 67/144 [00:41<00:47,  1.63file/s, recent=0.6s/file ETA0.0h]download_data:  49%|████▉     | 71/144 [00:41<00:43,  1.69file/s, recent=0.6s/file ETA0.0h]download_data:  52%|█████▏    | 75/144 [00:42<00:39,  1.75file/s, recent=0.6s/file ETA0.0h]download_data:  55%|█████▍    | 79/144 [00:43<00:35,  1.83file/s, recent=0.5s/file ETA0.0h]download_data:  58%|█████▊    | 83/144 [00:43<00:31,  1.91file/s, recent=0.5s/file ETA0.0h]download_data:  60%|██████    | 87/144 [00:43<00:28,  1.99file/s, recent=0.5s/file ETA0.0h]download_data:  63%|██████▎   | 91/144 [00:43<00:25,  2.07file/s, recent=0.5s/file ETA0.0h]download_data:  66%|██████▌   | 95/144 [00:44<00:22,  2.15file/s, recent=0.5s/file ETA0.0h]download_data:  69%|██████▉   | 99/144 [00:44<00:20,  2.22file/s, recent=0.4s/file ETA0.0h]download_data:  72%|███████▏  | 103/144 [00:44<00:17,  2.30file/s, recent=0.4s/file ETA0.0h]download_data:  74%|███████▍  | 107/144 [00:45<00:15,  2.37file/s, recent=0.4s/file ETA0.0h]download_data:  77%|███████▋  | 111/144 [00:45<00:13,  2.44file/s, recent=0.4s/file ETA0.0h]download_data:  80%|███████▉  | 115/144 [00:45<00:11,  2.51file/s, recent=0.4s/file ETA0.0h]download_data:  83%|████████▎ | 119/144 [00:46<00:09,  2.58file/s, recent=0.4s/file ETA0.0h]download_data:  85%|████████▌ | 123/144 [00:46<00:07,  2.65file/s, recent=0.4s/file ETA0.0h]download_data:  88%|████████▊ | 127/144 [00:46<00:06,  2.72file/s, recent=0.4s/file ETA0.0h]download_data:  91%|█████████ | 131/144 [00:46<00:04,  2.79file/s, recent=0.4s/file ETA0.0h]download_data:  94%|█████████▍| 135/144 [00:47<00:03,  2.86file/s, recent=0.3s/file ETA0.0h]download_data:  97%|█████████▋| 139/144 [00:47<00:01,  2.93file/s, recent=0.3s/file ETA0.0h]download_data:  99%|█████████▉| 143/144 [00:52<00:00,  2.73file/s, recent=0.3s/file ETA0.0h]download_data:  99%|█████████▉| 143/144 [01:10<00:00,  2.02file/s, recent=0.4s/file ETA0.0h]download_data: 100%|██████████| 144/144 [02:11<00:00,  1.09file/s, recent=0.4s/file ETA0.0h]download_data: 100%|██████████| 144/144 [02:11<00:00,  1.09file/s, recent=0.4s/file ETA0.0h]
+
+  [hf_outputs] post-download unpack: data/eval_10k_local/m10_sam_segment/masks-*.tar → data/eval_10k_local/m10_sam_segment/masks/
+  unpacked masks-00000.tar: 1387 cum extracted, 0 cum skipped
+  unpacked masks-00001.tar: 2977 cum extracted, 0 cum skipped
+  unpacked masks-00002.tar: 4416 cum extracted, 0 cum skipped
+  unpacked masks-00003.tar: 6136 cum extracted, 0 cum skipped
+  unpacked masks-00004.tar: 7815 cum extracted, 0 cum skipped
+  unpacked masks-00005.tar: 9297 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 9297 files extracted (0 skipped existing) from 6 shards, 5.92 GB in 5s → data/eval_10k_local/m10_sam_segment/masks/
+  [hf_outputs] cleaned up 6 masks-*.tar (5.94 GB freed)
+
+  [hf_outputs] post-download unpack: data/eval_10k_local/m11_factor_datasets/D_L-*.tar → data/eval_10k_local/m11_factor_datasets/D_L/
+  unpacked D_L-00000.tar: 53 cum extracted, 0 cum skipped
+  unpacked D_L-00001.tar: 98 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 98 files extracted (0 skipped existing) from 2 shards, 1.79 GB in 1s → data/eval_10k_local/m11_factor_datasets/D_L/
+  [hf_outputs] cleaned up 2 D_L-*.tar (1.79 GB freed)
+
+  [hf_outputs] post-download unpack: data/eval_10k_local/m11_factor_datasets/D_A-*.tar → data/eval_10k_local/m11_factor_datasets/D_A/
+  unpacked D_A-00000.tar: 53 cum extracted, 0 cum skipped
+  unpacked D_A-00001.tar: 75 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 75 files extracted (0 skipped existing) from 2 shards, 1.37 GB in 1s → data/eval_10k_local/m11_factor_datasets/D_A/
+  [hf_outputs] cleaned up 2 D_A-*.tar (1.37 GB freed)
+
+  [hf_outputs] post-download unpack: data/eval_10k_local/m11_factor_datasets/D_I-*.tar → data/eval_10k_local/m11_factor_datasets/D_I/
+  unpacked D_I-00000.tar: 2334 cum extracted, 0 cum skipped
+  unpacked D_I-00001.tar: 3462 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 3462 files extracted (0 skipped existing) from 2 shards, 1.51 GB in 1s → data/eval_10k_local/m11_factor_datasets/D_I/
+  [hf_outputs] cleaned up 2 D_I-*.tar (1.51 GB freed)
+
+Data download complete: 139s
+  skipped (already on disk):     0 / 144
+  newly downloaded         :   144 / 144
+  failed                   :     0 / 144

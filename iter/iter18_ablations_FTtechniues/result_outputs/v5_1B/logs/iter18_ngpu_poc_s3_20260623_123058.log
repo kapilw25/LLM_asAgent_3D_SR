@@ -1,0 +1,106 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 12:31:00 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_autorgn_encoder vjepa_2_1_vitg_surgery_raw_encoder vjepa_2_1_vitg_full_ft_encoder vjepa_2_1_vitg_lpft_encoder vjepa_2_1_vitg_peft_lora_encoder vjepa_2_1_vitg_peft_dora_encoder vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,8c
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/poc/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external/HF frozen (no trainer needed)
+  ✓ vjepa_2_1_vitg_pretrain_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/student_encoder.pt
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_autorgn_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_autorgn_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_autorgn_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgery_raw_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_raw_encoder --POC
+  → dropping vjepa_2_1_vitg_surgery_raw_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_full_ft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_full_ft_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh full_ft_encoder --POC
+  → dropping vjepa_2_1_vitg_full_ft_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_lpft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_lpft_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh lpft_encoder --POC
+  → dropping vjepa_2_1_vitg_lpft_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_peft_lora_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh peft_lora_encoder --POC
+  → dropping vjepa_2_1_vitg_peft_lora_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_peft_dora_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_dora_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh peft_dora_encoder --POC
+  → dropping vjepa_2_1_vitg_peft_dora_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_diheavy_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_intervene_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f30_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_intervene_wiseft_f30_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f50_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_intervene_wiseft_f50_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f70_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_intervene_wiseft_f70_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder from this run; pipeline continues with remaining encoders
+  → final ENCODERS: vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: checkpoints/vjepa2_1_vitg_384.pt
+  ✓ vjepa_2_1_vitg_pretrain_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external frozen (no head — encoder-only path)
+  ✓ vjepa_2_1_vitg_pretrain_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_pretrain_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 12:31:02 · STAGE 1 · action_probe + taxonomy labels (CPU, ~1-2 min) ═══
+[M1 Opt X] mode=poc: subsampled 10,000/10,000 clips (100.00%)
+  [motion-flow] magnitude quartiles: Q1=112.219  Q2=169.959  Q3=256.442
+  [motion-flow] 703/10000 clip_keys had no motion_features record (m04d may not have processed them yet)
+  [motion-flow] 11 classes: ['fast__downward', 'fast__upward', 'medium__downward', 'medium__upward', 'slow__downward', 'slow__rightward', 'slow__upward', 'still__downward', 'still__leftward', 'still__rightward', 'still__upward']
+  [motion-flow] kept 9130 clips, dropped 167 (dropped counts: {'slow__leftward': 86, 'medium__rightward': 58, 'fast__rightward': 3, 'medium__leftward': 17, 'fast__leftward': 3})
+Loaded 9130 labeled clips from data/eval_10k_local/eval_10k.json (11 motion-flow classes)
+[stratified_split] video-disjoint iter16+ mode: N_clips=9130, N_videos=637, N_classes=11; train/val/test = 6854/451/1825
+  [class-edges] wrote outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/class_edges.json (quartiles + 11 class_names) — reuse via --class-edges for cross-set eval
+Wrote: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json  +  class_counts.json
+  derived labels for 10000/10000 clips (0 skipped — no tag record)
+Wrote: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json  (15 dims, 10000 labeled clips)
+
+═══ 12:31:06 · STAGE 4 · action_probe paired_delta (🔥 P1 GATE — CPU, ~5 min, BCa 10K) ═══
+FATAL: need >=2 encoders with probe outputs, found: ['vjepa_2_1_vitg_frozen'] (run --stage train per-encoder first)
+
+❌ FATAL: run_eval.sh aborted at line 1175 (exit=1) — sequential dependency failed; downstream stages skipped

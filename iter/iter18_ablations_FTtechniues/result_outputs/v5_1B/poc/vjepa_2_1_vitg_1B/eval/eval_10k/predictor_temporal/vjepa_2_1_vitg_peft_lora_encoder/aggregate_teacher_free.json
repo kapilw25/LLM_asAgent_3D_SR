@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_peft_lora_encoder",
+  "metric": "teacher_free",
+  "n_test": 1825,
+  "mean": 0.036089,
+  "std": 0.013947,
+  "ci": {
+    "mean": 0.036089,
+    "ci_lo": 0.035459,
+    "ci_hi": 0.036758,
+    "ci_half": 0.000649
+  },
+  "lower_is_better": true,
+  "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt"
+}

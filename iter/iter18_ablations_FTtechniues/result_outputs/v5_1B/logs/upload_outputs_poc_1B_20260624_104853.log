@@ -1,0 +1,3824 @@
+[33mWarning: You are about to upload a large folder to the Hub using `hf upload-large-folder`. This is a new feature so feedback is very welcome!
+
+A few things to keep in mind:
+  - Repository limits still apply: https://huggingface.co/docs/hub/repositories-recommendations
+  - Do not start several processes in parallel.
+  - You can interrupt and resume the process at any time. The script will pick up where it left off except for partially uploaded files that would have to be entirely reuploaded.
+  - Do not upload the same folder to several repositories. If you need to do so, you must delete the `./.cache/huggingface/` folder first.
+
+Some temporary metadata will be stored under `./.cache/huggingface`.
+  - You must not modify those files manually.
+  - You must not delete the `./.cache/huggingface/` folder while a process is running.
+  - You can delete the `./.cache/huggingface/` folder to reinitialize the upload state when process is not running. Files will have to be hashed and preuploaded again, except for already committed files.
+
+If the process output is too verbose, you can disable the progress bars with `--no-bars`. You can also entirely disable the status report with `--no-report`.
+
+For more details, run `hf upload-large-folder --help` or check the documentation at https://huggingface.co/docs/huggingface_hub/guides/upload#upload-a-large-folder.[0m
+Repo created: https://huggingface.co/datasets/anonymousML123/factorjepa-outputs
+
+================================================================================
+WARNING: This repository has 699 commits.
+Repositories with a large number of commits can experience performance issues.
+
+Consider squashing your commit history using `super_squash_history()`.
+To do so, you need to stop this process, run the snippet below and restart the upload command.  from huggingface_hub import super_squash_history
+  super_squash_history(repo_id='anonymousML123/factorjepa-outputs', repo_type='dataset')
+
+Note: This is a non-revertible operation. See the documentation for more details:
+https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.super_squash_history
+================================================================================
+
+Found 1812 candidate files to upload
+Running validation checks on files to upload...
+Validation checks complete.
+Starting upload...
+Recovering from metadata files:   0%|          | 0/1812 [00:00<?, ?it/s]Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/predictor_temporal/predictor_temporal_per_variant.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/per_dim_acc.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/probe_taxonomy_per_dim.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/probe_taxonomy_per_dim.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json' (outdated). Will re-compute hash.
+Recovering from metadata files:  17%|█▋        | 301/1812 [00:00<00:00, 3002.12it/s]Recovering from metadata files:  33%|███▎      | 602/1812 [00:00<00:00, 2952.73it/s]Recovering from metadata files:  50%|████▉     | 899/1812 [00:00<00:00, 2956.17it/s]Recovering from metadata files:  66%|██████▌   | 1198/1812 [00:00<00:00, 2966.95it/s]Recovering from metadata files:  83%|████████▎ | 1498/1812 [00:00<00:00, 2977.28it/s]Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_metrics.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_metrics.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_metrics.json' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_metrics.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_trajectories.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/train_trajectories.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/kept_scorecard.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/kept_scorecard.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/wiseft_sweep_table.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/wiseft_sweep_table.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard_paper.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard_paper.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/m13_metric_validity.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/m13_metric_validity.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/m13_metric_validity.csv' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_action_acc_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_action_acc_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_motion_cos_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_motion_cos_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/m13_taxonomy_f1_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/m13_taxonomy_f1_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_future_mse_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_future_mse_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_rollout_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_rollout_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_causal_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_causal_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_tdist_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_tdist_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_teacher_free_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_teacher_free_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_maskratio_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_maskratio_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_aot_compare.png' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_aot_compare.pdf' (outdated). Will re-compute hash.
+Ignored metadata for 'outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tov_compare.png' (outdated). Will re-compute hash.
+Recovering from metadata files: 100%|█████████▉| 1808/1812 [00:00<00:00, 3017.21it/s]Recovering from metadata files: 100%|██████████| 1812/1812 [00:00<00:00, 2992.29it/s]
+
+
+
+---------- 2026-06-24 10:49:02 (0:00:00) ----------
+Files:   hashed 1805/1812 (207.9G/210.1G) | pre-uploaded: 1404/1404 (207.9G/210.1G) (+84 unsure) | committed: 1728/1812 (207.9G/210.1G) | ignored: 0
+Workers: hashing: 7 | get upload mode: 37 | pre-uploading: 0 | committing: 0 | waiting: 20
+---------------------------------------------------
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [AProcessing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[AProcessing Files (0 / 1)      :  48%|████▊     |  141kB /  292kB,   ???B/s  
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  347kB /  347kB,   ???B/s  
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[AProcessing Files (0 / 1)      :  97%|█████████▋|  557kB /  572kB, 14.3kB/s  
+New Data Upload               :  97%|█████████▋|  557kB /  572kB, 14.3kB/s  [A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[AProcessing Files (0 / 1)      :  94%|█████████▍|  558kB /  594kB, 14.4kB/s  
+New Data Upload               :  94%|█████████▍|  558kB /  594kB, 14.4kB/s  [A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[AProcessing Files (0 / 1)      :  90%|████████▉ |  557kB /  620kB, 14.4kB/s  
+New Data Upload               :  90%|████████▉ |  557kB /  620kB, 14.4kB/s  [A
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:   3%|▎         |  171kB / 6.55MB            [A[A
+
+  ...1_vitg/eval_scorecard.png:   3%|▎         |  171kB / 6.55MB            [A[AProcessing Files (0 / 1)      :   3%|▎         |  171kB / 6.55MB, 4.42kB/s  
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  270kB /  270kB, 6.96kB/s  
+
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  347kB /  347kB, 8.64kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...tg/train_trajectories.png: 100%|██████████|  347kB /  347kB            
+
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  542kB / 1.58MB            [A[A
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  542kB / 1.58MB            [A[A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[AProcessing Files (0 / 1)      :  34%|███▍      |  542kB / 1.58MB, 14.1kB/s  
+New Data Upload               :  34%|███▍      |  542kB / 1.58MB, 14.1kB/s  [A
+
+  ...tg/wiseft_sweep_table.png:  48%|████▊     |  141kB /  292kB            [A[A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:   3%|▎         |  171kB / 6.55MB            [A[A
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[A
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  542kB / 1.58MB            [A[A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  292kB /  292kB, 7.45kB/s  
+New Data Upload               : 100%|██████████|  152kB /  152kB, 3.96kB/s  [A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:   3%|▎         |  171kB / 6.55MB            [A[A
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[A
+
+  ...g/m13_metric_validity.png:  34%|███▍      |  542kB / 1.58MB            [A[A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:  35%|███▍      | 2.29MB / 6.55MB            [A[A
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[AProcessing Files (0 / 1)      :  35%|███▍      | 2.29MB / 6.55MB, 59.9kB/s  Processing Files (0 / 1)      :  85%|████████▌ |  554kB /  648kB, 14.5kB/s  
+New Data Upload               :  33%|███▎      | 2.12MB / 6.38MB, 55.5kB/s  [A
+New Data Upload               :  85%|████████▌ |  554kB /  648kB, 14.5kB/s  [A
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[A
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[AProcessing Files (0 / 1)      :   5%|▍         | 4.29MB / 90.1MB,  113kB/s  
+New Data Upload               :   5%|▍         | 4.29MB / 90.1MB,  113kB/s  [A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▊   | 1.08MB / 1.58MB            [A[AProcessing Files (0 / 1)      :  69%|██████▊   | 1.08MB / 1.58MB, 28.2kB/s  
+New Data Upload               :  69%|██████▊   | 1.08MB / 1.58MB, 28.2kB/s  [A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[A
+
+  ...be_motion_cos_compare.png:  97%|█████████▋|  557kB /  572kB            [A[A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  168kB /  168kB, 4.41kB/s  
+New Data Upload               : 100%|██████████|  168kB /  168kB, 4.41kB/s  [A
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[AProcessing Files (0 / 1)      :  92%|█████████▏|  558kB /  607kB, 14.7kB/s  
+New Data Upload               :  92%|█████████▏|  558kB /  607kB, 14.7kB/s  [A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[AProcessing Files (0 / 1)      :  94%|█████████▍|  558kB /  591kB, 14.7kB/s  
+New Data Upload               :  94%|█████████▍|  558kB /  591kB, 14.7kB/s  [A
+
+  ...ncoder/tov_test_feats.npy:   0%|          | 44.1kB /  164MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   0%|          | 44.1kB /  164MB            [A[AProcessing Files (0 / 1)      :   0%|          | 44.1kB /  164MB, 1.16kB/s  
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  591kB /  591kB, 15.5kB/s  
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:  35%|███▍      | 2.29MB / 6.55MB            [A[A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▊   | 1.08MB / 1.58MB            [A[A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...3_taxonomy_f1_compare.png:  90%|████████▉ |  557kB /  620kB            [A[A
+
+  .../probe_notable_objects.pt:   0%|          |  554kB /  399MB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  .../probe_notable_objects.pt:   0%|          |  554kB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  572kB /  572kB, 14.5kB/s  Processing Files (0 / 1)      :   0%|          |  554kB /  399MB, 14.8kB/s  
+New Data Upload               : 100%|██████████|  572kB /  572kB, 14.5kB/s  [A
+
+  ...coder/probe_vegetation.pt:   1%|          | 2.22MB /  399MB            [A[A
+New Data Upload               :   1%|          |  554kB / 67.0MB, 14.8kB/s  [A
+
+  ...coder/probe_vegetation.pt:   1%|          | 2.22MB /  399MB            [A[AProcessing Files (0 / 1)      :   1%|          | 2.22MB /  399MB, 58.8kB/s  
+New Data Upload               :   3%|▎         | 2.22MB / 67.0MB, 58.8kB/s  [A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[A
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  ...er/probe_video_quality.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:   1%|          | 2.22MB /  399MB            [A[AProcessing Files (0 / 1)      :   1%|          | 2.22MB /  399MB, 58.9kB/s  
+New Data Upload               :   2%|▏         | 2.22MB /  134MB, 58.9kB/s  [A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   0%|          |  248kB /  164MB            [A[AProcessing Files (0 / 1)      :   0%|          |  248kB /  164MB, 6.55kB/s  
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:  35%|███▍      | 2.29MB / 6.55MB            [A[A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  270kB /  270kB, 6.86kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...1_vitg/kept_scorecard.png: 100%|██████████|  270kB /  270kB            
+
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[A
+
+  ...tor/m13_tdist_compare.png:  94%|█████████▍|  558kB /  594kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▊   | 1.08MB / 1.58MB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  620kB /  620kB, 15.8kB/s  
+New Data Upload               : 100%|██████████|  620kB /  620kB, 15.8kB/s  [A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  .../probe_notable_objects.pt:   0%|          |  554kB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[A
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  ...encoder/probe_lighting.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[AProcessing Files (0 / 1)      :   1%|          | 2.22MB /  399MB, 59.1kB/s  
+New Data Upload               :   2%|▏         | 2.22MB /  134MB, 59.1kB/s  [A
+
+  ...ncoder/tov_test_feats.npy:   0%|          |  248kB /  164MB            [A[A
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...1_vitg/eval_scorecard.png:  35%|███▍      | 2.29MB / 6.55MB            [A[A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...g/m13_metric_validity.png:  69%|██████▊   | 1.08MB / 1.58MB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  594kB /  594kB, 15.1kB/s  
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+New Data Upload               : 100%|██████████|  594kB /  594kB, 15.1kB/s  [A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  .../probe_notable_objects.pt:   0%|          |  554kB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[A
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  ...er/probe_video_quality.pt:   1%|          | 4.43MB /  399MB            [A[AProcessing Files (0 / 1)      :   1%|          | 4.43MB /  399MB,  118kB/s  
+New Data Upload               :   2%|▏         | 4.43MB /  201MB,  118kB/s  [A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[A
+
+  ...encoder/probe_lighting.pt:   1%|          | 2.22MB /  399MB            [A[A
+
+  ...or/m13_causal_compare.png:  93%|█████████▎|  555kB /  600kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   0%|          |  264kB /  164MB            [A[A
+
+  ...or/m13_causal_compare.png:  93%|█████████▎|  555kB /  600kB            [A[A
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (0 / 1)      :   0%|          |  264kB /  164MB, 6.92kB/s  
+
+  ...1_vitg/eval_scorecard.png:  35%|███▍      | 2.29MB / 6.55MB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎|  555kB /  600kB, 14.8kB/s  
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+New Data Upload               :  93%|█████████▎|  555kB /  600kB, 14.8kB/s  [A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  575kB /  575kB, 15.3kB/s  
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[AProcessing Files (1 / 26)     :   1%|          | 99.8kB / 13.3MB, 2.67kB/s  
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.58MB / 1.58MB, 41.2kB/s  
+New Data Upload               : 100%|██████████| 1.58MB / 1.58MB, 41.2kB/s  [A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+  .../probe_notable_objects.pt:   0%|          | 1.11MB /  399MB            [A[AProcessing Files (0 / 1)      :   0%|          | 1.11MB /  399MB, 29.6kB/s  
+New Data Upload               :   1%|          | 1.11MB /  134MB, 29.6kB/s  [A
+
+  ...coder/probe_vegetation.pt:   1%|          | 4.42MB /  399MB            [A[A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[AProcessing Files (0 / 1)      :   1%|          | 4.42MB /  399MB,  118kB/s  
+New Data Upload               :   3%|▎         | 4.42MB /  134MB,  118kB/s  [A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[A
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  522kB /  522kB, 14.0kB/s  
+New Data Upload               : 100%|██████████|  522kB /  522kB, 14.0kB/s  [A
+
+  ...er/probe_video_quality.pt:   1%|          | 4.43MB /  399MB            [A[A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[A
+
+  ...encoder/probe_lighting.pt:   1%|          | 2.77MB /  399MB            [A[AProcessing Files (0 / 1)      :   1%|          | 2.77MB /  399MB, 73.7kB/s  
+New Data Upload               :   2%|▏         | 2.77MB /  134MB, 73.7kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.15MB /  329MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.15MB /  329MB            [A[AProcessing Files (0 / 1)      :   1%|          | 2.15MB /  329MB, 57.8kB/s  
+New Data Upload               :   2%|▏         | 2.15MB /  134MB, 57.8kB/s  [A
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[A
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[AProcessing Files (0 / 1)      :  94%|█████████▎|  557kB /  595kB, 14.9kB/s  
+New Data Upload               :  94%|█████████▎|  557kB /  595kB, 14.9kB/s  [A
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   1%|          |  834kB /  164MB            [A[AProcessing Files (0 / 1)      :   1%|          |  834kB /  164MB, 22.2kB/s  
+New Data Upload               :   1%|          |  541kB / 67.1MB, 14.5kB/s  [A
+
+  ...1_vitg/eval_scorecard.png:  35%|███▍      | 2.29MB / 6.55MB            [A[A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+
+  ...or/m13_causal_compare.png:  93%|█████████▎|  555kB /  600kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  168kB /  168kB, 4.35kB/s  
+New Data Upload               : 100%|██████████|  168kB /  168kB, 4.35kB/s  
+  ...g/m13_metric_validity.pdf: 100%|██████████|  168kB /  168kB            
+
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+  ...coder/aot_train_feats.npy:   5%|▍         | 4.29MB / 90.1MB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            [A[A
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[AProcessing Files (1 / 1)      : 100%|██████████|  292kB /  292kB, 7.31kB/s  
+New Data Upload               : 100%|██████████|  152kB /  152kB, 3.88kB/s  
+  ...tg/wiseft_sweep_table.png: 100%|██████████|  292kB /  292kB            
+
+
+  .../probe_notable_objects.pt:   1%|          | 4.43MB /  399MB            [A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[AProcessing Files (0 / 1)      :   1%|          | 4.43MB /  399MB,  119kB/s  
+
+  ...coder/probe_vegetation.pt:   1%|          | 4.42MB /  399MB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+New Data Upload               :   3%|▎         | 4.43MB /  134MB,  119kB/s  [AProcessing Files (4 / 26)     :   3%|▎         |  399kB / 13.3MB, 10.7kB/s  
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[A
+
+  ...er/probe_video_quality.pt:   1%|          | 4.43MB /  399MB            [A[A
+
+  ..._teacher_free_compare.png:  94%|█████████▍|  558kB /  591kB            [A[A
+
+  ...encoder/probe_lighting.pt:   1%|          | 4.43MB /  399MB            [A[AProcessing Files (0 / 1)      :   1%|          | 4.43MB /  399MB,  118kB/s  
+New Data Upload               :   2%|▏         | 4.43MB /  201MB,  118kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.15MB /  329MB            [A[A
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 65.7kB / 65.7kB, 1.76kB/s  
+New Data Upload               : 100%|██████████| 65.7kB / 65.7kB, 1.76kB/s  [A
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   3%|▎         | 4.74MB /  164MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 4.74MB /  164MB,  127kB/s  
+New Data Upload               :   6%|▋         | 4.32MB / 67.1MB,  116kB/s  [A
+
+  ...1_vitg/eval_scorecard.png:  59%|█████▉    | 3.88MB / 6.55MB            [A[AProcessing Files (0 / 1)      :  59%|█████▉    | 3.88MB / 6.55MB,  102kB/s  
+New Data Upload               :  58%|█████▊    | 3.71MB / 6.38MB, 97.4kB/s  [A
+
+  ...be_future_mse_compare.png:  85%|████████▌ |  554kB /  648kB            [A[A
+
+  ...or/m13_causal_compare.png:  93%|█████████▎|  555kB /  600kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  591kB /  591kB, 15.3kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...be_action_acc_compare.png: 100%|██████████|  591kB /  591kB            
+
+
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  572kB /  572kB, 14.3kB/s  
+New Data Upload               : 100%|██████████|  572kB /  572kB, 14.3kB/s  
+  ...be_motion_cos_compare.png: 100%|██████████|  572kB /  572kB            
+
+
+  ...coder/aot_train_feats.npy:   7%|▋         | 5.90MB / 90.1MB            [A[A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 5.90MB / 90.1MB,  154kB/s  
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[A
+New Data Upload               :   7%|▋         | 5.90MB / 90.1MB,  154kB/s  [A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[A
+
+  ...coder/probe_vegetation.pt:   1%|          | 4.42MB /  399MB            [A[A
+
+  .../probe_notable_objects.pt:   2%|▏         | 6.09MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 6.09MB /  399MB,  164kB/s  
+New Data Upload               :   5%|▍         | 6.09MB /  134MB,  164kB/s  [A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[AProcessing Files (5 / 26)     :   4%|▎         |  499kB / 13.3MB, 13.4kB/s  
+
+  ...coder/m13_aot_compare.png:  92%|█████████▏|  558kB /  607kB            [A[A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[A
+
+  ...er/probe_video_quality.pt:   1%|          | 4.43MB /  399MB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...encoder/probe_lighting.pt:   1%|          | 4.43MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  591kB /  591kB, 15.3kB/s  
+New Data Upload               : 100%|██████████|  591kB /  591kB, 15.3kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.15MB /  329MB            [A[A
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   3%|▎         | 4.74MB /  164MB            [A[A
+
+  ...1_vitg/eval_scorecard.png:  92%|█████████▏| 6.01MB / 6.55MB            [A[AProcessing Files (0 / 1)      :  92%|█████████▏| 6.01MB / 6.55MB,  159kB/s  
+New Data Upload               :  91%|█████████▏| 5.84MB / 6.38MB,  154kB/s  [A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  648kB /  648kB, 16.8kB/s  
+New Data Upload               : 100%|██████████|  648kB /  648kB, 16.8kB/s  [A
+
+  ...or/m13_causal_compare.png:  93%|█████████▎|  555kB /  600kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  620kB /  620kB, 15.6kB/s  
+New Data Upload               : 100%|██████████|  620kB /  620kB, 15.6kB/s  
+  ...3_taxonomy_f1_compare.png: 100%|██████████|  620kB /  620kB            
+
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...coder/aot_train_feats.npy:  11%|█         | 9.65MB / 90.1MB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[AProcessing Files (0 / 1)      :  11%|█         | 9.65MB / 90.1MB,  256kB/s  
+New Data Upload               :  11%|█         | 9.65MB / 90.1MB,  256kB/s  [A
+
+  ...coder/probe_vegetation.pt:   2%|▏         | 6.09MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 6.09MB /  399MB,  162kB/s  
+New Data Upload               :   3%|▎         | 6.09MB /  201MB,  162kB/s  [A
+
+  .../probe_notable_objects.pt:   2%|▏         | 8.31MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 8.31MB /  399MB,  224kB/s  
+New Data Upload               :   4%|▍         | 8.31MB /  201MB,  224kB/s  [A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[AProcessing Files (6 / 26)     :   4%|▍         |  531kB / 13.3MB, 14.2kB/s  
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  607kB /  607kB, 15.7kB/s  
+New Data Upload               : 100%|██████████|  607kB /  607kB, 15.7kB/s  [A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[A
+
+  ...er/probe_video_quality.pt:   2%|▏         | 6.09MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 6.09MB /  399MB,  162kB/s  
+New Data Upload               :   3%|▎         | 6.09MB /  201MB,  162kB/s  [A
+
+  ...encoder/probe_lighting.pt:   1%|          | 4.43MB /  399MB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.69MB /  329MB            [A[AProcessing Files (0 / 1)      :   1%|          | 2.69MB /  329MB, 71.9kB/s  
+New Data Upload               :   2%|▏         | 2.69MB /  134MB, 71.9kB/s  [A
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   5%|▍         | 8.09MB /  164MB            [A[AProcessing Files (0 / 1)      :   5%|▍         | 8.09MB /  164MB,  217kB/s  
+New Data Upload               :   5%|▍         | 7.57MB /  164MB,  203kB/s  [A
+
+  ...1_vitg/eval_scorecard.png: 100%|█████████▉| 6.54MB / 6.55MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉| 6.54MB / 6.55MB,  173kB/s  
+New Data Upload               : 100%|█████████▉| 6.37MB / 6.38MB,  168kB/s  [A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...or/m13_causal_compare.png:  93%|█████████▎|  555kB /  600kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  594kB /  594kB, 14.9kB/s  
+New Data Upload               : 100%|██████████|  594kB /  594kB, 14.9kB/s  
+  ...tor/m13_tdist_compare.png: 100%|██████████|  594kB /  594kB            
+
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[A
+
+  ...coder/aot_train_feats.npy:  15%|█▍        | 13.4MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  15%|█▍        | 13.4MB / 90.1MB,  357kB/s  
+New Data Upload               :  15%|█▍        | 13.4MB / 90.1MB,  357kB/s  [A
+
+  ...coder/probe_vegetation.pt:   2%|▏         | 6.09MB /  399MB            [A[A
+
+  .../probe_notable_objects.pt:   2%|▏         | 9.97MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 9.97MB /  399MB,  269kB/s  
+New Data Upload               :   5%|▍         | 9.97MB /  201MB,  269kB/s  [A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[AProcessing Files (8 / 26)     :   5%|▍         |  605kB / 13.3MB, 16.2kB/s  
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[A
+
+  ...er/probe_video_quality.pt:   2%|▏         | 7.75MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 7.75MB /  399MB,  207kB/s  
+New Data Upload               :   4%|▍         | 7.75MB /  201MB,  207kB/s  [A
+
+  ...encoder/probe_lighting.pt:   2%|▏         | 6.09MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 6.09MB /  399MB,  163kB/s  
+New Data Upload               :   3%|▎         | 6.09MB /  201MB,  163kB/s  [A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.69MB /  329MB            [A[A
+
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  522kB /  522kB, 13.8kB/s  
+New Data Upload               : 100%|██████████|  522kB /  522kB, 13.8kB/s  
+  .../eval_scorecard_paper.png: 100%|██████████|  522kB /  522kB            
+
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:   9%|▊         | 14.0MB /  164MB            [A[AProcessing Files (0 / 1)      :   9%|▊         | 14.0MB /  164MB,  378kB/s  
+New Data Upload               :   8%|▊         | 13.5MB /  164MB,  365kB/s  [A
+
+  ...1_vitg/eval_scorecard.png: 100%|█████████▉| 6.54MB / 6.55MB            [A[A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  600kB /  600kB, 15.8kB/s  
+New Data Upload               : 100%|██████████|  600kB /  600kB, 15.8kB/s  [A
+
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 1.58MB / 1.58MB, 40.7kB/s  
+New Data Upload               : 100%|██████████| 1.58MB / 1.58MB, 40.7kB/s  
+  ...g/m13_metric_validity.png: 100%|██████████| 1.58MB / 1.58MB            
+
+
+  ...coder/aot_train_feats.npy:  21%|██        | 18.8MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  21%|██        | 18.8MB / 90.1MB,  502kB/s  
+New Data Upload               :  21%|██        | 18.8MB / 90.1MB,  502kB/s  [A
+
+  ...coder/probe_vegetation.pt:   2%|▏         | 8.30MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 8.30MB /  399MB,  222kB/s  
+New Data Upload               :   4%|▍         | 8.30MB /  201MB,  222kB/s  [A
+
+  .../probe_notable_objects.pt:   3%|▎         | 13.8MB /  399MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 13.8MB /  399MB,  375kB/s  
+New Data Upload               :   7%|▋         | 13.8MB /  201MB,  375kB/s  [A
+
+
+
+
+
+
+
+
+
+  ...der/tov_test_clip_ids.npy:   1%|          |   750B /  125kB            [A[A[A[A[A[A[A[A[A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...der/tov_test_clip_ids.npy:   1%|          |   750B /  125kB            [A[A[A[A[A[A[A[A[A[AProcessing Files (8 / 26)     :   5%|▍         |  605kB / 13.3MB, 16.1kB/s  
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...er/probe_video_quality.pt:   3%|▎         | 11.1MB /  399MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 11.1MB /  399MB,  298kB/s  
+New Data Upload               :   6%|▌         | 11.1MB /  201MB,  298kB/s  [A
+
+  ...encoder/probe_lighting.pt:   2%|▏         | 7.76MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 7.76MB /  399MB,  208kB/s  
+New Data Upload               :   4%|▍         | 7.76MB /  201MB,  208kB/s  [A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:   1%|          | 2.69MB /  329MB            [A[A
+
+  ...m13_maskratio_compare.png:  94%|█████████▎|  557kB /  595kB            [A[A
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  12%|█▏        | 19.4MB /  164MB            [A[A
+
+  ...1_vitg/eval_scorecard.png: 100%|█████████▉| 6.54MB / 6.55MB            [A[AProcessing Files (0 / 1)      :  12%|█▏        | 19.4MB /  164MB,  525kB/s  
+New Data Upload               :  12%|█▏        | 18.9MB /  164MB,  511kB/s  [A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  575kB /  575kB, 15.0kB/s  
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+  ...r/m13_rollout_compare.png: 100%|██████████|  575kB /  575kB            
+
+
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 65.7kB / 65.7kB, 1.74kB/s  
+New Data Upload               : 100%|██████████| 65.7kB / 65.7kB, 1.74kB/s  
+  ...coder/m13_tov_compare.png: 100%|██████████| 65.7kB / 65.7kB            
+
+
+  ...coder/aot_train_feats.npy:  28%|██▊       | 25.2MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  28%|██▊       | 25.2MB / 90.1MB,  678kB/s  
+New Data Upload               :  28%|██▊       | 25.2MB / 90.1MB,  678kB/s  [A
+
+  ...coder/probe_vegetation.pt:   2%|▏         | 9.96MB /  399MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 9.96MB /  399MB,  267kB/s  
+New Data Upload               :   5%|▍         | 9.96MB /  201MB,  267kB/s  [A
+
+  .../probe_notable_objects.pt:   4%|▍         | 17.7MB /  399MB            [A[AProcessing Files (0 / 1)      :   4%|▍         | 17.7MB /  399MB,  482kB/s  
+New Data Upload               :   9%|▉         | 17.7MB /  201MB,  482kB/s  [A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...der/tov_test_clip_ids.npy:   1%|          |   750B /  125kB            [A[A[A[A[A[A[A[A[A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...er/probe_video_quality.pt:   4%|▍         | 17.2MB /  399MB            [A[AProcessing Files (0 / 1)      :   4%|▍         | 17.2MB /  399MB,  465kB/s  
+New Data Upload               :   9%|▊         | 17.2MB /  201MB,  465kB/s  [A
+
+  ...encoder/probe_lighting.pt:   3%|▎         | 9.97MB /  399MB            [A[A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 9.97MB /  399MB,  269kB/s  
+New Data Upload               :   5%|▍         | 9.97MB /  201MB,  269kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   1%|▏         | 4.84MB /  329MB            [A[AProcessing Files (0 / 1)      :   1%|▏         | 4.84MB /  329MB,  131kB/s  
+New Data Upload               :   2%|▏         | 4.84MB /  201MB,  131kB/s  [A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  595kB /  595kB, 15.7kB/s  
+New Data Upload               : 100%|██████████|  595kB /  595kB, 15.7kB/s  [A
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 6.55MB / 6.55MB,  172kB/s  
+New Data Upload               : 100%|██████████| 6.38MB / 6.38MB,  167kB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  14%|█▍        | 23.8MB /  164MB            [A[AProcessing Files (0 / 1)      :  14%|█▍        | 23.8MB /  164MB,  642kB/s  
+New Data Upload               :  14%|█▍        | 23.2MB /  164MB,  629kB/s  [A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...coder/aot_train_feats.npy:  37%|███▋      | 33.2MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  37%|███▋      | 33.2MB / 90.1MB,  897kB/s  
+New Data Upload               :  37%|███▋      | 33.2MB / 90.1MB,  897kB/s  [A
+
+  ...coder/probe_vegetation.pt:   3%|▎         | 13.8MB /  399MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 13.8MB /  399MB,  374kB/s  
+New Data Upload               :   7%|▋         | 13.8MB /  201MB,  374kB/s  [A
+
+  .../probe_notable_objects.pt:   6%|▌         | 22.2MB /  399MB            [A[AProcessing Files (0 / 1)      :   6%|▌         | 22.2MB /  399MB,  603kB/s  
+New Data Upload               :  11%|█         | 22.2MB /  201MB,  603kB/s  [A
+
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  591kB /  591kB, 15.1kB/s  
+
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...der/tov_test_clip_ids.npy:   1%|          |   750B /  125kB            [A[A[A[A[A[A[A[A[A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[ANew Data Upload               : 100%|██████████|  591kB /  591kB, 15.1kB/s  
+  ..._teacher_free_compare.png: 100%|██████████|  591kB /  591kB            
+
+
+  ...er/probe_video_quality.pt:   5%|▌         | 21.0MB /  399MB            [A[AProcessing Files (0 / 1)      :   5%|▌         | 21.0MB /  399MB,  572kB/s  
+New Data Upload               :  10%|█         | 21.0MB /  201MB,  572kB/s  [A
+
+  ...encoder/probe_lighting.pt:   4%|▎         | 14.4MB /  399MB            [A[AProcessing Files (0 / 1)      :   4%|▎         | 14.4MB /  399MB,  391kB/s  
+New Data Upload               :   7%|▋         | 14.4MB /  201MB,  391kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   2%|▏         | 6.99MB /  329MB            [A[AProcessing Files (0 / 1)      :   2%|▏         | 6.99MB /  329MB,  190kB/s  
+New Data Upload               :   3%|▎         | 6.99MB /  201MB,  190kB/s  [A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  18%|█▊        | 30.3MB /  164MB            [A[AProcessing Files (0 / 1)      :  18%|█▊        | 30.3MB /  164MB,  819kB/s  
+New Data Upload               :  18%|█▊        | 29.7MB /  164MB,  806kB/s  [A
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[A
+
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  607kB /  607kB, 15.5kB/s  
+New Data Upload               : 100%|██████████|  607kB /  607kB, 15.5kB/s  
+  ...coder/m13_aot_compare.png: 100%|██████████|  607kB /  607kB            
+
+
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  648kB /  648kB, 16.5kB/s  
+New Data Upload               : 100%|██████████|  648kB /  648kB, 16.5kB/s  
+  ...be_future_mse_compare.png: 100%|██████████|  648kB /  648kB            
+
+
+  ...coder/aot_train_feats.npy:  43%|████▎     | 38.6MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  43%|████▎     | 38.6MB / 90.1MB, 1.04MB/s  
+New Data Upload               :  43%|████▎     | 38.6MB / 90.1MB, 1.04MB/s  [A
+
+  ...coder/probe_vegetation.pt:   4%|▍         | 16.0MB /  399MB            [A[AProcessing Files (0 / 1)      :   4%|▍         | 16.0MB /  399MB,  434kB/s  
+New Data Upload               :   8%|▊         | 16.0MB /  201MB,  434kB/s  [A
+
+  .../probe_notable_objects.pt:   7%|▋         | 28.2MB /  399MB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 28.2MB /  399MB,  772kB/s  
+New Data Upload               :  14%|█▍        | 28.2MB /  201MB,  772kB/s  [A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...der/tov_test_clip_ids.npy:   1%|          |   750B /  125kB            [A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:   7%|▋         | 26.6MB /  399MB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 26.6MB /  399MB,  724kB/s  
+New Data Upload               :  13%|█▎        | 26.6MB /  201MB,  724kB/s  [A
+
+  ...encoder/probe_lighting.pt:   5%|▌         | 21.1MB /  399MB            [A[AProcessing Files (0 / 1)      :   5%|▌         | 21.1MB /  399MB,  575kB/s  
+New Data Upload               :  10%|█         | 21.1MB /  201MB,  575kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   3%|▎         | 10.8MB /  329MB            [A[AProcessing Files (0 / 1)      :   3%|▎         | 10.8MB /  329MB,  294kB/s  
+New Data Upload               :   5%|▌         | 10.8MB /  201MB,  294kB/s  [A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  22%|██▏       | 36.7MB /  164MB            [A[AProcessing Files (0 / 1)      :  22%|██▏       | 36.7MB /  164MB,  996kB/s  
+New Data Upload               :  22%|██▏       | 36.2MB /  164MB,  983kB/s  [A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...coder/aot_train_feats.npy:  48%|████▊     | 42.9MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  48%|████▊     | 42.9MB / 90.1MB, 1.16MB/s  
+New Data Upload               :  48%|████▊     | 42.9MB / 90.1MB, 1.16MB/s  [A
+
+  ...coder/probe_vegetation.pt:   6%|▌         | 22.1MB /  399MB            [A[AProcessing Files (0 / 1)      :   6%|▌         | 22.1MB /  399MB,  603kB/s  
+New Data Upload               :  11%|█         | 22.1MB /  201MB,  603kB/s  [A
+
+  .../probe_notable_objects.pt:   8%|▊         | 32.1MB /  399MB            [A[AProcessing Files (0 / 1)      :   8%|▊         | 32.1MB /  399MB,  878kB/s  
+New Data Upload               :  16%|█▌        | 32.1MB /  201MB,  878kB/s  [A
+
+
+
+
+
+
+
+
+
+
+  ...er_clip_motion_aux_l1.npy:   6%|▌         |   456B / 7.43kB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...der/tov_test_clip_ids.npy:   7%|▋         | 8.39kB /  125kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :   6%|▌         |  774kB / 12.6MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (8 / 26)     :  10%|█         | 1.39MB / 13.3MB, 37.7kB/s  
+New Data Upload               :   6%|▌         |  781kB / 12.7MB, 21.7kB/s  [A
+
+  ...er/probe_video_quality.pt:   9%|▊         | 34.9MB /  399MB            [A[AProcessing Files (0 / 1)      :   9%|▊         | 34.9MB /  399MB,  955kB/s  
+New Data Upload               :  17%|█▋        | 34.9MB /  201MB,  955kB/s  [A
+
+  ...encoder/probe_lighting.pt:   7%|▋         | 27.1MB /  399MB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 27.1MB /  399MB,  743kB/s  
+New Data Upload               :  13%|█▎        | 27.1MB /  201MB,  743kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   4%|▍         | 14.5MB /  329MB            [A[AProcessing Files (0 / 1)      :   4%|▍         | 14.5MB /  329MB,  398kB/s  
+New Data Upload               :   7%|▋         | 14.5MB /  201MB,  398kB/s  [A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  25%|██▍       | 41.1MB /  164MB            [A[AProcessing Files (0 / 1)      :  25%|██▍       | 41.1MB /  164MB, 1.11MB/s  
+New Data Upload               :  25%|██▍       | 40.5MB /  164MB, 1.10MB/s  [A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[A
+
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  600kB /  600kB, 15.6kB/s  
+New Data Upload               : 100%|██████████|  600kB /  600kB, 15.6kB/s  
+  ...or/m13_causal_compare.png: 100%|██████████|  600kB /  600kB            
+
+
+  ...coder/aot_train_feats.npy:  52%|█████▏    | 47.2MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  52%|█████▏    | 47.2MB / 90.1MB, 1.28MB/s  
+New Data Upload               :  52%|█████▏    | 47.2MB / 90.1MB, 1.28MB/s  [A
+
+  ...coder/probe_vegetation.pt:   7%|▋         | 27.7MB /  399MB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 27.7MB /  399MB,  756kB/s  
+New Data Upload               :  14%|█▍        | 27.7MB /  201MB,  756kB/s  [A
+
+  .../probe_notable_objects.pt:  10%|▉         | 39.9MB /  399MB            [A[AProcessing Files (0 / 1)      :  10%|▉         | 39.9MB /  399MB, 1.09MB/s  
+New Data Upload               :  20%|█▉        | 39.9MB /  201MB, 1.09MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:   7%|▋         | 8.39kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:   6%|▌         |   456B / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:   6%|▌         |   456B / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:   6%|▌         | 6.13kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:   6%|▌         | 2.88kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:   6%|▌         |   904B / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:   6%|▌         | 6.13kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:   6%|▌         | 6.13kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:   6%|▌         | 86.0kB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  11%|█         | 1.27MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  11%|█         | 43.2MB /  399MB            [A[AProcessing Files (0 / 1)      :  11%|█         | 43.2MB /  399MB, 1.19MB/s  
+New Data Upload               :  21%|██▏       | 43.2MB /  201MB, 1.19MB/s  [A
+
+  ...encoder/probe_lighting.pt:   9%|▊         | 34.9MB /  399MB            [A[AProcessing Files (0 / 1)      :   9%|▊         | 34.9MB /  399MB,  959kB/s  
+New Data Upload               :  17%|█▋        | 34.9MB /  201MB,  959kB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   6%|▌         | 18.8MB /  329MB            [A[AProcessing Files (0 / 1)      :   6%|▌         | 18.8MB /  329MB,  517kB/s  
+New Data Upload               :   9%|▉         | 18.8MB /  201MB,  517kB/s  [A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  30%|██▉       | 48.6MB /  164MB            [A[AProcessing Files (0 / 1)      :  30%|██▉       | 48.6MB /  164MB, 1.32MB/s  
+New Data Upload               :  29%|██▉       | 48.1MB /  164MB, 1.31MB/s  [A
+
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 6.55MB / 6.55MB,  169kB/s  
+New Data Upload               : 100%|██████████| 6.38MB / 6.38MB,  165kB/s  
+  ...1_vitg/eval_scorecard.png: 100%|██████████| 6.55MB / 6.55MB            
+
+
+  ...coder/aot_train_feats.npy:  57%|█████▋    | 51.5MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  57%|█████▋    | 51.5MB / 90.1MB, 1.39MB/s  
+New Data Upload               :  57%|█████▋    | 51.5MB / 90.1MB, 1.39MB/s  [A
+
+  ...coder/probe_vegetation.pt:   9%|▊         | 34.9MB /  399MB            [A[AProcessing Files (0 / 1)      :   9%|▊         | 34.9MB /  399MB,  957kB/s  
+New Data Upload               :  17%|█▋        | 34.9MB /  201MB,  957kB/s  [A
+
+  .../probe_notable_objects.pt:  12%|█▏        | 48.2MB /  399MB            [A[AProcessing Files (0 / 1)      :  12%|█▏        | 48.2MB /  399MB, 1.32MB/s  
+New Data Upload               :  24%|██▍       | 48.2MB /  201MB, 1.32MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:   7%|▋         | 8.39kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:   6%|▌         |   456B / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:   6%|▌         |   456B / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:   6%|▌         | 6.13kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:   6%|▌         | 2.88kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:   6%|▌         |   904B / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:   6%|▌         | 6.13kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:   6%|▌         | 6.13kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:   6%|▌         | 86.0kB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  11%|█         | 1.27MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  13%|█▎        | 51.5MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  11%|█         | 42.7MB /  399MB            [A[AProcessing Files (0 / 1)      :  13%|█▎        | 51.5MB /  399MB, 1.42MB/s  Processing Files (0 / 1)      :  11%|█         | 42.7MB /  399MB, 1.17MB/s  
+New Data Upload               :  26%|██▌       | 51.5MB /  201MB, 1.42MB/s  [A
+New Data Upload               :  21%|██        | 42.7MB /  201MB, 1.17MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   7%|▋         | 22.6MB /  329MB            [A[AProcessing Files (0 / 1)      :   7%|▋         | 22.6MB /  329MB,  622kB/s  
+New Data Upload               :  11%|█         | 22.6MB /  201MB,  622kB/s  [A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[A
+
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  595kB /  595kB, 15.5kB/s  
+New Data Upload               : 100%|██████████|  595kB /  595kB, 15.5kB/s  
+  ...m13_maskratio_compare.png: 100%|██████████|  595kB /  595kB            
+
+
+  ...ncoder/tov_test_feats.npy:  34%|███▎      | 55.1MB /  164MB            [A[AProcessing Files (0 / 1)      :  34%|███▎      | 55.1MB /  164MB, 1.50MB/s  
+New Data Upload               :  33%|███▎      | 54.6MB /  164MB, 1.49MB/s  [A
+
+  ...coder/aot_train_feats.npy:  58%|█████▊    | 52.5MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  58%|█████▊    | 52.5MB / 90.1MB, 1.42MB/s  
+New Data Upload               :  58%|█████▊    | 52.5MB / 90.1MB, 1.42MB/s  [A
+
+  ...coder/probe_vegetation.pt:  11%|█         | 43.1MB /  399MB            [A[AProcessing Files (0 / 1)      :  11%|█         | 43.1MB /  399MB, 1.19MB/s  
+New Data Upload               :  21%|██▏       | 43.1MB /  201MB, 1.19MB/s  [A
+
+  .../probe_notable_objects.pt:  14%|█▍        | 55.9MB /  399MB            [A[AProcessing Files (0 / 1)      :  14%|█▍        | 55.9MB /  399MB, 1.54MB/s  
+New Data Upload               :  28%|██▊       | 55.9MB /  201MB, 1.54MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  13%|█▎        | 16.0kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  12%|█▏        |   912B / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  12%|█▏        |   912B / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  12%|█▏        | 12.3kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  12%|█▏        | 5.77kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  12%|█▏        | 1.81kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  12%|█▏        | 12.3kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  12%|█▏        | 12.3kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  12%|█▏        |  172kB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  17%|█▋        | 1.93MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  15%|█▍        | 59.3MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  12%|█▏        | 46.0MB /  399MB            [A[AProcessing Files (8 / 26)     :  16%|█▋        | 2.17MB / 13.3MB, 59.4kB/s  Processing Files (0 / 1)      :  15%|█▍        | 59.3MB /  399MB, 1.63MB/s  Processing Files (0 / 1)      :  12%|█▏        | 46.0MB /  399MB, 1.27MB/s  
+New Data Upload               :  12%|█▏        | 1.56MB / 12.7MB, 43.6kB/s  [A
+New Data Upload               :  29%|██▉       | 59.3MB /  201MB, 1.63MB/s  [A
+New Data Upload               :  23%|██▎       | 46.0MB /  201MB, 1.27MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:   9%|▉         | 30.1MB /  329MB            [A[AProcessing Files (0 / 1)      :   9%|▉         | 30.1MB /  329MB,  832kB/s  
+New Data Upload               :  15%|█▍        | 30.1MB /  201MB,  832kB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  36%|███▌      | 59.4MB /  164MB            [A[AProcessing Files (0 / 1)      :  36%|███▌      | 59.4MB /  164MB, 1.62MB/s  
+New Data Upload               :  36%|███▌      | 58.9MB /  164MB, 1.60MB/s  [A
+
+  ...coder/aot_train_feats.npy:  61%|██████▏   | 55.2MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  61%|██████▏   | 55.2MB / 90.1MB, 1.49MB/s  
+New Data Upload               :  61%|██████▏   | 55.2MB / 90.1MB, 1.49MB/s  [A
+
+  ...coder/probe_vegetation.pt:  13%|█▎        | 50.9MB /  399MB            [A[AProcessing Files (0 / 1)      :  13%|█▎        | 50.9MB /  399MB, 1.40MB/s  
+New Data Upload               :  25%|██▌       | 50.9MB /  201MB, 1.40MB/s  [A
+
+  .../probe_notable_objects.pt:  16%|█▌        | 64.2MB /  399MB            [A[AProcessing Files (0 / 1)      :  16%|█▌        | 64.2MB /  399MB, 1.77MB/s  
+New Data Upload               :  32%|███▏      | 64.2MB /  201MB, 1.77MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  19%|█▉        | 23.7kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  18%|█▊        | 1.37kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  18%|█▊        | 1.37kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  18%|█▊        | 18.4kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  18%|█▊        | 8.65kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  18%|█▊        | 2.71kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  18%|█▊        | 18.4kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  18%|█▊        | 18.4kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  18%|█▊        |  258kB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  23%|██▎       | 2.60MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  17%|█▋        | 67.6MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  12%|█▏        | 38.2MB /  329MB            [A[A
+
+  ...encoder/probe_lighting.pt:  13%|█▎        | 51.5MB /  399MB            [A[AProcessing Files (8 / 26)     :  22%|██▏       | 2.95MB / 13.3MB, 81.3kB/s  Processing Files (0 / 1)      :  17%|█▋        | 67.6MB /  399MB, 1.86MB/s  Processing Files (0 / 1)      :  12%|█▏        | 38.2MB /  329MB, 1.06MB/s  Processing Files (0 / 1)      :  13%|█▎        | 51.5MB /  399MB, 1.42MB/s  
+New Data Upload               :  18%|█▊        | 2.34MB / 12.7MB, 65.5kB/s  [A
+New Data Upload               :  34%|███▎      | 67.6MB /  201MB, 1.86MB/s  [A
+New Data Upload               :  19%|█▉        | 38.2MB /  201MB, 1.06MB/s  [A
+New Data Upload               :  26%|██▌       | 51.5MB /  201MB, 1.42MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  41%|████▏     | 68.1MB /  164MB            [A[AProcessing Files (0 / 1)      :  41%|████▏     | 68.1MB /  164MB, 1.86MB/s  
+New Data Upload               :  41%|████      | 67.6MB /  164MB, 1.84MB/s  [A
+
+  ...coder/aot_train_feats.npy:  65%|██████▌   | 59.0MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  65%|██████▌   | 59.0MB / 90.1MB, 1.59MB/s  
+New Data Upload               :  65%|██████▌   | 59.0MB / 90.1MB, 1.59MB/s  [A
+
+  ...coder/probe_vegetation.pt:  15%|█▍        | 59.7MB /  399MB            [A[AProcessing Files (0 / 1)      :  15%|█▍        | 59.7MB /  399MB, 1.65MB/s  
+New Data Upload               :  30%|██▉       | 59.7MB /  201MB, 1.65MB/s  [A
+
+  .../probe_notable_objects.pt:  18%|█▊        | 73.1MB /  399MB            [A[AProcessing Files (0 / 1)      :  18%|█▊        | 73.1MB /  399MB, 2.02MB/s  
+New Data Upload               :  36%|███▋      | 73.1MB /  201MB, 2.02MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  56%|█████▌    | 69.5kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  55%|█████▌    | 4.11kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  55%|█████▌    | 4.11kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  55%|█████▌    | 55.2kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  55%|█████▌    | 26.0kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  55%|█████▌    | 8.14kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  55%|█████▌    | 55.2kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  55%|█████▌    | 55.2kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  55%|█████▌    |  774kB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  58%|█████▊    | 6.59MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  15%|█▍        | 59.3MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:  19%|█▉        | 75.3MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  14%|█▍        | 46.8MB /  329MB            [A[AProcessing Files (8 / 26)     :  57%|█████▋    | 7.64MB / 13.3MB,  214kB/s  Processing Files (0 / 1)      :  15%|█▍        | 59.3MB /  399MB, 1.64MB/s  Processing Files (0 / 1)      :  19%|█▉        | 75.3MB /  399MB, 2.08MB/s  Processing Files (0 / 1)      :  14%|█▍        | 46.8MB /  329MB, 1.30MB/s  
+New Data Upload               :  55%|█████▌    | 7.03MB / 12.7MB,  199kB/s  [A
+New Data Upload               :  29%|██▉       | 59.3MB /  201MB, 1.64MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  43%|████▎     | 71.3MB /  164MB            [A[A
+New Data Upload               :  37%|███▋      | 75.3MB /  201MB, 2.08MB/s  [A
+New Data Upload               :  23%|██▎       | 46.8MB /  201MB, 1.30MB/s  [AProcessing Files (0 / 1)      :  43%|████▎     | 71.3MB /  164MB, 1.94MB/s  
+New Data Upload               :  43%|████▎     | 70.8MB /  164MB, 1.93MB/s  [A
+
+  ...coder/aot_train_feats.npy:  71%|███████   | 63.8MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  71%|███████   | 63.8MB / 90.1MB, 1.72MB/s  
+New Data Upload               :  71%|███████   | 63.8MB / 90.1MB, 1.72MB/s  [A
+
+  ...coder/probe_vegetation.pt:  17%|█▋        | 68.0MB /  399MB            [A[AProcessing Files (0 / 1)      :  17%|█▋        | 68.0MB /  399MB, 1.89MB/s  
+New Data Upload               :  34%|███▍      | 68.0MB /  201MB, 1.89MB/s  [A
+
+  .../probe_notable_objects.pt:  20%|██        | 80.8MB /  399MB            [A[AProcessing Files (0 / 1)      :  20%|██        | 80.8MB /  399MB, 2.24MB/s  
+New Data Upload               :  40%|████      | 80.8MB /  201MB, 2.24MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  56%|█████▌    | 69.5kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  55%|█████▌    | 4.11kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  55%|█████▌    | 4.11kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  55%|█████▌    | 55.2kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  55%|█████▌    | 26.0kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  55%|█████▌    | 8.14kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  55%|█████▌    | 55.2kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  55%|█████▌    | 55.2kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  55%|█████▌    |  774kB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  58%|█████▊    | 6.59MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  17%|█▋        | 68.1MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:  21%|██        | 83.1MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  47%|████▋     | 76.7MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  17%|█▋        | 55.4MB /  329MB            [A[AProcessing Files (0 / 1)      :  17%|█▋        | 68.1MB /  399MB, 1.89MB/s  Processing Files (0 / 1)      :  21%|██        | 83.1MB /  399MB, 2.30MB/s  Processing Files (0 / 1)      :  47%|████▋     | 76.7MB /  164MB, 2.09MB/s  Processing Files (0 / 1)      :  17%|█▋        | 55.4MB /  329MB, 1.54MB/s  
+New Data Upload               :  34%|███▍      | 68.1MB /  201MB, 1.89MB/s  [A
+New Data Upload               :  41%|████▏     | 83.1MB /  201MB, 2.30MB/s  [A
+New Data Upload               :  46%|████▋     | 76.2MB /  164MB, 2.08MB/s  [A
+New Data Upload               :  28%|██▊       | 55.4MB /  201MB, 1.54MB/s  [A
+
+  ...coder/aot_train_feats.npy:  76%|███████▌  | 68.0MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  76%|███████▌  | 68.0MB / 90.1MB, 1.84MB/s  
+New Data Upload               :  76%|███████▌  | 68.0MB / 90.1MB, 1.84MB/s  [A
+
+  ...coder/probe_vegetation.pt:  19%|█▉        | 76.3MB /  399MB            [A[AProcessing Files (0 / 1)      :  19%|█▉        | 76.3MB /  399MB, 2.12MB/s  
+New Data Upload               :  38%|███▊      | 76.3MB /  201MB, 2.12MB/s  [A
+
+  .../probe_notable_objects.pt:  22%|██▏       | 89.1MB /  399MB            [A[AProcessing Files (0 / 1)      :  22%|██▏       | 89.1MB /  399MB, 2.47MB/s  
+New Data Upload               :  44%|████▍     | 89.1MB /  201MB, 2.47MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  80%|███████▉  |  100kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  80%|███████▉  | 5.93kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  80%|███████▉  | 5.93kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  80%|███████▉  | 79.7kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  80%|███████▉  | 37.5kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  80%|███████▉  | 11.8kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  80%|███████▉  | 79.7kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  80%|███████▉  | 79.7kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  80%|███████▉  | 1.12MB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  81%|████████  | 9.24MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (8 / 26)     :  81%|████████  | 10.8MB / 13.3MB,  303kB/s  
+New Data Upload               :  80%|███████▉  | 10.2MB / 12.7MB,  287kB/s  [A
+
+  ...encoder/probe_lighting.pt:  19%|█▉        | 77.0MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:  23%|██▎       | 90.3MB /  399MB            [A[AProcessing Files (0 / 1)      :  19%|█▉        | 77.0MB /  399MB, 2.13MB/s  
+
+  ...ncoder/tov_test_feats.npy:  51%|█████▏    | 84.3MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  19%|█▉        | 64.0MB /  329MB            [A[AProcessing Files (0 / 1)      :  23%|██▎       | 90.3MB /  399MB, 2.50MB/s  
+New Data Upload               :  38%|███▊      | 77.0MB /  201MB, 2.13MB/s  [AProcessing Files (0 / 1)      :  51%|█████▏    | 84.3MB /  164MB, 2.30MB/s  Processing Files (0 / 1)      :  19%|█▉        | 64.0MB /  329MB, 1.79MB/s  
+New Data Upload               :  45%|████▍     | 90.3MB /  201MB, 2.50MB/s  [A
+New Data Upload               :  51%|█████     | 83.8MB /  164MB, 2.29MB/s  [A
+New Data Upload               :  32%|███▏      | 64.0MB /  201MB, 1.79MB/s  [A
+
+  ...coder/aot_train_feats.npy:  79%|███████▉  | 71.3MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  79%|███████▉  | 71.3MB / 90.1MB, 1.93MB/s  
+New Data Upload               :  79%|███████▉  | 71.3MB / 90.1MB, 1.93MB/s  [A
+
+  ...coder/probe_vegetation.pt:  21%|██        | 84.6MB /  399MB            [A[AProcessing Files (0 / 1)      :  21%|██        | 84.6MB /  399MB, 2.35MB/s  
+New Data Upload               :  42%|████▏     | 84.6MB /  201MB, 2.35MB/s  [A
+
+  .../probe_notable_objects.pt:  25%|██▍       | 98.0MB /  399MB            [A[AProcessing Files (0 / 1)      :  25%|██▍       | 98.0MB /  399MB, 2.72MB/s  
+New Data Upload               :  49%|████▊     | 98.0MB /  201MB, 2.72MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  98%|█████████▊|  123kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  98%|█████████▊| 7.30kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  98%|█████████▊| 7.30kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  98%|█████████▊| 46.2kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  98%|█████████▊| 14.5kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  98%|█████████▊| 1.38MB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  98%|█████████▊| 11.2MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (8 / 26)     :  98%|█████████▊| 13.1MB / 13.3MB,  369kB/s  
+New Data Upload               :  98%|█████████▊| 12.5MB / 12.7MB,  353kB/s  [A
+
+  ...encoder/probe_lighting.pt:  21%|██        | 84.8MB /  399MB            [A[AProcessing Files (0 / 1)      :  21%|██        | 84.8MB /  399MB, 2.35MB/s  
+New Data Upload               :  42%|████▏     | 84.8MB /  201MB, 2.35MB/s  [A
+
+  ...er/probe_video_quality.pt:  25%|██▍       | 98.6MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  56%|█████▌    | 91.9MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  22%|██▏       | 72.1MB /  329MB            [A[AProcessing Files (0 / 1)      :  25%|██▍       | 98.6MB /  399MB, 2.73MB/s  Processing Files (0 / 1)      :  56%|█████▌    | 91.9MB /  164MB, 2.51MB/s  Processing Files (0 / 1)      :  22%|██▏       | 72.1MB /  329MB, 2.01MB/s  
+New Data Upload               :  49%|████▉     | 98.6MB /  201MB, 2.73MB/s  [A
+New Data Upload               :  56%|█████▌    | 91.4MB /  164MB, 2.50MB/s  [A
+New Data Upload               :  36%|███▌      | 72.1MB /  201MB, 2.01MB/s  [A
+
+  ...coder/aot_train_feats.npy:  84%|████████▍ | 75.5MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  84%|████████▍ | 75.5MB / 90.1MB, 2.05MB/s  
+New Data Upload               :  84%|████████▍ | 75.5MB / 90.1MB, 2.05MB/s  [A
+
+  ...coder/probe_vegetation.pt:  23%|██▎       | 92.9MB /  399MB            [A[AProcessing Files (0 / 1)      :  23%|██▎       | 92.9MB /  399MB, 2.59MB/s  
+New Data Upload               :  46%|████▌     | 92.9MB /  201MB, 2.59MB/s  [A
+
+  .../probe_notable_objects.pt:  27%|██▋       |  106MB /  399MB            [A[AProcessing Files (0 / 1)      :  27%|██▋       |  106MB /  399MB, 2.95MB/s  
+New Data Upload               :  53%|█████▎    |  106MB /  201MB, 2.95MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  98%|█████████▊|  123kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  98%|█████████▊| 7.30kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  98%|█████████▊| 7.30kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  98%|█████████▊| 46.2kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  98%|█████████▊| 14.5kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  98%|█████████▊| 1.38MB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  98%|█████████▊| 11.2MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  23%|██▎       | 93.6MB /  399MB            [A[AProcessing Files (0 / 1)      :  23%|██▎       | 93.6MB /  399MB, 2.60MB/s  
+New Data Upload               :  47%|████▋     | 93.6MB /  201MB, 2.60MB/s  [A
+
+  ...er/probe_video_quality.pt:  26%|██▌       |  105MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  61%|██████    |  101MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  25%|██▍       | 80.7MB /  329MB            [A[AProcessing Files (0 / 1)      :  26%|██▌       |  105MB /  399MB, 2.90MB/s  Processing Files (0 / 1)      :  61%|██████    |  101MB /  164MB, 2.76MB/s  Processing Files (0 / 1)      :  25%|██▍       | 80.7MB /  329MB, 2.26MB/s  
+New Data Upload               :  52%|█████▏    |  105MB /  201MB, 2.90MB/s  [A
+New Data Upload               :  61%|██████    |  100MB /  164MB, 2.74MB/s  [A
+New Data Upload               :  40%|████      | 80.7MB /  201MB, 2.26MB/s  [A
+
+  ...coder/aot_train_feats.npy:  89%|████████▊ | 79.8MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  89%|████████▊ | 79.8MB / 90.1MB, 2.16MB/s  
+New Data Upload               :  89%|████████▊ | 79.8MB / 90.1MB, 2.16MB/s  [A
+
+  ...coder/probe_vegetation.pt:  25%|██▌       |  101MB /  399MB            [A[AProcessing Files (0 / 1)      :  25%|██▌       |  101MB /  399MB, 2.82MB/s  
+New Data Upload               :  50%|█████     |  101MB /  201MB, 2.82MB/s  [A
+
+  .../probe_notable_objects.pt:  29%|██▊       |  114MB /  399MB            [A[AProcessing Files (0 / 1)      :  29%|██▊       |  114MB /  399MB, 3.17MB/s  
+New Data Upload               :  57%|█████▋    |  114MB /  201MB, 3.17MB/s  [A
+
+  ...der/tov_test_clip_ids.npy:  98%|█████████▊|  123kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy:  98%|█████████▊| 7.30kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy:  98%|█████████▊| 7.30kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt:  98%|█████████▊| 46.2kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy:  98%|█████████▊| 14.5kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy:  98%|█████████▊| 98.1kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png:  98%|█████████▊| 1.38MB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                :  98%|█████████▊| 11.2MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  26%|██▌       |  102MB /  399MB            [A[AProcessing Files (0 / 1)      :  26%|██▌       |  102MB /  399MB, 2.84MB/s  
+New Data Upload               :  51%|█████     |  102MB /  201MB, 2.84MB/s  [A
+
+  ...er/probe_video_quality.pt:  28%|██▊       |  114MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  66%|██████▋   |  109MB /  164MB            [A[AProcessing Files (0 / 1)      :  28%|██▊       |  114MB /  399MB, 3.15MB/s  
+
+  ...ncoder/tcc_test_feats.npy:  27%|██▋       | 88.7MB /  329MB            [A[AProcessing Files (0 / 1)      :  66%|██████▋   |  109MB /  164MB, 3.00MB/s  
+New Data Upload               :  56%|█████▋    |  114MB /  201MB, 3.15MB/s  [AProcessing Files (0 / 1)      :  27%|██▋       | 88.7MB /  329MB, 2.48MB/s  
+New Data Upload               :  66%|██████▋   |  109MB /  164MB, 2.98MB/s  [A
+New Data Upload               :  44%|████▍     | 88.7MB /  201MB, 2.48MB/s  [A
+
+  ...coder/aot_train_feats.npy:  93%|█████████▎| 84.1MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎| 84.1MB / 90.1MB, 2.28MB/s  
+New Data Upload               :  93%|█████████▎| 84.1MB / 90.1MB, 2.28MB/s  [A
+
+  ...coder/probe_vegetation.pt:  27%|██▋       |  108MB /  399MB            [A[AProcessing Files (0 / 1)      :  27%|██▋       |  108MB /  399MB, 3.02MB/s  
+New Data Upload               :  54%|█████▍    |  108MB /  201MB, 3.02MB/s  [A
+
+  .../probe_notable_objects.pt:  29%|██▉       |  115MB /  399MB            [A[AProcessing Files (0 / 1)      :  29%|██▉       |  115MB /  399MB, 3.19MB/s  
+New Data Upload               :  57%|█████▋    |  115MB /  201MB, 3.19MB/s  [A
+
+  ...der/tov_test_clip_ids.npy: 100%|██████████|  125kB /  125kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_aot.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...f70_encoder/clip_keys.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...t_f70_encoder/head_aot.pt: 100%|██████████| 47.0kB / 47.0kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._clip_notable_objects.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 11.4MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (26 / 26)    : 100%|██████████| 13.3MB / 13.3MB,  372kB/s  
+New Data Upload               : 100%|██████████| 12.7MB / 12.7MB,  357kB/s  [A
+
+  ...encoder/probe_lighting.pt:  28%|██▊       |  111MB /  399MB            [A[AProcessing Files (0 / 1)      :  28%|██▊       |  111MB /  399MB, 3.09MB/s  
+New Data Upload               :  55%|█████▌    |  111MB /  201MB, 3.09MB/s  [A
+
+  ...er/probe_video_quality.pt:  31%|███       |  122MB /  399MB            [A[AProcessing Files (0 / 1)      :  31%|███       |  122MB /  399MB, 3.40MB/s  
+New Data Upload               :  61%|██████    |  122MB /  201MB, 3.40MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  70%|███████   |  116MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  29%|██▉       | 96.8MB /  329MB            [A[AProcessing Files (0 / 1)      :  70%|███████   |  116MB /  164MB, 3.18MB/s  Processing Files (0 / 1)      :  29%|██▉       | 96.8MB /  329MB, 2.71MB/s  
+New Data Upload               :  70%|███████   |  115MB /  164MB, 3.16MB/s  [A
+New Data Upload               :  48%|████▊     | 96.8MB /  201MB, 2.71MB/s  [A
+
+  ...coder/aot_train_feats.npy:  95%|█████████▌| 85.7MB / 90.1MB            [A[A
+
+  ...coder/probe_vegetation.pt:  29%|██▉       |  116MB /  399MB            [A[AProcessing Files (0 / 1)      :  95%|█████████▌| 85.7MB / 90.1MB, 2.32MB/s  Processing Files (0 / 1)      :  29%|██▉       |  116MB /  399MB, 3.22MB/s  
+New Data Upload               :  57%|█████▋    |  116MB /  201MB, 3.22MB/s  [A
+New Data Upload               :  95%|█████████▌| 85.7MB / 90.1MB, 2.32MB/s  [A
+
+  .../probe_notable_objects.pt:  30%|██▉       |  120MB /  399MB            [A[AProcessing Files (0 / 1)      :  30%|██▉       |  120MB /  399MB, 3.31MB/s  
+New Data Upload               :  59%|█████▉    |  120MB /  201MB, 3.31MB/s  [A
+
+  ...oder/per_clip_tcc_tau.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A
+
+
+  ...er/per_clip_tcc_cycle.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 12.8MB / 12.8MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  30%|██▉       |  120MB /  399MB            [A[AProcessing Files (0 / 1)      :  30%|██▉       |  120MB /  399MB, 3.34MB/s  
+New Data Upload               :  59%|█████▉    |  120MB /  201MB, 3.34MB/s  [A
+
+  ...er/probe_video_quality.pt:  32%|███▏      |  128MB /  399MB            [A[AProcessing Files (0 / 1)      :  32%|███▏      |  128MB /  399MB, 3.55MB/s  
+New Data Upload               :  64%|██████▎   |  128MB /  201MB, 3.55MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  73%|███████▎  |  120MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  31%|███▏      |  103MB /  329MB            [A[AProcessing Files (0 / 1)      :  73%|███████▎  |  120MB /  164MB, 3.29MB/s  Processing Files (0 / 1)      :  31%|███▏      |  103MB /  329MB, 2.89MB/s  
+New Data Upload               :  73%|███████▎  |  119MB /  164MB, 3.28MB/s  [A
+New Data Upload               :  51%|█████▏    |  103MB /  201MB, 2.89MB/s  [A
+
+  ...coder/probe_vegetation.pt:  30%|██▉       |  118MB /  399MB            [A[AProcessing Files (0 / 1)      :  30%|██▉       |  118MB /  399MB, 3.28MB/s  
+New Data Upload               :  59%|█████▊    |  118MB /  201MB, 3.28MB/s  [A
+
+  ...coder/aot_train_feats.npy:  98%|█████████▊| 87.9MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  98%|█████████▊| 87.9MB / 90.1MB, 2.38MB/s  
+New Data Upload               :  98%|█████████▊| 87.9MB / 90.1MB, 2.38MB/s  [A
+
+  .../probe_notable_objects.pt:  31%|███       |  124MB /  399MB            [A[AProcessing Files (0 / 1)      :  31%|███       |  124MB /  399MB, 3.43MB/s  
+New Data Upload               :  62%|██████▏   |  124MB /  201MB, 3.43MB/s  [A
+
+  ..._encoder/per_clip_aot.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A
+
+
+  ...t_f70_encoder/head_aot.pt: 100%|██████████| 47.0kB / 47.0kB            [A[A[A
+
+
+
+  ..._encoder/per_clip_mse.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A
+
+
+
+
+  ...er_clip_motion_aux_l1.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A
+
+
+
+
+
+  ...f70_encoder/clip_keys.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...r/per_clip_motion_cos.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  .../pooled_features_test.npy: 100%|██████████| 10.6MB / 10.6MB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...per_clip_tcc_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 2.32MB / 2.32MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  30%|███       |  120MB /  399MB            [A[AProcessing Files (0 / 1)      :  30%|███       |  120MB /  399MB, 3.35MB/s  
+New Data Upload               :  60%|█████▉    |  120MB /  201MB, 3.35MB/s  [A
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  132MB /  399MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  132MB /  399MB, 3.67MB/s  
+New Data Upload               :  66%|██████▌   |  132MB /  201MB, 3.67MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  75%|███████▌  |  124MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  33%|███▎      |  109MB /  329MB            [A[AProcessing Files (0 / 1)      :  75%|███████▌  |  124MB /  164MB, 3.40MB/s  Processing Files (0 / 1)      :  33%|███▎      |  109MB /  329MB, 3.04MB/s  
+New Data Upload               :  75%|███████▌  |  123MB /  164MB, 3.38MB/s  [A
+New Data Upload               :  54%|█████▍    |  109MB /  201MB, 3.04MB/s  [A
+
+  ...coder/probe_vegetation.pt:  31%|███▏      |  125MB /  399MB            [A[AProcessing Files (0 / 1)      :  31%|███▏      |  125MB /  399MB, 3.48MB/s  
+New Data Upload               :  62%|██████▏   |  125MB /  201MB, 3.48MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉| 90.0MB / 90.1MB, 2.43MB/s  
+New Data Upload               : 100%|█████████▉| 90.0MB / 90.1MB, 2.43MB/s  [A
+
+  .../probe_notable_objects.pt:  32%|███▏      |  128MB /  399MB            [A[AProcessing Files (0 / 1)      :  32%|███▏      |  128MB /  399MB, 3.54MB/s  
+New Data Upload               :  64%|██████▎   |  128MB /  201MB, 3.54MB/s  [A
+
+  ..._clip_notable_objects.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A
+
+
+  ...der/per_clip_lighting.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A
+
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...er/per_clip_tcc_cycle.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 11.5MB / 11.5MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...encoder/probe_lighting.pt:  31%|███       |  125MB /  399MB            [A[AProcessing Files (0 / 1)      :  31%|███       |  125MB /  399MB, 3.47MB/s  
+New Data Upload               :  62%|██████▏   |  125MB /  201MB, 3.47MB/s  [A
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  133MB /  399MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  133MB /  399MB, 3.69MB/s  
+New Data Upload               :  66%|██████▋   |  133MB /  201MB, 3.69MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  77%|███████▋  |  126MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  35%|███▌      |  116MB /  329MB            [A[AProcessing Files (0 / 1)      :  77%|███████▋  |  126MB /  164MB, 3.46MB/s  Processing Files (0 / 1)      :  35%|███▌      |  116MB /  329MB, 3.26MB/s  
+New Data Upload               :  77%|███████▋  |  126MB /  164MB, 3.45MB/s  [A
+New Data Upload               :  58%|█████▊    |  116MB /  201MB, 3.26MB/s  [A
+
+  ...coder/probe_vegetation.pt:  32%|███▏      |  129MB /  399MB            [A[AProcessing Files (0 / 1)      :  32%|███▏      |  129MB /  399MB, 3.59MB/s  
+New Data Upload               :  64%|██████▍   |  129MB /  201MB, 3.59MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  .../probe_notable_objects.pt:  33%|███▎      |  132MB /  399MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  132MB /  399MB, 3.66MB/s  
+New Data Upload               :  66%|██████▌   |  132MB /  201MB, 3.66MB/s  [A
+
+  ...encoder/probe_lighting.pt:  32%|███▏      |  129MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  37%|███▋      |  122MB /  329MB            [A[A
+
+  ...er_clip_video_quality.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A
+
+
+  ...er_clip_motion_aux_l1.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A
+
+
+
+  ...t_f70_encoder/head_aot.pt: 100%|██████████| 47.0kB / 47.0kB            [A[A[A[A
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  .../pooled_features_test.npy: 100%|██████████| 10.6MB / 10.6MB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ..._encoder/per_clip_mse.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...r/per_clip_motion_cos.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...r/per_clip_vegetation.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 2.47MB / 2.47MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (0 / 1)      :  32%|███▏      |  129MB /  399MB, 3.59MB/s  
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  133MB /  399MB            [A[AProcessing Files (0 / 1)      :  37%|███▋      |  122MB /  329MB, 3.41MB/s  
+
+  ...ncoder/tov_test_feats.npy:  79%|███████▉  |  130MB /  164MB            [A[A
+New Data Upload               :  64%|██████▍   |  129MB /  201MB, 3.59MB/s  [A
+New Data Upload               :  60%|██████    |  122MB /  201MB, 3.41MB/s  [AProcessing Files (0 / 1)      :  79%|███████▉  |  130MB /  164MB, 3.57MB/s  
+New Data Upload               :  79%|███████▉  |  130MB /  164MB, 3.55MB/s  [A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  133MB /  399MB, 3.71MB/s  
+New Data Upload               :  66%|██████▋   |  133MB /  201MB, 3.71MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  .../probe_notable_objects.pt:  33%|███▎      |  133MB /  399MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  133MB /  399MB, 3.68MB/s  
+New Data Upload               :  66%|██████▋   |  133MB /  201MB, 3.68MB/s  [A
+
+  ...er/per_clip_tcc_cycle.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A
+
+
+  ...per_clip_tcc_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A
+
+
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ...er/aot_train_clip_ids.npy: 100%|██████████|  117kB /  117kB            [A[A[A[A[A
+
+
+
+
+
+  ..._clip_notable_objects.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...der/tcc_test_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...der/per_clip_lighting.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 11.4MB / 11.4MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  38%|███▊      |  126MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  82%|████████▏ |  134MB /  164MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  133MB /  399MB, 3.69MB/s  Processing Files (0 / 1)      :  38%|███▊      |  126MB /  329MB, 3.52MB/s  Processing Files (0 / 1)      :  82%|████████▏ |  134MB /  164MB, 3.67MB/s  
+New Data Upload               :  66%|██████▌   |  133MB /  201MB, 3.69MB/s  [A
+New Data Upload               :  63%|██████▎   |  126MB /  201MB, 3.52MB/s  [A
+New Data Upload               :  81%|████████▏ |  134MB /  164MB, 3.65MB/s  [A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  .../probe_notable_objects.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...r/per_clip_motion_cos.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A
+
+
+  ...oder/per_clip_tcc_tau.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A
+
+
+
+  ...er_clip_video_quality.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A
+
+
+
+
+  .../pooled_features_test.npy: 100%|██████████| 10.6MB / 10.6MB            [A[A[A[A[A
+
+
+
+
+
+  ...r/per_clip_vegetation.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ..._keys_test_vegetation.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 2.32MB / 2.32MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  34%|███▎      |  134MB /  399MB            [A[AProcessing Files (0 / 1)      :  34%|███▎      |  134MB /  399MB, 3.71MB/s  
+New Data Upload               :  67%|██████▋   |  134MB /  201MB, 3.71MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  40%|███▉      |  130MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  82%|████████▏ |  135MB /  164MB            [A[AProcessing Files (0 / 1)      :  40%|███▉      |  130MB /  329MB, 3.64MB/s  Processing Files (0 / 1)      :  82%|████████▏ |  135MB /  164MB, 3.67MB/s  
+New Data Upload               :  65%|██████▍   |  130MB /  201MB, 3.64MB/s  [A
+New Data Upload               :  82%|████████▏ |  134MB /  164MB, 3.66MB/s  [A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  .../probe_notable_objects.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...der/tcc_test_clip_ids.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...der/per_clip_lighting.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A
+
+
+
+  ..._test_notable_objects.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A
+
+
+
+
+  ..._clip_notable_objects.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A[A
+
+
+
+
+
+  ...ip_keys_test_lighting.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ..._encoder/per_clip_mse.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...er_clip_motion_aux_l1.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ..._encoder/per_clip_aot.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...coder/tov_test_labels.npy: 100%|██████████| 58.5kB / 58.5kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 12.9MB / 12.9MB            [A[A[A[A[A[A[A[A[A[A[A
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  34%|███▎      |  134MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  133MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  82%|████████▏ |  135MB /  164MB            [A[AProcessing Files (0 / 1)      :  41%|████      |  133MB /  329MB, 3.73MB/s  
+New Data Upload               :  66%|██████▋   |  133MB /  201MB, 3.73MB/s  [A
+
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A
+
+
+  ...r/per_clip_vegetation.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A
+
+
+
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            [A[A[A[A
+
+
+
+
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            [A[A[A[A[A
+
+
+
+
+
+  .../pooled_features_test.npy: 100%|██████████| 10.6MB / 10.6MB            [A[A[A[A[A[A
+
+
+
+
+
+
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            [A[A[A[A[A[A[A
+
+
+
+
+
+
+
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            [A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+  ...oder/per_clip_tcc_tau.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+  ...er/per_clip_tcc_cycle.npy: 100%|██████████| 7.43kB / 7.43kB            [A[A[A[A[A[A[A[A[A[A
+
+
+
+
+
+
+
+
+
+
+  [+ 16 files]                : 100%|██████████| 1.02MB / 1.02MB            [A[A[A[A[A[A[A[A[A[A[AProcessing Files (26 / 26)    : 100%|██████████| 13.3MB / 13.3MB,  364kB/s  
+New Data Upload               : 100%|██████████| 12.7MB / 12.7MB,  349kB/s  
+  ...ncoder/clip_keys_test.npy: 100%|██████████| 99.8kB / 99.8kB            
+  ...r/per_clip_vegetation.npy: 100%|██████████| 14.7kB / 14.7kB            
+  ...coder/tcc_test_labels.npy: 100%|██████████| 14.7kB / 14.7kB            
+  ...ys_test_video_quality.npy: 100%|██████████| 99.8kB / 99.8kB            
+  .../pooled_features_test.npy: 100%|██████████| 10.6MB / 10.6MB            
+  ...oder/aot_train_labels.npy: 100%|██████████| 32.1kB / 32.1kB            
+  ...robe_taxonomy_per_dim.png: 100%|██████████| 1.40MB / 1.40MB            
+  ...oder/per_clip_tcc_tau.npy: 100%|██████████| 7.43kB / 7.43kB            
+  ...er/per_clip_tcc_cycle.npy: 100%|██████████| 7.43kB / 7.43kB            
+  [+ 16 files]                : 100%|██████████| 1.02MB / 1.02MB            
+
+
+  .../probe_notable_objects.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  ...er/probe_video_quality.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  34%|███▎      |  134MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  82%|████████▏ |  135MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  133MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt:  34%|███▎      |  134MB /  399MB            [A[AProcessing Files (0 / 1)      :  34%|███▎      |  134MB /  399MB, 3.65MB/s  
+New Data Upload               :  50%|████▉     |  134MB /  268MB, 3.65MB/s  [A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  ...er/probe_video_quality.pt:  34%|███▎      |  134MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  34%|███▎      |  134MB /  399MB            [A[AProcessing Files (0 / 1)      :  34%|███▎      |  134MB /  399MB, 3.64MB/s  
+New Data Upload               :  67%|██████▋   |  134MB /  201MB, 3.64MB/s  [A
+
+  ...ncoder/tov_test_feats.npy:  84%|████████▍ |  138MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  133MB /  329MB            [A[AProcessing Files (0 / 1)      :  84%|████████▍ |  138MB /  164MB, 3.74MB/s  
+New Data Upload               :  84%|████████▍ |  137MB /  164MB, 3.72MB/s  [A
+
+  .../probe_notable_objects.pt:  35%|███▍      |  138MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[AProcessing Files (0 / 1)      :  35%|███▍      |  138MB /  399MB, 3.76MB/s  
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+New Data Upload               :  51%|█████▏    |  138MB /  268MB, 3.76MB/s  [A
+
+  ...encoder/probe_lighting.pt:  34%|███▎      |  134MB /  399MB            [A[AProcessing Files (0 / 1)      :  34%|███▎      |  134MB /  399MB, 3.67MB/s  
+New Data Upload               :  50%|████▉     |  134MB /  268MB, 3.67MB/s  [A
+
+  ...er/probe_video_quality.pt:  35%|███▍      |  138MB /  399MB            [A[AProcessing Files (0 / 1)      :  35%|███▍      |  138MB /  399MB, 3.75MB/s  
+New Data Upload               :  51%|█████▏    |  138MB /  268MB, 3.75MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  133MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  84%|████████▍ |  138MB /  164MB            [A[AProcessing Files (0 / 1)      :  84%|████████▍ |  138MB /  164MB, 3.74MB/s  
+New Data Upload               :  84%|████████▍ |  138MB /  164MB, 3.73MB/s  [A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|█████████▉| 90.0MB / 90.1MB            [A[A
+
+  .../probe_notable_objects.pt:  36%|███▌      |  142MB /  399MB            [A[AProcessing Files (0 / 1)      :  36%|███▌      |  142MB /  399MB, 3.87MB/s  
+New Data Upload               :  42%|████▏     |  142MB /  335MB, 3.87MB/s  [A
+
+  ...encoder/probe_lighting.pt:  35%|███▍      |  138MB /  399MB            [A[AProcessing Files (0 / 1)      :  35%|███▍      |  138MB /  399MB, 3.78MB/s  
+New Data Upload               :  51%|█████▏    |  138MB /  268MB, 3.78MB/s  [A
+
+  ...er/probe_video_quality.pt:  35%|███▌      |  140MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  133MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  84%|████████▍ |  138MB /  164MB            [A[AProcessing Files (0 / 1)      :  35%|███▌      |  140MB /  399MB, 3.80MB/s  
+New Data Upload               :  42%|████▏     |  140MB /  335MB, 3.80MB/s  [A
+
+  .../probe_notable_objects.pt:  37%|███▋      |  146MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  133MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  37%|███▋      |  146MB /  399MB, 3.99MB/s  Processing Files (1 / 1)      : 100%|██████████| 90.1MB / 90.1MB, 2.37MB/s  
+New Data Upload               :  44%|████▎     |  146MB /  335MB, 3.99MB/s  [A
+New Data Upload               : 100%|██████████| 90.1MB / 90.1MB, 2.37MB/s  [A
+
+  ...encoder/probe_lighting.pt:  35%|███▌      |  141MB /  399MB            [A[AProcessing Files (0 / 1)      :  35%|███▌      |  141MB /  399MB, 3.86MB/s  
+New Data Upload               :  42%|████▏     |  141MB /  335MB, 3.86MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  134MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  89%|████████▊ |  146MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  37%|███▋      |  147MB /  399MB            [A[AProcessing Files (0 / 1)      :  41%|████      |  134MB /  329MB, 3.67MB/s  Processing Files (0 / 1)      :  89%|████████▊ |  146MB /  164MB, 3.95MB/s  Processing Files (0 / 1)      :  37%|███▋      |  147MB /  399MB, 4.01MB/s  
+New Data Upload               :  66%|██████▋   |  134MB /  201MB, 3.67MB/s  [A
+New Data Upload               :  89%|████████▊ |  145MB /  164MB, 3.93MB/s  [A
+New Data Upload               :  44%|████▍     |  147MB /  335MB, 4.01MB/s  [A
+
+  ...coder/probe_vegetation.pt:  33%|███▎      |  134MB /  399MB            [A[AProcessing Files (0 / 1)      :  33%|███▎      |  134MB /  399MB, 3.62MB/s  
+New Data Upload               :  50%|████▉     |  134MB /  268MB, 3.62MB/s  [A
+
+  .../probe_notable_objects.pt:  38%|███▊      |  154MB /  399MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  38%|███▊      |  154MB /  399MB, 4.20MB/s  
+New Data Upload               :  46%|████▌     |  154MB /  335MB, 4.20MB/s  [A
+
+  ...encoder/probe_lighting.pt:  37%|███▋      |  148MB /  399MB            [A[AProcessing Files (0 / 1)      :  37%|███▋      |  148MB /  399MB, 4.06MB/s  
+New Data Upload               :  44%|████▍     |  148MB /  335MB, 4.06MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  134MB /  329MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  91%|█████████▏|  150MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  38%|███▊      |  151MB /  399MB            [A[AProcessing Files (0 / 1)      :  91%|█████████▏|  150MB /  164MB, 4.07MB/s  Processing Files (0 / 1)      :  38%|███▊      |  151MB /  399MB, 4.12MB/s  
+New Data Upload               :  91%|█████████▏|  150MB /  164MB, 4.05MB/s  [A
+New Data Upload               :  45%|████▌     |  151MB /  335MB, 4.12MB/s  [A
+
+  ...coder/probe_vegetation.pt:  34%|███▍      |  137MB /  399MB            [A[AProcessing Files (0 / 1)      :  34%|███▍      |  137MB /  399MB, 3.73MB/s  
+New Data Upload               :  51%|█████▏    |  137MB /  268MB, 3.73MB/s  [A
+
+  .../probe_notable_objects.pt:  40%|███▉      |  159MB /  399MB            [A[AProcessing Files (0 / 1)      :  40%|███▉      |  159MB /  399MB, 4.34MB/s  
+New Data Upload               :  47%|████▋     |  159MB /  335MB, 4.34MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  134MB /  329MB            [A[A
+
+  ...encoder/probe_lighting.pt:  38%|███▊      |  152MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  93%|█████████▎|  154MB /  164MB            [A[AProcessing Files (0 / 1)      :  41%|████      |  134MB /  329MB, 3.67MB/s  
+
+  ...er/probe_video_quality.pt:  40%|████      |  161MB /  399MB            [A[AProcessing Files (0 / 1)      :  38%|███▊      |  152MB /  399MB, 4.18MB/s  Processing Files (0 / 1)      :  93%|█████████▎|  154MB /  164MB, 4.16MB/s  
+New Data Upload               :  50%|█████     |  134MB /  268MB, 3.67MB/s  [AProcessing Files (0 / 1)      :  40%|████      |  161MB /  399MB, 4.42MB/s  
+New Data Upload               :  40%|████      |  161MB /  399MB, 4.42MB/s  [A
+New Data Upload               :  93%|█████████▎|  153MB /  164MB, 4.14MB/s  [A
+New Data Upload               :  45%|████▌     |  152MB /  335MB, 4.18MB/s  [A
+
+  ...encoder/probe_lighting.pt:  40%|████      |  161MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  35%|███▌      |  140MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:  43%|████▎     |  172MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  95%|█████████▌|  157MB /  164MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  134MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt:  41%|████      |  162MB /  399MB            [A[AProcessing Files (0 / 1)      :  40%|████      |  161MB /  399MB, 4.45MB/s  
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[AProcessing Files (0 / 1)      :  35%|███▌      |  140MB /  399MB, 3.78MB/s  
+New Data Upload               :  52%|█████▏    |  140MB /  268MB, 3.78MB/s  [AProcessing Files (0 / 1)      :  95%|█████████▌|  157MB /  164MB, 4.24MB/s  Processing Files (0 / 1)      :  41%|████      |  162MB /  399MB, 4.45MB/s  
+New Data Upload               :  48%|████▊     |  161MB /  335MB, 4.45MB/s  [AProcessing Files (0 / 1)      :  43%|████▎     |  172MB /  399MB, 4.73MB/s  
+New Data Upload               :  95%|█████████▌|  156MB /  164MB, 4.23MB/s  [A
+New Data Upload               :  48%|████▊     |  162MB /  335MB, 4.45MB/s  [A
+New Data Upload               :  43%|████▎     |  172MB /  399MB, 4.73MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  41%|████      |  134MB /  329MB            [A[A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[A
+
+  ...coder/probe_vegetation.pt:  36%|███▋      |  145MB /  399MB            [A[AProcessing Files (0 / 1)      :  36%|███▋      |  145MB /  399MB, 3.92MB/s  
+New Data Upload               :  54%|█████▍    |  145MB /  268MB, 3.92MB/s  [A
+
+  ...encoder/probe_lighting.pt:  43%|████▎     |  173MB /  399MB            [A[AProcessing Files (0 / 1)      :  43%|████▎     |  173MB /  399MB, 4.79MB/s  
+New Data Upload               :  52%|█████▏    |  173MB /  335MB, 4.79MB/s  [A
+
+  .../probe_notable_objects.pt:  42%|████▏     |  166MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy:  99%|█████████▉|  163MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  46%|████▌     |  184MB /  399MB            [A[AProcessing Files (0 / 1)      :  42%|████▏     |  166MB /  399MB, 4.54MB/s  Processing Files (0 / 1)      :  99%|█████████▉|  163MB /  164MB, 4.43MB/s  Processing Files (0 / 1)      :  46%|████▌     |  184MB /  399MB, 5.10MB/s  
+New Data Upload               :  49%|████▉     |  166MB /  335MB, 4.54MB/s  [A
+New Data Upload               :  99%|█████████▉|  163MB /  164MB, 4.42MB/s  [A
+New Data Upload               :  46%|████▌     |  184MB /  399MB, 5.10MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  42%|████▏     |  137MB /  329MB            [A[AProcessing Files (0 / 1)      :  42%|████▏     |  137MB /  329MB, 3.73MB/s  
+New Data Upload               :  42%|████▏     |  137MB /  329MB, 3.73MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[A
+
+  ...coder/probe_vegetation.pt:  38%|███▊      |  153MB /  399MB            [A[AProcessing Files (0 / 1)      :  38%|███▊      |  153MB /  399MB, 4.17MB/s  
+New Data Upload               :  57%|█████▋    |  153MB /  268MB, 4.17MB/s  [A
+
+  ...encoder/probe_lighting.pt:  45%|████▌     |  180MB /  399MB            [A[AProcessing Files (0 / 1)      :  45%|████▌     |  180MB /  399MB, 5.00MB/s  
+New Data Upload               :  54%|█████▎    |  180MB /  335MB, 5.00MB/s  [A
+
+  .../probe_notable_objects.pt:  43%|████▎     |  172MB /  399MB            [A[AProcessing Files (0 / 1)      :  43%|████▎     |  172MB /  399MB, 4.72MB/s  
+New Data Upload               :  51%|█████▏    |  172MB /  335MB, 4.72MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|█████████▉|  164MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  50%|█████     |  201MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  164MB /  164MB, 4.45MB/s  Processing Files (0 / 1)      :  50%|█████     |  201MB /  399MB, 5.60MB/s  
+New Data Upload               : 100%|█████████▉|  164MB /  164MB, 4.44MB/s  [A
+New Data Upload               :  50%|█████     |  201MB /  399MB, 5.60MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  42%|████▏     |  139MB /  329MB            [A[AProcessing Files (0 / 1)      :  42%|████▏     |  139MB /  329MB, 3.77MB/s  
+New Data Upload               :  42%|████▏     |  139MB /  329MB, 3.77MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[A
+
+  ...coder/probe_vegetation.pt:  39%|███▉      |  157MB /  399MB            [A[AProcessing Files (0 / 1)      :  39%|███▉      |  157MB /  399MB, 4.28MB/s  
+New Data Upload               :  58%|█████▊    |  157MB /  268MB, 4.28MB/s  [A
+
+  ...encoder/probe_lighting.pt:  47%|████▋     |  187MB /  399MB            [A[AProcessing Files (0 / 1)      :  47%|████▋     |  187MB /  399MB, 5.22MB/s  
+New Data Upload               :  56%|█████▌    |  187MB /  335MB, 5.22MB/s  [A
+
+  .../probe_notable_objects.pt:  45%|████▍     |  179MB /  399MB            [A[AProcessing Files (0 / 1)      :  45%|████▍     |  179MB /  399MB, 4.93MB/s  
+New Data Upload               :  45%|████▍     |  179MB /  399MB, 4.93MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|█████████▉|  164MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  54%|█████▍    |  215MB /  399MB            [A[AProcessing Files (0 / 1)      :  54%|█████▍    |  215MB /  399MB, 6.02MB/s  
+New Data Upload               :  54%|█████▍    |  215MB /  399MB, 6.02MB/s  [A
+
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 90.1MB / 90.1MB, 2.32MB/s  
+New Data Upload               : 100%|██████████| 90.1MB / 90.1MB, 2.32MB/s  
+  ...coder/aot_train_feats.npy: 100%|██████████| 90.1MB / 90.1MB            
+
+
+  ...ncoder/tcc_test_feats.npy:  43%|████▎     |  141MB /  329MB            [A[AProcessing Files (0 / 1)      :  43%|████▎     |  141MB /  329MB, 3.82MB/s  
+New Data Upload               :  43%|████▎     |  141MB /  329MB, 3.82MB/s  [A
+
+  ...coder/probe_vegetation.pt:  40%|████      |  161MB /  399MB            [A[AProcessing Files (0 / 1)      :  40%|████      |  161MB /  399MB, 4.41MB/s  
+New Data Upload               :  48%|████▊     |  161MB /  335MB, 4.41MB/s  [A
+
+  ...encoder/probe_lighting.pt:  49%|████▉     |  196MB /  399MB            [A[AProcessing Files (0 / 1)      :  49%|████▉     |  196MB /  399MB, 5.46MB/s  
+New Data Upload               :  49%|████▉     |  196MB /  399MB, 5.46MB/s  [A
+
+  .../probe_notable_objects.pt:  47%|████▋     |  189MB /  399MB            [A[AProcessing Files (0 / 1)      :  47%|████▋     |  189MB /  399MB, 5.21MB/s  
+New Data Upload               :  47%|████▋     |  189MB /  399MB, 5.21MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|█████████▉|  164MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  58%|█████▊    |  231MB /  399MB            [A[AProcessing Files (0 / 1)      :  58%|█████▊    |  231MB /  399MB, 6.53MB/s  
+New Data Upload               :  58%|█████▊    |  231MB /  399MB, 6.53MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  43%|████▎     |  143MB /  329MB            [A[AProcessing Files (0 / 1)      :  43%|████▎     |  143MB /  329MB, 3.86MB/s  
+New Data Upload               :  43%|████▎     |  143MB /  329MB, 3.86MB/s  [A
+
+  ...coder/probe_vegetation.pt:  42%|████▏     |  168MB /  399MB            [A[AProcessing Files (0 / 1)      :  42%|████▏     |  168MB /  399MB, 4.61MB/s  
+New Data Upload               :  42%|████▏     |  168MB /  399MB, 4.61MB/s  [A
+
+  ...encoder/probe_lighting.pt:  51%|█████▏    |  205MB /  399MB            [A[AProcessing Files (0 / 1)      :  51%|█████▏    |  205MB /  399MB, 5.74MB/s  
+New Data Upload               :  51%|█████▏    |  205MB /  399MB, 5.74MB/s  [A
+
+  .../probe_notable_objects.pt:  49%|████▉     |  197MB /  399MB            [A[AProcessing Files (0 / 1)      :  49%|████▉     |  197MB /  399MB, 5.46MB/s  
+New Data Upload               :  49%|████▉     |  197MB /  399MB, 5.46MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|█████████▉|  164MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  61%|██████    |  243MB /  399MB            [A[AProcessing Files (0 / 1)      :  61%|██████    |  243MB /  399MB, 6.90MB/s  
+New Data Upload               :  61%|██████    |  243MB /  399MB, 6.90MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  43%|████▎     |  143MB /  329MB            [A[A
+
+  ...coder/probe_vegetation.pt:  44%|████▍     |  177MB /  399MB            [A[AProcessing Files (0 / 1)      :  44%|████▍     |  177MB /  399MB, 4.87MB/s  
+New Data Upload               :  44%|████▍     |  177MB /  399MB, 4.87MB/s  [A
+
+  ...encoder/probe_lighting.pt:  53%|█████▎    |  211MB /  399MB            [A[AProcessing Files (0 / 1)      :  53%|█████▎    |  211MB /  399MB, 5.92MB/s  
+New Data Upload               :  53%|█████▎    |  211MB /  399MB, 5.92MB/s  [A
+
+  .../probe_notable_objects.pt:  52%|█████▏    |  208MB /  399MB            [A[AProcessing Files (0 / 1)      :  52%|█████▏    |  208MB /  399MB, 5.81MB/s  
+New Data Upload               :  52%|█████▏    |  208MB /  399MB, 5.81MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|█████████▉|  164MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  65%|██████▍   |  258MB /  399MB            [A[AProcessing Files (0 / 1)      :  65%|██████▍   |  258MB /  399MB, 7.35MB/s  
+New Data Upload               :  65%|██████▍   |  258MB /  399MB, 7.35MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  44%|████▍     |  145MB /  329MB            [A[AProcessing Files (0 / 1)      :  44%|████▍     |  145MB /  329MB, 3.91MB/s  
+New Data Upload               :  44%|████▍     |  145MB /  329MB, 3.91MB/s  [A
+
+  ...coder/probe_vegetation.pt:  47%|████▋     |  187MB /  399MB            [A[AProcessing Files (0 / 1)      :  47%|████▋     |  187MB /  399MB, 5.18MB/s  
+New Data Upload               :  47%|████▋     |  187MB /  399MB, 5.18MB/s  [A
+
+  ...encoder/probe_lighting.pt:  54%|█████▍    |  216MB /  399MB            [A[AProcessing Files (0 / 1)      :  54%|█████▍    |  216MB /  399MB, 6.06MB/s  
+New Data Upload               :  54%|█████▍    |  216MB /  399MB, 6.06MB/s  [A
+
+  .../probe_notable_objects.pt:  55%|█████▍    |  218MB /  399MB            [A[AProcessing Files (0 / 1)      :  55%|█████▍    |  218MB /  399MB, 6.10MB/s  
+New Data Upload               :  55%|█████▍    |  218MB /  399MB, 6.10MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|█████████▉|  164MB /  164MB            [A[A
+
+  ...er/probe_video_quality.pt:  69%|██████▉   |  276MB /  399MB            [A[AProcessing Files (0 / 1)      :  69%|██████▉   |  276MB /  399MB, 7.88MB/s  
+New Data Upload               :  69%|██████▉   |  276MB /  399MB, 7.88MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  46%|████▌     |  151MB /  329MB            [A[AProcessing Files (0 / 1)      :  46%|████▌     |  151MB /  329MB, 4.08MB/s  
+New Data Upload               :  46%|████▌     |  151MB /  329MB, 4.08MB/s  [A
+
+  ...coder/probe_vegetation.pt:  49%|████▉     |  195MB /  399MB            [A[AProcessing Files (0 / 1)      :  49%|████▉     |  195MB /  399MB, 5.43MB/s  
+New Data Upload               :  49%|████▉     |  195MB /  399MB, 5.43MB/s  [A
+
+  ...encoder/probe_lighting.pt:  57%|█████▋    |  227MB /  399MB            [A[AProcessing Files (0 / 1)      :  57%|█████▋    |  227MB /  399MB, 6.38MB/s  
+New Data Upload               :  57%|█████▋    |  227MB /  399MB, 6.38MB/s  [A
+
+  .../probe_notable_objects.pt:  57%|█████▋    |  228MB /  399MB            [A[AProcessing Files (0 / 1)      :  57%|█████▋    |  228MB /  399MB, 6.42MB/s  
+New Data Upload               :  57%|█████▋    |  228MB /  399MB, 6.42MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  164MB /  164MB, 4.37MB/s  
+New Data Upload               : 100%|██████████|  164MB /  164MB, 4.35MB/s  [A
+
+  ...er/probe_video_quality.pt:  73%|███████▎  |  292MB /  399MB            [A[AProcessing Files (0 / 1)      :  73%|███████▎  |  292MB /  399MB, 8.39MB/s  
+New Data Upload               :  73%|███████▎  |  292MB /  399MB, 8.39MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  48%|████▊     |  159MB /  329MB            [A[AProcessing Files (0 / 1)      :  48%|████▊     |  159MB /  329MB, 4.33MB/s  
+New Data Upload               :  48%|████▊     |  159MB /  329MB, 4.33MB/s  [A
+
+  ...coder/probe_vegetation.pt:  51%|█████     |  203MB /  399MB            [A[AProcessing Files (0 / 1)      :  51%|█████     |  203MB /  399MB, 5.66MB/s  
+New Data Upload               :  51%|█████     |  203MB /  399MB, 5.66MB/s  [A
+
+  ...encoder/probe_lighting.pt:  59%|█████▉    |  237MB /  399MB            [A[AProcessing Files (0 / 1)      :  59%|█████▉    |  237MB /  399MB, 6.70MB/s  
+New Data Upload               :  59%|█████▉    |  237MB /  399MB, 6.70MB/s  [A
+
+  .../probe_notable_objects.pt:  60%|██████    |  241MB /  399MB            [A[AProcessing Files (0 / 1)      :  60%|██████    |  241MB /  399MB, 6.79MB/s  
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+New Data Upload               :  60%|██████    |  241MB /  399MB, 6.79MB/s  [A
+
+  ...er/probe_video_quality.pt:  77%|███████▋  |  307MB /  399MB            [A[AProcessing Files (0 / 1)      :  77%|███████▋  |  307MB /  399MB, 8.84MB/s  
+New Data Upload               :  77%|███████▋  |  307MB /  399MB, 8.84MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  50%|█████     |  165MB /  329MB            [A[AProcessing Files (0 / 1)      :  50%|█████     |  165MB /  329MB, 4.50MB/s  
+New Data Upload               :  50%|█████     |  165MB /  329MB, 4.50MB/s  [A
+
+  ...coder/probe_vegetation.pt:  53%|█████▎    |  212MB /  399MB            [A[AProcessing Files (0 / 1)      :  53%|█████▎    |  212MB /  399MB, 5.93MB/s  
+New Data Upload               :  53%|█████▎    |  212MB /  399MB, 5.93MB/s  [A
+
+  ...encoder/probe_lighting.pt:  62%|██████▏   |  247MB /  399MB            [A[AProcessing Files (0 / 1)      :  62%|██████▏   |  247MB /  399MB, 6.98MB/s  
+New Data Upload               :  62%|██████▏   |  247MB /  399MB, 6.98MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+
+  .../probe_notable_objects.pt:  62%|██████▏   |  246MB /  399MB            [A[AProcessing Files (0 / 1)      :  62%|██████▏   |  246MB /  399MB, 6.95MB/s  
+New Data Upload               :  62%|██████▏   |  246MB /  399MB, 6.95MB/s  [A
+
+  ...er/probe_video_quality.pt:  81%|████████▏ |  324MB /  399MB            [A[AProcessing Files (0 / 1)      :  81%|████████▏ |  324MB /  399MB, 9.37MB/s  
+New Data Upload               :  81%|████████▏ |  324MB /  399MB, 9.37MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  53%|█████▎    |  175MB /  329MB            [A[AProcessing Files (0 / 1)      :  53%|█████▎    |  175MB /  329MB, 4.82MB/s  
+New Data Upload               :  53%|█████▎    |  175MB /  329MB, 4.82MB/s  [A
+
+  ...coder/probe_vegetation.pt:  55%|█████▍    |  218MB /  399MB            [A[AProcessing Files (0 / 1)      :  55%|█████▍    |  218MB /  399MB, 6.13MB/s  
+New Data Upload               :  55%|█████▍    |  218MB /  399MB, 6.13MB/s  [A
+
+  ...encoder/probe_lighting.pt:  64%|██████▍   |  257MB /  399MB            [A[AProcessing Files (0 / 1)      :  64%|██████▍   |  257MB /  399MB, 7.28MB/s  
+New Data Upload               :  64%|██████▍   |  257MB /  399MB, 7.28MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+
+  .../probe_notable_objects.pt:  65%|██████▍   |  259MB /  399MB            [A[AProcessing Files (0 / 1)      :  65%|██████▍   |  259MB /  399MB, 7.34MB/s  
+New Data Upload               :  65%|██████▍   |  259MB /  399MB, 7.34MB/s  [A
+
+  ...er/probe_video_quality.pt:  86%|████████▌ |  341MB /  399MB            [A[AProcessing Files (0 / 1)      :  86%|████████▌ |  341MB /  399MB, 9.88MB/s  
+New Data Upload               :  86%|████████▌ |  341MB /  399MB, 9.88MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  56%|█████▋    |  186MB /  329MB            [A[AProcessing Files (0 / 1)      :  56%|█████▋    |  186MB /  329MB, 5.15MB/s  
+New Data Upload               :  56%|█████▋    |  186MB /  329MB, 5.15MB/s  [A
+
+  ...coder/probe_vegetation.pt:  57%|█████▋    |  229MB /  399MB            [A[AProcessing Files (0 / 1)      :  57%|█████▋    |  229MB /  399MB, 6.45MB/s  
+New Data Upload               :  57%|█████▋    |  229MB /  399MB, 6.45MB/s  [A
+
+  ...encoder/probe_lighting.pt:  67%|██████▋   |  269MB /  399MB            [A[A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[AProcessing Files (0 / 1)      :  67%|██████▋   |  269MB /  399MB, 7.65MB/s  
+New Data Upload               :  67%|██████▋   |  269MB /  399MB, 7.65MB/s  [A
+
+  .../probe_notable_objects.pt:  67%|██████▋   |  268MB /  399MB            [A[AProcessing Files (0 / 1)      :  67%|██████▋   |  268MB /  399MB, 7.62MB/s  
+New Data Upload               :  67%|██████▋   |  268MB /  399MB, 7.62MB/s  [A
+
+  ...er/probe_video_quality.pt:  89%|████████▊ |  354MB /  399MB            [A[AProcessing Files (0 / 1)      :  89%|████████▊ |  354MB /  399MB, 10.3MB/s  
+New Data Upload               :  89%|████████▊ |  354MB /  399MB, 10.3MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  60%|██████    |  197MB /  329MB            [A[AProcessing Files (0 / 1)      :  60%|██████    |  197MB /  329MB, 5.52MB/s  
+New Data Upload               :  60%|██████    |  197MB /  329MB, 5.52MB/s  [A
+
+  ...coder/probe_vegetation.pt:  60%|██████    |  241MB /  399MB            [A[AProcessing Files (0 / 1)      :  60%|██████    |  241MB /  399MB, 6.81MB/s  
+New Data Upload               :  60%|██████    |  241MB /  399MB, 6.81MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+
+  ...encoder/probe_lighting.pt:  71%|███████   |  282MB /  399MB            [A[AProcessing Files (0 / 1)      :  71%|███████   |  282MB /  399MB, 8.05MB/s  
+New Data Upload               :  71%|███████   |  282MB /  399MB, 8.05MB/s  [A
+
+  .../probe_notable_objects.pt:  70%|██████▉   |  279MB /  399MB            [A[AProcessing Files (0 / 1)      :  70%|██████▉   |  279MB /  399MB, 7.94MB/s  
+New Data Upload               :  70%|██████▉   |  279MB /  399MB, 7.94MB/s  [A
+
+  ...er/probe_video_quality.pt:  91%|█████████▏|  365MB /  399MB            [A[AProcessing Files (0 / 1)      :  91%|█████████▏|  365MB /  399MB, 10.6MB/s  
+New Data Upload               :  91%|█████████▏|  365MB /  399MB, 10.6MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  62%|██████▏   |  206MB /  329MB            [A[AProcessing Files (0 / 1)      :  62%|██████▏   |  206MB /  329MB, 5.77MB/s  
+New Data Upload               :  62%|██████▏   |  206MB /  329MB, 5.77MB/s  [A
+
+  ...coder/probe_vegetation.pt:  63%|██████▎   |  253MB /  399MB            [A[AProcessing Files (0 / 1)      :  63%|██████▎   |  253MB /  399MB, 7.19MB/s  
+New Data Upload               :  63%|██████▎   |  253MB /  399MB, 7.19MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+
+  ...encoder/probe_lighting.pt:  73%|███████▎  |  292MB /  399MB            [A[AProcessing Files (0 / 1)      :  73%|███████▎  |  292MB /  399MB, 8.37MB/s  
+New Data Upload               :  73%|███████▎  |  292MB /  399MB, 8.37MB/s  [A
+
+  .../probe_notable_objects.pt:  73%|███████▎  |  291MB /  399MB            [A[AProcessing Files (0 / 1)      :  73%|███████▎  |  291MB /  399MB, 8.30MB/s  
+New Data Upload               :  73%|███████▎  |  291MB /  399MB, 8.30MB/s  [A
+
+  ...er/probe_video_quality.pt:  93%|█████████▎|  373MB /  399MB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎|  373MB /  399MB, 10.8MB/s  
+New Data Upload               :  93%|█████████▎|  373MB /  399MB, 10.8MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  66%|██████▋   |  218MB /  329MB            [A[AProcessing Files (0 / 1)      :  66%|██████▋   |  218MB /  329MB, 6.17MB/s  
+New Data Upload               :  66%|██████▋   |  218MB /  329MB, 6.17MB/s  [A
+
+  ...coder/probe_vegetation.pt:  65%|██████▌   |  261MB /  399MB            [A[AProcessing Files (0 / 1)      :  65%|██████▌   |  261MB /  399MB, 7.42MB/s  
+New Data Upload               :  65%|██████▌   |  261MB /  399MB, 7.42MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+
+  ...encoder/probe_lighting.pt:  76%|███████▌  |  303MB /  399MB            [A[AProcessing Files (0 / 1)      :  76%|███████▌  |  303MB /  399MB, 8.68MB/s  
+New Data Upload               :  76%|███████▌  |  303MB /  399MB, 8.68MB/s  [A
+
+  .../probe_notable_objects.pt:  76%|███████▌  |  302MB /  399MB            [A[AProcessing Files (0 / 1)      :  76%|███████▌  |  302MB /  399MB, 8.63MB/s  
+New Data Upload               :  76%|███████▌  |  302MB /  399MB, 8.63MB/s  [A
+
+  ...er/probe_video_quality.pt:  94%|█████████▍|  377MB /  399MB            [A[AProcessing Files (0 / 1)      :  94%|█████████▍|  377MB /  399MB, 10.9MB/s  
+New Data Upload               :  94%|█████████▍|  377MB /  399MB, 10.9MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  70%|██████▉   |  229MB /  329MB            [A[AProcessing Files (0 / 1)      :  70%|██████▉   |  229MB /  329MB, 6.49MB/s  
+New Data Upload               :  70%|██████▉   |  229MB /  329MB, 6.49MB/s  [A
+
+  ...coder/probe_vegetation.pt:  68%|██████▊   |  269MB /  399MB            [A[AProcessing Files (0 / 1)      :  68%|██████▊   |  269MB /  399MB, 7.69MB/s  
+New Data Upload               :  68%|██████▊   |  269MB /  399MB, 7.69MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[A
+
+  ...encoder/probe_lighting.pt:  78%|███████▊  |  311MB /  399MB            [A[AProcessing Files (0 / 1)      :  78%|███████▊  |  311MB /  399MB, 8.93MB/s  
+New Data Upload               :  78%|███████▊  |  311MB /  399MB, 8.93MB/s  [A
+
+  .../probe_notable_objects.pt:  79%|███████▊  |  314MB /  399MB            [A[AProcessing Files (0 / 1)      :  79%|███████▊  |  314MB /  399MB, 9.01MB/s  
+New Data Upload               :  79%|███████▊  |  314MB /  399MB, 9.01MB/s  [A
+
+  ...er/probe_video_quality.pt:  96%|█████████▌|  383MB /  399MB            [A[AProcessing Files (0 / 1)      :  96%|█████████▌|  383MB /  399MB, 11.1MB/s  
+New Data Upload               :  96%|█████████▌|  383MB /  399MB, 11.1MB/s  [A
+
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  164MB /  164MB, 4.25MB/s  
+New Data Upload               : 100%|██████████|  164MB /  164MB, 4.24MB/s  
+  ...ncoder/tov_test_feats.npy: 100%|██████████|  164MB /  164MB            
+
+
+  ...ncoder/tcc_test_feats.npy:  73%|███████▎  |  242MB /  329MB            [A[AProcessing Files (0 / 1)      :  73%|███████▎  |  242MB /  329MB, 6.89MB/s  
+New Data Upload               :  73%|███████▎  |  242MB /  329MB, 6.89MB/s  [A
+
+  ...coder/probe_vegetation.pt:  71%|███████   |  283MB /  399MB            [A[AProcessing Files (0 / 1)      :  71%|███████   |  283MB /  399MB, 8.10MB/s  
+New Data Upload               :  71%|███████   |  283MB /  399MB, 8.10MB/s  [A
+
+  ...encoder/probe_lighting.pt:  80%|███████▉  |  319MB /  399MB            [A[AProcessing Files (0 / 1)      :  80%|███████▉  |  319MB /  399MB, 9.16MB/s  
+New Data Upload               :  80%|███████▉  |  319MB /  399MB, 9.16MB/s  [A
+
+  .../probe_notable_objects.pt:  82%|████████▏ |  327MB /  399MB            [A[AProcessing Files (0 / 1)      :  82%|████████▏ |  327MB /  399MB, 9.40MB/s  
+New Data Upload               :  82%|████████▏ |  327MB /  399MB, 9.40MB/s  [A
+
+  ...er/probe_video_quality.pt:  98%|█████████▊|  389MB /  399MB            [A[AProcessing Files (0 / 1)      :  98%|█████████▊|  389MB /  399MB, 11.3MB/s  
+New Data Upload               :  98%|█████████▊|  389MB /  399MB, 11.3MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  77%|███████▋  |  254MB /  329MB            [A[AProcessing Files (0 / 1)      :  77%|███████▋  |  254MB /  329MB, 7.30MB/s  
+New Data Upload               :  77%|███████▋  |  254MB /  329MB, 7.30MB/s  [A
+
+  .../probe_notable_objects.pt:  85%|████████▌ |  340MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  74%|███████▍  |  296MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  82%|████████▏ |  328MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt:  99%|█████████▊|  394MB /  399MB            [A[AProcessing Files (0 / 1)      :  85%|████████▌ |  340MB /  399MB, 9.81MB/s  Processing Files (0 / 1)      :  74%|███████▍  |  296MB /  399MB, 8.50MB/s  Processing Files (0 / 1)      :  82%|████████▏ |  328MB /  399MB, 9.42MB/s  Processing Files (0 / 1)      :  99%|█████████▊|  394MB /  399MB, 11.4MB/s  
+New Data Upload               :  85%|████████▌ |  340MB /  399MB, 9.81MB/s  [A
+New Data Upload               :  74%|███████▍  |  296MB /  399MB, 8.50MB/s  [A
+New Data Upload               :  82%|████████▏ |  328MB /  399MB, 9.42MB/s  [A
+New Data Upload               :  99%|█████████▊|  394MB /  399MB, 11.4MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  81%|████████  |  267MB /  329MB            [A[AProcessing Files (0 / 1)      :  81%|████████  |  267MB /  329MB, 7.68MB/s  
+New Data Upload               :  81%|████████  |  267MB /  329MB, 7.68MB/s  [A
+
+  .../probe_notable_objects.pt:  89%|████████▊ |  354MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  77%|███████▋  |  308MB /  399MB            [A[AProcessing Files (0 / 1)      :  89%|████████▊ |  354MB /  399MB, 10.2MB/s  
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  397MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  84%|████████▍ |  337MB /  399MB            [A[AProcessing Files (0 / 1)      :  77%|███████▋  |  308MB /  399MB, 8.87MB/s  
+New Data Upload               :  89%|████████▊ |  354MB /  399MB, 10.2MB/s  [AProcessing Files (0 / 1)      : 100%|█████████▉|  397MB /  399MB, 11.4MB/s  Processing Files (0 / 1)      :  84%|████████▍ |  337MB /  399MB, 9.68MB/s  
+New Data Upload               :  77%|███████▋  |  308MB /  399MB, 8.87MB/s  [A
+New Data Upload               : 100%|█████████▉|  397MB /  399MB, 11.4MB/s  [A
+New Data Upload               :  84%|████████▍ |  337MB /  399MB, 9.68MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  85%|████████▍ |  279MB /  329MB            [A[AProcessing Files (0 / 1)      :  85%|████████▍ |  279MB /  329MB, 8.07MB/s  
+New Data Upload               :  85%|████████▍ |  279MB /  329MB, 8.07MB/s  [A
+
+  .../probe_notable_objects.pt:  91%|█████████ |  364MB /  399MB            [A[AProcessing Files (0 / 1)      :  91%|█████████ |  364MB /  399MB, 10.5MB/s  
+New Data Upload               :  91%|█████████ |  364MB /  399MB, 10.5MB/s  [A
+
+  ...coder/probe_vegetation.pt:  80%|████████  |  320MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  397MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  86%|████████▌ |  343MB /  399MB            [A[AProcessing Files (0 / 1)      :  80%|████████  |  320MB /  399MB, 9.25MB/s  Processing Files (0 / 1)      :  86%|████████▌ |  343MB /  399MB, 9.85MB/s  
+New Data Upload               :  80%|████████  |  320MB /  399MB, 9.25MB/s  [A
+New Data Upload               :  86%|████████▌ |  343MB /  399MB, 9.85MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  89%|████████▊ |  292MB /  329MB            [A[AProcessing Files (0 / 1)      :  89%|████████▊ |  292MB /  329MB, 8.46MB/s  
+New Data Upload               :  89%|████████▊ |  292MB /  329MB, 8.46MB/s  [A
+
+  .../probe_notable_objects.pt:  93%|█████████▎|  372MB /  399MB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎|  372MB /  399MB, 10.8MB/s  
+New Data Upload               :  93%|█████████▎|  372MB /  399MB, 10.8MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  397MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  397MB /  399MB, 11.4MB/s  
+New Data Upload               : 100%|█████████▉|  397MB /  399MB, 11.4MB/s  [A
+
+  ...coder/probe_vegetation.pt:  83%|████████▎ |  331MB /  399MB            [A[AProcessing Files (0 / 1)      :  83%|████████▎ |  331MB /  399MB, 9.59MB/s  
+New Data Upload               :  83%|████████▎ |  331MB /  399MB, 9.59MB/s  [A
+
+  ...encoder/probe_lighting.pt:  88%|████████▊ |  351MB /  399MB            [A[AProcessing Files (0 / 1)      :  88%|████████▊ |  351MB /  399MB, 10.1MB/s  
+New Data Upload               :  88%|████████▊ |  351MB /  399MB, 10.1MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  92%|█████████▏|  303MB /  329MB            [A[AProcessing Files (0 / 1)      :  92%|█████████▏|  303MB /  329MB, 8.83MB/s  
+New Data Upload               :  92%|█████████▏|  303MB /  329MB, 8.83MB/s  [A
+
+  .../probe_notable_objects.pt:  95%|█████████▌|  381MB /  399MB            [A[AProcessing Files (0 / 1)      :  95%|█████████▌|  381MB /  399MB, 11.0MB/s  
+New Data Upload               :  95%|█████████▌|  381MB /  399MB, 11.0MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.3MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.3MB/s  [A
+
+  ...coder/probe_vegetation.pt:  85%|████████▌ |  340MB /  399MB            [A[AProcessing Files (0 / 1)      :  85%|████████▌ |  340MB /  399MB, 9.86MB/s  
+New Data Upload               :  85%|████████▌ |  340MB /  399MB, 9.86MB/s  [A
+
+  ...encoder/probe_lighting.pt:  90%|█████████ |  361MB /  399MB            [A[AProcessing Files (0 / 1)      :  90%|█████████ |  361MB /  399MB, 10.4MB/s  
+New Data Upload               :  90%|█████████ |  361MB /  399MB, 10.4MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy:  95%|█████████▍|  311MB /  329MB            [A[AProcessing Files (0 / 1)      :  95%|█████████▍|  311MB /  329MB, 9.05MB/s  
+New Data Upload               :  95%|█████████▍|  311MB /  329MB, 9.05MB/s  [A
+
+  .../probe_notable_objects.pt:  97%|█████████▋|  385MB /  399MB            [A[AProcessing Files (0 / 1)      :  97%|█████████▋|  385MB /  399MB, 11.2MB/s  
+New Data Upload               :  97%|█████████▋|  385MB /  399MB, 11.2MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  87%|████████▋ |  349MB /  399MB            [A[AProcessing Files (0 / 1)      :  87%|████████▋ |  349MB /  399MB, 10.1MB/s  
+New Data Upload               :  87%|████████▋ |  349MB /  399MB, 10.1MB/s  [A
+
+  ...encoder/probe_lighting.pt:  92%|█████████▏|  366MB /  399MB            [A[AProcessing Files (0 / 1)      :  92%|█████████▏|  366MB /  399MB, 10.5MB/s  
+New Data Upload               :  92%|█████████▏|  366MB /  399MB, 10.5MB/s  [A
+
+  .../probe_notable_objects.pt:  97%|█████████▋|  385MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  88%|████████▊ |  353MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  93%|█████████▎|  372MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy:  96%|█████████▌|  315MB /  329MB            [A[AProcessing Files (0 / 1)      :  88%|████████▊ |  353MB /  399MB, 10.2MB/s  Processing Files (0 / 1)      :  93%|█████████▎|  372MB /  399MB, 10.7MB/s  Processing Files (0 / 1)      :  96%|█████████▌|  315MB /  329MB, 9.15MB/s  
+New Data Upload               :  88%|████████▊ |  353MB /  399MB, 10.2MB/s  [A
+New Data Upload               :  93%|█████████▎|  372MB /  399MB, 10.7MB/s  [A
+New Data Upload               :  96%|█████████▌|  315MB /  329MB, 9.15MB/s  [A
+
+  .../probe_notable_objects.pt:  98%|█████████▊|  390MB /  399MB            [A[AProcessing Files (0 / 1)      :  98%|█████████▊|  390MB /  399MB, 11.2MB/s  
+New Data Upload               :  98%|█████████▊|  390MB /  399MB, 11.2MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.2MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.2MB/s  [A
+
+  ...coder/probe_vegetation.pt:  91%|█████████ |  362MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt:  95%|█████████▌|  381MB /  399MB            [A[AProcessing Files (0 / 1)      :  91%|█████████ |  362MB /  399MB, 10.5MB/s  
+
+  ...ncoder/tcc_test_feats.npy:  98%|█████████▊|  323MB /  329MB            [A[AProcessing Files (0 / 1)      :  95%|█████████▌|  381MB /  399MB, 11.0MB/s  
+New Data Upload               :  91%|█████████ |  362MB /  399MB, 10.5MB/s  [AProcessing Files (0 / 1)      :  98%|█████████▊|  323MB /  329MB, 9.41MB/s  
+New Data Upload               :  95%|█████████▌|  381MB /  399MB, 11.0MB/s  [A
+New Data Upload               :  98%|█████████▊|  323MB /  329MB, 9.41MB/s  [A
+
+  .../probe_notable_objects.pt:  99%|█████████▊|  393MB /  399MB            [A[AProcessing Files (0 / 1)      :  99%|█████████▊|  393MB /  399MB, 11.3MB/s  
+New Data Upload               :  99%|█████████▊|  393MB /  399MB, 11.3MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  93%|█████████▎|  371MB /  399MB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎|  371MB /  399MB, 10.8MB/s  
+New Data Upload               :  93%|█████████▎|  371MB /  399MB, 10.8MB/s  [A
+
+  ...encoder/probe_lighting.pt:  98%|█████████▊|  389MB /  399MB            [A[AProcessing Files (0 / 1)      :  98%|█████████▊|  389MB /  399MB, 11.2MB/s  
+New Data Upload               :  98%|█████████▊|  389MB /  399MB, 11.2MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  328MB /  329MB, 9.52MB/s  
+New Data Upload               : 100%|█████████▉|  328MB /  329MB, 9.52MB/s  [A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.4MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.4MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 11.2MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 11.2MB/s  [A
+
+  ...coder/probe_vegetation.pt:  95%|█████████▍|  378MB /  399MB            [A[AProcessing Files (0 / 1)      :  95%|█████████▍|  378MB /  399MB, 11.0MB/s  
+New Data Upload               :  95%|█████████▍|  378MB /  399MB, 11.0MB/s  [A
+
+  ...encoder/probe_lighting.pt:  99%|█████████▊|  393MB /  399MB            [A[AProcessing Files (0 / 1)      :  99%|█████████▊|  393MB /  399MB, 11.3MB/s  
+New Data Upload               :  99%|█████████▊|  393MB /  399MB, 11.3MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.4MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.4MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  97%|█████████▋|  387MB /  399MB            [A[AProcessing Files (0 / 1)      :  97%|█████████▋|  387MB /  399MB, 11.3MB/s  
+New Data Upload               :  97%|█████████▋|  387MB /  399MB, 11.3MB/s  [A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  397MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  397MB /  399MB, 11.4MB/s  
+New Data Upload               : 100%|█████████▉|  397MB /  399MB, 11.4MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  399MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  399MB /  399MB, 11.4MB/s  
+New Data Upload               : 100%|█████████▉|  399MB /  399MB, 11.4MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt:  99%|█████████▉|  396MB /  399MB            [A[AProcessing Files (0 / 1)      :  99%|█████████▉|  396MB /  399MB, 11.5MB/s  
+New Data Upload               :  99%|█████████▉|  396MB /  399MB, 11.5MB/s  [A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.4MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.4MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  399MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.6MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.6MB/s  [A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  399MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  399MB /  399MB, 11.3MB/s  
+New Data Upload               : 100%|█████████▉|  399MB /  399MB, 11.3MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  328MB /  329MB, 9.37MB/s  
+New Data Upload               : 100%|█████████▉|  328MB /  329MB, 9.37MB/s  [A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  399MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  399MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  328MB /  329MB, 9.32MB/s  
+New Data Upload               : 100%|█████████▉|  328MB /  329MB, 9.32MB/s  [A
+
+  .../probe_notable_objects.pt: 100%|█████████▉|  399MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|█████████▉|  328MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 11.2MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 11.2MB/s  [A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.2MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.2MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  329MB /  329MB, 9.27MB/s  
+New Data Upload               : 100%|██████████|  329MB /  329MB, 9.27MB/s  [A
+
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 10.8MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 10.8MB/s  
+  ...er/probe_video_quality.pt: 100%|██████████|  399MB /  399MB            
+
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 11.1MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 11.1MB/s  [A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[AProcessing Files (0 / 1)      : 100%|█████████▉|  398MB /  399MB, 11.2MB/s  
+New Data Upload               : 100%|█████████▉|  398MB /  399MB, 11.2MB/s  [A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|█████████▉|  398MB /  399MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 11.1MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 11.1MB/s  [A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  329MB /  329MB, 9.00MB/s  
+New Data Upload               : 100%|██████████|  329MB /  329MB, 9.00MB/s  
+  ...ncoder/tcc_test_feats.npy: 100%|██████████|  329MB /  329MB            
+
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 10.7MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 10.7MB/s  
+  .../probe_notable_objects.pt: 100%|██████████|  399MB /  399MB            
+
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 10.7MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 10.7MB/s  
+  ...encoder/probe_lighting.pt: 100%|██████████|  399MB /  399MB            
+
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[A
+
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            [A[AProcessing Files (1 / 1)      : 100%|██████████|  399MB /  399MB, 10.7MB/s  
+New Data Upload               : 100%|██████████|  399MB /  399MB, 10.7MB/s  
+  ...coder/probe_vegetation.pt: 100%|██████████|  399MB /  399MB            
+Removing 8 file(s) from commit that have not changed.
+Successfully committed 50 at once. Increasing the limit for next batch.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+Is done: exiting main loop
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+All files have been processed! Exiting worker.
+
+---------- 2026-06-24 10:50:06 (0:01:04) ----------
+Files:   hashed 1812/1812 (210.1G/210.1G) | pre-uploaded: 1455/1455 (210.1G/210.1G) | committed: 1812/1812 (210.1G/210.1G) | ignored: 0
+Workers: hashing: 0 | get upload mode: 0 | pre-uploading: 0 | committing: 0 | waiting: 0
+---------------------------------------------------
+Upload is complete!

@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_replay25_encoder",
+  "metric": "rollout",
+  "n_test": 1825,
+  "mean": 0.010427,
+  "std": 0.005811,
+  "ci": {
+    "mean": 0.010427,
+    "ci_lo": 0.01016,
+    "ci_hi": 0.010696,
+    "ci_half": 0.000268
+  },
+  "lower_is_better": true,
+  "interpretation": "free-run drift slope; lower = stabler dynamics",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgery_3stage_DI_replay25_encoder/m09c_ckpt_best.pt"
+}

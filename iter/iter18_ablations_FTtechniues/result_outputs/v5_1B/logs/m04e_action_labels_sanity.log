@@ -1,0 +1,21 @@
+[M1 Opt X] mode=sanity: subsampled 100/10,000 clips (1.00%)
+  [motion-flow] magnitude quartiles: Q1=112.219  Q2=169.959  Q3=256.442
+  [motion-flow] 11 classes: ['fast__downward', 'fast__upward', 'medium__upward', 'slow__downward', 'slow__leftward', 'slow__rightward', 'slow__upward', 'still__downward', 'still__leftward', 'still__rightward', 'still__upward']
+  [motion-flow] kept 97 clips, dropped 3 (dropped counts: {'medium__downward': 2, 'medium__leftward': 1})
+Loaded 97 labeled clips from data/eval_10k_local/eval_10k.json (11 motion-flow classes)
+[stratified_split] SANITY clip-level (NOT video-disjoint): N_clips=97, N_videos=7, N_classes=11; train/val/test = 57/20/20
+  [class-edges] wrote outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/class_edges.json (quartiles + 11 class_names) — reuse via --class-edges for cross-set eval
+  WARN: class 'slow__upward' train=5 (recommended >=30)
+  WARN: class 'still__upward' train=6 (recommended >=30)
+  WARN: class 'still__rightward' train=7 (recommended >=30)
+  WARN: class 'slow__downward' train=3 (recommended >=30)
+  WARN: class 'medium__upward' train=6 (recommended >=30)
+  WARN: class 'slow__rightward' train=3 (recommended >=30)
+  WARN: class 'fast__upward' train=16 (recommended >=30)
+  WARN [SANITY]: class 'still__downward' val=0/test=1 (need >= 1 each for POC/FULL; SANITY only validates code paths)
+  WARN: class 'still__downward' train=2 (recommended >=30)
+  WARN [SANITY]: class 'fast__downward' val=1/test=0 (need >= 1 each for POC/FULL; SANITY only validates code paths)
+  WARN: class 'fast__downward' train=2 (recommended >=30)
+  WARN: class 'slow__leftward' train=2 (recommended >=30)
+  WARN: class 'still__leftward' train=5 (recommended >=30)
+Wrote: outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json  +  class_counts.json

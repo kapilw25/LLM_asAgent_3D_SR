@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_3stage_DI_encoder",
+  "metric": "causal",
+  "n_test": 1825,
+  "mean": 0.615382,
+  "std": 0.037381,
+  "ci": {
+    "mean": 0.615382,
+    "ci_lo": 0.613685,
+    "ci_hi": 0.617059,
+    "ci_half": 0.001687
+  },
+  "lower_is_better": true,
+  "interpretation": "causal future-block L1; lower = better",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt"
+}

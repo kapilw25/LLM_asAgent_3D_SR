@@ -1,0 +1,96 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 12:16:26 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 SANITY
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  3
+  ✓ min_per_split:        1
+  ✓ encoders:             vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/sanity/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 12:16:27 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/motion_aux_head.pt
+
+═══ 12:16:30 ·   STAGE 8c · encoder_temporal (metric=tcc) for vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 524.4 GB / 1026.1 GB (51%)
+[m12f_encoder_temporal]   pids:   977 / 15616 (6%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  splits: train=57  test=20  metrics=['tcc']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=5632; encoder-only — no predictor build)
+  [share-features] test: off — n/a (no aot/tov in group)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[tcc/test]:   0%|          | 0/20 [00:00<?, ?clip/s]  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]: 100%|██████████| 20/20 [00:16<00:00,  1.24clip/s]m12f[tcc/test]: 100%|██████████| 20/20 [00:16<00:00,  1.24clip/s, recent=0.2s/clip ETA0.0h]
+  [tcc] pair-chunk auto → 21  (free=93.9G × target=0.85 ÷ 1.08MB/pair, n_pairs=21)
+  tcc: cycle=1.8767±0.3107  τ=0.4133±0.2645 N=15 pairs=21 (0s)
+forward stage: 16s
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder (mode=SANITY, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 12:16:48 · DONE · total wall = 0 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json
+  motion_cos     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder/probe.pt

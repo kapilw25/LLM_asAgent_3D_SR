@@ -1,0 +1,96 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 12:12:27 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 SANITY
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  3
+  ✓ min_per_split:        1
+  ✓ encoders:             vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8c,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/sanity/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 12:12:27 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/motion_aux_head.pt
+  [lazy-cleanup] removed .probe_features_val_ckpt.npz (0.0 GB)
+
+═══ 12:12:30 ·   STAGE 8b · predictor_temporal (metric=order) for vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12e_predictor_temporal] cgroup envelope:
+[m12e_predictor_temporal]   memory: 501.2 GB / 1026.1 GB (49%)
+[m12e_predictor_temporal]   pids:   890 / 15616 (6%)
+[m12e_predictor_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+Forward ['order'] on 20 test clips, variant=vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+  h-memoization (PT_H_MEMO): OFF — recomputed each call (legacy)
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder+predictor loaded (concat dim=5632)
+m12e:   0%|          | 0/20 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12e:  20%|██        | 4/20 [00:16<01:07,  4.19s/clip]m12e:  40%|████      | 8/20 [00:18<00:27,  2.27s/clip]m12e:  60%|██████    | 12/20 [00:19<00:12,  1.62s/clip, recent=0.3s/clip ETA0.0h]m12e:  80%|████████  | 16/20 [00:20<00:05,  1.29s/clip, recent=0.3s/clip ETA0.0h]m12e: 100%|██████████| 20/20 [00:22<00:00,  1.10s/clip, recent=0.3s/clip ETA0.0h]m12e: 100%|██████████| 20/20 [00:22<00:00,  1.10s/clip, recent=0.3s/clip ETA0.0h]
+  order: mean=0.02345 std=0.03642 N=20
+forward stage: 22s
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder (mode=SANITY, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 12:12:55 · DONE · total wall = 0 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json
+  motion_cos     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder/probe.pt

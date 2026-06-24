@@ -1,0 +1,24 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder",
+  "metric": "tov",
+  "n_test": 1825,
+  "k_per_clip": 4,
+  "mean": 0.921507,
+  "std": 0.144428,
+  "ci": {
+    "mean": 0.921507,
+    "ci_lo": 0.914658,
+    "ci_hi": 0.927945,
+    "ci_half": 0.006644
+  },
+  "lower_is_better": false,
+  "interpretation": "TOV/VCOP top-1 over n_permutations; higher = encoder retains frame order",
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/student_encoder.pt",
+  "head_lr": 0.001,
+  "head_epochs": 20,
+  "head_weight_decay": 0.0001,
+  "head_batch_size": 64,
+  "n_permutations": 4
+}

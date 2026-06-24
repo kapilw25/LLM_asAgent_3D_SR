@@ -1,0 +1,57 @@
+{
+  "slow__upward": {
+    "train": 0,
+    "val": 0,
+    "test": 38
+  },
+  "still__upward": {
+    "train": 0,
+    "val": 0,
+    "test": 22
+  },
+  "still__rightward": {
+    "train": 0,
+    "val": 0,
+    "test": 17
+  },
+  "still__downward": {
+    "train": 0,
+    "val": 0,
+    "test": 6
+  },
+  "fast__downward": {
+    "train": 0,
+    "val": 0,
+    "test": 10
+  },
+  "still__leftward": {
+    "train": 0,
+    "val": 0,
+    "test": 6
+  },
+  "medium__upward": {
+    "train": 0,
+    "val": 0,
+    "test": 33
+  },
+  "slow__downward": {
+    "train": 0,
+    "val": 0,
+    "test": 15
+  },
+  "slow__rightward": {
+    "train": 0,
+    "val": 0,
+    "test": 7
+  },
+  "fast__upward": {
+    "train": 0,
+    "val": 0,
+    "test": 33
+  },
+  "medium__downward": {
+    "train": 0,
+    "val": 0,
+    "test": 10
+  }
+}

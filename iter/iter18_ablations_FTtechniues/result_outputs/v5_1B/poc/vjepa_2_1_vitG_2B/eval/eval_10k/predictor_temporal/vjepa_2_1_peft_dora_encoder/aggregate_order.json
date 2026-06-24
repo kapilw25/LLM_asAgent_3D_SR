@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_peft_dora_encoder",
+  "metric": "order",
+  "n_test": 1825,
+  "mean": 0.017285,
+  "std": 0.03018,
+  "ci": {
+    "mean": 0.017285,
+    "ci_lo": 0.0159,
+    "ci_hi": 0.018641,
+    "ci_half": 0.001371
+  },
+  "lower_is_better": null,
+  "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09b_peft_dora_encoder/m09c_ckpt_best.pt"
+}

@@ -1,0 +1,987 @@
+{
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-001.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-002.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-005.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-006.mp4": {
+    "class": "still__downward",
+    "class_id": 7,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-007.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-008.mp4": {
+    "class": "still__downward",
+    "class_id": 7,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-014.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-015.mp4": {
+    "class": "still__leftward",
+    "class_id": 8,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-017.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-027.mp4": {
+    "class": "still__leftward",
+    "class_id": 8,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-034.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-037.mp4": {
+    "class": "still__leftward",
+    "class_id": 8,
+    "split": "test"
+  },
+  "tier2/bhopal/rain/--pBu8H35ro/--pBu8H35ro-040.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-006.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-007.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-023.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-050.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-055.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-056.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-059.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-107.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-129.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-139.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-143.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-154.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/walking/-65OxoMJcGQ/-65OxoMJcGQ-166.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-000.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-011.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-012.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-013.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-019.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-020.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-027.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-035.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-043.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-048.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-054.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-057.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/chennai/drive/-Bl2EIufMNQ/-Bl2EIufMNQ-075.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-001.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-002.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-003.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-008.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-012.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-014.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-019.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-022.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-023.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-024.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/pune/rain/-EgBIiZ51nw/-EgBIiZ51nw-025.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-046.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-071.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-081.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-103.mp4": {
+    "class": "still__downward",
+    "class_id": 7,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-196.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-233.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-238.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-284.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-296.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-300.mp4": {
+    "class": "still__downward",
+    "class_id": 7,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-370.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-373.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-389.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/jaipur/walking/-MoRGHs81zw/-MoRGHs81zw-464.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-036.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-083.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-087.mp4": {
+    "class": "still__downward",
+    "class_id": 7,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-107.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-136.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-181.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-189.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-273.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-311.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-325.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-331.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-343.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-349.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier1/delhi/drive/-OJ4E3UA7hI/-OJ4E3UA7hI-359.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-083.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-112.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-125.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-138.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-166.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-194.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-236.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-285.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-327.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-350.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-352.mp4": {
+    "class": "still__leftward",
+    "class_id": 8,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-373.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-393.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "tier1/kolkata/walking/-RaG6pedYQ8/-RaG6pedYQ8-397.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-008.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-014.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-016.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-054.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-058.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-068.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-080.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-102.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-145.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-183.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-206.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-210.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/delhi/walking/-Xlzej8RTTU/-Xlzej8RTTU-224.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-035.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-036.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-054.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-063.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-080.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-101.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-117.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-127.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-164.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-167.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-226.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/mumbai/walking/-ZKhs7WiRU0/-ZKhs7WiRU0-234.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-012.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-023.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-035.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-056.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-067.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-092.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-102.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-109.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-126.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-130.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-137.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-143.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/thiruvananthapuram/drive/01eKackXXdg/01eKackXXdg-149.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-008.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-014.mp4": {
+    "class": "slow__rightward",
+    "class_id": 5,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-019.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-020.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-048.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-049.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-054.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-059.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-076.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-080.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-087.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-101.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "goa/walking/04YKvC8kAgI/04YKvC8kAgI-110.mp4": {
+    "class": "fast__downward",
+    "class_id": 0,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-000.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-007.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-010.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-016.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-017.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-018.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-021.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-027.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-033.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-034.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-035.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-042.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/indore/walking/0T7g-ZR6Pyk/0T7g-ZR6Pyk-043.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-000.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-003.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-004.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-005.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-008.mp4": {
+    "class": "still__downward",
+    "class_id": 7,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-009.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-010.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-013.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-014.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-018.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-019.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/kochi/drone/0ZCRYfmgkkU/0ZCRYfmgkkU-021.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-000.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-001.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-007.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-019.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-020.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-023.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-025.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-041.mp4": {
+    "class": "slow__downward",
+    "class_id": 4,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-047.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-053.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-056.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-059.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier2/mysuru/rain/0_bwM56GabE/0_bwM56GabE-062.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-003.mp4": {
+    "class": "medium__downward",
+    "class_id": 2,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-004.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-015.mp4": {
+    "class": "still__leftward",
+    "class_id": 8,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-019.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-031.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-034.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-036.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-046.mp4": {
+    "class": "still__upward",
+    "class_id": 10,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-048.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-051.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-053.mp4": {
+    "class": "still__leftward",
+    "class_id": 8,
+    "split": "test"
+  },
+  "tier1/mumbai/drone/0ckImiKkVLg/0ckImiKkVLg-057.mp4": {
+    "class": "still__rightward",
+    "class_id": 9,
+    "split": "test"
+  },
+  "tier1/bangalore/drive/0dsDjXBthT0/0dsDjXBthT0-016.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/bangalore/drive/0dsDjXBthT0/0dsDjXBthT0-019.mp4": {
+    "class": "fast__upward",
+    "class_id": 1,
+    "split": "test"
+  },
+  "tier1/bangalore/drive/0dsDjXBthT0/0dsDjXBthT0-021.mp4": {
+    "class": "medium__upward",
+    "class_id": 3,
+    "split": "test"
+  },
+  "tier1/bangalore/drive/0dsDjXBthT0/0dsDjXBthT0-025.mp4": {
+    "class": "slow__upward",
+    "class_id": 6,
+    "split": "test"
+  }
+}

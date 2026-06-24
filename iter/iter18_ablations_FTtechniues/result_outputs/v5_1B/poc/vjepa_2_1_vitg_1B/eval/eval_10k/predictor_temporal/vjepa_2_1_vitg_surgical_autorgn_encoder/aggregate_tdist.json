@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_autorgn_encoder",
+  "metric": "tdist",
+  "n_test": 1825,
+  "mean": 0.009246,
+  "std": 0.008336,
+  "ci": {
+    "mean": 0.009246,
+    "ci_lo": 0.00887,
+    "ci_hi": 0.009641,
+    "ci_half": 0.000385
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-\u0394t slope; lower = slower decay w/ distance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/m09c_ckpt_best.pt"
+}

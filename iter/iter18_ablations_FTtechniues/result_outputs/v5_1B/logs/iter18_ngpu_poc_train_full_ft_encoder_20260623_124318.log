@@ -1,0 +1,31 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+═══ 12:43:19 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 6854 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 451 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 1825 clips (split=test)
+═══ 12:43:19 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [POC]) ═══
+  [clip_splits] universe=broad_manifest: 10000 − val(451) − test(1825) = 7724 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 7724 train-pool keys → data/eval_10k_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json
+═══ 12:43:20 · m09f_full_ft train [variant=encoder] (POC) ═══
+  config:    configs/train/full_ft_encoder.yaml
+  subset:    data/eval_10k_local/train_pool.json  (leakage-safe: universe − val − test)
+  factor:    data/eval_10k_local/m11_factor_datasets
+  output:    outputs/poc/vjepa_2_1_vitg_1B/train/m09f_full_ft_encoder
+  init:      outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)
+  recipe (MANDATORY, resolved from configs/train/full_ft_encoder.yaml + optional env overrides): --teacher-mode EMA --lp-ft-stage0 off --warmup-mode single --subset-mode recipe_v3 --saliency off --spd off --replay on
+[live-debug] installed — pid=252683. Force a stack dump anytime via:
+[live-debug]   kill -USR1 252683   # signal-safe native dump
+[live-debug]   kill -USR2 252683   # Python dump with banner
+  [train-frame-cache] ON → data/eval_10k_local/m12_frame_cache (min_free=200G) — deterministic decode memoized; shared across epochs/stages/arms/evals
+  [stream-autotune m09f_naiveft_encoder] cores=32 (pinned cpuset) · concurrency=4 (src=env) · cgroup_ram=1026G → num_workers=20
+  [recipe-v3 receipts] saliency_weighting=False · spd.enabled=False · raw_pretrain_pct=1.0 · factor_streaming.enabled=True
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+  [probe_labels] cached: /workspace/factorjepa/outputs/poc/probe_action/action_labels.json
+  [probe_labels] missing: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json — auto-generating via m04f_taxonomy_labels.py (CPU, ~30 s)
+  derived labels for 10000/10000 clips (0 skipped — no tag record)
+Wrote: /workspace/factorjepa/outputs/poc/probe_taxonomy/taxonomy_labels.json  (15 dims, 10000 labeled clips)
+  [cache-policy=1/keep] preserved output_dir (m09f_full_ft_encoder): outputs/poc/vjepa_2_1_vitg_1B/train/m09f_full_ft_encoder — rerun with --cache-policy 2 to delete (whole folder wipe)
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)

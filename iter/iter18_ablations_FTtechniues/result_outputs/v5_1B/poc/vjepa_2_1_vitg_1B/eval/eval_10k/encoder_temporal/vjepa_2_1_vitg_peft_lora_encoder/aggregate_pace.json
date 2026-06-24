@@ -1,0 +1,25 @@
+{
+  "variant": "vjepa_2_1_vitg_peft_lora_encoder",
+  "metric": "pace",
+  "n_test": 1825,
+  "k_per_clip": 3,
+  "mean": 0.725297,
+  "std": 0.278782,
+  "ci": {
+    "mean": 0.725297,
+    "ci_lo": 0.711963,
+    "ci_hi": 0.738082,
+    "ci_half": 0.013059
+  },
+  "lower_is_better": false,
+  "interpretation": "Pace top-1 over playback rates; higher = encoder is rate-sensitive",
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt",
+  "head_lr": 0.001,
+  "head_epochs": 20,
+  "head_weight_decay": 0.0001,
+  "head_batch_size": 64,
+  "strides": "1,2,4",
+  "source_frames": 64
+}

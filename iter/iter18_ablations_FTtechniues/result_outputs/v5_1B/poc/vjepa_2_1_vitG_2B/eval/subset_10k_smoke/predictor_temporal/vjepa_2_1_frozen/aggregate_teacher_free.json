@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_frozen",
+  "metric": "teacher_free",
+  "n_test": 197,
+  "mean": 0.046345,
+  "std": 0.012164,
+  "ci": {
+    "mean": 0.046345,
+    "ci_lo": 0.044793,
+    "ci_hi": 0.048237,
+    "ci_half": 0.001722
+  },
+  "lower_is_better": true,
+  "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+  "num_frames": 16,
+  "encoder_ckpt": "checkpoints/vjepa2_1_vitG_384.pt"
+}

@@ -1,0 +1,12 @@
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12a_action_top1] cgroup envelope:
+[m12a_action_top1]   memory: 670.4 GB / 1026.1 GB (65%)
+[m12a_action_top1]   pids:   977 / 15616 (6%)
+[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+Loading V-JEPA frozen vjepa_2_1_vitg_surgical_autorgn_encoder (vit_giant_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 482/484 params  (missing=2, unexpected=10)
+  [features] saving splits ['test']; lazy splits (extracted by Stage 3): ['train', 'val']
+  [keep] test: features cached -> skipping

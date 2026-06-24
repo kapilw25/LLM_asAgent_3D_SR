@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_3stage_DI_replay25_encoder",
+  "metric": "order",
+  "n_test": 1825,
+  "mean": 0.018113,
+  "std": 0.032138,
+  "ci": {
+    "mean": 0.018113,
+    "ci_lo": 0.016652,
+    "ci_hi": 0.019602,
+    "ci_half": 0.001475
+  },
+  "lower_is_better": null,
+  "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgery_3stage_DI_replay25_encoder/m09c_ckpt_best.pt"
+}

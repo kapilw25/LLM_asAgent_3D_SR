@@ -1,0 +1,45 @@
+verify (loose, disk vs HF): anonymousML123/factorjepa-outputs/outputs/poc  <->  outputs/poc/
+  HF files   :  4578  (  691.2 GB listed)
+  disk files :  2648  (  215.1 GB)
+  matched    : 2478
+  on HF but MISSING on disk (incomplete pull): 2085
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/.m12f_ckpt_test.npz
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/.m12f_ckpt_train.npz
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/aot_test_clip_ids.npy
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/aot_test_feats.npy
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/aot_test_labels.npy
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/aot_train_clip_ids.npy
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/aot_train_feats.npy
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/aot_train_labels.npy
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/head_aot.pt
+       - vjepa_2_1_vitG_2B/eval/eval_10k/encoder_temporal/vjepa_2_1_frozen/head_pace.pt
+       ... and 2075 more
+  on disk SMALLER than HF (truncated): 12
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.csv  (disk 6471 vs HF 6480)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_metrics.json  (disk 22166 vs HF 22175)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_scorecard.pdf  (disk 76413 vs HF 85038)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_scorecard.png  (disk 6481797 vs HF 7248365)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/kept_scorecard.pdf  (disk 22626 vs HF 44913)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/kept_scorecard.png  (disk 269560 vs HF 948601)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/tcc_comparison.pdf  (disk 50069 vs HF 50090)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/tcc_comparison.png  (disk 368303 vs HF 370346)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/train_metrics.csv  (disk 94 vs HF 7546)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/train_metrics.json  (disk 3272 vs HF 21505)
+       ... and 2 more
+  disk LARGER than HF-listed (xet stale size — OK): 3
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_scorecard_paper.pdf  (disk 56901 vs HF 56869)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_scorecard_paper.png  (disk 634095 vs HF 617432)
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/wiseft_sweep_table.pdf  (disk 25700 vs HF 25699)
+  on disk but NOT on HF (local-only, not backed up): 155
+       - probe_action/action_labels.json
+       - probe_action/class_counts.json
+       - probe_plot/metrics_watch/eval_scorecard_combined.pdf
+       - probe_taxonomy/taxonomy_labels.json
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/m13_metric_validity.csv
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/m13_metric_validity.pdf
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/m13_metric_validity.png
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/train_trajectories.png
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG_old/eval_metrics.csv
+       - vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG_old/eval_metrics.json
+       ... and 145 more
+VERIFY: FAIL - 2085 missing + 12 truncated. Re-run `download-data outputs/poc` to fetch/resume them.

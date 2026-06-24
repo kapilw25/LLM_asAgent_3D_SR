@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_lpft_encoder",
+  "metric": "causal",
+  "n_test": 1825,
+  "mean": 0.643705,
+  "std": 0.034582,
+  "ci": {
+    "mean": 0.643705,
+    "ci_lo": 0.642116,
+    "ci_hi": 0.64531,
+    "ci_half": 0.001597
+  },
+  "lower_is_better": true,
+  "interpretation": "causal future-block L1; lower = better",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09f_lpft_encoder/m09c_ckpt_best.pt"
+}

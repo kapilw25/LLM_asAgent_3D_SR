@@ -1,0 +1,1094 @@
+{
+  "metric": "top1_accuracy",
+  "by_encoder": {
+    "vjepa_2_1_vitg_frozen": {
+      "acc_pct": 42.4658,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.424658,
+        "ci_lo": 0.402192,
+        "ci_hi": 0.447671,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_vitg_full_ft_encoder": {
+      "acc_pct": 50.9041,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.509041,
+        "ci_lo": 0.486027,
+        "ci_hi": 0.532055,
+        "ci_half": 0.023014
+      }
+    },
+    "vjepa_2_1_vitg_lpft_encoder": {
+      "acc_pct": 46.0822,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.460822,
+        "ci_lo": 0.437808,
+        "ci_hi": 0.484234,
+        "ci_half": 0.023213
+      }
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder": {
+      "acc_pct": 47.5616,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.475616,
+        "ci_lo": 0.452603,
+        "ci_hi": 0.498082,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder": {
+      "acc_pct": 46.6849,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.466849,
+        "ci_lo": 0.444384,
+        "ci_hi": 0.489315,
+        "ci_half": 0.022466
+      }
+    },
+    "vjepa_2_1_vitg_pretrain_encoder": {
+      "acc_pct": 49.3151,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.493151,
+        "ci_lo": 0.470685,
+        "ci_hi": 0.516712,
+        "ci_half": 0.023014
+      }
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder": {
+      "acc_pct": 48.0,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.48,
+        "ci_lo": 0.456986,
+        "ci_hi": 0.502466,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "acc_pct": 48.274,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.48274,
+        "ci_lo": 0.459726,
+        "ci_hi": 0.506301,
+        "ci_half": 0.023288
+      }
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "acc_pct": 47.6712,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.476712,
+        "ci_lo": 0.453699,
+        "ci_hi": 0.499178,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "acc_pct": 47.2877,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.472877,
+        "ci_lo": 0.450959,
+        "ci_hi": 0.49589,
+        "ci_half": 0.022466
+      }
+    },
+    "vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "acc_pct": 49.6986,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.496986,
+        "ci_lo": 0.473973,
+        "ci_hi": 0.519452,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "acc_pct": 45.8082,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.458082,
+        "ci_lo": 0.435068,
+        "ci_hi": 0.481096,
+        "ci_half": 0.023014
+      }
+    },
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "acc_pct": 45.0959,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.450959,
+        "ci_lo": 0.428493,
+        "ci_hi": 0.473425,
+        "ci_half": 0.022466
+      }
+    },
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "acc_pct": 45.0959,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.450959,
+        "ci_lo": 0.427945,
+        "ci_hi": 0.473425,
+        "ci_half": 0.02274
+      }
+    }
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_full_ft_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -8.4384,
+      "ci_lo_pp": -10.6849,
+      "ci_hi_pp": -6.3562,
+      "ci_half_pp": 2.1644,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_full_ft_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_full_ft_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_lpft_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -3.6164,
+      "ci_lo_pp": -5.863,
+      "ci_hi_pp": -1.4247,
+      "ci_half_pp": 2.2192,
+      "p_value": 0.0016,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_lpft_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_lpft_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_peft_dora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -5.0959,
+      "ci_lo_pp": -7.2877,
+      "ci_hi_pp": -2.9589,
+      "ci_half_pp": 2.1644,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_peft_dora_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_peft_dora_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_peft_lora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -4.2192,
+      "ci_lo_pp": -6.411,
+      "ci_hi_pp": -2.0274,
+      "ci_half_pp": 2.1918,
+      "p_value": 0.0002,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_peft_lora_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_peft_lora_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -6.8493,
+      "ci_lo_pp": -9.0959,
+      "ci_hi_pp": -4.6027,
+      "ci_half_pp": 2.2466,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgery_raw_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -5.5342,
+      "ci_lo_pp": -7.7808,
+      "ci_hi_pp": -3.3425,
+      "ci_half_pp": 2.2192,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgery_raw_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgery_raw_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -5.8082,
+      "ci_lo_pp": -8.1096,
+      "ci_hi_pp": -3.6712,
+      "ci_half_pp": 2.2192,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -5.2055,
+      "ci_lo_pp": -7.4521,
+      "ci_hi_pp": -3.0324,
+      "ci_half_pp": 2.2098,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -4.8219,
+      "ci_lo_pp": -7.0137,
+      "ci_hi_pp": -2.6301,
+      "ci_half_pp": 2.1918,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -7.2329,
+      "ci_lo_pp": -9.4247,
+      "ci_hi_pp": -5.1507,
+      "ci_half_pp": 2.137,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -3.3425,
+      "ci_lo_pp": -5.5342,
+      "ci_hi_pp": -1.2603,
+      "ci_half_pp": 2.137,
+      "p_value": 0.0028,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.6301,
+      "ci_lo_pp": -4.8219,
+      "ci_hi_pp": -0.5479,
+      "ci_half_pp": 2.137,
+      "p_value": 0.0192,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.6301,
+      "ci_lo_pp": -4.6027,
+      "ci_hi_pp": -0.6575,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.0094,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_lpft_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 4.8219,
+      "ci_lo_pp": 2.9589,
+      "ci_hi_pp": 6.6849,
+      "ci_half_pp": 1.863,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_lpft_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_lpft_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_peft_dora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.3425,
+      "ci_lo_pp": 1.5342,
+      "ci_hi_pp": 5.2055,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.0002,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_peft_dora_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_peft_dora_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_peft_lora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 4.2192,
+      "ci_lo_pp": 2.3014,
+      "ci_hi_pp": 6.0822,
+      "ci_half_pp": 1.8904,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_peft_lora_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_peft_lora_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.589,
+      "ci_lo_pp": -0.1644,
+      "ci_hi_pp": 3.3425,
+      "ci_half_pp": 1.7534,
+      "p_value": 0.0888,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgery_raw_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.9041,
+      "ci_lo_pp": 0.9315,
+      "ci_hi_pp": 4.8219,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.0032,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgery_raw_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgery_raw_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.6301,
+      "ci_lo_pp": 0.8219,
+      "ci_hi_pp": 4.4932,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.0058,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.2329,
+      "ci_lo_pp": 1.2336,
+      "ci_hi_pp": 5.2055,
+      "ci_half_pp": 1.986,
+      "p_value": 0.0014,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.6164,
+      "ci_lo_pp": 1.7534,
+      "ci_hi_pp": 5.4922,
+      "ci_half_pp": 1.8694,
+      "p_value": 0.0004,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.2055,
+      "ci_lo_pp": -0.6575,
+      "ci_hi_pp": 3.0685,
+      "ci_half_pp": 1.863,
+      "p_value": 0.2232,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 5.0959,
+      "ci_lo_pp": 3.1233,
+      "ci_hi_pp": 7.0137,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 5.8082,
+      "ci_lo_pp": 3.6712,
+      "ci_hi_pp": 7.9452,
+      "ci_half_pp": 2.137,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_full_ft_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 5.8082,
+      "ci_lo_pp": 3.726,
+      "ci_hi_pp": 7.9452,
+      "ci_half_pp": 2.1096,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_full_ft_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_full_ft_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_peft_dora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.4795,
+      "ci_lo_pp": -3.4521,
+      "ci_hi_pp": 0.6027,
+      "ci_half_pp": 2.0274,
+      "p_value": 0.1592,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_peft_dora_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_peft_dora_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_peft_lora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.6027,
+      "ci_lo_pp": -2.137,
+      "ci_hi_pp": 0.9315,
+      "ci_half_pp": 1.5342,
+      "p_value": 0.4544,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_peft_lora_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_peft_lora_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -3.2329,
+      "ci_lo_pp": -5.2055,
+      "ci_hi_pp": -1.2603,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.001,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgery_raw_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.9178,
+      "ci_lo_pp": -3.7808,
+      "ci_hi_pp": -0.0294,
+      "ci_half_pp": 1.8757,
+      "p_value": 0.05,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgery_raw_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgery_raw_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.1918,
+      "ci_lo_pp": -3.8356,
+      "ci_hi_pp": -0.4932,
+      "ci_half_pp": 1.6712,
+      "p_value": 0.012,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.589,
+      "ci_lo_pp": -3.5068,
+      "ci_hi_pp": 0.3836,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.1072,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.2055,
+      "ci_lo_pp": -2.9041,
+      "ci_hi_pp": 0.6027,
+      "ci_half_pp": 1.7534,
+      "p_value": 0.1868,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -3.6164,
+      "ci_lo_pp": -5.7534,
+      "ci_hi_pp": -1.4795,
+      "ci_half_pp": 2.137,
+      "p_value": 0.001,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.274,
+      "ci_lo_pp": -1.5342,
+      "ci_hi_pp": 2.137,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.7862,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.9863,
+      "ci_lo_pp": -1.0411,
+      "ci_hi_pp": 3.0137,
+      "ci_half_pp": 2.0274,
+      "p_value": 0.3542,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_lpft_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.9863,
+      "ci_lo_pp": -1.1507,
+      "ci_hi_pp": 3.1781,
+      "ci_half_pp": 2.1644,
+      "p_value": 0.3916,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_lpft_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_lpft_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_peft_lora_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.8767,
+      "ci_lo_pp": -1.0959,
+      "ci_hi_pp": 2.7945,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.404,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_peft_lora_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_peft_lora_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.7534,
+      "ci_lo_pp": -3.6164,
+      "ci_hi_pp": 0.1096,
+      "ci_half_pp": 1.863,
+      "p_value": 0.0688,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgery_raw_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.4384,
+      "ci_lo_pp": -2.2466,
+      "ci_hi_pp": 1.3699,
+      "ci_half_pp": 1.8082,
+      "p_value": 0.6656,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgery_raw_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgery_raw_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.7123,
+      "ci_lo_pp": -2.5753,
+      "ci_hi_pp": 1.1507,
+      "ci_half_pp": 1.863,
+      "p_value": 0.4684,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.1096,
+      "ci_lo_pp": -1.9178,
+      "ci_hi_pp": 1.7534,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.9136,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.274,
+      "ci_lo_pp": -1.6986,
+      "ci_hi_pp": 2.1918,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.8068,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.137,
+      "ci_lo_pp": -4.0548,
+      "ci_hi_pp": -0.274,
+      "ci_half_pp": 1.8904,
+      "p_value": 0.0276,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.7534,
+      "ci_lo_pp": -0.274,
+      "ci_hi_pp": 3.6712,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.0926,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.4658,
+      "ci_lo_pp": 0.3288,
+      "ci_hi_pp": 4.4932,
+      "ci_half_pp": 2.0822,
+      "p_value": 0.0224,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_peft_dora_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.4658,
+      "ci_lo_pp": 0.3836,
+      "ci_hi_pp": 4.4932,
+      "ci_half_pp": 2.0548,
+      "p_value": 0.0208,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_peft_dora_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_peft_dora_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.6301,
+      "ci_lo_pp": -4.5479,
+      "ci_hi_pp": -0.7123,
+      "ci_half_pp": 1.9178,
+      "p_value": 0.0076,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_pretrain_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgery_raw_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.3151,
+      "ci_lo_pp": -3.0137,
+      "ci_hi_pp": 0.4384,
+      "ci_half_pp": 1.726,
+      "p_value": 0.1476,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgery_raw_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgery_raw_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.589,
+      "ci_lo_pp": -3.2877,
+      "ci_hi_pp": 0.0548,
+      "ci_half_pp": 1.6712,
+      "p_value": 0.0598,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.9863,
+      "ci_lo_pp": -2.8493,
+      "ci_hi_pp": 0.8219,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.295,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.6027,
+      "ci_lo_pp": -2.3014,
+      "ci_hi_pp": 1.1507,
+      "ci_half_pp": 1.726,
+      "p_value": 0.5084,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -3.0137,
+      "ci_lo_pp": -5.0411,
+      "ci_hi_pp": -0.9863,
+      "ci_half_pp": 2.0274,
+      "p_value": 0.0044,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.8767,
+      "ci_lo_pp": -0.9315,
+      "ci_hi_pp": 2.7397,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.3622,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.589,
+      "ci_lo_pp": -0.3836,
+      "ci_hi_pp": 3.5616,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.1126,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.589,
+      "ci_lo_pp": -0.6027,
+      "ci_hi_pp": 3.7808,
+      "ci_half_pp": 2.1918,
+      "p_value": 0.1618,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgery_raw_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.3151,
+      "ci_lo_pp": -0.7123,
+      "ci_hi_pp": 3.3425,
+      "ci_half_pp": 2.0274,
+      "p_value": 0.198,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgery_raw_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgery_raw_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.0411,
+      "ci_lo_pp": -0.7671,
+      "ci_hi_pp": 2.7945,
+      "ci_half_pp": 1.7808,
+      "p_value": 0.2582,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.6438,
+      "ci_lo_pp": -0.274,
+      "ci_hi_pp": 3.6164,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.1038,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.0274,
+      "ci_lo_pp": -0.0548,
+      "ci_hi_pp": 4.1644,
+      "ci_half_pp": 2.1096,
+      "p_value": 0.0628,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.3836,
+      "ci_lo_pp": -2.3562,
+      "ci_hi_pp": 1.589,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.729,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.5068,
+      "ci_lo_pp": 1.589,
+      "ci_hi_pp": 5.4247,
+      "ci_half_pp": 1.9178,
+      "p_value": 0.0002,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 4.2192,
+      "ci_lo_pp": 2.0274,
+      "ci_hi_pp": 6.3562,
+      "ci_half_pp": 2.1644,
+      "p_value": 0.0002,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_pretrain_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 4.2192,
+      "ci_lo_pp": 2.1918,
+      "ci_hi_pp": 6.3014,
+      "ci_half_pp": 2.0548,
+      "p_value": 0.0002,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_pretrain_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_pretrain_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -0.274,
+      "ci_lo_pp": -2.0822,
+      "ci_hi_pp": 1.5342,
+      "ci_half_pp": 1.8082,
+      "p_value": 0.7754,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.3288,
+      "ci_lo_pp": -1.4247,
+      "ci_hi_pp": 2.137,
+      "ci_half_pp": 1.7808,
+      "p_value": 0.7584,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.7123,
+      "ci_lo_pp": -0.9315,
+      "ci_hi_pp": 2.3014,
+      "ci_half_pp": 1.6164,
+      "p_value": 0.417,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.6986,
+      "ci_lo_pp": -3.7808,
+      "ci_hi_pp": 0.3362,
+      "ci_half_pp": 2.0585,
+      "p_value": 0.1108,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.1918,
+      "ci_lo_pp": 0.2192,
+      "ci_hi_pp": 4.1644,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.03,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.9041,
+      "ci_lo_pp": 0.9863,
+      "ci_hi_pp": 4.8219,
+      "ci_half_pp": 1.9178,
+      "p_value": 0.0022,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_surgery_raw_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.9041,
+      "ci_lo_pp": 0.7123,
+      "ci_hi_pp": 5.0411,
+      "ci_half_pp": 2.1644,
+      "p_value": 0.0102,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgery_raw_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgery_raw_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.6027,
+      "ci_lo_pp": -1.0411,
+      "ci_hi_pp": 2.3014,
+      "ci_half_pp": 1.6712,
+      "p_value": 0.5076,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder - vjepa_2_1_vitg_surgical_3stage_DI_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.9863,
+      "ci_lo_pp": -0.8767,
+      "ci_hi_pp": 2.7448,
+      "ci_half_pp": 1.8108,
+      "p_value": 0.2904,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -1.4247,
+      "ci_lo_pp": -3.3425,
+      "ci_hi_pp": 0.4575,
+      "ci_half_pp": 1.9,
+      "p_value": 0.15,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.4658,
+      "ci_lo_pp": 0.6575,
+      "ci_hi_pp": 4.2192,
+      "ci_half_pp": 1.7808,
+      "p_value": 0.0068,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.1781,
+      "ci_lo_pp": 1.2055,
+      "ci_hi_pp": 5.0959,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.0012,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.1781,
+      "ci_lo_pp": 1.2055,
+      "ci_hi_pp": 5.2603,
+      "ci_half_pp": 2.0274,
+      "p_value": 0.0008,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.3836,
+      "ci_lo_pp": -1.4795,
+      "ci_hi_pp": 2.2466,
+      "ci_half_pp": 1.863,
+      "p_value": 0.707,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.0274,
+      "ci_lo_pp": -4.0,
+      "ci_hi_pp": -0.1096,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.0472,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.863,
+      "ci_lo_pp": 0.0,
+      "ci_hi_pp": 3.6164,
+      "ci_half_pp": 1.8082,
+      "p_value": 0.0426,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.5753,
+      "ci_lo_pp": 0.5479,
+      "ci_hi_pp": 4.4932,
+      "ci_half_pp": 1.9726,
+      "p_value": 0.0088,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.5753,
+      "ci_lo_pp": 0.6027,
+      "ci_hi_pp": 4.6027,
+      "ci_half_pp": 2.0,
+      "p_value": 0.0116,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder_minus_vjepa_2_1_vitg_surgical_autorgn_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -2.411,
+      "ci_lo_pp": -4.4932,
+      "ci_hi_pp": -0.3836,
+      "ci_half_pp": 2.0548,
+      "p_value": 0.022,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder - vjepa_2_1_vitg_surgical_autorgn_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder more accurate than vjepa_2_1_vitg_surgical_autorgn_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 1.4795,
+      "ci_lo_pp": -0.4384,
+      "ci_hi_pp": 3.3973,
+      "ci_half_pp": 1.9178,
+      "p_value": 0.1398,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.1918,
+      "ci_lo_pp": 0.274,
+      "ci_hi_pp": 4.1096,
+      "ci_half_pp": 1.9178,
+      "p_value": 0.0272,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 2.1918,
+      "ci_lo_pp": 0.0548,
+      "ci_hi_pp": 4.3288,
+      "ci_half_pp": 2.137,
+      "p_value": 0.0448,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 3.8904,
+      "ci_lo_pp": 1.9178,
+      "ci_hi_pp": 5.9178,
+      "ci_half_pp": 2.0,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_autorgn_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder > 0 means vjepa_2_1_vitg_surgical_autorgn_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 4.6027,
+      "ci_lo_pp": 2.411,
+      "ci_hi_pp": 6.7945,
+      "ci_half_pp": 2.1918,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_autorgn_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_surgical_autorgn_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_autorgn_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 4.6027,
+      "ci_lo_pp": 2.6849,
+      "ci_hi_pp": 6.5753,
+      "ci_half_pp": 1.9452,
+      "p_value": 0.0,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_surgical_autorgn_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgical_autorgn_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.7123,
+      "ci_lo_pp": -1.1507,
+      "ci_hi_pp": 2.5205,
+      "ci_half_pp": 1.8356,
+      "p_value": 0.4718,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder > 0 means vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.7123,
+      "ci_lo_pp": -1.2055,
+      "ci_hi_pp": 2.6301,
+      "ci_half_pp": 1.9178,
+      "p_value": 0.4886,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    },
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder_minus_vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": {
+      "n_shared": 1825,
+      "delta_pp": 0.0,
+      "ci_lo_pp": -1.9726,
+      "ci_hi_pp": 2.0274,
+      "ci_half_pp": 2.0,
+      "p_value": 1.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder - vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder > 0 means vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder more accurate than vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder"
+    }
+  },
+  "iter14_paper_deltas": {
+    "delta_1_pretrain_vs_frozen": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_pretrain_encoder (present=False), b=vjepa_2_1_frozen (present=False)",
+      "interpretation": "\u03941: pretrain > frozen (continual SSL beats frozen baseline)"
+    },
+    "delta_2_surgical_vs_pretrain": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_pretrain_encoder (present=False)",
+      "interpretation": "\u03942: surgery > pretrain (factor patching adds value)"
+    },
+    "delta_3_surgical_vs_pretrain_2X": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_pretrain_2X_encoder (present=False)",
+      "interpretation": "\u03943: surgery > pretrain_2X (CAUSAL \u2014 gain is factor patching, not extra steps)"
+    },
+    "delta_4_pretrain_vs_pretrain_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_pretrain_encoder (present=False), b=vjepa_2_1_pretrain_head (present=False)",
+      "interpretation": "\u03944: pretrain > pretrain_head (does encoder-update add value beyond a trained head?)"
+    },
+    "delta_5_surgical_vs_surgical_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_surgical_3stage_DI_head (present=False)",
+      "interpretation": "\u03945: surgery > surgery_head (KEY iter15 paper claim \u2014 if |\u03945|<0.01, head-only WINS)"
+    },
+    "delta_6_surgical_head_vs_pretrain_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_head (present=False), b=vjepa_2_1_pretrain_head (present=False)",
+      "interpretation": "\u03946: surgery_head > pretrain_head (factor data helps even when encoder is frozen)"
+    },
+    "delta_7_DI_head_vs_noDI_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_head (present=False), b=vjepa_2_1_surgical_noDI_head (present=False)",
+      "interpretation": "\u03947: 3stage_DI_head > noDI_head (D_I tubes carry signal beyond D_L+D_A)"
+    }
+  }
+}

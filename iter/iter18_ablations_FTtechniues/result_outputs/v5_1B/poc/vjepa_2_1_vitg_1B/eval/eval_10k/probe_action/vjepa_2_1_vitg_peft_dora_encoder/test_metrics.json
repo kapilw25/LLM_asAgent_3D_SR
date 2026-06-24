@@ -1,0 +1,29 @@
+{
+  "encoder": "vjepa_2_1_vitg_peft_dora_encoder",
+  "n_classes": 11,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__upward",
+    "slow__downward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 1825,
+  "top1_acc": 0.4756164383561644,
+  "top1_ci": {
+    "mean": 0.475616,
+    "ci_lo": 0.452603,
+    "ci_hi": 0.498082,
+    "ci_half": 0.02274
+  },
+  "best_val_acc": 0.5144124168514412,
+  "probe_lr": 0.0005,
+  "warmup_pct": 0.0,
+  "epochs": 20
+}

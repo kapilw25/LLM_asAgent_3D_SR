@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_full_ft_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.424975,
+    "std": 0.228711,
+    "ci": {
+      "mean": 2.424975,
+      "ci_lo": 2.414662,
+      "ci_hi": 2.435724,
+      "ci_half": 0.010531
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.283649,
+    "std": 0.113374,
+    "ci": {
+      "mean": 0.283649,
+      "ci_lo": 0.278512,
+      "ci_hi": 0.288732,
+      "ci_half": 0.00511
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09f_full_ft_encoder/student_encoder.pt"
+}

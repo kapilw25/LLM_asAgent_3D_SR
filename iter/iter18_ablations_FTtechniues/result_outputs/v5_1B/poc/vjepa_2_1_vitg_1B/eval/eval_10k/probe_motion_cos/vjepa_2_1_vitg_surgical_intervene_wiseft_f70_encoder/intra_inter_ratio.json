@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder",
+  "n_test": 1825,
+  "pos_mean": 0.871769,
+  "neg_mean": 0.860667,
+  "score_mean": 0.011103,
+  "score_ci": {
+    "mean": 0.011103,
+    "ci_lo": 0.010253,
+    "ci_hi": 0.011918,
+    "ci_half": 0.000832
+  },
+  "elapsed_sec": 0.04
+}

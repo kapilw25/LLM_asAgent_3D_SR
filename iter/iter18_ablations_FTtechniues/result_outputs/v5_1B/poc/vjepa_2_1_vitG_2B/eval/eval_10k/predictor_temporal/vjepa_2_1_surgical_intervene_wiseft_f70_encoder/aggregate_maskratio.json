@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_surgical_intervene_wiseft_f70_encoder",
+  "metric": "maskratio",
+  "n_test": 1825,
+  "mean": 0.069599,
+  "std": 0.011911,
+  "ci": {
+    "mean": 0.069599,
+    "ci_lo": 0.06903,
+    "ci_hi": 0.070131,
+    "ci_half": 0.000551
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG/m09c_surgical_intervene_wiseft_f70_encoder/m09c_ckpt_best.pt"
+}

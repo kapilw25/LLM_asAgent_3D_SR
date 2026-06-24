@@ -1,0 +1,112 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 07:25:10 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/poc/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 07:25:11 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/motion_aux_head.pt
+  [lazy-cleanup] removed .probe_features_train_ckpt.npz (0.3 GB)
+  [lazy-cleanup] removed .probe_features_val_ckpt.npz (0.0 GB)
+
+═══ 07:25:13 ·   STAGE 8c · encoder_temporal (metric=aot) for vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 680.9 GB / 1026.1 GB (66%)
+[m12f_encoder_temporal]   pids:   1092 / 15616 (7%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [head-train-cap] train 6854 → 2000 (head-fit only; test/CI unaffected)
+  splits: train=2000  test=1825  metrics=['aot']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=5632; encoder-only — no predictor build)
+  [share-features] test: off — cache shape (1825, 16, 1456) mismatches (N, T_eff=8, D=5632) — pooling parity not guaranteed
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[aot/test]:   0%|          | 0/1825 [00:00<?, ?clip/s]m12f[aot/test]:   2%|▏         | 32/1825 [00:19<17:59,  1.66clip/s]m12f[aot/test]:   4%|▎         | 64/1825 [00:26<11:59,  2.45clip/s, recent=0.3s/clip ETA0.1h]m12f[aot/test]:   5%|▌         | 96/1825 [00:33<09:58,  2.89clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:   7%|▋         | 128/1825 [00:39<08:46,  3.22clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:   9%|▉         | 160/1825 [00:47<08:14,  3.37clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  11%|█         | 192/1825 [00:54<07:46,  3.50clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  12%|█▏        | 224/1825 [01:01<07:22,  3.62clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  14%|█▍        | 256/1825 [01:08<07:01,  3.72clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  16%|█▌        | 288/1825 [01:15<06:41,  3.83clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  18%|█▊        | 320/1825 [01:21<06:24,  3.91clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  19%|█▉        | 352/1825 [01:28<06:10,  3.98clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  21%|██        | 384/1825 [01:36<06:01,  3.99clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  23%|██▎       | 416/1825 [01:43<05:49,  4.03clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  25%|██▍       | 448/1825 [01:50<05:39,  4.05clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  26%|██▋       | 480/1825 [01:57<05:29,  4.09clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  28%|██▊       | 512/1825 [02:04<05:18,  4.12clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  30%|██▉       | 544/1825 [02:11<05:10,  4.13clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  32%|███▏      | 576/1825 [02:18<05:00,  4.16clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  33%|███▎      | 608/1825 [02:25<04:51,  4.18clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  35%|███▌      | 640/1825 [02:32<04:41,  4.20clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  37%|███▋      | 672/1825 [02:39<04:33,  4.22clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  39%|███▊      | 704/1825 [02:45<04:24,  4.24clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  40%|████      | 736/1825 [02:52<04:15,  4.26clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  42%|████▏     | 768/1825 [02:59<04:07,  4.28clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00003.tar: emitted=138, dropped=0 (missing_part=0, empty_mp4=0), filtered=862 (subset=862, resume=0)
+m12f[aot/test]:  44%|████▍     | 800/1825 [03:06<03:58,  4.29clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00000.tar: emitted=144, dropped=0 (missing_part=0, empty_mp4=0), filtered=856 (subset=856, resume=0)
+m12f[aot/test]:  46%|████▌     | 832/1825 [03:13<03:50,  4.30clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  47%|████▋     | 864/1825 [03:20<03:42,  4.31clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  49%|████▉     | 896/1825 [03:27<03:35,  4.32clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  51%|█████     | 928/1825 [03:34<03:27,  4.32clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  53%|█████▎    | 960/1825 [03:41<03:19,  4.33clip/s, recent=0.2s/clip ETA0.1h]  [tar reader] subset-00009.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=277 (subset=277, resume=0)
+m12f[aot/test]:  54%|█████▍    | 992/1825 [03:48<03:12,  4.33clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  56%|█████▌    | 1024/1825 [03:56<03:04,  4.33clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/test]:  58%|█████▊    | 1056/1825 [04:03<02:57,  4.34clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00004.tar: emitted=137, dropped=0 (missing_part=0, empty_mp4=0), filtered=863 (subset=863, resume=0)
+m12f[aot/test]:  60%|█████▉    | 1088/1825 [04:10<02:49,  4.34clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  61%|██████▏   | 1120/1825 [04:17<02:42,  4.35clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  63%|██████▎   | 1152/1825 [04:24<02:34,  4.36clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  65%|██████▍   | 1184/1825 [04:31<02:26,  4.37clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  67%|██████▋   | 1216/1825 [04:38<02:19,  4.37clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00001.tar: emitted=199, dropped=0 (missing_part=0, empty_mp4=0), filtered=801 (subset=801, resume=0)
+  [tar reader] subset-00006.tar: emitted=204, dropped=0 (missing_part=0, empty_mp4=0), filtered=796 (subset=796, resume=0)
+m12f[aot/test]:  68%|██████▊   | 1248/1825 [04:45<02:11,  4.38clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  70%|███████   | 1280/1825 [04:52<02:04,  4.38clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  72%|███████▏  | 1312/1825 [04:59<01:56,  4.38clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  74%|███████▎  | 1344/1825 [05:06<01:49,  4.38clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  75%|███████▌  | 1376/1825 [05:13<01:42,  4.39clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00002.tar: emitted=244, dropped=0 (missing_part=0, empty_mp4=0), filtered=756 (subset=756, resume=0)
+m12f[aot/test]:  77%|███████▋  | 1408/1825 [05:19<01:34,  4.40clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  79%|███████▉  | 1440/1825 [05:27<01:27,  4.40clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  81%|████████  | 1472/1825 [05:34<01:20,  4.41clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00005.tar: emitted=231, dropped=0 (missing_part=0, empty_mp4=0), filtered=769 (subset=769, resume=0)
+m12f[aot/test]:  82%|████████▏ | 1504/1825 [05:41<01:12,  4.41clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  84%|████████▍ | 1536/1825 [05:49<01:05,  4.40clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00008.tar: emitted=172, dropped=0 (missing_part=0, empty_mp4=0), filtered=828 (subset=828, resume=0)
+m12f[aot/test]:  86%|████████▌ | 1568/1825 [05:55<00:58,  4.40clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00007.tar: emitted=336, dropped=0 (missing_part=0, empty_mp4=0), filtered=664 (subset=664, resume=0)
+m12f[aot/test]:  88%|████████▊ | 1600/1825 [06:03<00:51,  4.40clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  89%|████████▉ | 1632/1825 [06:10<00:43,  4.40clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  91%|█████████ | 1664/1825 [06:18<00:36,  4.40clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  93%|█████████▎| 1696/1825 [06:25<00:29,  4.40clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  95%|█████████▍| 1728/1825 [06:32<00:22,  4.41clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  96%|█████████▋| 1760/1825 [06:39<00:14,  4.41clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]:  98%|█████████▊| 1792/1825 [06:46<00:07,  4.41clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]: 100%|█████████▉| 1824/1825 [06:53<00:00,  4.42clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/test]: 100%|██████████| 1825/1825 [06:53<00:00,  4.42clip/s, recent=0.2s/clip ETA0.0h]
+  [share-features] train: off — probe_action cache missing at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[aot/train]:   0%|          | 0/2000 [00:00<?, ?clip/s]  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[aot/train]:   2%|▏         | 32/2000 [07:02<7:12:36, 13.19s/clip]m12f[aot/train]:   3%|▎         | 64/2000 [07:09<3:36:31,  6.71s/clip, recent=0.3s/clip ETA0.1h]m12f[aot/train]:   5%|▍         | 96/2000 [07:16<2:24:23,  4.55s/clip, recent=0.3s/clip ETA0.1h]m12f[aot/train]:   6%|▋         | 128/2000 [07:24<1:48:16,  3.47s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:   8%|▊         | 160/2000 [07:31<1:26:31,  2.82s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  10%|▉         | 192/2000 [07:38<1:12:01,  2.39s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  11%|█         | 224/2000 [07:46<1:01:38,  2.08s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  13%|█▎        | 256/2000 [07:54<53:50,  1.85s/clip, recent=0.2s/clip ETA0.1h]  m12f[aot/train]:  14%|█▍        | 288/2000 [08:01<47:39,  1.67s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  16%|█▌        | 320/2000 [08:08<42:44,  1.53s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  18%|█▊        | 352/2000 [08:17<38:47,  1.41s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  19%|█▉        | 384/2000 [08:23<35:20,  1.31s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  21%|██        | 416/2000 [08:30<32:25,  1.23s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  22%|██▏       | 448/2000 [08:37<29:52,  1.15s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  24%|██▍       | 480/2000 [08:44<27:40,  1.09s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  26%|██▌       | 512/2000 [08:52<25:46,  1.04s/clip, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  27%|██▋       | 544/2000 [08:59<24:05,  1.01clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  29%|██▉       | 576/2000 [09:07<22:32,  1.05clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  30%|███       | 608/2000 [09:14<21:09,  1.10clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  32%|███▏      | 640/2000 [09:22<19:55,  1.14clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  34%|███▎      | 672/2000 [09:30<18:47,  1.18clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  35%|███▌      | 704/2000 [09:38<17:45,  1.22clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  37%|███▋      | 736/2000 [09:46<16:47,  1.25clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  38%|███▊      | 768/2000 [09:54<15:53,  1.29clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  40%|████      | 800/2000 [10:01<15:02,  1.33clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  42%|████▏     | 832/2000 [10:09<14:15,  1.36clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  43%|████▎     | 864/2000 [10:17<13:32,  1.40clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  45%|████▍     | 896/2000 [10:26<12:52,  1.43clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  46%|████▋     | 928/2000 [10:33<12:12,  1.46clip/s, recent=0.3s/clip ETA0.1h]m12f[aot/train]:  48%|████▊     | 960/2000 [10:41<11:34,  1.50clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  50%|████▉     | 992/2000 [10:50<11:00,  1.53clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  51%|█████     | 1024/2000 [10:58<10:27,  1.56clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  53%|█████▎    | 1056/2000 [11:05<09:54,  1.59clip/s, recent=0.3s/clip ETA0.1h]m12f[aot/train]:  54%|█████▍    | 1088/2000 [11:13<09:24,  1.61clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  56%|█████▌    | 1120/2000 [11:21<08:55,  1.64clip/s, recent=0.3s/clip ETA0.1h]m12f[aot/train]:  58%|█████▊    | 1152/2000 [11:29<08:27,  1.67clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  59%|█████▉    | 1184/2000 [11:37<08:00,  1.70clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  61%|██████    | 1216/2000 [11:45<07:35,  1.72clip/s, recent=0.3s/clip ETA0.1h]m12f[aot/train]:  62%|██████▏   | 1248/2000 [11:53<07:10,  1.75clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  64%|██████▍   | 1280/2000 [12:01<06:45,  1.77clip/s, recent=0.2s/clip ETA0.1h]m12f[aot/train]:  66%|██████▌   | 1312/2000 [12:10<06:23,  1.80clip/s, recent=0.3s/clip ETA0.1h]m12f[aot/train]:  67%|██████▋   | 1344/2000 [12:17<06:00,  1.82clip/s, recent=0.3s/clip ETA0.0h]m12f[aot/train]:  69%|██████▉   | 1376/2000 [12:24<05:37,  1.85clip/s, recent=0.3s/clip ETA0.0h]m12f[aot/train]:  70%|███████   | 1408/2000 [12:32<05:16,  1.87clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  72%|███████▏  | 1440/2000 [12:39<04:55,  1.90clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  74%|███████▎  | 1472/2000 [12:46<04:35,  1.92clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  75%|███████▌  | 1504/2000 [12:55<04:15,  1.94clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00002.tar: emitted=594, dropped=0 (missing_part=0, empty_mp4=0), filtered=406 (subset=406, resume=0)
+m12f[aot/train]:  77%|███████▋  | 1536/2000 [13:02<03:56,  1.96clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  78%|███████▊  | 1568/2000 [13:10<03:37,  1.98clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00001.tar: emitted=697, dropped=0 (missing_part=0, empty_mp4=0), filtered=303 (subset=303, resume=0)
+m12f[aot/train]:  80%|████████  | 1600/2000 [13:17<03:19,  2.01clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  82%|████████▏ | 1632/2000 [13:24<03:01,  2.03clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  83%|████████▎ | 1664/2000 [13:32<02:44,  2.05clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  85%|████████▍ | 1696/2000 [13:40<02:27,  2.07clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  86%|████████▋ | 1728/2000 [13:48<02:10,  2.08clip/s, recent=0.2s/clip ETA0.0h]  [tar reader] subset-00000.tar: emitted=709, dropped=0 (missing_part=0, empty_mp4=0), filtered=291 (subset=291, resume=0)
+m12f[aot/train]:  88%|████████▊ | 1760/2000 [13:56<01:54,  2.10clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  90%|████████▉ | 1792/2000 [14:04<01:38,  2.12clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  91%|█████████ | 1824/2000 [14:12<01:22,  2.14clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  93%|█████████▎| 1856/2000 [14:19<01:06,  2.16clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  94%|█████████▍| 1888/2000 [14:26<00:51,  2.18clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  96%|█████████▌| 1920/2000 [14:34<00:36,  2.20clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  98%|█████████▊| 1952/2000 [14:41<00:21,  2.21clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]:  99%|█████████▉| 1984/2000 [14:49<00:07,  2.23clip/s, recent=0.2s/clip ETA0.0h]m12f[aot/train]: 100%|██████████| 2000/2000 [14:52<00:00,  2.24clip/s, recent=0.2s/clip ETA0.0h]
+[keep-heads] aot: saved head → outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder/head_aot.pt
+  aot: mean=0.9523 std=0.1541 N=1825 (1s)
+forward stage: 893s
+  [post-stage8-cleanup] SKIPPED for vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder (mode=POC, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
+
+═══ 07:40:10 · DONE · total wall = 15 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder/probe.pt

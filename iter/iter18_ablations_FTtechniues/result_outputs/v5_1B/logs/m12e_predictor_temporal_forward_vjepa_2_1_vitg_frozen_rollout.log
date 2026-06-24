@@ -1,0 +1,9 @@
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12e_predictor_temporal] cgroup envelope:
+[m12e_predictor_temporal]   memory: 475.9 GB / 1026.1 GB (46%)
+[m12e_predictor_temporal]   pids:   894 / 15616 (6%)
+[m12e_predictor_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [keep] rollout: aggregate_rollout.json present — skipping (--cache-policy 2 to redo)
+  all requested metrics cached — nothing to do
+forward stage: 1s

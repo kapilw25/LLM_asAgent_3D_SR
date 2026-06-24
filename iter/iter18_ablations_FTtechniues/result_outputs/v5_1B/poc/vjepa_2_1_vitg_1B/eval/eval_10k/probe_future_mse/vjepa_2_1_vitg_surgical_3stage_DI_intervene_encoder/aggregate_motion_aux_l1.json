@@ -1,0 +1,16 @@
+{
+  "variant": "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder",
+  "n_test": 1825,
+  "ma_l1_mean": 0.195615,
+  "ma_l1_std": 0.131016,
+  "ma_l1_ci": {
+    "mean": 0.195615,
+    "ci_lo": 0.189907,
+    "ci_hi": 0.201948,
+    "ci_half": 0.00602
+  },
+  "num_frames": 16,
+  "predictor_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/m09c_ckpt_best.pt",
+  "motion_aux_head_loaded_from": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/motion_aux_head.pt",
+  "augment_space_dim": 34
+}

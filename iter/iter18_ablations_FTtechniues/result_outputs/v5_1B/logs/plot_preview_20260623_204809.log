@@ -1,0 +1,662 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
+
+═══ 20:48:12 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
+✓ ckpt present
+  ✓ mode:                 POC
+  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
+  ✓ local_data:           data/eval_10k_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
+  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_noDI_encoder vjepa_2_1_vitg_surgical_3stage_DI_head vjepa_2_1_vitg_surgical_noDI_head vjepa_2_1_vitg_surgical_autorgn_encoder vjepa_2_1_vitg_surgery_raw_encoder vjepa_2_1_vitg_full_ft_encoder vjepa_2_1_vitg_lpft_encoder vjepa_2_1_vitg_peft_lora_encoder vjepa_2_1_vitg_peft_dora_encoder vjepa_2_1_vitg_cassle_encoder vjepa_2_1_vitg_ewc_encoder vjepa_2_1_vitg_surgical_3stage_DI_replay25_encoder vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder vjepa_2_1_vitg_surgical_3stage_DI_tccaux_encoder vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder vjepa_2_1_vitg_surgical_3stage_DI_wiseft_encoder vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,8c
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/poc/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external/HF frozen (no trainer needed)
+  ✓ vjepa_2_1_vitg_pretrain_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/student_encoder.pt
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/student_encoder.pt
+  ⚠️  vjepa_2_1_vitg_surgical_noDI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_noDI_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_noDI_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_noDI_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_head: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_head/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_head --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_head from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_noDI_head: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_noDI_head/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_noDI_head --POC
+  → dropping vjepa_2_1_vitg_surgical_noDI_head from this run; pipeline continues with remaining encoders
+  ✓ vjepa_2_1_vitg_surgical_autorgn_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/student_encoder.pt
+  ✓ vjepa_2_1_vitg_surgery_raw_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/student_encoder.pt
+  ✓ vjepa_2_1_vitg_full_ft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_full_ft_encoder/student_encoder.pt
+  ✓ vjepa_2_1_vitg_lpft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_lpft_encoder/student_encoder.pt
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt
+  ⚠️  vjepa_2_1_vitg_peft_dora_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_dora_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh peft_dora_encoder --POC
+  → dropping vjepa_2_1_vitg_peft_dora_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_cassle_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09d_cassle_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh cassle_encoder --POC
+  → dropping vjepa_2_1_vitg_cassle_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_ewc_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09d_ewc_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh ewc_encoder --POC
+  → dropping vjepa_2_1_vitg_ewc_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_replay25_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_replay25_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_replay25_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_replay25_encoder from this run; pipeline continues with remaining encoders
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/student_encoder.pt
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_tccaux_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_tccaux_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_tccaux_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_tccaux_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_intervene_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgery_3stage_DI_intervene_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_3stage_DI_wiseft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_3stage_DI_wiseft_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_3stage_DI_wiseft_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_3stage_DI_wiseft_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f30_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_intervene_wiseft_f30_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f50_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_intervene_wiseft_f50_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder from this run; pipeline continues with remaining encoders
+  ⚠️  vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f70_encoder/student_encoder.pt not found — train via:
+       BACKBONE=vjepa_2_1_vitg ./scripts/run_train.sh surgical_intervene_wiseft_f70_encoder --POC
+  → dropping vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder from this run; pipeline continues with remaining encoders
+  → final ENCODERS: vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_autorgn_encoder vjepa_2_1_vitg_surgery_raw_encoder vjepa_2_1_vitg_full_ft_encoder vjepa_2_1_vitg_lpft_encoder vjepa_2_1_vitg_peft_lora_encoder vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: checkpoints/vjepa2_1_vitg_384.pt
+  ✓ vjepa_2_1_vitg_pretrain_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/m09c_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_surgical_autorgn_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/m09c_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_surgery_raw_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/m09c_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_full_ft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_full_ft_encoder/m09c_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_lpft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_lpft_encoder/m09c_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_autorgn_encoder vjepa_2_1_vitg_surgery_raw_encoder vjepa_2_1_vitg_full_ft_encoder vjepa_2_1_vitg_lpft_encoder vjepa_2_1_vitg_peft_lora_encoder vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external frozen (no head — encoder-only path)
+  ✓ vjepa_2_1_vitg_pretrain_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_surgical_autorgn_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09e_autorgn_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_surgery_raw_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_full_ft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_full_ft_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_lpft_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09f_lpft_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
+  ✓ vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder: outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_autorgn_encoder vjepa_2_1_vitg_surgery_raw_encoder vjepa_2_1_vitg_full_ft_encoder vjepa_2_1_vitg_lpft_encoder vjepa_2_1_vitg_peft_lora_encoder vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_frozen vjepa_2_1_vitg_pretrain_encoder vjepa_2_1_vitg_surgical_3stage_DI_encoder vjepa_2_1_vitg_surgical_autorgn_encoder vjepa_2_1_vitg_surgery_raw_encoder vjepa_2_1_vitg_full_ft_encoder vjepa_2_1_vitg_lpft_encoder vjepa_2_1_vitg_peft_lora_encoder vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 20:48:16 · STAGE 1 · action_probe + taxonomy labels (CPU, ~1-2 min) ═══
+  [keep] outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json present — skipping (--cache-policy 2 to redo)
+  [keep] outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json present — skipping (--cache-policy 2 to redo)
+
+═══ 20:48:17 · STAGE 4 · action_probe paired_delta (🔥 P1 GATE — CPU, ~5 min, BCa 10K) ═══
+Encoders found: ['vjepa_2_1_vitg_frozen', 'vjepa_2_1_vitg_pretrain_encoder']
+{
+  "metric": "top1_accuracy",
+  "by_encoder": {
+    "vjepa_2_1_vitg_frozen": {
+      "acc_pct": 42.4658,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.424658,
+        "ci_lo": 0.402192,
+        "ci_hi": 0.447671,
+        "ci_half": 0.02274
+      }
+    },
+    "vjepa_2_1_vitg_pretrain_encoder": {
+      "acc_pct": 49.3151,
+      "n": 1825,
+      "top1_ci": {
+        "mean": 0.493151,
+        "ci_lo": 0.470685,
+        "ci_hi": 0.516712,
+        "ci_half": 0.023014
+      }
+    }
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_pp": -6.8493,
+      "ci_lo_pp": -9.0959,
+      "ci_hi_pp": -4.6027,
+      "ci_half_pp": 2.2466,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_pretrain_encoder"
+    }
+  },
+  "iter14_paper_deltas": {
+    "delta_1_pretrain_vs_frozen": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_pretrain_encoder (present=False), b=vjepa_2_1_frozen (present=False)",
+      "interpretation": "\u03941: pretrain > frozen (continual SSL beats frozen baseline)"
+    },
+    "delta_2_surgical_vs_pretrain": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_pretrain_encoder (present=False)",
+      "interpretation": "\u03942: surgery > pretrain (factor patching adds value)"
+    },
+    "delta_3_surgical_vs_pretrain_2X": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_pretrain_2X_encoder (present=False)",
+      "interpretation": "\u03943: surgery > pretrain_2X (CAUSAL \u2014 gain is factor patching, not extra steps)"
+    },
+    "delta_4_pretrain_vs_pretrain_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_pretrain_encoder (present=False), b=vjepa_2_1_pretrain_head (present=False)",
+      "interpretation": "\u03944: pretrain > pretrain_head (does encoder-update add value beyond a trained head?)"
+    },
+    "delta_5_surgical_vs_surgical_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_surgical_3stage_DI_head (present=False)",
+      "interpretation": "\u03945: surgery > surgery_head (KEY iter15 paper claim \u2014 if |\u03945|<0.01, head-only WINS)"
+    },
+    "delta_6_surgical_head_vs_pretrain_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_head (present=False), b=vjepa_2_1_pretrain_head (present=False)",
+      "interpretation": "\u03946: surgery_head > pretrain_head (factor data helps even when encoder is frozen)"
+    },
+    "delta_7_DI_head_vs_noDI_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_head (present=False), b=vjepa_2_1_surgical_noDI_head (present=False)",
+      "interpretation": "\u03947: 3stage_DI_head > noDI_head (D_I tubes carry signal beyond D_L+D_A)"
+    }
+  }
+}
+
+═══ 20:48:20 · STAGE 12 · probe_taxonomy paired_delta (CPU, 16 dims × encoders, BCa 10K each) ═══
+Encoders found: ['vjepa_2_1_vitg_frozen', 'vjepa_2_1_vitg_pretrain_encoder']
+Wrote: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/per_dim_acc.json  (15 dims compared)
+
+═══ 20:48:24 · STAGE 13 · probe_taxonomy plot (CPU, ~5s) ═══
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/probe_taxonomy_per_dim.png + .pdf
+
+═══ 20:48:28 · STAGE 7 · motion_cos paired_delta (CPU) ═══
+Encoders found: ['vjepa_2_1_vitg_frozen', 'vjepa_2_1_vitg_pretrain_encoder']
+{
+  "metric": "intra_minus_inter_cosine",
+  "by_encoder": {
+    "vjepa_2_1_vitg_frozen": {
+      "score_mean": 0.007001,
+      "n": 1825,
+      "score_ci": {
+        "mean": 0.007001,
+        "ci_lo": 0.006288,
+        "ci_hi": 0.007665,
+        "ci_half": 0.000688
+      }
+    },
+    "vjepa_2_1_vitg_pretrain_encoder": {
+      "score_mean": 0.054412,
+      "n": 1825,
+      "score_ci": {
+        "mean": 0.054412,
+        "ci_lo": 0.05261,
+        "ci_hi": 0.056303,
+        "ci_half": 0.001846
+      }
+    }
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n_shared": 1825,
+      "delta_mean": -0.047411,
+      "delta_ci_lo": -0.049036,
+      "delta_ci_hi": -0.045815,
+      "delta_ci_half": 0.00161,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_frozen has stronger intra-class motion clustering than vjepa_2_1_vitg_pretrain_encoder"
+    }
+  }
+}
+
+═══ 20:48:32 · STAGE 9 · future_mse paired_per_variant (CPU) ═══
+Variants found: ['vjepa_2_1_vitg_frozen', 'vjepa_2_1_vitg_pretrain_encoder']
+  [m12d_future_mse] vjepa_2_1_vitg_frozen vs vjepa_2_1_vitg_pretrain_encoder keys disagree by 0.0% — re-aligned to 1825 shared clips (under 5% threshold)
+{
+  "metric": "future_frame_l1_loss",
+  "by_variant": {
+    "vjepa_2_1_frozen": null,
+    "vjepa_2_1_pretrain_encoder": null,
+    "vjepa_2_1_pretrain_2X_encoder": null,
+    "vjepa_2_1_surgical_3stage_DI_encoder": null,
+    "vjepa_2_1_surgical_3stage_DI_replay25_encoder": null,
+    "vjepa_2_1_surgical_3stage_DI_diheavy_encoder": null,
+    "vjepa_2_1_surgical_3stage_DI_tccaux_encoder": null,
+    "vjepa_2_1_surgical_3stage_DI_intervene_encoder": null,
+    "vjepa_2_1_surgical_3stage_DI_wiseft_encoder": null,
+    "vjepa_2_1_surgical_intervene_wiseft_f30_encoder": null,
+    "vjepa_2_1_surgical_intervene_wiseft_f50_encoder": null,
+    "vjepa_2_1_surgical_intervene_wiseft_f70_encoder": null,
+    "vjepa_2_1_surgical_noDI_encoder": null,
+    "vjepa_2_1_surgical_autorgn_encoder": null,
+    "vjepa_2_1_surgery_raw_encoder": null,
+    "vjepa_2_1_full_ft_encoder": null,
+    "vjepa_2_1_lpft_encoder": null,
+    "vjepa_2_1_peft_lora_encoder": null,
+    "vjepa_2_1_peft_dora_encoder": null,
+    "vjepa_2_1_cassle_encoder": null,
+    "vjepa_2_1_ewc_encoder": null,
+    "vjepa_2_1_pretrain_head": null,
+    "vjepa_2_1_surgical_3stage_DI_head": null,
+    "vjepa_2_1_surgical_noDI_head": null,
+    "vjepa_2_0_vitg_frozen": null,
+    "vjepa_1_vitL_frozen": null,
+    "vjepa_1_vitH_frozen": null,
+    "vjepa_2_1_vitg_frozen": {
+      "mse_mean": 0.636863,
+      "mse_std": 0.027133,
+      "mse_ci": {
+        "mean": 0.636863,
+        "ci_lo": 0.635591,
+        "ci_hi": 0.638082,
+        "ci_half": 0.001246
+      },
+      "n": 1825
+    },
+    "vjepa_2_1_vitL_frozen": null,
+    "vjepa_2_vitL_256_frozen": null,
+    "vjepa_2_1_vitg_pretrain_encoder": {
+      "mse_mean": 0.607266,
+      "mse_std": 0.025955,
+      "mse_ci": {
+        "mean": 0.607266,
+        "ci_lo": 0.606055,
+        "ci_hi": 0.608424,
+        "ci_half": 0.001185
+      },
+      "n": 1825
+    },
+    "vjepa_2_1_vitg_pretrain_2X_encoder": null,
+    "vjepa_2_1_vitg_pretrain_head": null,
+    "vjepa_2_1_vitg_surgical_3stage_DI_encoder": null,
+    "vjepa_2_1_vitg_surgical_noDI_encoder": null,
+    "vjepa_2_1_vitg_surgical_3stage_DI_head": null,
+    "vjepa_2_1_vitg_surgical_noDI_head": null,
+    "vjepa_2_1_vitg_surgical_autorgn_encoder": null,
+    "vjepa_2_1_vitg_surgery_raw_encoder": null,
+    "vjepa_2_1_vitg_full_ft_encoder": null,
+    "vjepa_2_1_vitg_lpft_encoder": null,
+    "vjepa_2_1_vitg_peft_lora_encoder": null,
+    "vjepa_2_1_vitg_peft_dora_encoder": null,
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": null,
+    "vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder": null,
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder": null,
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder": null,
+    "vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder": null,
+    "vjepa_2_0_vitg_pretrain_encoder": null,
+    "vjepa_2_0_vitg_pretrain_2X_encoder": null,
+    "vjepa_2_0_vitg_pretrain_head": null,
+    "vjepa_2_0_vitg_surgical_3stage_DI_encoder": null,
+    "vjepa_2_0_vitg_surgical_noDI_encoder": null,
+    "vjepa_2_0_vitg_surgical_3stage_DI_head": null,
+    "vjepa_2_0_vitg_surgical_noDI_head": null,
+    "dinov2": "n/a \u2014 no future-frame predictor"
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_encoder": {
+      "n": 1825,
+      "delta_mean": 0.029597,
+      "delta_ci_lo": 0.028753,
+      "delta_ci_hi": 0.030393,
+      "delta_ci_half": 0.00082,
+      "p_value": 0.0,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_pretrain_encoder > 0 means vjepa_2_1_vitg_frozen has HIGHER MSE (worse future-frame prediction) than vjepa_2_1_vitg_pretrain_encoder; lower MSE = better."
+    }
+  }
+}
+
+═══ 20:48:35 · STAGE 9b · predictor_temporal paired_per_variant (CPU) ═══
+{
+  "metrics": {
+    "rollout": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "rollout",
+          "n_test": 1825,
+          "mean": 0.007262,
+          "std": 0.00511,
+          "ci": {
+            "mean": 0.007262,
+            "ci_lo": 0.007027,
+            "ci_hi": 0.007502,
+            "ci_half": 0.000237
+          },
+          "lower_is_better": true,
+          "interpretation": "free-run drift slope; lower = stabler dynamics",
+          "num_frames": 16,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        },
+        "vjepa_2_1_vitg_pretrain_encoder": {
+          "variant": "vjepa_2_1_vitg_pretrain_encoder",
+          "metric": "rollout",
+          "n_test": 1825,
+          "mean": 0.005962,
+          "std": 0.005282,
+          "ci": {
+            "mean": 0.005962,
+            "ci_lo": 0.005729,
+            "ci_hi": 0.006214,
+            "ci_half": 0.000243
+          },
+          "lower_is_better": true,
+          "interpretation": "free-run drift slope; lower = stabler dynamics",
+          "num_frames": 16,
+          "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt"
+        }
+      },
+      "pairwise_deltas": {
+        "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_pretrain_encoder": {
+          "n": 1825,
+          "delta_mean": 0.0013,
+          "delta_ci_lo": 0.001192,
+          "delta_ci_hi": 0.001411,
+          "p_value": 0.0
+        }
+      },
+      "lower_is_better": true
+    },
+    "causal": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "causal",
+          "n_test": 1825,
+          "mean": 0.655149,
+          "std": 0.034144,
+          "ci": {
+            "mean": 0.655148,
+            "ci_lo": 0.653607,
+            "ci_hi": 0.656744,
+            "ci_half": 0.001569
+          },
+          "lower_is_better": true,
+          "interpretation": "causal future-block L1; lower = better",
+          "num_frames": 16,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": true
+    },
+    "tdist": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "tdist",
+          "n_test": 1825,
+          "mean": 0.007439,
+          "std": 0.00817,
+          "ci": {
+            "mean": 0.007439,
+            "ci_lo": 0.00708,
+            "ci_hi": 0.007823,
+            "ci_half": 0.000372
+          },
+          "lower_is_better": true,
+          "interpretation": "L1-vs-\u0394t slope; lower = slower decay w/ distance",
+          "num_frames": 16,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": true
+    },
+    "teacher_free": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "teacher_free",
+          "n_test": 1825,
+          "mean": 0.043995,
+          "std": 0.011122,
+          "ci": {
+            "mean": 0.043995,
+            "ci_lo": 0.043485,
+            "ci_hi": 0.044511,
+            "ci_half": 0.000513
+          },
+          "lower_is_better": true,
+          "interpretation": "free\u2212teacher gap; lower = less exposure bias",
+          "num_frames": 16,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": true
+    },
+    "maskratio": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "maskratio",
+          "n_test": 1825,
+          "mean": 0.06511,
+          "std": 0.014649,
+          "ci": {
+            "mean": 0.06511,
+            "ci_lo": 0.064457,
+            "ci_hi": 0.065764,
+            "ci_half": 0.000654
+          },
+          "lower_is_better": true,
+          "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+          "num_frames": 16,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": true
+    },
+    "order": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "order",
+          "n_test": 1825,
+          "mean": 0.022689,
+          "std": 0.032714,
+          "ci": {
+            "mean": 0.022689,
+            "ci_lo": 0.021195,
+            "ci_hi": 0.024144,
+            "ci_half": 0.001474
+          },
+          "lower_is_better": null,
+          "interpretation": "shuffled\u2212ordered \u0394L1; sign = order reliance",
+          "num_frames": 16,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": null
+    }
+  }
+}
+
+═══ 20:48:37 · STAGE 9c · encoder_temporal paired_per_variant (CPU) ═══
+{
+  "metrics": {
+    "aot": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "aot",
+          "n_test": 1825,
+          "k_per_clip": 2,
+          "mean": 0.964931,
+          "std": 0.13499,
+          "ci": {
+            "mean": 0.964932,
+            "ci_lo": 0.958356,
+            "ci_hi": 0.970685,
+            "ci_half": 0.006164
+          },
+          "lower_is_better": false,
+          "interpretation": "Arrow-of-Time binary acc; higher = encoder preserves temporal direction",
+          "num_frames": 16,
+          "tubelet_size": 2,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt",
+          "head_lr": 0.001,
+          "head_epochs": 20,
+          "head_weight_decay": 0.0001,
+          "head_batch_size": 64
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": false
+    },
+    "tov": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "tov",
+          "n_test": 1825,
+          "k_per_clip": 4,
+          "mean": 0.922603,
+          "std": 0.147825,
+          "ci": {
+            "mean": 0.922603,
+            "ci_lo": 0.915616,
+            "ci_hi": 0.929041,
+            "ci_half": 0.006712
+          },
+          "lower_is_better": false,
+          "interpretation": "TOV/VCOP top-1 over n_permutations; higher = encoder retains frame order",
+          "num_frames": 16,
+          "tubelet_size": 2,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt",
+          "head_lr": 0.001,
+          "head_epochs": 20,
+          "head_weight_decay": 0.0001,
+          "head_batch_size": 64,
+          "n_permutations": 4
+        }
+      },
+      "pairwise_deltas": {},
+      "lower_is_better": false
+    },
+    "pace": {
+      "by_variant": {},
+      "pairwise_deltas": {},
+      "lower_is_better": false
+    },
+    "tcc": {
+      "by_variant": {
+        "vjepa_2_1_vitg_frozen": {
+          "variant": "vjepa_2_1_vitg_frozen",
+          "metric": "tcc",
+          "n_test": 1825,
+          "n_pairs": 226571,
+          "cycle_back": {
+            "mean": 2.195203,
+            "std": 0.177425,
+            "ci": {
+              "mean": 2.195203,
+              "ci_lo": 2.187209,
+              "ci_hi": 2.20362,
+              "ci_half": 0.008206
+            },
+            "lower_is_better": true
+          },
+          "kendalls_tau": {
+            "mean": 0.33376,
+            "std": 0.12401,
+            "ci": {
+              "mean": 0.33376,
+              "ci_lo": 0.32808,
+              "ci_hi": 0.339533,
+              "ci_half": 0.005727
+            },
+            "lower_is_better": false
+          },
+          "temperature": 0.1,
+          "num_frames": 16,
+          "tubelet_size": 2,
+          "encoder_ckpt": "checkpoints/vjepa2_1_vitg_384.pt"
+        }
+      },
+      "pairwise_deltas": {
+        "cycle_back": {},
+        "kendalls_tau": {}
+      }
+    }
+  }
+}
+
+═══ 20:48:40 · STAGE 10 · m13 eval plot — 14 bars + HERO (CPU, ~5s) ═══
+m13_eval_plot:   0%|          | 0/15 [00:00<?, ?panel/s]  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_action_acc_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_motion_cos_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/m13_taxonomy_f1_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/head/probe_future_mse_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_rollout_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_causal_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_tdist_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_teacher_free_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/predictor/m13_maskratio_compare.png + .pdf
+  [skip] order: signed (no better/worse direction) — diagnostic only, kept in CSV not plotted
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_aot_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tov_compare.png + .pdf
+  [skip] pace: source JSON absent
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_tau_compare.png + .pdf
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/encoder/m13_tcc_cycle_compare.png + .pdf
+m13_eval_plot: 100%|██████████| 15/15 [00:04<00:00,  3.01panel/s]m13_eval_plot: 100%|██████████| 15/15 [00:04<00:00,  3.01panel/s]
+  13/15 bar panels written (13 plotted): ['action_top1', 'aot', 'causal', 'future_mse', 'maskratio', 'motion_cos', 'rollout', 'taxonomy_f1', 'tcc_cycle', 'tcc_tau', 'tdist', 'teacher_free', 'tov']  ·  signed (CSV-only, not plotted): ['order']
+  [per-backbone] vjepa_2_1_vitg → eval/vjepa_2_1_vitg/  (2 arms vs g-frozen)
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_table.png + .pdf
+  [hero-table] m13_hero_table.{png,pdf,csv} — 12 metric rows drawn (+signed 'order' in CSV only) × 3 cols (transposed) · WINNER col = champion duel (ties shown)
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/vjepa_2_1_vitg/m13_hero_raw_values.png + .pdf
+  [hero-heatmap] m13_hero_raw_values.{png,pdf} — 2 rows (frozen + 1 arms) × 12 (raw value CI)
+  [stack] m13_hero_raw_values.{png,pdf} — vertical append of 1 LABELLED backbone panels (vjepa_2_1_vitg) · NO averaging
+  Saved: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/m13_paired_diff_heatmap.png + .pdf
+  [paired-heatmap] m13_paired_diff_heatmap.{png,pdf} — 12 metrics × 1 backbones
+  Plots written to: outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval
+
+═══ 20:48:48 · DONE · total wall = 0 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json
+  motion_cos     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_frozen/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_pretrain_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_autorgn_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgery_raw_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_full_ft_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_lpft_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_peft_lora_encoder/probe.pt
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder/probe.pt

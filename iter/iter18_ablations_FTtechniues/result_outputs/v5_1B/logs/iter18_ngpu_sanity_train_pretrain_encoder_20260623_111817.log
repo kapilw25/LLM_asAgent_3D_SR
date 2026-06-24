@@ -1,0 +1,180 @@
+[M9] LOCAL_DATA=data/eval_10k_local · MASTER_MANIFEST=data/eval_10k_local/eval_10k.json
+═══ 11:18:21 · Generating train/val/test split JSONs ═══
+Generated data/eval_10k_local/train_split.json: 57 clips (split=train)
+Generated data/eval_10k_local/val_split.json: 20 clips (split=val)
+Generated data/eval_10k_local/test_split.json: 20 clips (split=test)
+═══ 11:18:21 · Building leakage-safe train pool (universe=broad_manifest · ratio=0.01 [SANITY]) ═══
+  [clip_splits] clip_pool_ratio=0.01: universe subsampled 10000 → 100 (seed=42, deterministic)
+  [clip_splits] universe=broad_manifest: 100 − val(0) − test(0) = 100 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 100 train-pool keys → data/eval_10k_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json
+═══ 11:18:22 · m09a continual SSL pretrain_encoder (SANITY) ═══
+  config:    configs/train/pretrain_encoder.yaml
+  subset:    data/eval_10k_local/train_pool.json  (leakage-safe: universe − val − test)
+  val:       data/eval_10k_local/val_split.json
+  local:     data/eval_10k_local
+  output:    outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder
+  lambda:    0.0 (read from yaml; bypasses auto-ablation gate)
+[live-debug] installed — pid=73290. Force a stack dump anytime via:
+[live-debug]   kill -USR1 73290   # signal-safe native dump
+[live-debug]   kill -USR2 73290   # Python dump with banner
+  [train-frame-cache] ON → data/eval_10k_local/m12_frame_cache (min_free=200G) — deterministic decode memoized; shared across epochs/stages/arms/evals
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m09a1] cgroup envelope:
+[m09a1]   memory: 476.0 GB / 1026.1 GB (46%)
+[m09a1]   pids:   830 / 15616 (5%)
+[m09a1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [probe_labels] cached: /workspace/factorjepa/outputs/sanity/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/sanity/probe_taxonomy/taxonomy_labels.json
+  [cache-policy=2/recompute] WIPING output_dir (m09a_pretrain_encoder): outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder (16 file(s))
+  [cache-policy=2/recompute] output_dir (m09a_pretrain_encoder) recreated empty: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder
+
+=== Building Model ===
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Loading pretrained weights from /workspace/factorjepa/checkpoints/vjepa2_1_vitg_384.pt
+Student loaded: 1,012,185,216 params (492/492 keys = 100%)
+  layer_freeze: blocks [0, 20) frozen + [20, 40) trainable + norms always trainable. Trainable params: 505,130,240/1,012,185,216 = 49.9%
+Teacher created (deepcopy of student, hierarchical output enabled)
+Predictor loaded from checkpoint (300/300 keys = 100%)
+Predictor: 55,397,632 params
+  Gradient checkpointing enabled on 40 blocks (~2-4× activation memory reduction, ~25% throughput cost)
+  [motion_aux] enabled: 11 classes, 23-D vec, 97 clips with targets, 369,954 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+Mask generators: 2 (blocks: [8, 2])
+[POC] Loaded subset: 100 clip keys from train_pool.json
+[VAL] Loaded val subset: 20 clips from val_split.json
+Train clips: 100 | Val clips: 20
+Epochs: 1 | Steps/epoch: 3 | Total steps: 3
+Checkpoint every 1 steps (2x/epoch, keep last 5)
+Validation every 1 steps (2x/epoch, 20 val clips)
+  Optimizer: PagedAdamW8bit (bitsandbytes, unified-memory CPU paging) — 630 param groups, 8-bit block-wise quantized m1/m2 (4× memory reduction)
+
+Collecting 20 val clips into memory...
+Val clips collected: 20 in 1 batches
+  [probe] decoding 20 held-out val clips (data/eval_10k_local/val_split.json) ...
+  [probe] frame-cache ON → data/eval_10k_local/m12_frame_cache (shared across arms + evals)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [probe] decoding 20 clips with 8 CPU workers (was serial → ~8x speedup expected)
+probe_decode:   0%|          | 0/20 [00:00<?, ?clip/s]probe_decode:   5%|▌         | 1/20 [00:37<11:46, 37.20s/clip]probe_decode: 100%|██████████| 20/20 [00:37<00:00,  1.87s/clip, recent=0.0s/clip ETA0.0h]
+  [probe] decoded 20 clips (0 skipped — no tag match)
+  WARNING: probe has only 20 clips — bootstrap CI will be wide (N<100)
+  [probe] decoded 20 clips (97 have action labels)
+m09a1_pretrain_encoder:   0%|          | 0/3 [00:00<?, ?step/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+=== Training: 0 → 3 steps (1 epochs) ===
+Batch size: 32
+Grad checkpointing: True
+Mixed precision: bfloat16
+EMA momentum: 0.99925
+Drift control: lambda=0
+
+Loss log: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.csv
+AdaptiveBatchSizer (training, grad-accum): start=30, max=32 (= effective BS), target VRAM=85%
+  [tar reader] subset-00002.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  [tar reader] subset-00001.tar: emitted=10, dropped=0 (missing_part=0, empty_mp4=0), filtered=990 (subset=990, resume=0)
+  [tar reader] subset-00003.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+  [tar reader] subset-00000.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00005.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00006.tar: emitted=7, dropped=0 (missing_part=0, empty_mp4=0), filtered=993 (subset=993, resume=0)
+  [tar reader] subset-00004.tar: emitted=13, dropped=0 (missing_part=0, empty_mp4=0), filtered=987 (subset=987, resume=0)
+  [tar reader] subset-00007.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+/usr/lib/python3.12/contextlib.py:105: FutureWarning: `torch.backends.cuda.sdp_kernel()` is deprecated. In the future, this context manager will be removed. Please see `torch.nn.attention.sdpa_kernel()` for the new context manager, with updated signature.
+  self.gen = func(*args, **kwds)
+  Producer: starting epoch 2 (rotated tmp_dir → /tmp/m09_e2_bkmk55n4)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00005.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00002.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  [tar reader] subset-00006.tar: emitted=7, dropped=0 (missing_part=0, empty_mp4=0), filtered=993 (subset=993, resume=0)
+  [tar reader] subset-00000.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00003.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+  [tar reader] subset-00001.tar: emitted=10, dropped=0 (missing_part=0, empty_mp4=0), filtered=990 (subset=990, resume=0)
+  [tar reader] subset-00007.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00004.tar: emitted=13, dropped=0 (missing_part=0, empty_mp4=0), filtered=987 (subset=987, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  AdaptiveBatch: VRAM 22% < 65% → sub-batch 30 → 31
+m09a1_pretrain_encoder:  33%|███▎      | 1/3 [00:59<01:59, 59.57s/step]
+--- Checkpoint at 33% of epoch 1 (step 1) ---
+  Step 1 | Val JEPA loss: 0.4584 (mt=0.0000 · ma=4.5537 · drift=0.000000 · total=0.9138; 1 batches)
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  SKIP plot_combined_losses: only 1 train rows in outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.jsonl
+  [probe-trio] encoding 20 clips...
+  [probe-trio] step=0 top1=0.2500  motion_cos=-0.1878  future_l1=0.6175  causal_l1=0.6396  maskratio=0.0577  (N=20)
+/workspace/factorjepa/src/utils/plots.py:840: UserWarning: Attempting to set identical low and high xlims makes transformation singular; automatically expanding.
+  im = ax_h.imshow(np.log10(drift_safe.T), aspect="auto", origin="lower",
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+/workspace/factorjepa/src/utils/plots.py:1047: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+  🎯 New best future_l1: 0.6175 (val_jepa at this step: 0.4584)
+  Producer: starting epoch 3 (rotated tmp_dir → /tmp/m09_e3_1tv7_2gf)
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+  [tar reader] subset-00001.tar: emitted=10, dropped=0 (missing_part=0, empty_mp4=0), filtered=990 (subset=990, resume=0)
+  [tar reader] subset-00003.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+  [tar reader] subset-00000.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00004.tar: emitted=13, dropped=0 (missing_part=0, empty_mp4=0), filtered=987 (subset=987, resume=0)
+  [tar reader] subset-00005.tar: emitted=8, dropped=0 (missing_part=0, empty_mp4=0), filtered=992 (subset=992, resume=0)
+  [tar reader] subset-00006.tar: emitted=7, dropped=0 (missing_part=0, empty_mp4=0), filtered=993 (subset=993, resume=0)
+  [tar reader] subset-00007.tar: emitted=16, dropped=0 (missing_part=0, empty_mp4=0), filtered=984 (subset=984, resume=0)
+  [tar reader] subset-00002.tar: emitted=12, dropped=0 (missing_part=0, empty_mp4=0), filtered=988 (subset=988, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  AdaptiveBatch: VRAM 23% < 65% → sub-batch 31 → 32
+m09a1_pretrain_encoder:  33%|███▎      | 1/3 [01:54<03:48, 114.45s/step, E0 loss=0.4647 drift=0.0000 lr=5.00e-05 grad=23.73 0.03 step/s]m09a1_pretrain_encoder:  67%|██████▋   | 2/3 [01:54<00:57, 57.22s/step, E0 loss=0.4647 drift=0.0000 lr=5.00e-05 grad=23.73 0.03 step/s] 
+--- Checkpoint at 67% of epoch 1 (step 2) ---
+  Step 2 | Val JEPA loss: 0.4336 (mt=0.0000 · ma=4.4972 · drift=0.000000 · total=0.8833; 1 batches)
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_loss_decomposition.png + .pdf
+  [probe-trio] encoding 20 clips...
+  [probe-trio] step=1 top1=0.2000  motion_cos=-0.1910  future_l1=0.6155  causal_l1=0.6374  maskratio=0.0594  (N=20)
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+  🎯 New best future_l1: 0.6155 (val_jepa at this step: 0.4336)
+m09a1_pretrain_encoder:  67%|██████▋   | 2/3 [02:41<01:20, 80.85s/step, E0 loss=0.4522 drift=0.0000 lr=1.00e-05 grad=3.43 0.02 step/s] m09a1_pretrain_encoder: 100%|██████████| 3/3 [02:41<00:00, 53.90s/step, E0 loss=0.4522 drift=0.0000 lr=1.00e-05 grad=3.43 0.02 step/s]
+--- Checkpoint at 100% of epoch 1 (step 3) ---
+  Step 3 | Val JEPA loss: 0.4357 (mt=0.0000 · ma=4.6115 · drift=0.000000 · total=0.8968; 1 batches)
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_train_loss.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_loss_decomposition.png + .pdf
+  [probe-trio] encoding 20 clips...
+  [probe-trio] step=2 top1=0.2500  motion_cos=-0.1881  future_l1=0.6232  causal_l1=0.6360  maskratio=0.0586  (N=20)
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_val_loss_jepa.png + .pdf
+  Saved: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png + .pdf
+
+--- Epoch 1/1 complete (step 3) ---
+m09a1_pretrain_encoder: 100%|██████████| 3/3 [03:13<00:00, 64.47s/step, recent=47.3s/step ETA0.0h]                                    
+Exported student encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/student_encoder.pt
+  [anchor-cleanup] removed m09a_ckpt_latest.pt (3.8 G)
+  [anchor-cleanup] removed m09a_ckpt_step1.pt (3.8 G)
+  [anchor-cleanup] removed m09a_ckpt_step2.pt (3.8 G)
+  [anchor-cleanup] removed m09a_ckpt_step3.pt (3.8 G)
+  [anchor-cleanup] m09a_pretrain_encoder: freed 15.1 G of resume anchors (kept student_encoder.pt + *ckpt_best*)
+  [SANITY] skip encoder-diverged assert (1-step warmup → lr=0 expected)
+Exported motion_aux head: outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/motion_aux_head.pt
+
+=== TRAINING COMPLETE ===
+Steps:        3 (1.0 epochs)
+Clips seen:   96
+Student:      outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/student_encoder.pt
+Loss log:     outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.csv
+Summary:      outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/training_summary.json
+
+═══ 11:21:39 · DONE ═══
+Expected outputs (consumed by scripts/run_eval.sh):
+-rw-rw-r-- 1 root root 3.8G Jun 23 11:21 outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/student_encoder.pt
+-rw-rw-r-- 1 root root 4.0G Jun 23 11:20 outputs/sanity/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  → Stage 8 future_mse will use this (carries 'predictor' key).

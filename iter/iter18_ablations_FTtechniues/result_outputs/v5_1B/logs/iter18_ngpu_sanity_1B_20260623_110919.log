@@ -1,0 +1,24 @@
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'surgery_3stage_DI_head', 'surgery_3stage_DI_replay25_encoder', 'surgery_3stage_DI_tccaux_encoder', 'surgery_noDI_encoder', 'surgery_noDI_head', 'surgical_3stage_DI_wiseft_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] free=483G · required≈30G
+  [cpu-preflight] 128 cores ≥ ~24 (gpus×6) — OK
+  [cpuset] GPU slots pinned: GPU0→0..79(32t) · GPU1→16..95(32t) · GPU2→32..111(32t) · GPU3→48..127(32t)
+═══ iter18 N-GPU scheduler · mode=SANITY · backbone=vjepa_2_1_vitg · gpus=4 · cache=2 · 167 jobs (13 train + 154 eval) ═══
+[11:09:19] GPU0 ◀ T:vjepa_2_1_vitg:pretrain_encoder  → logs/iter18_ngpu_sanity_train_pretrain_encoder_20260623_110919.log
+[11:09:19] GPU1 ◀ E:vjepa_2_1_vitg_frozen  → logs/iter18_ngpu_sanity_eval_vjepa_2_1_vitg_frozen_20260623_110919.log
+[11:09:19] GPU2 ◀ P:vjepa_2_1_vitg_frozen:rollout  → logs/iter18_ngpu_sanity_pt_vjepa_2_1_vitg_frozen_rollout_20260623_110919.log
+[11:09:19] GPU3 ◀ P:vjepa_2_1_vitg_frozen:causal  → logs/iter18_ngpu_sanity_pt_vjepa_2_1_vitg_frozen_causal_20260623_110919.log
+[11:09:49] GPU2 ✓ P:vjepa_2_1_vitg_frozen:rollout  (1/167 done)
+[11:09:49] GPU3 ✓ P:vjepa_2_1_vitg_frozen:causal  (2/167 done)
+[11:09:59] GPU2 ◀ P:vjepa_2_1_vitg_frozen:tdist  → logs/iter18_ngpu_sanity_pt_vjepa_2_1_vitg_frozen_tdist_20260623_110959.log
+[11:09:59] GPU3 ◀ P:vjepa_2_1_vitg_frozen:teacher_free  → logs/iter18_ngpu_sanity_pt_vjepa_2_1_vitg_frozen_teacher_free_20260623_110959.log
+[11:10:29] GPU2 ✓ P:vjepa_2_1_vitg_frozen:tdist  (3/167 done)
+[11:10:39] GPU2 ◀ P:vjepa_2_1_vitg_frozen:maskratio  → logs/iter18_ngpu_sanity_pt_vjepa_2_1_vitg_frozen_maskratio_20260623_111039.log
+[11:10:39] GPU3 ✓ P:vjepa_2_1_vitg_frozen:teacher_free  (4/167 done)
+[11:10:49] GPU3 ◀ P:vjepa_2_1_vitg_frozen:order  → logs/iter18_ngpu_sanity_pt_vjepa_2_1_vitg_frozen_order_20260623_111049.log
+[11:11:19] GPU1 ✗ E:vjepa_2_1_vitg_frozen rc=1 — see its log
+[11:11:19] GPU2 ✓ P:vjepa_2_1_vitg_frozen:maskratio  (5/167 done)
+[11:11:19] GPU3 ✓ P:vjepa_2_1_vitg_frozen:order  (6/167 done)
+  ⛔ FAIL-FAST: E:vjepa_2_1_vitg_frozen failed (rc=1) — SIGTERM 1 still-running job(s) + aborting the run
+═══ ⛔ FAIL-FAST ABORT after 0.0h · E:vjepa_2_1_vitg_frozen failed (rc=1) · 6 job(s) done before the abort · §3 finale NOT run ═══
+  ✗ first failure: E:vjepa_2_1_vitg_frozen — read its per-job log (named on its GPU ◀ line above).
+  Fix the cause, then re-run with --cache 1 to keep the 6 completed job(s).

@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_vitg_surgery_raw_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.411343,
+    "std": 0.20647,
+    "ci": {
+      "mean": 2.411343,
+      "ci_lo": 2.402089,
+      "ci_hi": 2.421208,
+      "ci_half": 0.00956
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.289262,
+    "std": 0.114779,
+    "ci": {
+      "mean": 0.289262,
+      "ci_lo": 0.283959,
+      "ci_hi": 0.294402,
+      "ci_half": 0.005222
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/student_encoder.pt"
+}

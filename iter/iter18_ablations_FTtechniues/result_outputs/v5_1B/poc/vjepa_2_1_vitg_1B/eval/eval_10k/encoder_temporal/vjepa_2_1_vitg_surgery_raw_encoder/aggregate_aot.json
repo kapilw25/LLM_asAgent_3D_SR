@@ -1,0 +1,23 @@
+{
+  "variant": "vjepa_2_1_vitg_surgery_raw_encoder",
+  "metric": "aot",
+  "n_test": 1825,
+  "k_per_clip": 2,
+  "mean": 0.952877,
+  "std": 0.156935,
+  "ci": {
+    "mean": 0.952877,
+    "ci_lo": 0.944932,
+    "ci_hi": 0.959452,
+    "ci_half": 0.00726
+  },
+  "lower_is_better": false,
+  "interpretation": "Arrow-of-Time binary acc; higher = encoder preserves temporal direction",
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitg_1B/train/m09c_surgery_raw_encoder/student_encoder.pt",
+  "head_lr": 0.001,
+  "head_epochs": 20,
+  "head_weight_decay": 0.0001,
+  "head_batch_size": 64
+}

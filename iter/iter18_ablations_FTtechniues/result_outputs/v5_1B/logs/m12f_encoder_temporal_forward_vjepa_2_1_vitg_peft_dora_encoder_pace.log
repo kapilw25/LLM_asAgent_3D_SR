@@ -1,0 +1,42 @@
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 671.3 GB / 1026.1 GB (65%)
+[m12f_encoder_temporal]   pids:   1056 / 15616 (7%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [head-train-cap] train 6854 → 2000 (head-fit only; test/CI unaffected)
+  splits: train=2000  test=1825  metrics=['pace']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=5632; encoder-only — no predictor build)
+  [share-features] test: off — n/a (no aot/tov in group)
+  [resume] .m12f_ckpt_test.npz: 1536 clips already extracted (test, metrics=['pace'])
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[pace/test]:   0%|          | 0/1825 [00:00<?, ?clip/s]  [tar reader] subset-00005.tar: emitted=2, dropped=0 (missing_part=0, empty_mp4=0), filtered=998 (subset=769, resume=229)
+  [tar reader] subset-00007.tar: emitted=134, dropped=0 (missing_part=0, empty_mp4=0), filtered=866 (subset=664, resume=202)
+  [tar reader] subset-00000.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=856, resume=144)
+  [tar reader] subset-00006.tar: emitted=25, dropped=0 (missing_part=0, empty_mp4=0), filtered=975 (subset=796, resume=179)
+  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=801, resume=199)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=863, resume=137)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=862, resume=138)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=277, resume=20)
+  [tar reader] subset-00002.tar: emitted=18, dropped=0 (missing_part=0, empty_mp4=0), filtered=982 (subset=756, resume=226)
+m12f[pace/test]:  86%|████████▌ | 1568/1825 [00:54<00:08, 28.75clip/s]  [tar reader] subset-00008.tar: emitted=110, dropped=0 (missing_part=0, empty_mp4=0), filtered=890 (subset=828, resume=62)
+m12f[pace/test]:  86%|████████▌ | 1568/1825 [01:05<00:10, 23.97clip/s, recent=1.2s/clip ETA0.1h]m12f[pace/test]:  88%|████████▊ | 1600/1825 [01:45<00:14, 15.12clip/s, recent=1.2s/clip ETA0.1h]m12f[pace/test]:  89%|████████▉ | 1632/1825 [02:43<00:19,  9.99clip/s, recent=1.6s/clip ETA0.1h]m12f[pace/test]:  91%|█████████ | 1664/1825 [03:52<00:22,  7.14clip/s, recent=1.8s/clip ETA0.1h]m12f[pace/test]:  93%|█████████▎| 1696/1825 [05:01<00:22,  5.63clip/s, recent=1.8s/clip ETA0.1h]m12f[pace/test]:  95%|█████████▍| 1728/1825 [05:44<00:19,  5.01clip/s, recent=1.8s/clip ETA0.1h]m12f[pace/test]:  96%|█████████▋| 1760/1825 [07:21<00:16,  3.99clip/s, recent=1.4s/clip ETA0.0h]m12f[pace/test]:  98%|█████████▊| 1792/1825 [09:28<00:10,  3.15clip/s, recent=1.4s/clip ETA0.0h]m12f[pace/test]: 100%|█████████▉| 1824/1825 [11:27<00:00,  2.65clip/s, recent=1.4s/clip ETA0.0h]m12f[pace/test]: 100%|██████████| 1825/1825 [11:30<00:00,  2.64clip/s, recent=1.4s/clip ETA0.0h]m12f[pace/test]: 100%|██████████| 1825/1825 [11:30<00:00,  2.64clip/s, recent=2.6s/clip ETA0.0h]
+  [share-features] train: off — n/a (no aot/tov in group)
+  [resume] .m12f_ckpt_train.npz: 1536 clips already extracted (train, metrics=['pace'])
+  Parallel TAR reader: 8 threads, 10 TARs, queue=256
+m12f[pace/train]:   0%|          | 0/2000 [00:00<?, ?clip/s]  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00002.tar: emitted=91, dropped=0 (missing_part=0, empty_mp4=0), filtered=909 (subset=406, resume=503)
+m12f[pace/train]:  78%|███████▊  | 1568/2000 [13:21<03:40,  1.96clip/s]m12f[pace/train]:  78%|███████▊  | 1568/2000 [13:35<03:44,  1.92clip/s]m12f[pace/train]:  80%|████████  | 1600/2000 [14:58<03:44,  1.78clip/s]m12f[pace/train]:  82%|████████▏ | 1632/2000 [15:38<03:31,  1.74clip/s]  [tar reader] subset-00001.tar: emitted=131, dropped=0 (missing_part=0, empty_mp4=0), filtered=869 (subset=303, resume=566)
+m12f[pace/train]:  83%|████████▎ | 1664/2000 [16:30<03:19,  1.68clip/s, recent=1.2s/clip ETA0.1h]m12f[pace/train]:  85%|████████▍ | 1696/2000 [17:52<03:12,  1.58clip/s, recent=1.6s/clip ETA0.2h]m12f[pace/train]:  86%|████████▋ | 1728/2000 [19:04<03:00,  1.51clip/s, recent=1.6s/clip ETA0.2h]  [tar reader] subset-00000.tar: emitted=242, dropped=0 (missing_part=0, empty_mp4=0), filtered=758 (subset=291, resume=467)
+m12f[pace/train]:  88%|████████▊ | 1760/2000 [19:54<02:42,  1.47clip/s, recent=1.6s/clip ETA0.2h]m12f[pace/train]:  90%|████████▉ | 1792/2000 [21:45<02:31,  1.37clip/s, recent=1.6s/clip ETA0.1h]m12f[pace/train]:  91%|█████████ | 1824/2000 [23:59<02:18,  1.27clip/s, recent=1.6s/clip ETA0.1h]m12f[pace/train]:  93%|█████████▎| 1856/2000 [26:23<02:02,  1.17clip/s, recent=1.6s/clip ETA0.1h]m12f[pace/train]:  94%|█████████▍| 1888/2000 [27:58<01:39,  1.13clip/s, recent=1.6s/clip ETA0.1h]m12f[pace/train]:  96%|█████████▌| 1920/2000 [28:46<01:11,  1.11clip/s, recent=1.6s/clip ETA0.1h]m12f[pace/train]:  98%|█████████▊| 1952/2000 [29:28<00:43,  1.10clip/s, recent=1.5s/clip ETA0.0h]m12f[pace/train]:  99%|█████████▉| 1984/2000 [30:02<00:14,  1.10clip/s, recent=1.3s/clip ETA0.0h]m12f[pace/train]: 100%|██████████| 2000/2000 [30:20<00:00,  1.10clip/s, recent=1.1s/clip ETA0.0h]m12f[pace/train]: 100%|██████████| 2000/2000 [30:20<00:00,  1.10clip/s, recent=1.1s/clip ETA0.0h]
+[keep-heads] pace: saved head → outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/vjepa_2_1_vitg_peft_dora_encoder/head_pace.pt
+  pace: mean=0.7218 std=0.2628 N=1825 (2s)
+forward stage: 1822s

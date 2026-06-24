@@ -1,0 +1,32 @@
+{
+  "variant": "vjepa_2_1_pretrain_encoder",
+  "metric": "tcc",
+  "n_test": 1825,
+  "n_pairs": 226571,
+  "cycle_back": {
+    "mean": 2.275159,
+    "std": 0.203663,
+    "ci": {
+      "mean": 2.27516,
+      "ci_lo": 2.265594,
+      "ci_hi": 2.284532,
+      "ci_half": 0.009469
+    },
+    "lower_is_better": true
+  },
+  "kendalls_tau": {
+    "mean": 0.292008,
+    "std": 0.122418,
+    "ci": {
+      "mean": 0.292008,
+      "ci_lo": 0.286512,
+      "ci_hi": 0.297715,
+      "ci_half": 0.005602
+    },
+    "lower_is_better": false
+  },
+  "temperature": 0.1,
+  "num_frames": 16,
+  "tubelet_size": 2,
+  "encoder_ckpt": "outputs/poc/vjepa_2_1_vitG_2B/train/m09a_pretrain_encoder/student_encoder.pt"
+}

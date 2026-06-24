@@ -1,0 +1,191 @@
+[
+ {
+  "arm": "pretrain_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_3stage_DI_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_noDI_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_3stage_DI_head",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_noDI_head",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgical_autorgn_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_raw_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "full_ft_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "lpft_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "peft_lora_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "peft_dora_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "cassle_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "ewc_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_3stage_DI_replay25_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_3stage_DI_diheavy_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_3stage_DI_tccaux_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgery_3stage_DI_intervene_encoder",
+  "status": "\u2b1a",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgical_3stage_DI_wiseft_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgical_intervene_wiseft_f30_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgical_intervene_wiseft_f50_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ },
+ {
+  "arm": "surgical_intervene_wiseft_f70_encoder",
+  "status": "\u2b1a",
+  "n_train": null,
+  "n_val": null,
+  "head_best": "",
+  "kept_idx": null,
+  "probes": []
+ }
+]
