@@ -140,6 +140,24 @@ find outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal -name 'head_*.
 ITER18_BACKBONE=vjepa_2_1_vitg ITER18_SKIP_ARMS="$SKIP" python -u scripts/iter18_poc_status.py --plots --log logs/iter18_ngpu_poc_1B_<ts>.log
 ls outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/   # ← the goal
 
+# (3b) COMBINED 1B-vs-2B scorecard PDF — re-render BOTH backbones with the SAME $SKIP (from step 2, so the
+# two grids can't drift: each hides the identical 8 arms + carries its own _BB_LABEL banner heading), then
+# stack 2B-champion-on-top + 1B-below into ONE vector PDF via m13 --combine-scorecards. The 2B metrics_watch
+# must already be on disk (the reference run, or `download-data outputs/poc/vjepa_2_1_vitG_2B`).
+ITER18_BACKBONE=vjepa_2_1_vitG ITER18_SKIP_ARMS="$SKIP" python -u src/m13_eval_plot.py --POC \
+  --output-dir        outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot \
+  --outputs-root      outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k \
+  --metrics-watch-out outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch --metrics-watch-only
+ITER18_BACKBONE=vjepa_2_1_vitg ITER18_SKIP_ARMS="$SKIP" python -u src/m13_eval_plot.py --POC \
+  --output-dir        outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot \
+  --outputs-root      outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k \
+  --metrics-watch-out outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch --metrics-watch-only
+python -u src/m13_eval_plot.py --combine-scorecards \
+  outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitG/eval_scorecard.pdf \
+  outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/metrics_watch/vjepa_2_1_vitg/eval_scorecard.pdf \
+  --combine-out outputs/poc/probe_plot/metrics_watch/eval_scorecard_combined.pdf
+ls -la outputs/poc/probe_plot/metrics_watch/eval_scorecard_combined.pdf   # ← the combined deliverable
+
 # (4) back up to HF (additive, whole-folder) + verify
 set -a; . .env; set +a
 

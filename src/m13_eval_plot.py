@@ -2484,9 +2484,14 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
                                               "desc" if direction == "higher" else "asc")
         _bar_with_ci(ax, s_enc, s_val, s_err, ylabel=title,
                      title=title, na_set=na, direction=direction)
-    fig.suptitle("iter18 EVAL scorecard — per-encoder TEST artifacts · 95% BCa CI where available",
-                 fontsize=16, fontweight="bold")
-    fig.subplots_adjust(hspace=0.6, wspace=0.3, top=0.94)
+    # Banner heading (model identity) — mirrors the m13_grouped_winner stacked overview so the 1B and 2B
+    # scorecards self-identify, especially once stacked into the combined PDF. _BB_LABEL = single-source caption.
+    _hdr = _BB_LABEL.get(_MW_BACKBONE, _MW_BACKBONE)
+    fig.text(0.5, 0.992, _hdr, ha="center", va="top", fontsize=21, fontweight="bold", color="white",
+             bbox=dict(boxstyle="round,pad=0.5", facecolor="#121C40", edgecolor="none"))
+    fig.text(0.5, 0.952, "iter18 EVAL scorecard — per-encoder TEST artifacts · 95% BCa CI where available",
+             ha="center", va="top", fontsize=14, fontweight="bold", color="#555")
+    fig.subplots_adjust(hspace=0.6, wspace=0.3, top=0.93)
     save_fig(fig, str(out_dir / "eval_scorecard"))
     plt.close(fig)
 
@@ -2520,6 +2525,45 @@ def _mw_dump(blocks, ev, out_dir: Path):
             raw = r["_raw"]
             cells = [c for k in _MW_EVAL_RAW_KEYS for c in raw.get(k, (None, None))]
             w.writerow([r["_enc_full"], r["n_te"][0], *cells])
+
+
+def combine_scorecards_pdf(src_pdfs, out_pdf):
+    """Stack per-backbone eval_scorecard PDFs into ONE combined comparison PDF (vector, via pymupdf
+    show_pdf_page) — a single-file 1B-vs-2B view mirroring the m13_grouped_winner stacked overview. Each
+    source grid already carries its own _BB_LABEL banner (the per-backbone heading), so the stack self-labels
+    with no extra drawing here. Missing inputs are skipped with a warning (graceful when one backbone's
+    scorecard is not built yet). Returns the out path, or None if no input PDF exists."""
+    import fitz   # pymupdf — vector PDF compositing (no rasterization, no extra pip dep)
+    srcs = []
+    for p in src_pdfs:
+        p = Path(p)
+        if p.exists():
+            srcs.append((p, fitz.open(str(p))))
+        else:
+            print(f"  [combine] skip missing {p}")
+    if not srcs:
+        print("  [combine] no input scorecard PDFs found — nothing to combine")
+        return None
+    rects = [d[0].rect for _, d in srcs]
+    width = max(r.width for r in rects)
+    height = sum(r.height for r in rects)
+    out = fitz.open()
+    page = out.new_page(width=width, height=height)
+    y = 0.0
+    for (p, d), r in zip(srcs, rects):
+        x0 = (width - r.width) / 2.0          # centre a narrower grid; equal widths just fill
+        page.show_pdf_page(fitz.Rect(x0, y, x0 + r.width, y + r.height), d, 0)
+        y += r.height
+    out_pdf = Path(out_pdf)
+    out_pdf.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out_pdf.with_suffix(f".tmp{os.getpid()}.pdf")   # atomic write — never half a PDF on disk
+    out.save(str(tmp))
+    os.replace(str(tmp), str(out_pdf))
+    out.close()
+    for _, d in srcs:
+        d.close()
+    print(f"  [combine] stacked {len(srcs)} scorecard(s) → {out_pdf}  ({width:.0f}x{height:.0f}pt)")
+    return out_pdf
 
 
 def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
@@ -2576,7 +2620,15 @@ def main():
                    help="m12e output dir (predictor_temporal_per_variant.json) — OPTIONAL.")
     p.add_argument("--encoder-temporal-root",   type=Path, default=None,
                    help="m12f output dir (encoder_temporal_per_variant.json) — OPTIONAL.")
-    p.add_argument("--output-dir",        type=Path, required=True)
+    p.add_argument("--output-dir",        type=Path, default=None,
+                   help="m13 eval/ plot dir (required for every mode EXCEPT --combine-scorecards).")
+    p.add_argument("--combine-scorecards", nargs="+", default=None, metavar="PDF",
+                   help="Standalone: stack these per-backbone eval_scorecard PDFs (in order) into ONE "
+                        "combined comparison PDF at --combine-out, then exit. Vector merge (pymupdf); each "
+                        "grid keeps its own _BB_LABEL banner. Mirrors the m13_grouped_winner stacked overview.")
+    p.add_argument("--combine-out", type=Path, default=None,
+                   help="Output path for --combine-scorecards (e.g. "
+                        "outputs/poc/probe_plot/metrics_watch/eval_scorecard_combined.pdf).")
     p.add_argument("--reference-hero", action="append", default=None, metavar="BACKBONE=PNG",
                    help="Paste a pre-made per-backbone Δ-vs-frozen hero into eval/<BACKBONE>/ verbatim "
                         "(e.g. a prior-iter champion whose data isn't in THIS run) and include it in the "
@@ -2597,8 +2649,17 @@ def main():
                         "into the single-source ITER18_SKIP_ARMS env.")
     add_wandb_args(p)
     args = p.parse_args()
+    # Standalone: stack per-backbone eval_scorecard PDFs into ONE combined comparison PDF, then exit
+    # (no mode flag / --output-dir needed — it reads finished PDFs and renders nothing).
+    if args.combine_scorecards:
+        if not args.combine_out:
+            sys.exit("ERROR: --combine-scorecards requires --combine-out")
+        combine_scorecards_pdf(args.combine_scorecards, args.combine_out)
+        return
     if not (args.SANITY or args.POC or args.FULL):
         sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
+    if args.output_dir is None:
+        sys.exit("ERROR: --output-dir is required (except for --combine-scorecards)")
     mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
     if args.skip_arms:                          # CLI --skip-arms ∪ existing ITER18_SKIP_ARMS env (single source)
         _toks = [t for t in re.split(r"[,\s]+", args.skip_arms) if t]

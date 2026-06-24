@@ -720,6 +720,28 @@ def main():
             plot_tcc_chart(mj, out_dir)
         else:
             print(f"  [tcc-chart] skip — partial json missing {sorted(_tcc_keys - _have)} (not evaled yet)")
+        # ── COMBINED cross-backbone scorecard (user 2026-06-24): after this backbone's scorecard renders,
+        #    re-stack EVERY per-backbone eval_scorecard.pdf on disk into ONE comparison PDF (champion-first,
+        #    _BB_TAG order) at the cross-backbone metrics_watch root → the 1B-vs-2B view tracks the data with
+        #    no manual `m13 --combine-scorecards` rebuild. It DISCOVERS whichever backbones rendered a
+        #    scorecard under the backbone-first eval tree (≥2 needed), so the two grids can never drift apart.
+        from m13_eval_plot import combine_scorecards_pdf, _BB_TAG
+        _known = {pre.rstrip("_") for pre, *_r in _BB_TAG}
+        # accept ONLY a canonical per-backbone scorecard: metrics_watch/<bb>/ whose <bb> is a real backbone
+        # AND sits in ITS OWN tree (outputs/<mode>/<bb>_<size>/…). Drops stray/backup dirs — e.g. a
+        # vjepa_2_1_vitg/ misplaced inside the 2B tree, or a vjepa_2_1_vitG_old/ snapshot.
+        def _canonical(p):
+            inner = p.parent.name
+            tree = p.relative_to(REPO).parts[2]             # outputs / <mode> / <tree=bb_size> / …
+            return inner in _known and tree.startswith(inner)
+        _src = sorted((p for p in REPO.glob(f"outputs/{mtag}/*/eval/*/probe_plot/metrics_watch/*/eval_scorecard.pdf")
+                       if _canonical(p)),
+                      key=lambda p: next((i for i, (pre, *_r) in enumerate(_BB_TAG)   # champion (ViT-G 2B) first
+                                          if pre.rstrip("_") == p.parent.name), 99))
+        if len(_src) >= 2:
+            combine_scorecards_pdf(_src, REPO / f"outputs/{mtag}/probe_plot/metrics_watch/eval_scorecard_combined.pdf")
+        elif _src:
+            print(f"  [combine] only 1 canonical per-backbone scorecard on disk ({_src[0].parent.name}) — need ≥2 (skip)")
         print(f"  🖼  graphs + data → {rel}/ · "
               f"{{train_trajectories,kept_scorecard,eval_scorecard,wiseft_sweep_table,eval_scorecard_paper,"
               f"tcc_comparison}}.{{png,pdf}} + {{train,eval}}_metrics.{{json,csv}}")
