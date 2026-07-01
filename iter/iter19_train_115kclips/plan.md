@@ -35,23 +35,67 @@
 
 ---
 
-## ⚙️ The FSDP question — **decision: do NOT port FSDP for this run**
+## ⚙️ Multi-GPU: the 1B needs **DDP, not FSDP** — grounded in measured wall-time
 
-The V-JEPA 2 repo does ship FSDP (V-JEPA 2.1 pretraining lives in `app/vjepa_2_1/`, launched via
-`app/main_distributed.py` on SLURM; configs under `configs/train_2_1/`). **But our surgery training loop
-(`m09c1`) is our own code and is single-GPU.** Adopting FSDP means porting the entire surgery objective
-(3-stage DI, factor tubes, uncertainty weighting, predictor blend) into an FSDP-wrapped loop — a large,
-risky rewrite that is **not needed for the 1B**:
+**Measured** from the v5_1B POC train logs (1B, single-GPU per arm, ~7.7k clips):
 
-| option | fit? | verdict |
+| arm (POC, 1 GPU) | steps | wall | s/step |
+|---|---:|---:|---:|
+| diheavy (Best-OUR) | 480 | 3:16 | ~25 |
+| peft_lora (Best-COMP) | 438 | 3:14 | ~27 |
+| surgery family | 480 | 3:05–4:06 | ~23–31 |
+| FT baselines | 438–481 | 2:14–5:03 | ~18–42 |
+
+**Extrapolated to FULL** (per-step time ~constant, so steps scale with clips×epochs).
+**FULL = 1 epoch** (confirmed 2026-07-01): 116k clips need one pass — POC used 2 epochs *only because* it had 10k:
+
+| | POC · 2 epochs (~7.7k train) | FULL · 1 epoch (~87k train) |
 |---|---|---|
-| **A · single-GPU per arm, fan arms across GPUs** | 1B (~1408-d ViT-g) trains comfortably on one 96 GB RTX 6000 | ✅ **chosen** — simplest, uses existing code, DAG-parallel across the 3 arms |
-| B · add FSDP/DDP to `m09c1` | would speed a single arm ~linearly across GPUs | ⏭️ deferred — big port + solo-project risk; revisit only if wall-time is prohibitive or for a 2B run |
-| C · port surgery into vjepa2.1's FSDP loop | maximal scale | ❌ out of scope — months of work; contradicts the budget goal |
+| one surgery arm | ~3:16 (480 steps) | **~19 h** (~2,700 steps) |
 
-> 🧷 **Net:** the 1B fits on one GPU, so we get multi-GPU speed by **fanning the 3 arms across GPUs**
-> (data-parallel *across arms*, not within), respecting the `pretrain → {diheavy, peft_lora}` DAG.
-> FSDP stays a documented future lever (ref: `facebookresearch/vjepa2` `app/vjepa_2_1` + `main_distributed.py`).
+⇒ steps scale by `87k×1 / (7.7k×2) ≈ 5.6×` → 480 → ~2,700 steps × ~25 s ≈ **~19 h on one GPU**. With the DAG
+(`pretrain → diheavy ∥ peft_lora`) plus eval, the wall is **~2–3 days, ~$150–250**. Real cost — earlier draft hand-waved it.
+
+**FSDP vs DDP — the correction** (an earlier draft wrongly lumped them and dismissed both):
+
+| | what it does | fit for our 1B |
+|---|---|---|
+| **FSDP** | shards params/grads/optimizer across GPUs — for models **too big** for one GPU | ❌ overkill — the 1B **fits** on one GPU (it trained fine at POC), so sharding buys ~nothing |
+| **DDP** | replicates the 1B on N GPUs, **splits the batch** → near-linear speedup, no sharding | ✅ the right lever — diheavy on 4 GPUs ≈ **~6 h** vs ~24 h |
+
+**Options (honest):**
+
+| opt | wall (full run) | GPU $ | engineering | risk | when |
+|---|---|---|---|---|---|
+| **A · single-GPU per arm** | ~2–3 days | ~$150–250 | none | none | **one-shot full run** (recommended) |
+| **B · add DDP to m09c1** | ~10–14 h | ~$80–130 | ~2–4 days | streaming-shard correctness | **multiple full runs** (2B, seeds) |
+| C · FSDP / vjepa2.1 port | — | — | weeks | high | never (overkill for a fits-on-one-GPU model) |
+
+> 🧭 **Recommendation:** for a **single** 1B full run, **A (single-GPU) clearly wins** — at 1 epoch the whole run
+> is ~2–3 days, so DDP (~2–4 days to build + correctness risk) costs MORE than the ~1–1.5 days it would save.
+> **B (DDP) pays off only if you'll do several full runs** (the 2B replication, multi-seed, more ablations).
+> Either way it is **DDP, not FSDP** — vjepa2.1's FSDP (`app/vjepa_2_1`, `main_distributed.py`) is for its
+> 1B/8B *pretraining*, a bigger regime than our fits-on-one-GPU surgery.
+
+### 🔧 What adding DDP to `m09c1` actually touches (scoping for option B)
+
+`m09c1` is a **4-stage progressive-unfreeze** loop feeding from a **streaming IterableDataset** of factor tubes —
+that shape is what makes DDP moderate-hard rather than a one-line wrap:
+
+| # | change | where in `m09c1` | effort | risk |
+|---|---|---|---|---|
+| 1 | torchrun launch + `init_process_group` + `set_device(local_rank)` | `train()` top; `device = torch.device("cuda")` (~L484) | 🟢 small | low |
+| 2 | wrap student + predictor in `DistributedDataParallel`, **RE-WRAP each stage** (trainable prefix changes per stage) | stage loop + `build_optimizer` (~L1265, L1323–1331) | 🟡 moderate | med — per-stage re-wrap must stay in sync with the optimizer rebuild |
+| 3 | **rank-aware sharding of the streaming factor loader** — an IterableDataset, so `DistributedSampler` does NOT apply; each rank must pull a **disjoint** clip shard | `stream_loader` / `_streaming_worker_init` (~L1396–1410) | 🔴 **hard** | **high — the crux**: wrong sharding ⇒ duplicated clips ⇒ wrong grads / inflated effective epoch |
+| 4 | `model.no_sync()` around the grad-accum macro-step's intermediate backwards | grad-accum block (~L1518–1583) | 🟡 moderate | med — premature all-reduce corrupts accumulated grads |
+| 5 | gate checkpoint / probe / live-plot / wandb writes to **rank 0** | `save_training_checkpoint`, `_run_probe_at_step`, `_render_live_plots`, `_log_step` | 🟢 mechanical | low (many call sites) |
+| 6 | rank-consistent **resume** (every rank resumes the same stage/step) | resume block (~L868–871, L1360–1373) | 🟡 moderate | med |
+| 7 | `UncertaintyWeights` module into the DDP/optimizer path | ~L726 | 🟢 small | low |
+
+**Bottom line for B:** ~2–4 focused days **plus a parity run** (DDP result must match single-GPU within the CI).
+The correctness risk is concentrated in **#3 (streaming shard)** and **#2 (per-stage re-wrap)** — that is why
+this is genuine engineering, not a wrapper. If you only ever do this one 1B full run, **A wins**; if the 2B
+replication + seeds are coming, **B amortizes**.
 
 ---
 
@@ -111,25 +155,26 @@ hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset -
 
 ---
 
-## ⏱️ Wall-time & cost (⚠️ estimate — needs a SANITY timing pass to firm up)
+## ⏱️ Wall-time & cost (grounded in the v5_1B POC train logs — see the multi-GPU section)
 
-| step | GPUs | rough wall | note |
+| step | GPUs | wall (option A, single-GPU) | note |
 |---|---|---:|---|
 | Stage 0 download | — | ~0:20–0:40 | ~120 GB |
-| pretrain (seed) | 1 | measure | 115k clips × FULL epochs; **run one SANITY step to get s/step, then ×N** |
-| diheavy ∥ peft_lora | 2 | measure | parallel; diheavy streams m11 factor tubes |
-| eval (6 enc, 23k) | 1–N | measure | ~2–3× the 10k eval; fan per-encoder across GPUs |
-| **budget** | | **~$150–250** | 1B on RTX 6000 @ ~$1.2/hr (per your 2B disjoint burn); firm up after the timing pass |
+| pretrain (seed) | 1 | ~19 h | FULL 1 epoch ≈ ~2,700 steps at ~25 s/step |
+| diheavy ∥ peft_lora | 2 | ~19 h | parallel; each ~19 h (116k × 1 epoch) |
+| eval (6 enc, 23k) | 1–N | ~1 day | ~2–3× the 10k eval; fan per-encoder across GPUs |
+| **total wall (option A)** | 2–3 | **~2–3 days** | pretrain (serial) → diheavy ∥ peft_lora → eval |
+| **budget** | | **~$150–250** (A) · **~$80–130** (B, DDP) | 1B on RTX 6000 @ ~$1.2/hr |
 
-> 🚫 **No fabricated wall-times.** The POC per-arm 1B time was never isolated (the ngpu scheduler ran many
-> arms concurrently). **First action on the box: a `--SANITY` timing run** of `pretrain` + `diheavy` to get
-> s/step, then extrapolate `115,687 × epochs / (steps/s)`. Report as duration only (hh:mm).
+> ✅ **FULL = 1 epoch (confirmed 2026-07-01).** 116k clips need only one pass; POC used 2 epochs *because* it had
+> just 10k clips. So per arm ≈ **~19 h** (not 48 h). Verify `max_epochs.full: 1` in
+> `configs/train/base_optimization.yaml`. Everything else is measured (diheavy 480 steps / 3:16 ≈ 25 s/step).
 
 ---
 
 ## ⚠️ Risks / open items
 
-- 🧮 **Epochs at FULL** — confirm `max_epochs.full` in `configs/train/base_optimization.yaml` (iter16 M2 = single-source `{…,full:1}`); 1 epoch over 115k may under-train diheavy vs the POC's 2 epochs over 7.7k. **Decide epochs before launch.**
+- ✅ **Epochs at FULL = 1 (decided 2026-07-01).** 116k clips → one pass (POC used 2 only because it had 10k). Verify `max_epochs.full: 1` in `configs/train/base_optimization.yaml` (iter16 M2 single-source). No under-training worry: full-scale sees ~87k train-clip-passes (116k×1) vs POC's ~15k (7.7k×2) → ~5.6× more clip-exposure.
 - 🔗 **1B init ckpt** — `pretrain_encoder --FULL` must write `outputs/full/vjepa_2_1_vitg/m09a_pretrain_encoder/m09a_ckpt_best.pt`; diheavy + peft_lora depend on it. Verify the path after Stage 2a.
 - 🧊 **m11 factor tubes are backbone-agnostic** (built from clips, not the model) → the HF `m11_factor_datasets` is reusable for the 1B diheavy. Confirm the streaming loader resolves them under `data/full_local`.
 - 💾 **Disk** — 116 tar (~120 GB) + m10/m11 (~60 GB) + 3 arm ckpts + eval artifacts → provision ≥ 350 GB.

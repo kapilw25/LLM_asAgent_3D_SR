@@ -5,6 +5,27 @@
 ## Note: but, /eli5 all technical failures faced and solutions built 
 
 
+
+## Wed, July 1, 2026
+- Confirmed the wins reproduce on the smaller 1B model: the method ranking survives 2B-to-1B on twelve of fifteen skill-scores.
+- Against the strongest fine-tuner, surgery cleanly separates only on prediction (future-frame, causal); it ties or trails elsewhere.
+- Next: full 116k-clip run — best surgery arm versus best baseline — to tighten bands and decide the rest.
+
+## Wed, June 24, 2026
+- The 1B model's training and evaluation finished; built the side-by-side 1B-versus-2B scorecard to compare scales at a glance.
+- Fixed two glitches: one stuck job had cancelled the whole run (added an auto-retry); the live charts silently stopped updating (wrong tool).
+- Next: cross-scale analysis — does the surgery-versus-baseline ranking hold from 2B down to 1B?
+
+## Tue, June 23, 2026
+- Trimmed the 1B run to only the models that carry the paper's story — the surgery winners plus three cheap weight-blends.
+- Dropped redundant variants to roughly halve the compute bill; infrastructure day, no new numbers.
+- Next: run the trimmed 1B training and evaluation.
+
+## Mon, June 22, 2026
+- Set up the smaller 1B model to reproduce the surgery wins at half the cost, testing whether they hold across model size.
+- Reused the existing 1B starting weights (recipe matched) — no wasted retraining; reorganised the results archive.
+- Next: trim the model roster to the essential arms, then train.
+
 ## Sun, June 21, 2026
 - Retraining each trained encoder's read-off heads, which the first run never saved: scene-attribute ones (taxonomy) done in ~16h on 1X 96GB vRAM GPU.
 - Time-ordering scorers (arrow-of-time, frame-order, pace) now retraining, ~12h on 4X 96GB vRAM GPU; every trained model reused, none retrained.

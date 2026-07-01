@@ -1,5 +1,0 @@
-  [wiseft] frozen=494 keys · surgery=492 keys · interpolated=492 · skipped=2
-    skip patch_embed_img.proj.weight: missing in surgery
-    skip patch_embed_img.proj.bias: missing in surgery
-  [wiseft] predictor: frozen=308 · surgery=300 · interpolated=300 · skipped=8
-  [wiseft] α=0.7 → student_encoder.pt (492 enc keys) + motion_aux_head.pt + m09c_ckpt_best.pt (300 pred keys)  → outputs/sanity/vjepa_2_1_vitg_1B/train/m09c_surgical_intervene_wiseft_f30_encoder

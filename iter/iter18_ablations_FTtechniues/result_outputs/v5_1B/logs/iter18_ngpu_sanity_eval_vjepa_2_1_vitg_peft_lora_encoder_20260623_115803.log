@@ -1,263 +1,0 @@
-  [encoders] source = --encoders CLI flag
-  ✓ eval frame cache:     data/eval_10k_local/m12_frame_cache (min free 80 GB)
-
-═══ 11:58:05 · PRE-FLIGHT ═══
--rw-rw-r-- 1 root root 29G Jun 23 10:34 checkpoints/vjepa2_1_vitG_384.pt
-✓ ckpt present
-  ✓ mode:                 SANITY
-  ✓ eval_subset:          data/eval_10k_local/eval_10k.json
-  ✓ local_data:           data/eval_10k_local
-  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitG_384.pt  (29G)
-  ✓ motion_features:      data/eval_10k_local/m04d_motion_features/motion_features.npy  (836K)
-  ✓ min_clips_per_class:  3
-  ✓ min_per_split:        1
-  ✓ encoders:             vjepa_2_1_vitg_peft_lora_encoder
-  ✓ skip_stages:          1,4,12,13,7,9,9b,9c,10,8b,8c
-  ✓ cache_policy:         1
-  ✓ eval_prefix:          outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k  (corpus=eval_10k · backbone=vjepa_2_1_vitg)
-  ✓ train_root:           outputs/sanity/vjepa_2_1_vitg_1B/train
-
-──────────────────────────────────────────────
-run_probe cache-policy gather (UPFRONT — one prompt per module)
-──────────────────────────────────────────────
-  probe_action: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
-  probe_cos: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
-  probe_mse: cache at outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
-  → ACTION=1  COS=1  MSE=1
-
-──────────────────────────────────────────────
-P2/P3 trainer-output pre-flight
-──────────────────────────────────────────────
-  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt
-  → final ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
-
-──────────────────────────────────────────────
-Stage 8 predictor-ckpt pre-flight
-──────────────────────────────────────────────
-  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt
-  → Stage 8 ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
-
-──────────────────────────────────────────────
-motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
-──────────────────────────────────────────────
-  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
-  → head-augmented eval ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
-  → final ENCODERS after head preflight: vjepa_2_1_vitg_peft_lora_encoder
-
-──────────────────────────────────────────────
-Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
-──────────────────────────────────────────────
-
-═══ 11:58:05 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
-
-════════════════════════════════════════════════════════════════
-ENCODER: vjepa_2_1_vitg_peft_lora_encoder  (Stages 2/3/5/6/8)
-════════════════════════════════════════════════════════════════
-  [motion_aux] head wired for vjepa_2_1_vitg_peft_lora_encoder: outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
-
-═══ 11:58:05 ·   STAGE 2 · features for vjepa_2_1_vitg_peft_lora_encoder (splits=test, dtype=fp16) ═══
-GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
-CUDA version: 13.0
-[m12a_action_top1] cgroup envelope:
-[m12a_action_top1]   memory: 505.2 GB / 1026.1 GB (49%)
-[m12a_action_top1]   pids:   872 / 15616 (6%)
-[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
-Loading V-JEPA frozen vjepa_2_1_vitg_peft_lora_encoder (vit_giant_xformers, crop=384, T=16) ...
-/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-  Loaded 482/484 params  (missing=2, unexpected=10)
-  [features] saving splits ['test']; lazy splits (extracted by Stage 3): ['train', 'val']
-
-=== Stage 2 features: test (20 clips, encoder=vjepa_2_1_vitg_peft_lora_encoder, pool_tokens=16) ===
-  AdaptiveBatchSizer(features_test): start=20, max=44, target_vram=85%
-probe_features_test:   0%|          | 0/20 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
-  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
-  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
-  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
-  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-probe_features_test:   5%|▌         | 1/20 [00:20<06:22, 20.11s/clip]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 20 → 21
-probe_features_test: 100%|██████████| 20/20 [00:20<00:00,  1.01s/clip, recent=0.0s/clip ETA0.0h]
-  extract_features_for_keys(features_test): 20/20 clips in 10s
-  [D9] final resume ckpt saved: .probe_features_test_ckpt.npz (20 clips) — Stage 3.5 will resume from this
-  [motion_aux] augmenting features with head: outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
-  [motion_aux] augmented dim: D=1408 + (K+n_dims)=48 = 1456
-  Saved outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_peft_lora_encoder/features_test.npy (20, 16, 1456)  (10s)
-
-═══ 11:58:29 ·   STAGE 3 · train probe (1 LR(s); epochs=50 warmup=0.1) for vjepa_2_1_vitg_peft_lora_encoder ═══
-GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
-CUDA version: 13.0
-[m12a_action_top1] cgroup envelope:
-[m12a_action_top1]   memory: 498.0 GB / 1026.1 GB (49%)
-[m12a_action_top1]   pids:   936 / 15616 (6%)
-[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
-  [lazy-extract] missing splits on disk: ['train', 'val'] — loading vjepa_2_1_vitg_peft_lora_encoder encoder for in-memory extraction
-Loading V-JEPA frozen vjepa_2_1_vitg_peft_lora_encoder (vit_giant_xformers, crop=384, T=16) ...
-/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-  Loaded 482/484 params  (missing=2, unexpected=10)
-  [lazy-extract][motion_aux] will augment lazy splits with head: outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt (K=11, n_dims=23)
-  AdaptiveBatchSizer(features_train): start=20, max=44, target_vram=85%
-probe_features_train:   0%|          | 0/57 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
-  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
-  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00000.tar: emitted=57, dropped=0 (missing_part=0, empty_mp4=0), filtered=943 (subset=943, resume=0)
-  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
-  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-probe_features_train:   2%|▏         | 1/57 [00:17<16:33, 17.74s/clip]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 20 → 21
-probe_features_train:  37%|███▋      | 21/57 [00:19<00:32,  1.09clip/s, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 21 → 22
-probe_features_train:  72%|███████▏  | 41/57 [00:22<00:08,  1.83clip/s, recent=0.1s/clip ETA0.0h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 22 → 23
-  AdaptiveBatch: VRAM 7% < 65% → sub-batch 23 → 24
-probe_features_train: 100%|██████████| 57/57 [00:22<00:00,  2.50clip/s, recent=0.1s/clip ETA0.0h]
-  extract_features_for_keys(features_train): 57/57 clips in 11s
-  [D9] final resume ckpt saved: .probe_features_train_ckpt.npz (57 clips) — Stage 3.5 will resume from this
-  [lazy-extract][motion_aux] train: D=1408 + (K+n_dims)=48 = 1456  (N=57)
-  AdaptiveBatchSizer(features_val): start=20, max=44, target_vram=85%
-probe_features_val:   0%|          | 0/20 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
-  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
-  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
-  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
-  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-probe_features_val:   5%|▌         | 1/20 [00:28<09:03, 28.59s/clip]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 20 → 21
-probe_features_val: 100%|██████████| 20/20 [00:28<00:00,  1.43s/clip, recent=0.0s/clip ETA0.0h]
-  extract_features_for_keys(features_val): 20/20 clips in 5s
-  [D9] final resume ckpt saved: .probe_features_val_ckpt.npz (20 clips) — Stage 3.5 will resume from this
-  [lazy-extract][motion_aux] val: D=1408 + (K+n_dims)=48 = 1456  (N=20)
-Probe: AttentiveClassifier(embed_dim=1456, n_classes=11, depth=4)
-  params: 99.73M  → output_dir=outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_peft_lora_encoder
-  epoch   0/50: loss=2.4197 train_acc=0.1228 val_acc=0.0500 lr=1.00e-04
-  epoch   5/50: loss=5.1363 train_acc=0.1754 val_acc=0.3000 lr=4.99e-04
-  epoch  10/50: loss=4.6501 train_acc=0.3158 val_acc=0.3500 lr=4.78e-04
-  epoch  15/50: loss=2.5594 train_acc=0.4211 val_acc=0.3000 lr=4.30e-04
-  epoch  20/50: loss=1.3015 train_acc=0.5614 val_acc=0.4500 lr=3.60e-04
-  epoch  25/50: loss=0.8211 train_acc=0.6140 val_acc=0.3500 lr=2.76e-04
-  epoch  30/50: loss=0.4931 train_acc=0.8772 val_acc=0.3000 lr=1.90e-04
-  epoch  35/50: loss=0.2359 train_acc=0.9298 val_acc=0.3500 lr=1.10e-04
-  epoch  40/50: loss=0.1548 train_acc=0.9649 val_acc=0.3500 lr=4.77e-05
-  epoch  45/50: loss=0.1172 train_acc=0.9825 val_acc=0.3500 lr=9.68e-06
-  epoch  49/50: loss=0.1115 train_acc=0.9825 val_acc=0.3500 lr=0.00e+00
-Saved best probe → outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_peft_lora_encoder/probe.pt (val_acc=0.4500)
-Test top-1 acc: 0.4500  ±0.2000  (95% BCa CI)
-
-═══ 11:59:04 ·   STAGE 3.5 · taxonomy probe (16 dims) for vjepa_2_1_vitg_peft_lora_encoder ═══
-GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
-CUDA version: 13.0
-  [lazy-extract] missing splits on disk: ['train', 'val'] — loading vjepa_2_1_vitg_peft_lora_encoder encoder for in-memory extraction
-Loading V-JEPA frozen vjepa_2_1_vitg_peft_lora_encoder (vit_giant_xformers, crop=384, T=16) ...
-/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-  Loaded 482/484 params  (missing=2, unexpected=10)
-  AdaptiveBatchSizer(features_train): start=20, max=44, target_vram=85%
-probe_features_train:   0%|          | 0/57 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
-  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
-  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
-  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00000.tar: emitted=57, dropped=0 (missing_part=0, empty_mp4=0), filtered=943 (subset=943, resume=0)
-  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-probe_features_train:   2%|▏         | 1/57 [00:18<17:07, 18.35s/clip]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 20 → 21
-probe_features_train:  37%|███▋      | 21/57 [00:19<00:33,  1.06clip/s, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 21 → 22
-probe_features_train:  72%|███████▏  | 41/57 [00:22<00:08,  1.79clip/s, recent=0.1s/clip ETA0.0h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 22 → 23
-  AdaptiveBatch: VRAM 7% < 65% → sub-batch 23 → 24
-probe_features_train: 100%|██████████| 57/57 [00:23<00:00,  2.44clip/s, recent=0.1s/clip ETA0.0h]
-  extract_features_for_keys(features_train): 57/57 clips in 12s
-  [D9] final resume ckpt saved: .probe_features_train_ckpt.npz (57 clips) — Stage 3.5 will resume from this
-  AdaptiveBatchSizer(features_val): start=20, max=44, target_vram=85%
-probe_features_val:   0%|          | 0/20 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
-  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
-  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
-  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
-  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-probe_features_val:   5%|▌         | 1/20 [00:29<09:12, 29.09s/clip]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 20 → 21
-probe_features_val: 100%|██████████| 20/20 [00:29<00:00,  1.46s/clip, recent=0.0s/clip ETA0.0h]
-  extract_features_for_keys(features_val): 20/20 clips in 5s
-  [D9] final resume ckpt saved: .probe_features_val_ckpt.npz (20 clips) — Stage 3.5 will resume from this
-m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:   0%|          | 0/15 [00:00<?, ?dim/s]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:   7%|▋         | 1/15 [00:32<07:41, 33.00s/dim]/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/scipy/stats/_resampling.py:156: RuntimeWarning: invalid value encountered in scalar divide
-  a_hat = 1/6 * sum(nums) / sum(dens)**(3/2)
-/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/scipy/_lib/_util.py:307: DegenerateDataWarning: The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.
-  return fun(*args, **kwargs)
-m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  13%|█▎        | 2/15 [00:35<03:49, 17.64s/dim]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  20%|██        | 3/15 [00:37<02:29, 12.42s/dim, recent=2.3s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  27%|██▋       | 4/15 [00:39<01:47,  9.76s/dim, recent=2.1s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  33%|███▎      | 5/15 [00:41<01:22,  8.29s/dim, recent=2.0s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  40%|████      | 6/15 [00:43<01:05,  7.27s/dim, recent=2.1s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  47%|████▋     | 7/15 [00:45<00:52,  6.55s/dim, recent=2.1s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  53%|█████▎    | 8/15 [00:48<00:42,  6.01s/dim, recent=2.1s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  60%|██████    | 9/15 [00:50<00:33,  5.62s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  67%|██████▋   | 10/15 [00:52<00:26,  5.26s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  73%|███████▎  | 11/15 [00:54<00:19,  4.98s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  80%|████████  | 12/15 [00:56<00:14,  4.75s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  87%|████████▋ | 13/15 [00:59<00:09,  4.60s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]:  93%|█████████▎| 14/15 [01:01<00:04,  4.39s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]: 100%|██████████| 15/15 [01:03<00:00,  4.24s/dim, recent=2.2s/dim ETA0.0h]m12c_taxonomy_f1[vjepa_2_1_vitg_peft_lora_encoder]: 100%|██████████| 15/15 [01:03<00:00,  4.24s/dim, recent=2.2s/dim ETA0.0h]
-Wrote: outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/vjepa_2_1_vitg_peft_lora_encoder/test_metrics.json (15 dim records)
-
-═══ 12:00:13 ·   STAGE 5 · motion_cos features for vjepa_2_1_vitg_peft_lora_encoder ═══
-  [share-features] mean-pooled (20, 16, 1456) -> (20, 1456); reused 20 clip keys
-
-═══ 12:00:15 ·   STAGE 6 · motion_cos cosine for vjepa_2_1_vitg_peft_lora_encoder ═══
-Cosine over N=20 clips, D=1456, classes=10
-  computed in 0.0s   pos_mean=0.6494  neg_mean=0.8324  score_mean=-0.1830
-
-═══ 12:00:18 ·   STAGE 8 · future_mse forward for vjepa_2_1_vitg_peft_lora_encoder ═══
-GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
-CUDA version: 13.0
-[m12d_future_mse] cgroup envelope:
-[m12d_future_mse]   memory: 511.8 GB / 1026.1 GB (50%)
-[m12d_future_mse]   pids:   1078 / 15616 (7%)
-[m12d_future_mse]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
-Forward on 20 test clips, variant=vjepa_2_1_vitg_peft_lora_encoder
-/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-  predictor: 55.4M params
-  [motion_aux] augment ON: head=outputs/sanity/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt (K=11, n_dims=23) → will emit per_clip_motion_aux_l1.npy alongside per_clip_mse.npy
-  AdaptiveBatchSizer: start=4, max=8 (encoder + predictor heavier than encoder-alone)
-m12d_future_mse:   0%|          | 0/20 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 10 TARs, queue=256
-  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00000.tar: emitted=20, dropped=0 (missing_part=0, empty_mp4=0), filtered=980 (subset=980, resume=0)
-  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=297 (subset=297, resume=0)
-  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
-m12d_future_mse:   5%|▌         | 1/20 [00:16<05:08, 16.22s/clip]  AdaptiveBatch: VRAM 4% < 65% → sub-batch 4 → 5
-m12d_future_mse:  25%|██▌       | 5/20 [00:16<00:49,  3.32s/clip, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 4% < 65% → sub-batch 5 → 6
-m12d_future_mse:  45%|████▌     | 9/20 [00:17<00:21,  1.95s/clip, recent=0.1s/clip ETA0.0h]  AdaptiveBatch: VRAM 5% < 65% → sub-batch 6 → 7
-m12d_future_mse:  75%|███████▌  | 15/20 [00:17<00:05,  1.18s/clip, recent=0.1s/clip ETA0.0h]  AdaptiveBatch: VRAM 5% < 65% → sub-batch 7 → 8
-m12d_future_mse: 100%|██████████| 20/20 [00:18<00:00,  1.09clip/s, recent=0.1s/clip ETA0.0h]
-  per_clip_mse: mean=0.6231  std=0.0359  N=20
-  per_clip_motion_aux_l1: mean=0.1622  std=0.0312  N=20
-forward stage: 18s
-  [post-stage8-cleanup] SKIPPED for vjepa_2_1_vitg_peft_lora_encoder (mode=SANITY, P_ACTION=1) — features_test.npy preserved for cache_policy=1 reruns
-
-═══ 12:00:39 · DONE · total wall = 2 min ═══
-Artifacts:
-  🔥 P1 GATE     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/probe_paired_delta.json
-  motion_cos     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_motion_cos/probe_motion_cos_paired.json
-  future_mse     outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_future_mse/probe_future_mse_per_variant.json
-  enc_temporal   outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
-  taxonomy lbls  outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
-  plots          outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
-Per-encoder probe ckpts:
-  outputs/sanity/vjepa_2_1_vitg_1B/eval/eval_10k/probe_action/vjepa_2_1_vitg_peft_lora_encoder/probe.pt
