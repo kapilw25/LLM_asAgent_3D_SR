@@ -12,8 +12,10 @@ USAGE:
 
     # resolves the consistency-check crash (plain-HTTP path, no broken validator)
     python -u src/utils/hf_outputs.py download-data outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-    # LIGHT refresh (data only; plain-HTTP skips server-broken xet blobs non-fatally — unlike `hf download`):
-    python -u src/utils/hf_outputs.py download-data outputs/poc --ext json,csv 2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
+    # LIGHT refresh (ALL light artifacts — json/csv/png/pdf/… — EXCLUDING the heavy .pt/.npy/.npz/.tar;
+python -u src/utils/hf_outputs.py download-data outputs/poc \
+--exclude '*.pt' --exclude '*.npy' --exclude '*.npz' --exclude 'tmp_*' --exclude '*.tar' \
+2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log
@@ -1383,7 +1385,7 @@ def _download_one_file(rpath: str, base_url: str, headers: dict,
             f"(after {_DOWNLOAD_ATTEMPTS} attempts)")
 
 
-def download_data(data_root: Path = None, exts: tuple = None):
+def download_data(data_root: Path = None, exts: tuple = None, exclude: tuple = None):
     """Download data_root/ from HF — parallel plain HTTP. Bypasses HF lib.
 
     iter16 (2026-05-22): rewritten to skip huggingface_hub's download stack
@@ -1415,13 +1417,22 @@ def download_data(data_root: Path = None, exts: tuple = None):
     subfolder = str(data_root)
     api = HfApi(token=token)
     remote_files = _list_remote_files(api, subfolder)
+    # LIGHT filters — the 8-way plain-HTTP loop below is NON-FATAL per file, so the handful of server-side
+    # xet-corrupt blobs that crash `hf download` / snapshot_download (500/416 on a zero-hash cas-bridge URL)
+    # are reported 'failed' + skipped instead of aborting the whole batch. Two independently-usable filters:
+    #   exts    = ALLOWLIST by extension (only these download)
+    #   exclude = DROP by FILENAME glob (everything ELSE downloads) — keeps EVERY light artifact
+    #             (png/pdf/tex/txt/…), not just the extensions you remembered to allowlist. Matched on the
+    #             basename so 'tmp_*', '*.pt', '*.tar' hit at any depth.
     if exts:
-        # LIGHT filter (e.g. outputs/poc/**/*.{json,csv} only). The 8-way plain-HTTP loop below is
-        # NON-FATAL per file, so the handful of server-side xet-corrupt blobs that crash `hf download`
-        # / snapshot_download (500/416 on a zero-hash cas-bridge URL) are reported 'failed' + skipped
-        # instead of aborting the whole batch.
         remote_files = [(p, s) for p, s in remote_files if p.lower().endswith(exts)]
-        print(f"  [--ext] light filter → {len(remote_files)} files matching {exts}")
+        print(f"  [--ext] allowlist → {len(remote_files)} files matching {exts}")
+    if exclude:
+        _n0 = len(remote_files)
+        remote_files = [(p, s) for p, s in remote_files
+                        if not any(fnmatch.fnmatch(Path(p).name, pat) for pat in exclude)]
+        print(f"  [--exclude] dropped {_n0 - len(remote_files)} heavy file(s) matching {list(exclude)} "
+              f"→ {len(remote_files)} light artifacts")
     total_bytes = sum(size for _, size in remote_files)
     print(f"Downloading {HF_OUTPUTS_REPO}/{subfolder}/ → {data_root}/")
     print(f"  {len(remote_files)} files ({_fmt_size(total_bytes)}) on HF "
@@ -1510,16 +1521,29 @@ if __name__ == "__main__":
         # Default = "data" (project convention). No more hardcoded subfolder list.
         rc = upload_data(Path(sys.argv[2]) if len(sys.argv) >= _MIN_CLI_ARGS else None)
     elif cmd == "download-data":
-        # optional `--ext json,csv,png,pdf` LIGHT filter — plain-HTTP path is non-fatal per file, so a
-        # few server-side xet-corrupt blobs are reported + skipped, not crashing the batch like `hf download`.
-        _dargs = sys.argv[2:]
+        # optional LIGHT filters (plain-HTTP path is non-fatal per file, so a few server-side xet-corrupt
+        # blobs are reported + skipped, not crashing the batch like `hf download`):
+        #   --ext json,csv,png        ALLOWLIST by extension
+        #   --exclude '*.pt' '*.npy'  DROP by filename glob (everything else downloads) — repeatable,
+        #                             also accepts --exclude=PAT and a comma-joined --exclude a,b,c
         _exts = None
-        if "--ext" in _dargs:
-            _i = _dargs.index("--ext")
-            _exts = tuple("." + e.strip().lstrip(".").lower()
-                          for e in _dargs[_i + 1].split(",") if e.strip())
-            _dargs = _dargs[:_i] + _dargs[_i + 2:]
-        rc = download_data(Path(_dargs[0]) if _dargs else None, exts=_exts)
+        _exclude = []
+        _pos = []
+        _it = iter(sys.argv[2:])
+        for _tok in _it:
+            if _tok == "--ext":
+                _exts = tuple("." + e.strip().lstrip(".").lower() for e in next(_it, "").split(",") if e.strip())
+            elif _tok.startswith("--ext="):
+                _exts = tuple("." + e.strip().lstrip(".").lower()
+                              for e in _tok.split("=", 1)[1].split(",") if e.strip())
+            elif _tok == "--exclude":
+                _exclude += [g.strip() for g in next(_it, "").split(",") if g.strip()]
+            elif _tok.startswith("--exclude="):
+                _exclude += [g.strip() for g in _tok.split("=", 1)[1].split(",") if g.strip()]
+            else:
+                _pos.append(_tok)
+        rc = download_data(Path(_pos[0]) if _pos else None,
+                           exts=(_exts or None), exclude=(tuple(_exclude) or None))
     else:
         print(f"Unknown command: {cmd}")
         sys.exit(1)

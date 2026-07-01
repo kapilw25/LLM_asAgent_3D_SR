@@ -318,21 +318,33 @@ PYEOF
     python -u src/utils/download_checkpoints.py \
         --registry configs/checkpoints_download.yaml --group trainable --dest checkpoints
 
-    # Download prebuilt wheels if --from-wheels
-    if [ "$FROM_WHEELS" = true ]; then
+    # Detect GPU EARLY — the prebuilt wheels in RELEASE_TAG are sm_120/cu128/torch2.12 (Blackwell-only).
+    echo ""
+    GPU_NAME=$(nvidia-smi --query-gpu=gpu_name --format=csv,noheader 2>/dev/null | head -1 || echo "")
+    echo "Detected GPU: ${GPU_NAME:-unknown}"
+    IS_BLACKWELL=false
+    if echo "$GPU_NAME" | grep -qiE "blackwell|rtx.*pro.*(4000|6000)|rtx.*5090|rtx.*5080|rtx.*5070"; then
+        IS_BLACKWELL=true
+    fi
+
+    # Download prebuilt wheels if --from-wheels — ONLY on Blackwell. Those wheels need sm_120 + CUDA 13
+    # (libcudart.so.13) + the torch-2.12 ABI; on Ampere/Ada (e.g. RTX 3070 → torch 2.5/cu124) they
+    # ImportError, so a non-Blackwell box must fetch the arch-matched FA2 + faiss-gpu-cu12 instead. 2026-07-01.
+    if [ "$FROM_WHEELS" = true ] && [ "$IS_BLACKWELL" = true ]; then
         echo ""
         echo "=== Downloading prebuilt wheels ==="
         download_sm120_wheels || {
             echo "Falling back to building from source..."
             FROM_WHEELS=false
         }
+    elif [ "$FROM_WHEELS" = true ]; then
+        echo "--from-wheels IGNORED: '${GPU_NAME}' is not Blackwell (sm_120) — using arch-matched FA2 + faiss-gpu-cu12."
+        FROM_WHEELS=false
     fi
 
     # 1. Install PyTorch (auto-detect Blackwell vs Ampere/Hopper)
     echo ""
-    GPU_NAME=$(nvidia-smi --query-gpu=gpu_name --format=csv,noheader 2>/dev/null | head -1 || echo "")
-    echo "Detected GPU: ${GPU_NAME:-unknown}"
-    if echo "$GPU_NAME" | grep -qiE "blackwell|rtx.*pro.*(4000|6000)|rtx.*5090|rtx.*5080|rtx.*5070"; then
+    if [ "$IS_BLACKWELL" = true ]; then
         echo "[1/10] Installing PyTorch ${TORCH_VERSION}+cu128 (Blackwell — pinned)..."
         # Two-step install (bump #3, 2026-06-12): torchvision dev20260407's metadata pins the
         # CDN-rotated torch dev20260407, so a combined resolve is UNSATISFIABLE. Install torch
@@ -374,8 +386,9 @@ print(f'torchvision: {torchvision.__version__} (installed --no-deps, ABI import 
     GPU_ARCH=$(python -c "import torch; cc=torch.cuda.get_device_capability(); print(f'{cc[0]}{cc[1]}')" 2>/dev/null || echo "")
     echo "GPU compute capability: sm_${GPU_ARCH:-unknown}"
 
-    if ls wheels/flash_attn*.whl &>/dev/null 2>&1; then
-        # Prebuilt wheel available (from --from-wheels or previous build)
+    if [ "$IS_BLACKWELL" = true ] && ls wheels/flash_attn*.whl &>/dev/null 2>&1; then
+        # Prebuilt sm_120 wheel — ONLY on Blackwell. A leftover Blackwell wheel in wheels/ must NOT be used
+        # on Ampere/Ada (wrong torch/CUDA ABI → import fails); non-Blackwell falls to the arch wheel below.
         echo "Installing FA2 from prebuilt wheel..."
         uv pip install wheels/flash_attn*.whl
     elif [ "$GPU_ARCH" = "80" ] || [ "$GPU_ARCH" = "86" ] || [ "$GPU_ARCH" = "89" ] || [ "$GPU_ARCH" = "90" ]; then
@@ -464,8 +477,9 @@ print(f'torchvision: {torchvision.__version__} (installed --no-deps, ABI import 
         apt-get update -qq && apt-get install -y -qq libopenblas-dev > /dev/null 2>&1
     fi
 
-    if ls wheels/faiss*.whl &>/dev/null 2>&1; then
-        # Prebuilt wheel available (from --from-wheels or previous build)
+    if [ "$IS_BLACKWELL" = true ] && ls wheels/faiss*.whl &>/dev/null 2>&1; then
+        # Prebuilt sm_120/cu13 wheel — ONLY on Blackwell. A leftover here on Ampere/Ada needs
+        # libcudart.so.13 (torch cu124 ships .so.12) → the exact ImportError this guard fixes.
         echo "Installing FAISS-GPU from prebuilt wheel..."
         uv pip uninstall -y faiss-gpu faiss-gpu-cu12 faiss-cpu faiss 2>/dev/null || true
         uv pip install wheels/faiss*.whl
@@ -487,6 +501,12 @@ print(f'torchvision: {torchvision.__version__} (installed --no-deps, ABI import 
             ./build_faiss_sm120.sh 2>&1 | tee logs/build_faiss_sm120.log
         fi
     else
+        # a prior --from-wheels run may have left the sm_120 `faiss` wheel installed (broken libcudart.so.13
+        # import) — uninstall it so the cu12 PyPI wheel replaces it cleanly. set +e: uninstalling an absent
+        # package is non-fatal (mirrors the sam3.1 block below), and must not trip the outer set -e.
+        set +e
+        uv pip uninstall -y faiss-gpu faiss-gpu-cu12 faiss-cpu faiss 2>/dev/null
+        set -e
         uv pip install faiss-gpu-cu12
     fi
 
@@ -667,7 +687,12 @@ print('SUCCESS: All GPU components verified')
     #   torch.cuda-toolkit  : cuML downgrades cuda-toolkit 13.0.2→12.9.2.0; runtime imports +
     #                         GPU verify passed on 24GB (06-12) and 4x96GB (06-12) boxes
     #   decord.platform     : dormant (m04 tags.json already produced, PyAV is active decoder)
-    EXPECTED='sam3.*numpy|sam3.*ftfy|torch.*cuda-bindings|torch.*cuda-toolkit|decord.*platform'
+    #   torch.nvidia-*-cu12 : the STABLE torch 2.5/cu124 (non-Blackwell path) hard-pins nvidia-*-cu12
+    #                         ==12.4.x; cuML upgrades them to 12.9.x — ABI-compatible within cu12.x (CUDA
+    #                         minor-version compat), and the GPU verify above PASSED using them (RTX 3070,
+    #                         07-01). Scoped to cu12 minors ONLY: a cu13/major bump (nvidia-*-cu13) is NOT
+    #                         matched → still FATAL. The Blackwell torch-2.12 nightly doesn't pin these.
+    EXPECTED='sam3.*numpy|sam3.*ftfy|torch.*cuda-bindings|torch.*cuda-toolkit|torch.*nvidia-.*-cu12|decord.*platform'
     UNEXPECTED=$(echo "$CHECK_OUT" | grep -E '^The package' | grep -vE "$EXPECTED" || echo "")
     if [ -n "$UNEXPECTED" ]; then
         echo "FATAL: uv pip check found UNEXPECTED incompatibilities:"

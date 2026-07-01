@@ -356,7 +356,8 @@
       "Bash(ITER18_BACKBONE=vjepa_2_1_vitG venv_walkindia/bin/python -c ' *)",
       "Bash(ITER18_BACKBONE=vjepa_2_1_vitg venv_walkindia/bin/python -c ' *)",
       "Bash(awk '{print \"  \"$5\"B  \"$6\"  \"$NF}')",
-      "Bash(hf upload-large-folder *)"
+      "Bash(hf upload-large-folder *)",
+      "Bash(shellcheck -S error setup_env_uv.sh)"
     ]
   }
 }
