@@ -2562,8 +2562,256 @@ def combine_scorecards_pdf(src_pdfs, out_pdf):
     out.close()
     for _, d in srcs:
         d.close()
-    print(f"  [combine] stacked {len(srcs)} scorecard(s) → {out_pdf}  ({width:.0f}x{height:.0f}pt)")
+    _pdf_to_png(out_pdf, out_pdf.with_suffix(".png"))       # user 2026-07-01: raster PNG twin beside the PDF
+    print(f"  [combine] stacked {len(srcs)} scorecard(s) → {out_pdf} (+ .png)  ({width:.0f}x{height:.0f}pt)")
     return out_pdf
+
+
+def _pdf_to_png(pdf_path, png_path, dpi=120):
+    """Rasterize a (single, possibly tall) PDF page to PNG via pymupdf — the raster twin the user wants
+    beside the vector combined scorecard. Atomic write; no extra pip dep (pymupdf already used above)."""
+    import fitz
+    doc = fitz.open(str(pdf_path))
+    pix = doc[0].get_pixmap(dpi=dpi)
+    png_path = Path(png_path)
+    tmp = png_path.with_suffix(f".tmp{os.getpid()}.png")
+    pix.save(str(tmp))
+    os.replace(str(tmp), str(png_path))
+    doc.close()
+
+
+# ══ Cross-backbone report (forest + scale-replication) — user 2026-07-01 ══════════════════════════════
+# Reads BOTH backbones' metrics_watch/eval_metrics.json keyed on the ARM SUFFIX (so the 2B vjepa_2_1_<arm>
+# and 1B vjepa_2_1_vitg_<arm> align), and renders two comparison figures into the cross-backbone
+# metrics_watch root beside eval_scorecard_combined. Colours reuse _color_for → every mark matches the
+# combined scorecard: surgery novelty = dark green (#2E7D32), competitors keep their own hues. OURs vs
+# COMPetitors is derived SINGLE-SOURCE from that colour (dark-green == our surgery novelty).
+_XB_OURS_GREEN = "#2E7D32"
+_XB_METRICS = [   # (key, "hi"|"lo", label) — the forest rows (mirrors the 13-metric reference set)
+    ("fut", "lo", "Future-frame L1"), ("causal", "lo", "Causal L1"), ("tcc_cycle", "lo", "TCC cycle-back"),
+    ("maskratio", "lo", "Mask-ratio slope"), ("tov", "hi", "Temporal-order"), ("pace", "hi", "Playback-pace"),
+    ("aot", "hi", "Arrow-of-time"), ("act", "hi", "Action top-1"), ("tdist", "lo", "t-dist decay"),
+    ("tcc_tau", "hi", "TCC Kendall τ"), ("rollout", "lo", "Rollout drift"),
+    ("teacher_free", "lo", "Teacher-free gap"), ("mcos", "hi", "Motion-cosine"),
+]
+# task2 2026-07-01: scale_replication covers ALL 15 metrics (the eval_metrics glossary), not just 4. The
+# forest keeps its 13-row _XB_METRICS; this superset adds taxonomy-F1 + frame-order for the 5×3 scatter grid.
+_XB_ALL15 = [
+    ("act", "hi", "Action top-1"), ("tax", "hi", "Taxonomy F1"), ("mcos", "hi", "Motion-cosine"),
+    ("fut", "lo", "Future-frame L1"), ("rollout", "lo", "Rollout drift"), ("causal", "lo", "Causal L1"),
+    ("tdist", "lo", "t-dist decay"), ("teacher_free", "lo", "Teacher-free gap"), ("maskratio", "lo", "Mask-ratio slope"),
+    ("order", "hi", "Frame-order"), ("aot", "hi", "Arrow-of-time"), ("tov", "hi", "Temporal-order"),
+    ("pace", "hi", "Playback-pace"), ("tcc_tau", "hi", "TCC Kendall τ"), ("tcc_cycle", "lo", "TCC cycle-back"),
+]
+
+
+def _xb_is_ours(suffix):
+    """OURs = the surgery-novelty dark-green arms PLUS surgery_raw (task1 2026-07-01: the surgery-on-raw
+    ablation is counted WITH OURs, not the competitors)."""
+    return suffix == "surgery_raw_encoder" or _color_for(f"vjepa_2_1_vitG_{suffix}", 0) == _XB_OURS_GREEN
+
+
+def _xb_load_metrics(json_path):
+    """eval_metrics.json → {arm_suffix: {metric:(mean, ci_half)}} — strips the backbone prefix so 2B and 1B
+    key on the SAME suffix; drops no-data (n_test=—) rows."""
+    out = {}
+    for r in json.loads(Path(json_path).read_text()):
+        if r.get("n_test") in (None, "—", "", 0):
+            continue
+        enc = r["encoder"]
+        for pre in ("vjepa_2_1_vitG_", "vjepa_2_1_vitg_", "vjepa_2_0_vitg_", "vjepa_2_1_"):
+            if enc.startswith(pre):
+                enc = enc[len(pre):]
+                break
+        out[enc] = {k: ((r.get(k) or {}).get("mean"), (r.get(k) or {}).get("ci_half"))
+                    for k, _, _ in _XB_ALL15}   # load ALL 15 (forest reads its 13 subset; scale reads all)
+    return out
+
+
+def _xb_best(data, keep, key, hi):
+    vals = [(s,) + data[s][key] for s in data if keep(s) and data[s][key][0] is not None]
+    return (max if hi else min)(vals, key=lambda t: t[1]) if vals else None
+
+
+def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci"):
+    """Per metric: surgery(best-OURs) advantage over a BASELINE. Two axes (both count surgery_raw with OURs
+    via _xb_is_ours):
+      vs='best'   → baseline = the best COMPETITOR arm (toughest bar — includes full-FT).
+      vs='frozen' → baseline = the FROZEN backbone only (the paper's stated 'beat frozen' claim).
+      mode='ci'   → x = advantage / (95% CI of the difference, sqrt(ci_ours^2+ci_base^2)); green = a
+                    SEPARATED win (>=1, right of the dashed 1×CI line) — the statistical view.
+      mode='mean' → x = advantage as % of the baseline's mean; green = surgery's MEAN is better (>0).
+    One panel per backbone, champion-first."""
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+    n = len(backbones)
+    fig, axes = plt.subplots(1, n, figsize=(8.5 * n, 6.8), squeeze=False)
+    for ax, (label, data) in zip(axes[0], backbones):
+        rows = []
+        for key, dr, lbl in _XB_METRICS:
+            hi = dr == "hi"
+            bo = _xb_best(data, _xb_is_ours, key, hi)
+            if vs == "frozen":
+                _fr = data.get("frozen", {}).get(key)
+                bc = ("frozen", _fr[0], _fr[1]) if (_fr and _fr[0] is not None) else None
+            else:
+                bc = _xb_best(data, lambda s: not _xb_is_ours(s), key, hi)
+            if not bo or not bc:
+                continue
+            adv = (bo[1] - bc[1]) if hi else (bc[1] - bo[1])          # +ve = surgery better
+            if mode == "ci":
+                ci = ((bo[2] or 0) ** 2 + (bc[2] or 0) ** 2) ** 0.5 or 1e-9
+                rows.append((lbl, adv / ci))
+            else:
+                rows.append((lbl, 100.0 * adv / abs(bc[1]) if bc[1] else 0.0))
+        rows.sort(key=lambda t: t[1])                                # y=0 (bottom) = worst → best at TOP
+        fmt = (lambda v: f"{v:.1f}×") if mode == "ci" else (lambda v: f"{v:+.1f}%")
+        for y, (lbl, v) in enumerate(rows):
+            won = (v >= 1.0) if mode == "ci" else (v > 0.0)
+            col = _XB_OURS_GREEN if won else "#90A4AE"
+            if mode == "ci":
+                ax.errorbar(v, y, xerr=1, fmt="o", ms=7, color=col, ecolor=col, elinewidth=1.5, capsize=3, zorder=3)
+            else:
+                ax.plot(v, y, "o", ms=8, color=col, zorder=3)
+            # label with a FIXED screen-space gap (offset points) — a data-space offset can't stay legible on
+            # the symlog axis (task2 2026-07-01: the same data step is huge near 0 and tiny far out).
+            ax.annotate(fmt(v), (v, y), xytext=(7, 0), textcoords="offset points",
+                        va="center", ha="left", fontsize=9, color=col, fontweight="bold")
+        # symlog x-axis (task2): ABSOLUTE signed values but NON-uniform spacing, so a 0.1 tie and a 47 blow-out
+        # are BOTH visible; linthresh keeps the small tie zone linear, beyond it compresses like log.
+        _lt = 1.0 if mode == "ci" else 0.5
+        ax.set_xscale("symlog", linthresh=_lt)
+        # asymmetric-aware xlim + decade-only ticks: a symmetric margin on a lopsided symlog range crammed
+        # phantom -1000/-10000 ticks at the left (frozen % blows up to +1379 but bottoms at -2). Bracket the
+        # ACTUAL data each side, keep only 0 + 10^k majors, drop the minor subticks. task 2026-07-01.
+        _pos = max([v for _, v in rows] + [_lt])
+        _neg = min([v for _, v in rows] + [-_lt])
+        ax.set_xlim(min(_neg * 3, -_lt * 3), max(_pos * 3, _lt * 3))
+        _cand = [0] + [10 ** k for k in range(6)] + [-10 ** k for k in range(6)]   # 0 · ±1 · ±10 … ±1e5
+        _lo, _hi = ax.get_xlim()
+        ax.set_xticks([t for t in _cand if _lo <= t <= _hi])                       # decades within range only
+        ax.xaxis.set_minor_locator(mticker.NullLocator())
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(
+            lambda v, _p: "0" if v == 0 else ("-" if v < 0 else "") + f"{abs(v):g}"))
+        ax.set_yticks(range(len(rows)))
+        ax.set_yticklabels([r[0] for r in rows], fontsize=10)
+        ax.axvline(0, color="#607D8B", lw=1.2, zorder=1)             # null: surgery == baseline
+        if mode == "ci":
+            ax.axvline(1, color=_XB_OURS_GREEN, ls="--", lw=1.4, zorder=1)
+            ax.text(1, len(rows) - 0.4, " 1×CI · separated →", color=_XB_OURS_GREEN, fontsize=8, ha="left", va="top")
+        ax.set_ylim(-0.7, len(rows) - 0.3)
+        ax.set_title(label, fontsize=13, fontweight="bold", loc="left")
+        _base = "frozen" if vs == "frozen" else "best competitor"
+        ax.set_xlabel(f"surgery advantage over {_base}   "
+                      + ("(× CI of difference)" if mode == "ci" else f"(% of {_base} mean)"), fontsize=10)
+        ax.grid(axis="x", alpha=0.2)
+    _base = "frozen" if vs == "frozen" else "the best competitor"
+    _sup = (f"Forest plot — does surgery statistically separate from {_base}?   (green past dashed line = yes · surgery_raw ∈ OURs)"
+            if mode == "ci" else
+            f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · surgery_raw ∈ OURs)")
+    fig.suptitle(_sup, fontsize=15, fontweight="bold")
+    fig.subplots_adjust(top=0.90, wspace=0.45, left=0.13, right=0.97, bottom=0.10)
+    save_fig(fig, str(Path(out_dir) / stem))
+    plt.close(fig)
+
+
+def plot_scale_replication(backbones, out_dir):
+    """2B-vs-1B rank-preservation scatter per metric (Spearman ρ over the shared arms). Points hug the
+    diagonal ORDER when the ranking survives the scale change. Uses the FIRST two backbones (champion, next)."""
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    from collections import OrderedDict
+    from scipy.stats import spearmanr
+    (xlbl, xd), (ylbl, yd) = backbones[0], backbones[1]
+    shared_encs = [s for s in xd if s in yd]
+    per = []                              # (rho, dir, label, [encs], xs, ys) — one per metric
+    for key, _dir, lbl in _XB_ALL15:
+        sh = [s for s in shared_encs if xd[s][key][0] is not None and yd[s][key][0] is not None]
+        xs = [xd[s][key][0] for s in sh]
+        ys = [yd[s][key][0] for s in sh]
+        rho = spearmanr(xs, ys).correlation if len(xs) > 2 else float("nan")
+        per.append((rho, _dir, lbl, sh, xs, ys))
+    per.sort(key=lambda t: (t[0] if t[0] == t[0] else -9.0), reverse=True)   # ρ DESC, NaN last — task2.2a
+    ncol, nrow = 4, 4                     # 16 cells = 15 ρ-sorted panels + 1 legend/callout cell
+    fig, axes = plt.subplots(nrow, ncol, figsize=(4.3 * ncol, 3.9 * nrow), squeeze=False)
+    axf = axes.flatten()
+    FAIL = 0.2                            # ρ < 0.2 ⇒ ranking does NOT survive 2B→1B (task2.2c)
+    for ax, (rho, _dir, lbl, sh, xs, ys) in zip(axf, per):
+        cols = [_color_for(f"vjepa_2_1_vitG_{s}", 0) for s in sh]
+        ax.scatter(xs, ys, c=cols, s=55, edgecolors="white", linewidths=0.6, zorder=3)
+        lo, hi = min(xs + ys), max(xs + ys)
+        pad = (hi - lo) * 0.08 or 0.01
+        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], ls="--", color="#90A4AE", lw=1.0, zorder=1)
+        tcol = "#C62828" if (rho != rho or rho < FAIL) else ("#2E7D32" if rho >= 0.5 else "#555")
+        ax.set_title(f"{lbl} {'↑' if _dir == 'hi' else '↓'}\nρ = {rho:.3f}", fontsize=10, fontweight="bold", color=tcol)
+        ax.set_xlabel(xlbl, fontsize=8)
+        ax.set_ylabel(ylbl, fontsize=8)
+        ax.tick_params(labelsize=7)
+        ax.grid(alpha=0.2)
+    # 16th cell = colour→encoder legend (task2.2b) + non-replicating callout (task2.2c)
+    lg = axf[len(per)]
+    lg.axis("off")
+    _short = lambda s: s.replace("_encoder", "").replace("surgical_", "").replace("surgery_", "")
+    col2encs = OrderedDict()
+    for s in shared_encs:
+        col2encs.setdefault(_color_for(f"vjepa_2_1_vitG_{s}", 0), []).append(_short(s))
+    handles = [mpatches.Patch(color=c, label=", ".join(encs)) for c, encs in col2encs.items()]
+    lg.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=6.5, frameon=False,
+              title="encoder colour → arm(s)", title_fontsize=8, labelspacing=0.3, handlelength=1.1)
+    fails = [f"{lbl} (ρ={rho:.2f})" for rho, _d, lbl, *_ in per if (rho != rho) or rho < FAIL]
+    lg.text(0.0, 0.02, "⚠ does NOT replicate 2B→1B (ρ<0.2):\n" +
+            ("\n".join("  · " + f for f in fails) if fails else "  (all 15 replicate)"),
+            transform=lg.transAxes, fontsize=8, va="bottom", ha="left", color="#C62828", fontweight="bold")
+    for ax in axf[len(per) + 1:]:
+        ax.set_visible(False)
+    fig.suptitle("Scale replication — does the ranking survive 2B→1B?   "
+                 "(all 15 metrics, panels sorted by ρ desc · green title = replicates · red = fails)",
+                 fontsize=14, fontweight="bold")
+    fig.subplots_adjust(top=0.94, hspace=0.52, wspace=0.30, left=0.05, right=0.98, bottom=0.05)
+    save_fig(fig, str(Path(out_dir) / "scale_replication"))
+    plt.close(fig)
+
+
+def cross_backbone_report(mtag, out_dir):
+    """Discover EVERY canonical per-backbone metrics_watch (eval_metrics.json + eval_scorecard.pdf) under
+    outputs/<mtag>/<bb>_<size>/eval/*/probe_plot/metrics_watch/<bb>/ (champion-first), then emit the
+    cross-backbone figures into out_dir: forest_plot + scale_replication + the combined scorecard (PDF+PNG)."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    known = {pre.rstrip("_") for pre, *_ in _BB_TAG}
+    order = {pre.rstrip("_"): i for i, (pre, *_) in enumerate(_BB_TAG)}
+    found = []
+    for mj in Path("outputs").glob(f"{mtag}/*/eval/*/probe_plot/metrics_watch/*/eval_metrics.json"):
+        bb, tree = mj.parent.name, mj.relative_to("outputs").parts[1]
+        if bb in known and tree.startswith(bb):        # canonical: <bb> is a real backbone in ITS OWN tree
+            found.append((order.get(bb, 99), bb, tree, mj))
+    found.sort()
+    if not found:
+        print("  [cross-plots] no canonical per-backbone eval_metrics.json found — nothing to do")
+        return None
+    backbones = []
+    for _, bb, tree, mj in found:
+        tag = next((t for pre, t, _ in _BB_TAG if pre.rstrip("_") == bb), bb)
+        size = tree[len(bb) + 1:] if tree.startswith(bb) else ""
+        backbones.append((f"{tag} · {size}".strip(" ·"), _xb_load_metrics(mj)))
+    print(f"  [cross-plots] backbones (champion-first): {[b[0] for b in backbones]}")
+    init_style()
+    plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_best_ci")      # vs BEST competitor · stat
+    plot_forest(backbones, out_dir, mode="mean", vs="best", stem="forest_plot_best_mean")  # vs BEST competitor · magnitude
+    plot_forest(backbones, out_dir, mode="ci", vs="frozen", stem="forest_plot_frozen_ci")  # vs FROZEN — paper claim
+    plot_forest(backbones, out_dir, mode="mean", vs="frozen", stem="forest_plot_frozen_mean")
+    for _stale in ("forest_plot", "forest_plot_ci", "forest_plot_mean"):   # drop names from the pre-"best" scheme
+        for _ext in (".png", ".pdf"):
+            (out_dir / f"{_stale}{_ext}").unlink(missing_ok=True)
+    if len(backbones) >= 2:
+        plot_scale_replication(backbones, out_dir)
+    else:
+        print("  [cross-plots] scale_replication skipped — need >=2 backbones")
+    combine_scorecards_pdf([mj.parent / "eval_scorecard.pdf" for _, _, _, mj in found],
+                           out_dir / "eval_scorecard_combined.pdf")
+    print(f"  [cross-plots] → {out_dir}/ · forest_plot_{{best,frozen}}_{{ci,mean}}.{{png,pdf}} · "
+          f"scale_replication.{{png,pdf}} · eval_scorecard_combined.{{pdf,png}}")
+    return out_dir
 
 
 def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
@@ -2629,6 +2877,13 @@ def main():
     p.add_argument("--combine-out", type=Path, default=None,
                    help="Output path for --combine-scorecards (e.g. "
                         "outputs/poc/probe_plot/metrics_watch/eval_scorecard_combined.pdf).")
+    p.add_argument("--cross-plots", action="store_true",
+                   help="Standalone: discover both backbones' metrics_watch (eval_metrics.json + "
+                        "eval_scorecard.pdf) and emit the cross-backbone forest_plot + scale_replication + "
+                        "combined scorecard (PDF/PNG) into outputs/<cross-mode>/probe_plot/metrics_watch/, "
+                        "then exit. Colours reuse the scorecard palette (surgery novelty = green).")
+    p.add_argument("--cross-mode", default="poc",
+                   help="mode tag for --cross-plots discovery (poc|sanity). Default poc.")
     p.add_argument("--reference-hero", action="append", default=None, metavar="BACKBONE=PNG",
                    help="Paste a pre-made per-backbone Δ-vs-frozen hero into eval/<BACKBONE>/ verbatim "
                         "(e.g. a prior-iter champion whose data isn't in THIS run) and include it in the "
@@ -2655,6 +2910,9 @@ def main():
         if not args.combine_out:
             sys.exit("ERROR: --combine-scorecards requires --combine-out")
         combine_scorecards_pdf(args.combine_scorecards, args.combine_out)
+        return
+    if args.cross_plots:                       # cross-backbone forest + scale-replication + combined (PDF/PNG)
+        cross_backbone_report(args.cross_mode, Path(f"outputs/{args.cross_mode}/probe_plot/metrics_watch"))
         return
     if not (args.SANITY or args.POC or args.FULL):
         sys.exit("ERROR: specify --SANITY, --POC, or --FULL")

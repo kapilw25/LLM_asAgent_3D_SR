@@ -1,102 +1,685 @@
 [
  {
   "arm": "pretrain_encoder",
-  "status": "\u2b1a",
+  "status": "\u2705",
   "n_train": null,
   "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 1,
+  "probes": [
+   {
+    "step": 119,
+    "probe_top1": 0.277162,
+    "motion_cos": 0.072903,
+    "future_l1": 0.53964,
+    "causal_l1": 0.561173,
+    "maskratio": 0.060004,
+    "val_jepa_loss": 0.467325,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 239,
+    "probe_top1": 0.268293,
+    "motion_cos": 0.140128,
+    "future_l1": 0.53808,
+    "causal_l1": 0.56025,
+    "maskratio": 0.062838,
+    "val_jepa_loss": 0.463321,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 359,
+    "probe_top1": 0.308204,
+    "motion_cos": 0.14685,
+    "future_l1": 0.53881,
+    "causal_l1": 0.561288,
+    "maskratio": 0.068863,
+    "val_jepa_loss": 0.459837,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 479,
+    "probe_top1": 0.337029,
+    "motion_cos": 0.156667,
+    "future_l1": 0.541811,
+    "causal_l1": 0.564332,
+    "maskratio": 0.070213,
+    "val_jepa_loss": 0.45897,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "surgery_3stage_DI_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 3,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.254989,
+    "motion_cos": 0.142171,
+    "future_l1": 0.52345,
+    "causal_l1": 0.549887,
+    "maskratio": 0.061302,
+    "val_jepa_loss": 0.4726592634707491,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 109,
+    "probe_top1": 0.277162,
+    "motion_cos": 0.146854,
+    "future_l1": 0.504865,
+    "causal_l1": 0.532275,
+    "maskratio": 0.057208,
+    "val_jepa_loss": 0.45440423224294796,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.283814,
+    "motion_cos": 0.146289,
+    "future_l1": 0.501685,
+    "causal_l1": 0.529198,
+    "maskratio": 0.058552,
+    "val_jepa_loss": 0.4487093670537361,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 327,
+    "probe_top1": 0.277162,
+    "motion_cos": 0.140238,
+    "future_l1": 0.499519,
+    "causal_l1": 0.529771,
+    "maskratio": 0.054736,
+    "val_jepa_loss": 0.4465160387714792,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 349,
+    "probe_top1": 0.277162,
+    "motion_cos": 0.14396,
+    "future_l1": 0.501212,
+    "causal_l1": 0.530325,
+    "maskratio": 0.055452,
+    "val_jepa_loss": 0.444057845091344,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 436,
+    "probe_top1": 0.27051,
+    "motion_cos": 0.141947,
+    "future_l1": 0.500033,
+    "causal_l1": 0.531602,
+    "maskratio": 0.058143,
+    "val_jepa_loss": 0.4446360784068605,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 480,
+    "probe_top1": 0.263858,
+    "motion_cos": 0.143898,
+    "future_l1": 0.502614,
+    "causal_l1": 0.531122,
+    "maskratio": 0.056975,
+    "val_jepa_loss": 0.44268096881007934,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "surgery_noDI_encoder",
-  "status": "\u2b1a",
+  "status": "\u2705",
   "n_train": null,
   "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 3,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.2616,
+    "motion_cos": 0.1422,
+    "future_l1": 0.5236,
+    "causal_l1": 0.5496,
+    "maskratio": 0.0614,
+    "val_jepa_loss": 0.4722,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 109,
+    "probe_top1": 0.2705,
+    "motion_cos": 0.1449,
+    "future_l1": 0.5037,
+    "causal_l1": 0.5312,
+    "maskratio": 0.0568,
+    "val_jepa_loss": 0.4551,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.2882,
+    "motion_cos": 0.1471,
+    "future_l1": 0.5015,
+    "causal_l1": 0.529,
+    "maskratio": 0.0557,
+    "val_jepa_loss": 0.4487,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 262,
+    "probe_top1": 0.2927,
+    "motion_cos": 0.1501,
+    "future_l1": 0.5013,
+    "causal_l1": 0.5296,
+    "maskratio": 0.0557,
+    "val_jepa_loss": 0.4466,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 372,
+    "probe_top1": 0.268293,
+    "motion_cos": 0.135797,
+    "future_l1": 0.502891,
+    "causal_l1": 0.532072,
+    "maskratio": 0.055436,
+    "val_jepa_loss": 0.4464527920978825,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 481,
+    "probe_top1": 0.261641,
+    "motion_cos": 0.143188,
+    "future_l1": 0.504202,
+    "causal_l1": 0.531036,
+    "maskratio": 0.056707,
+    "val_jepa_loss": 0.4436472705885471,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "surgery_3stage_DI_head",
-  "status": "\u2b1a",
+  "status": "\u2705",
   "n_train": null,
   "n_val": null,
-  "head_best": "",
+  "head_best": "sel=head-vloss 1.968@ep1",
   "kept_idx": null,
-  "probes": []
+  "probes": [
+   {
+    "step": 121,
+    "probe_top1": 0.272727,
+    "motion_cos": 0.142564,
+    "future_l1": 0.536894,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.21301736778800612,
+    "verdict": "\u00b7",
+    "kept": false
+   },
+   {
+    "step": 242,
+    "probe_top1": 0.27051,
+    "motion_cos": 0.145091,
+    "future_l1": 0.536894,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.19700922561590528,
+    "verdict": "\u00b7",
+    "kept": false
+   },
+   {
+    "step": 363,
+    "probe_top1": 0.268293,
+    "motion_cos": 0.148341,
+    "future_l1": 0.536894,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.2072529333393748,
+    "verdict": "\u00b7",
+    "kept": false
+   },
+   {
+    "step": 484,
+    "probe_top1": 0.274945,
+    "motion_cos": 0.150146,
+    "future_l1": 0.536894,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.19679852700286327,
+    "verdict": "\u00b7",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "surgery_noDI_head",
-  "status": "\u2b1a",
+  "status": "\u2705",
   "n_train": null,
   "n_val": null,
-  "head_best": "",
+  "head_best": "sel=head-vloss 2.096@ep1",
   "kept_idx": null,
-  "probes": []
+  "probes": [
+   {
+    "step": 121,
+    "probe_top1": 0.257206,
+    "motion_cos": 0.147595,
+    "future_l1": 0.536912,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.2214431911508683,
+    "verdict": "\u00b7",
+    "kept": false
+   },
+   {
+    "step": 242,
+    "probe_top1": 0.266075,
+    "motion_cos": 0.153717,
+    "future_l1": 0.536912,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.21326458438272755,
+    "verdict": "\u00b7",
+    "kept": false
+   },
+   {
+    "step": 363,
+    "probe_top1": 0.268293,
+    "motion_cos": 0.157308,
+    "future_l1": 0.536912,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.20961623421793765,
+    "verdict": "\u00b7",
+    "kept": false
+   },
+   {
+    "step": 484,
+    "probe_top1": 0.27051,
+    "motion_cos": 0.157309,
+    "future_l1": 0.536912,
+    "causal_l1": 0.560254,
+    "maskratio": 0.062843,
+    "val_jepa_loss": 0.21595796370453424,
+    "verdict": "\u00b7",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "surgical_autorgn_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 0,
+  "probes": [
+   {
+    "step": 109,
+    "probe_top1": 0.299335,
+    "motion_cos": 0.205827,
+    "future_l1": 0.523572,
+    "causal_l1": 0.546207,
+    "maskratio": 0.06202,
+    "val_jepa_loss": 0.45492287512100454,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.323725,
+    "motion_cos": 0.195503,
+    "future_l1": 0.524519,
+    "causal_l1": 0.547089,
+    "maskratio": 0.062655,
+    "val_jepa_loss": 0.44802100298938624,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 327,
+    "probe_top1": 0.339246,
+    "motion_cos": 0.212142,
+    "future_l1": 0.526677,
+    "causal_l1": 0.5483,
+    "maskratio": 0.062361,
+    "val_jepa_loss": 0.4457051036363166,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 436,
+    "probe_top1": 0.341463,
+    "motion_cos": 0.221088,
+    "future_l1": 0.527624,
+    "causal_l1": 0.552321,
+    "maskratio": 0.061204,
+    "val_jepa_loss": 0.44377016340549663,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 438,
+    "probe_top1": 0.334812,
+    "motion_cos": 0.222743,
+    "future_l1": 0.52937,
+    "causal_l1": 0.551549,
+    "maskratio": 0.061293,
+    "val_jepa_loss": 0.44463950038749206,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "surgery_raw_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 3,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.2683,
+    "motion_cos": 0.1434,
+    "future_l1": 0.5207,
+    "causal_l1": 0.5477,
+    "maskratio": 0.0609,
+    "val_jepa_loss": 0.4695,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 109,
+    "probe_top1": 0.255,
+    "motion_cos": 0.1462,
+    "future_l1": 0.5059,
+    "causal_l1": 0.5322,
+    "maskratio": 0.058,
+    "val_jepa_loss": 0.4558,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.2683,
+    "motion_cos": 0.1473,
+    "future_l1": 0.5023,
+    "causal_l1": 0.5301,
+    "maskratio": 0.0577,
+    "val_jepa_loss": 0.4486,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 349,
+    "probe_top1": 0.274945,
+    "motion_cos": 0.151062,
+    "future_l1": 0.50115,
+    "causal_l1": 0.530232,
+    "maskratio": 0.056757,
+    "val_jepa_loss": 0.4462938456736224,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 480,
+    "probe_top1": 0.283814,
+    "motion_cos": 0.152315,
+    "future_l1": 0.501236,
+    "causal_l1": 0.52891,
+    "maskratio": 0.056598,
+    "val_jepa_loss": 0.44290705246565876,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "full_ft_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 1,
+  "probes": [
+   {
+    "step": 110,
+    "probe_top1": 0.323725,
+    "motion_cos": 0.273186,
+    "future_l1": 0.53488,
+    "causal_l1": 0.559099,
+    "maskratio": 0.06041,
+    "val_jepa_loss": 0.45404354352380116,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 219,
+    "probe_top1": 0.334812,
+    "motion_cos": 0.254477,
+    "future_l1": 0.534361,
+    "causal_l1": 0.556724,
+    "maskratio": 0.062935,
+    "val_jepa_loss": 0.4482614510339538,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 328,
+    "probe_top1": 0.332594,
+    "motion_cos": 0.257847,
+    "future_l1": 0.542093,
+    "causal_l1": 0.566568,
+    "maskratio": 0.063026,
+    "val_jepa_loss": 0.4494295434782616,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 438,
+    "probe_top1": 0.317073,
+    "motion_cos": 0.236535,
+    "future_l1": 0.543852,
+    "causal_l1": 0.566217,
+    "maskratio": 0.065498,
+    "val_jepa_loss": 0.44684572071828227,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "lpft_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 0,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.27051,
+    "motion_cos": 0.139471,
+    "future_l1": 0.530692,
+    "causal_l1": 0.556562,
+    "maskratio": 0.06027,
+    "val_jepa_loss": 0.4835711650864248,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 153,
+    "probe_top1": 0.32816,
+    "motion_cos": 0.267409,
+    "future_l1": 0.532426,
+    "causal_l1": 0.557809,
+    "maskratio": 0.054635,
+    "val_jepa_loss": 0.4625727287152918,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 262,
+    "probe_top1": 0.317073,
+    "motion_cos": 0.27404,
+    "future_l1": 0.532017,
+    "causal_l1": 0.556494,
+    "maskratio": 0.055194,
+    "val_jepa_loss": 0.4551944399620107,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 371,
+    "probe_top1": 0.317073,
+    "motion_cos": 0.279689,
+    "future_l1": 0.53517,
+    "causal_l1": 0.557035,
+    "maskratio": 0.056663,
+    "val_jepa_loss": 0.4522477888611626,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 481,
+    "probe_top1": 0.332594,
+    "motion_cos": 0.285966,
+    "future_l1": 0.541773,
+    "causal_l1": 0.562652,
+    "maskratio": 0.060942,
+    "val_jepa_loss": 0.45103275551235594,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "peft_lora_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 1,
+  "probes": [
+   {
+    "step": 110,
+    "probe_top1": 0.266075,
+    "motion_cos": 0.159397,
+    "future_l1": 0.506248,
+    "causal_l1": 0.532997,
+    "maskratio": 0.057047,
+    "val_jepa_loss": 0.4534134544316522,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 219,
+    "probe_top1": 0.292683,
+    "motion_cos": 0.186573,
+    "future_l1": 0.504742,
+    "causal_l1": 0.531156,
+    "maskratio": 0.05404,
+    "val_jepa_loss": 0.44661721712734115,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 328,
+    "probe_top1": 0.321508,
+    "motion_cos": 0.196002,
+    "future_l1": 0.506814,
+    "causal_l1": 0.532784,
+    "maskratio": 0.055159,
+    "val_jepa_loss": 0.44573191693775405,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 438,
+    "probe_top1": 0.339246,
+    "motion_cos": 0.193984,
+    "future_l1": 0.509092,
+    "causal_l1": 0.533173,
+    "maskratio": 0.054068,
+    "val_jepa_loss": 0.440265465668194,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "peft_dora_encoder",
-  "status": "\u2b1a",
-  "n_train": 7021,
-  "n_val": 451,
+  "status": "\u2705",
+  "n_train": null,
+  "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 1,
+  "probes": [
+   {
+    "step": 110,
+    "probe_top1": 0.266075,
+    "motion_cos": 0.159469,
+    "future_l1": 0.506493,
+    "causal_l1": 0.532934,
+    "maskratio": 0.05721,
+    "val_jepa_loss": 0.4535534704339478,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 219,
+    "probe_top1": 0.2949,
+    "motion_cos": 0.187061,
+    "future_l1": 0.504271,
+    "causal_l1": 0.530133,
+    "maskratio": 0.052818,
+    "val_jepa_loss": 0.4461016884928532,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   },
+   {
+    "step": 328,
+    "probe_top1": 0.339246,
+    "motion_cos": 0.205719,
+    "future_l1": 0.51221,
+    "causal_l1": 0.537115,
+    "maskratio": 0.054287,
+    "val_jepa_loss": 0.4439572284861309,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 438,
+    "probe_top1": 0.334812,
+    "motion_cos": 0.229272,
+    "future_l1": 0.519154,
+    "causal_l1": 0.542795,
+    "maskratio": 0.057038,
+    "val_jepa_loss": 0.4432096955781501,
+    "verdict": "\u270b",
+    "kept": false
+   }
+  ]
  },
  {
   "arm": "cassle_encoder",
@@ -109,48 +692,284 @@
  },
  {
   "arm": "ewc_encoder",
-  "status": "\u2b1a",
+  "status": "\ud83d\udd04",
   "n_train": null,
   "n_val": null,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 0,
+  "probes": [
+   {
+    "step": 110,
+    "probe_top1": 0.272727,
+    "motion_cos": 0.219772,
+    "future_l1": 0.540679,
+    "causal_l1": 0.564849,
+    "maskratio": 0.056074,
+    "val_jepa_loss": 0.45650875608038216,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   }
+  ]
  },
  {
   "arm": "surgery_3stage_DI_replay25_encoder",
-  "status": "\u2b1a",
-  "n_train": null,
-  "n_val": null,
+  "status": "\u2705",
+  "n_train": 7021,
+  "n_val": 451,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 4,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.261641,
+    "motion_cos": 0.140268,
+    "future_l1": 0.524909,
+    "causal_l1": 0.551451,
+    "maskratio": 0.059465,
+    "val_jepa_loss": 0.4747048018380438,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 131,
+    "probe_top1": 0.261641,
+    "motion_cos": 0.145571,
+    "future_l1": 0.505064,
+    "causal_l1": 0.531566,
+    "maskratio": 0.055168,
+    "val_jepa_loss": 0.45131979033582226,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.281596,
+    "motion_cos": 0.148124,
+    "future_l1": 0.503327,
+    "causal_l1": 0.529278,
+    "maskratio": 0.055885,
+    "val_jepa_loss": 0.4488616880450703,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 349,
+    "probe_top1": 0.277162,
+    "motion_cos": 0.144539,
+    "future_l1": 0.504522,
+    "causal_l1": 0.532413,
+    "maskratio": 0.057378,
+    "val_jepa_loss": 0.44764102450231225,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 480,
+    "probe_top1": 0.268293,
+    "motion_cos": 0.137112,
+    "future_l1": 0.502182,
+    "causal_l1": 0.530993,
+    "maskratio": 0.056518,
+    "val_jepa_loss": 0.445636650278933,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   }
+  ]
  },
  {
   "arm": "surgery_3stage_DI_diheavy_encoder",
-  "status": "\u2b1a",
+  "status": "\u2705",
   "n_train": 7021,
   "n_val": 451,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 4,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.257206,
+    "motion_cos": 0.141156,
+    "future_l1": 0.523649,
+    "causal_l1": 0.549867,
+    "maskratio": 0.060927,
+    "val_jepa_loss": 0.47290311717405553,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 174,
+    "probe_top1": 0.272727,
+    "motion_cos": 0.147639,
+    "future_l1": 0.50464,
+    "causal_l1": 0.531021,
+    "maskratio": 0.057558,
+    "val_jepa_loss": 0.44970532306810707,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 283,
+    "probe_top1": 0.263858,
+    "motion_cos": 0.140338,
+    "future_l1": 0.502837,
+    "causal_l1": 0.530436,
+    "maskratio": 0.056118,
+    "val_jepa_loss": 0.4459277552670227,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 381,
+    "probe_top1": 0.272727,
+    "motion_cos": 0.144286,
+    "future_l1": 0.503,
+    "causal_l1": 0.530784,
+    "maskratio": 0.056964,
+    "val_jepa_loss": 0.4458079692265411,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 480,
+    "probe_top1": 0.27051,
+    "motion_cos": 0.135256,
+    "future_l1": 0.499683,
+    "causal_l1": 0.529113,
+    "maskratio": 0.053105,
+    "val_jepa_loss": 0.44370354094156406,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   }
+  ]
  },
  {
   "arm": "surgery_3stage_DI_tccaux_encoder",
-  "status": "\u2b1a",
-  "n_train": null,
-  "n_val": null,
-  "head_best": "",
-  "kept_idx": null,
-  "probes": []
- },
- {
-  "arm": "surgery_3stage_DI_intervene_encoder",
-  "status": "\u2b1a",
+  "status": "\u2705",
   "n_train": 7021,
   "n_val": 451,
   "head_best": "",
-  "kept_idx": null,
-  "probes": []
+  "kept_idx": 4,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.254989,
+    "motion_cos": 0.14152,
+    "future_l1": 0.522814,
+    "causal_l1": 0.549556,
+    "maskratio": 0.060114,
+    "val_jepa_loss": 0.47280812858213606,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 131,
+    "probe_top1": 0.27051,
+    "motion_cos": 0.142469,
+    "future_l1": 0.502568,
+    "causal_l1": 0.530856,
+    "maskratio": 0.054579,
+    "val_jepa_loss": 0.4514232285799843,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.281596,
+    "motion_cos": 0.148167,
+    "future_l1": 0.502545,
+    "causal_l1": 0.529123,
+    "maskratio": 0.056389,
+    "val_jepa_loss": 0.44853963555887905,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 349,
+    "probe_top1": 0.268293,
+    "motion_cos": 0.145333,
+    "future_l1": 0.501319,
+    "causal_l1": 0.529151,
+    "maskratio": 0.055167,
+    "val_jepa_loss": 0.4456700097166514,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 480,
+    "probe_top1": 0.274945,
+    "motion_cos": 0.141028,
+    "future_l1": 0.500233,
+    "causal_l1": 0.529034,
+    "maskratio": 0.054367,
+    "val_jepa_loss": 0.44354288468339753,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   }
+  ]
+ },
+ {
+  "arm": "surgery_3stage_DI_intervene_encoder",
+  "status": "\u2705",
+  "n_train": 7021,
+  "n_val": 451,
+  "head_best": "",
+  "kept_idx": 4,
+  "probes": [
+   {
+    "step": 43,
+    "probe_top1": 0.252772,
+    "motion_cos": 0.142322,
+    "future_l1": 0.523398,
+    "causal_l1": 0.548338,
+    "maskratio": 0.062026,
+    "val_jepa_loss": 0.4607348017840586,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 131,
+    "probe_top1": 0.277162,
+    "motion_cos": 0.142731,
+    "future_l1": 0.504314,
+    "causal_l1": 0.532524,
+    "maskratio": 0.059911,
+    "val_jepa_loss": 0.438940933300492,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 218,
+    "probe_top1": 0.281596,
+    "motion_cos": 0.14786,
+    "future_l1": 0.500398,
+    "causal_l1": 0.529356,
+    "maskratio": 0.059882,
+    "val_jepa_loss": 0.43486233442162725,
+    "verdict": "\ud83c\udfaf",
+    "kept": false
+   },
+   {
+    "step": 349,
+    "probe_top1": 0.257206,
+    "motion_cos": 0.145189,
+    "future_l1": 0.503278,
+    "causal_l1": 0.531499,
+    "maskratio": 0.059576,
+    "val_jepa_loss": 0.43442529895881854,
+    "verdict": "\u270b",
+    "kept": false
+   },
+   {
+    "step": 480,
+    "probe_top1": 0.272727,
+    "motion_cos": 0.143762,
+    "future_l1": 0.5003,
+    "causal_l1": 0.529139,
+    "maskratio": 0.060769,
+    "val_jepa_loss": 0.4310637367538232,
+    "verdict": "\ud83c\udfaf",
+    "kept": true
+   }
+  ]
  },
  {
   "arm": "surgical_3stage_DI_wiseft_encoder",

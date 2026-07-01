@@ -1,4 +1,71 @@
-# 🎯 Tighten the 2B confidence bands — re-eval the 17 arms on a **fresh, disjoint 10k**
+# 🎯 Tighten the confidence bands — re-eval on a **fresh, disjoint 10k**  ·  2B (done) + **1B (cheap)**
+
+---
+
+## 🔵 1B VERSION (iter19, 2026-07-01) — **the heads are already saved → skip the ~$250 regen**
+
+> 🟢 **The 1B disjoint-10k retest is MUCH cheaper than the 2B one.** The costly part of the 2B run was
+> **re-training the flushed probe heads on `eval_10k`** (`--taxheads-only` ~15 h + `--etheads-only` ~5 h on
+> 4× RTX 6000 ≈ **$250**). **The 1B eval already persisted every head we need** — verified on HF (2026-07-01):
+> for **all 14 evaluated 1B encoders** the tree `outputs/poc/vjepa_2_1_vitg_1B/eval/eval_10k/` already contains
+> `probe_action/<enc>/probe.pt`, `probe_taxonomy/<enc>/probe_*.pt` (15 dims), and
+> `encoder_temporal/<enc>/head_{aot,tov,pace}.pt`; `motion_aux_head.pt` is durable in `.../train/`.
+> **⇒ the 1B retest needs NO head regeneration** — it reuses the saved 1B heads as `EVAL_HEAD_REUSE_ROOT`.
+
+```text
+   2B disjoint-10k (what it cost)                 1B disjoint-10k (this plan)
+   ├─ m04d motion on subset_10k       ~1 h        ├─ m04d motion — ALREADY on HF ✅   download only
+   ├─ --taxheads-only  regen  ~15 h  ⟶ $$$        ├─ (SKIP — heads already on HF) ✅   $0
+   ├─ --etheads-only   regen  ~5 h×4 ⟶ ~$250      ├─ (SKIP — heads already on HF) ✅   $0
+   └─ cross-set eval (test-all)  ~8–12 h          └─ cross-set eval (test-all)  ~8–12 h · reuse saved heads
+```
+
+### What changes vs the 2B doc below
+
+| item | 2B (below) | **1B (this run)** |
+|---|---|---|
+| backbone / env | `ITER18_BACKBONE=vjepa_2_1_vitG` | **`ITER18_BACKBONE=vjepa_2_1_vitg`** |
+| output tree | `outputs/poc/vjepa_2_1_vitG_2B/…` | **`outputs/poc/vjepa_2_1_vitg_1B/…`** |
+| head regen (taxheads/etheads) | **required** (flushed in orig eval) | **SKIP** — 14 encoders' heads already on HF ✅ |
+| subset_10k prep (`m04d`) | required (~1 h compute) | **already on HF** (verified 2026-07-01) → **download only** ✅ |
+| `EVAL_HEAD_REUSE_ROOT` | rebuilt on eval_10k | point at the **existing** `…/vjepa_2_1_vitg_1B/eval/eval_10k` |
+| roster | 17 arms | **14 evaluated 1B encoders** (the `arm_registry` eval-tokens present in the 1B tree) |
+| disjointness proof | `audit_disjoint.py` (0 exact shared clips) | **same** — the data is backbone-independent |
+
+### 1B runbook (the only steps needed)
+
+```bash
+export ITER18_BACKBONE=vjepa_2_1_vitg EVAL_CORPUS=subset_10k PROBE_SPLIT=test-all
+export LOCAL_DATA=data/subset_10k_local EVAL_SUBSET=data/subset_10k_local/subset_10k.json
+export CLASS_EDGES=outputs/poc/_xset_edges/class_edges.json
+# reuse the ALREADY-SAVED 1B eval_10k heads (NO regen):
+export EVAL_HEAD_REUSE_ROOT="$(python src/utils/output_paths.py eval-root poc vjepa_2_1_vitg eval_10k)"
+
+# 1) subset_10k motion features — ALREADY on HF (backbone-agnostic, built during the 2B prep) → DOWNLOAD ONLY.
+#    Pulls m04d_motion_features/{motion_features.npy,.paths.npy,.meta.json} + tags.json + subset_10k.json.
+#    (m10/m11 factor prep NOT needed for eval — grep-proven in the 2B doc below.) NO --ext / NO compute.
+python -u src/utils/hf_outputs.py download-data data/subset_10k_local \
+  2>&1 | tee logs/dl_subset_10k_local_$(date +%F_%H%M%S).log
+#    [only if the npy were ever missing] recompute: src/m04d_motion_features.py --POC --subset …/subset_10k.json --local-data data/subset_10k_local --cache-policy 1
+
+# 2) disjointness audit (CPU, ~5 s) — same clean-CI proof
+python -u src/utils/audit_disjoint.py \
+  --set-a data/eval_10k_local/eval_10k.json    --keys-field-a clip_keys --label-a eval_10k \
+  --set-b data/subset_10k_local/subset_10k.json --keys-field-b clip_keys --label-b subset_10k --window-clips 1
+
+# 3) cross-set retest — 14 encoders on the FULL 10k, REUSING the saved 1B heads (no taxheads/etheads regen)
+python -u scripts/iter18_poc_ngpu.py --mode POC --gpus <N> --cache 1   # ARM2ENC auto-covers the 1B roster
+#    EVAL_CORPUS=subset_10k ⇒ the L: label-bootstrap runs Stage-1 once; every eval job reuses the saved heads.
+```
+
+> 📏 **Band-shrink (same math):** `n_test 1,825 → ~10,000` ⇒ CIs **~2.3× tighter** on the 1B, at ~**$0** of
+> head-regen. Every new byte lands under a tagged tree; the 1B `eval_10k` results stay read-only (Task-1 contract).
+
+---
+
+*(The original **2B** plan follows unchanged — the reference for the head-regen mechanics + the Task-1/2/3 proofs.)*
+
+---
 
 > 💡 **One job, nothing else.** Our 2B arms are already trained + evaluated on `eval_10k` (a 75/5/20
 > split). The close OURS arms have **overlapping 95% bands** (`n_test ≈ 1,825`), so we can't cleanly
