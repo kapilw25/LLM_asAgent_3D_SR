@@ -5,8 +5,8 @@ Repo: anonymousML123/factorjepa-outputs (public, gated, auto-created on first up
 USAGE:
     # clean MIRROR [delete file on HF, if doesnt exist on disk]
     HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc/ 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
-    # only ADDTIVE
-    hf upload-large-folder anonymousML123/factorjepa-outputs . --repo-type dataset --include "outputs/poc/**" --exclude "**/.*"   2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    # only ADDITIVE (token-safe, no-delete — reads HF_TOKEN from .env). USE THIS, not the bare `hf` CLI below,
+    python -u src/utils/hf_outputs.py upload-additive outputs/poc 2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     # VERIFY UPLOAD
     python -u src/utils/hf_outputs.py verify outputs/poc 2>&1 | tee logs/verify_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
@@ -1486,10 +1486,36 @@ def download_data(data_root: Path = None, exts: tuple = None, exclude: tuple = N
 
 # ── CLI ──────────────────────────────────────────────────────────────
 
+def upload_additive(subfolder: str):
+    """ADDITIVE upload (NEVER deletes remote) of every local file under <subfolder> — the token-safe, in-repo
+    replacement for the raw `hf upload-large-folder --include <subfolder>/** --exclude "**/.*"`. Fixes two
+    things permanently:
+      • AUTH — reads the token from .env via _get_token() and hands it to HfApi, so it can't hit the raw-CLI
+        401 (the bare `hf` CLI does NOT read .env; it needs HF_TOKEN already exported / a prior `hf auth login`).
+      • SAFETY — unlike `upload` (which MIRRORS: deletes remote files absent locally → catastrophic with a
+        LIGHT local copy that has no .pt), this only uploads/updates local files; remote-only heavy checkpoints
+        stay untouched.
+    folder_path="." + allow_patterns=["<subfolder>/**"] preserves the on-repo path prefix (same as the raw
+    `. --include`). Returns True on success, False if the token is missing."""
+    token = _get_token()
+    if not token:
+        print("FATAL upload-additive: HF_TOKEN not found (env or repo-root .env)")
+        return False
+    sub = str(subfolder).rstrip("/")
+    print(f"upload-additive (no-delete, auth from .env): {sub}/**  ->  {HF_OUTPUTS_REPO}")
+    HfApi(token=token).upload_large_folder(
+        repo_id=HF_OUTPUTS_REPO, repo_type="dataset", folder_path=".",
+        allow_patterns=[f"{sub}/**"], ignore_patterns=["**/.*"],
+    )
+    print(f"upload-additive complete: {sub}/** committed additively (remote-only files preserved)")
+    return True
+
+
 if __name__ == "__main__":
     if len(sys.argv) < _MIN_CLI_ARGS - 1:
         print("Usage:")
         print("  python -u src/utils/hf_outputs.py upload <output_dir>")
+        print("  python -u src/utils/hf_outputs.py upload-additive <output_dir>  # ADDITIVE no-delete + auth from .env (safe for a LIGHT local copy; use instead of bare `hf`)")
         print("  python -u src/utils/hf_outputs.py download <output_dir>")
         print("  python -u src/utils/hf_outputs.py upload-full <output_dir>    # EVERY file (ckpts/npy too), per-dir _full-*.tar")
         print("  python -u src/utils/hf_outputs.py download-full <output_dir>  # pulls + auto-unpacks _full-*.tar")
@@ -1506,6 +1532,8 @@ if __name__ == "__main__":
     rc = None
     if cmd == "upload" and len(sys.argv) >= _MIN_CLI_ARGS:
         rc = upload_outputs(sys.argv[2])
+    elif cmd == "upload-additive" and len(sys.argv) >= _MIN_CLI_ARGS:
+        rc = upload_additive(sys.argv[2])   # token-safe, no-delete (the raw-`hf` 401 fix)
     elif cmd == "download" and len(sys.argv) >= _MIN_CLI_ARGS:
         rc = download_outputs(sys.argv[2])
     elif cmd == "upload-full" and len(sys.argv) >= _MIN_CLI_ARGS:
