@@ -1,235 +1,158 @@
-# 🚀 iter16 — 115K FULL training runbook
+# 🚀 iter19 — FULL 115k runbook (1B `vjepa_2_1_vitg`)
 
-> **Status legend**: ⏳ pending · 🟡 in-progress · ✅ done · ❌ blocked · ⏭️ skipped
+> 🎯 Two-box, seed-then-parallel FULL run driven by the **verified** `scripts/ngpu_run.py` (`--mode FULL`).
+> Trains the paper's headline trio on **116k clips (1 epoch)**, evals 6 encoders on the **23k test**.
+> Box A trains the SSL seed serially; Box B trains Best-OUR ∥ Best-COMP, evals all 6, runs the §3 finale.
 
-🛠️ **All 9 code modifications (M1-M9) ✅ LANDED 2026-05-21**. Full design +
-verification + recipe sources archived in
-`iter/iter16_train_115kclips/legacy/plan_code_modifications.md` (post-T40).
+---
 
-```
-┌────┬────────────────────────────────────────────────────────────────────────┐
-│ M  │ ✅ Status                                                                │
-├────┼────────────────────────────────────────────────────────────────────────┤
-│ M1 │ clip_pool_ratio + subsample_manifest_for_mode + Option X stratified-   │
-│    │ for-POC. CLI + in-process symmetric wiring. probe_split mode-keyed.    │
-│ M2 │ max_epochs single source — base_optimization.yaml {1,2,1};             │
-│    │ pretrain_encoder + surgery_base overrides DELETED                      │
-│ M3 │ src/utils/gen_full_local_manifest.py — wrote full_local.json           │
-│    │ (n=115,687 · num_videos=1,559 · ~74 clips/video)                       │
-│ M4 │ checkpoint.saves_per_epoch 2 → 9 (9 trajectory points/cell)            │
-│ M5 │ Video-disjoint stratified_split (StratifiedGroupKFold) — 2026-05-20.  │
-│    │ Mode-keyed: SANITY clip-level, POC/FULL video-disjoint                 │
-│ M6 │ DINO 4-anchor batched inference (R3) — ~18% per-clip speedup           │
-│ M7 │ torch.compile DINO yaml gate (R5, Pro 6000) — default OFF on Pro 4000 │
-│ M8 │ torch.compile m04d RAFT — iter13 disable REVERSED with WebSearch-     │
-│    │ validated recipe (mode=default + dynamic=False)                        │
-│ M9 │ yaml-keyed local_data_dir + master_manifest_name (Option III) —       │
-│    │ 30+ hardcoded refs eliminated. ONE-LINE migration to full_local.      │
-└────┴────────────────────────────────────────────────────────────────────────┘
+## 🗂️ Roster — 6 eval encoders (3 trained + frozen + 2 merges)
+
+| # | encoder | arm (`run_train` name) | how it is produced | box |
+|---|---|---|---|---|
+| 1 | `vjepa_2_1_vitg_pretrain_encoder` | `pretrain_encoder` | SSL seed — every arm's init ckpt | **A** (serial) |
+| 2 | `vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder` | `surgery_3stage_DI_diheavy_encoder` | Best-OUR — inits from seed | **B** (GPU0) |
+| 3 | `vjepa_2_1_vitg_peft_lora_encoder` | `peft_lora_encoder` | Best-COMP — inits from seed | **B** (GPU1) |
+| 4 | `vjepa_2_1_vitg_frozen` | — | anchor, eval-only (no train) | **B** (finale) |
+| 5 | `vjepa_2_1_vitg_surgical_diheavy_wiseft_f50_encoder` | `surgical_diheavy_wiseft_f50_encoder` | `kind: merge` — post-hoc WiSE-FT (α=0.5), built by `run_eval` | **B** (finale) |
+| 6 | `vjepa_2_1_vitg_surgical_diheavy_wiseft_f70_encoder` | `surgical_diheavy_wiseft_f70_encoder` | `kind: merge` — post-hoc WiSE-FT (α=0.3), built by `run_eval` | **B** (finale) |
+
+DAG: `pretrain` (Box A, serial) → `diheavy` (GPU0) ∥ `peft_lora` (GPU1) → eval all 6 + §3 finale (Box B).
+The two merges have **no train job** — the scheduler builds them from `merge_recipe()` once `diheavy`'s ckpt exists.
+
+---
+
+## ✅ Pre-flight (verify BEFORE any GPU spend)
+
+| ✅ | check | expected | source |
+|---|---|---|---|
+| ☐ | `max_epochs.full` | **1** (confirmed) | `configs/train/base_optimization.yaml:187` |
+| ☐ | disk free — Box A (`--cache 2`) | **≥ 500 G** | `ngpu_run.py` gate `FULL {2:500}` |
+| ☐ | disk free — Box B (`--cache 1`) | **≥ 350 G** | `ngpu_run.py` gate `FULL {1:350}` |
+| ☐ | `EVAL_CORPUS` | **`full`** (export; also default-derived after the yaml flip) | scheduler L77–78 |
+| ☐ | pipeline data dir flipped | `data.local_data_dir: data/full_local` + `master_manifest_name: full_local.json` | Stage-1 sed below |
+| ☐ | `batch_size` / `max_epochs` / `saves_per_epoch` carry `full:` | inherited from `base_optimization.yaml` (`full: 2 / 1 / 9`) → status ledger prices it; no `full` key ⇒ ledger falls back to priors **loudly, no crash** | base_optimization.yaml |
+| ☐ | `SKIP` string | the 18 non-roster arms (see bottom) | `configs/arm_registry.yaml` |
+| ☐ | backbone | `ITER18_BACKBONE=vjepa_2_1_vitg` (1B) on **every** scheduler + status pane | scheduler L53 default is 2B — MUST export |
+
+---
+
+## 🌐 Shared env — set on BOTH boxes, every pane
+
+```bash
+export ITER18_BACKBONE=vjepa_2_1_vitg     # 1B (scheduler default is the 2B vitG → MUST export)
+export EVAL_CORPUS=full                    # score against the 'full' corpus (23k test)
+
+# Point the whole pipeline at the prepped 116k data (single source; run_train.sh:74-77 reads this).
+# After this flip, TRAINED_CORPUS derives to 'full' automatically for every mode.
+sed -i -e 's|local_data_dir:.*|local_data_dir: "data/full_local"|' \
+       -e 's|master_manifest_name:.*|master_manifest_name: "full_local.json"|' configs/pipeline.yaml
+
+# The 18 arms to DROP = every scheduler:true arm EXCEPT the 5 roster arms
+# (pretrain_encoder, surgery_3stage_DI_diheavy_encoder, peft_lora_encoder,
+#  surgical_diheavy_wiseft_f50_encoder, surgical_diheavy_wiseft_f70_encoder).
+export SKIP="surgery_3stage_DI_encoder surgery_noDI_encoder surgery_3stage_DI_head surgery_noDI_head \
+surgical_autorgn_encoder surgery_raw_encoder full_ft_encoder lpft_encoder peft_dora_encoder \
+cassle_encoder ewc_encoder surgery_3stage_DI_replay25_encoder surgery_3stage_DI_tccaux_encoder \
+surgery_3stage_DI_intervene_encoder surgical_3stage_DI_wiseft_encoder surgical_intervene_wiseft_f30_encoder \
+surgical_intervene_wiseft_f50_encoder surgical_intervene_wiseft_f70_encoder"
 ```
 
 ---
 
-## 🖥️ Terminal commands (in execution order)
-
-### 🚦 Pre-flight — flip yaml to data/full_local (after Stage 1 + M3 + Stage 2-3 outputs ready)
+## 📦 BOX A — 1× 96 GB — train the SEED only (~19 h)
 
 ```bash
-# Pre-flight gate: data/full_local/ must already contain:
-#   1. tags.json (Stage 1 metadata)
-#   2. full_local.json (M3 generated — already done)
-#   3. m04d_motion_features/motion_features.{npy,paths.npy} (Stage 2 output)
-#   4. m10_sam_segment/masks/ (Stage 3 output)
-#   5. m11_factor_datasets/ (Stage 4 — streaming or pre-computed)
-#   6. subset-*.tar shards (Stage 1 — RUNNING)
+# A1 · pull the prepped full data (~120 GB; m04d + m10 SAM + m11 factor are already in the tree).
+python -u src/utils/hf_outputs.py download-data data/full_local \
+  2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
 
-# When gate passes, one-line flip migrates the whole pipeline:
-sed -i \
-    -e 's|local_data_dir:        "data/eval_10k_local"|local_data_dir:        "data/full_local"|' \
-    -e 's|master_manifest_name:  "eval_10k.json"|master_manifest_name:  "full_local.json"|' \
-    configs/pipeline.yaml
+# A2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, the yaml flip) — from the block above.
+
+# A3 · SANITY smoke first (~200 clips, fresh) — code-path green-light before the 19 h seed.
+#      --only trains ONLY pretrain_encoder (no eval, no §3 finale). rm the throwaway smoke tree after.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 1 --cache 2 --only pretrain_encoder \
+  2>&1 | tee logs/iter19_sanity_seed_$(date +%F_%H%M%S).log
+rm -rf outputs/sanity/
+
+# A4 · train the SEED (fresh — outputs/full/ is empty on HF). ~19 h, 1 GPU.
+#      Writes outputs/full/vjepa_2_1_vitg/train/m09a_pretrain_encoder/{student_encoder.pt, m09a_ckpt_best.pt}.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 1 --cache 2 --only pretrain_encoder \
+  2>&1 | tee logs/iter19_full_seed_$(date +%F_%H%M%S).log
+
+# A5 · push the seed so Box B can pull it (additive, no-delete, token-safe).
+python -u src/utils/hf_outputs.py upload-additive outputs/full \
+  2>&1 | tee logs/iter19_up_seed_$(date +%F_%H%M%S).log
 ```
 
-### ⏳ Stage 1 — HF download (~15-20 min, single command)
+---
 
-iter16 (2026-05-22): `hf_outputs.py upload-data` fix now uploads top-level files
-(was *.json only). The 116 subset-*.tar shards (~120 GB) now live in
-`anonymousML123/factorjepa-outputs/data/full_local/` so we no longer need m00d as
-a separate step. ONE command pulls everything.
+## 🔀 BOX B — 2× 96 GB — Best-OUR ∥ Best-COMP + eval + §3 finale
+
+> Spin up **after** Box A's seed lands on HF. `--cache 1` resume-skips the seed's train job, then trains
+> `diheavy` (GPU0) ∥ `peft_lora` (GPU1), evals all kept encoders, and the §3 finale evals `frozen` + the
+> two diheavy WiSE-FT merges on the 23k test.
 
 ```bash
-python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 \
-  | tee logs/iter16_dl_full_local_$(date +%Y%m%d_%H%M%S).log
+# B1 · pull the full data + the seed Box A trained.
+python -u src/utils/hf_outputs.py download-data data/full_local \
+  2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
+python -u src/utils/hf_outputs.py download outputs/full \
+  2>&1 | tee logs/iter19_dl_seed_$(date +%F_%H%M%S).log
 
-# Expected under data/full_local/ after download:
-#   subset-00000.tar … subset-00115.tar       116 shards × ~1 GB ≈ 120 GB total
-#   tags.json                                 115,687 entries (~149 MB)
-#   manifest.json + full_local.json           metadata
-#   m04d_motion_features/.m04d_checkpoint.npz iter16 resume token (14.42 MB)
+# B2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, the yaml flip, SKIP) — from the block above.
+
+# B3 · SANITY smoke first (2 GPU, fresh, same SKIP) — green-light before the 19 h arms.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 2 --cache 2 --skip-arms $SKIP \
+  2>&1 | tee logs/iter19_sanity_rest_$(date +%F_%H%M%S).log
+rm -rf outputs/sanity/
+
+# B4 · the real FULL run. --cache 1 resume-skips pretrain, trains diheavy ∥ peft_lora, evals all 6,
+#      then the §3 finale builds frozen + the two diheavy WiSE-FT merges. ~19 h + eval.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 --skip-arms $SKIP \
+  2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
 ```
 
-> **Fallback** — if `download-data` fails (HF API issue, repo permissions), the
-> legacy 2-step still works: `python -u src/m00d_download_subset.py --FULL
-> --master-tags data/full_local/tags.json --no-wandb` then `hf_outputs.py
-> download-data data/full_local` for the metadata.
-
-### 🟡 Stage 2 — m04d motion features (Pro 6000 ONLY · ~30-60 min RESUME from 85%)
-
-⚠️ **Pro 4000 (36 GB cgroup) STRUCTURALLY TOO SMALL** for this stage. The 2026-05-22 attempt
-ran 23 hr to 85% (clip 98,400 / 115,687) before kernel SIGKILL'd it on cgroup OOM (memory
-slowly crept from 80% → 100% as Inductor cache + producer queue + page cache + Python heap
-accumulated). Restart on the same box → same crash within 12-24 hr. **Migrate to Pro 6000.**
-The 14.42 MB `.m04d_checkpoint.npz` (98,400 clips processed) is on HF for cross-box resume.
-
-#### 🚀 Pro 6000 migration recipe — paste ONE line at a time (avoid bracketed-paste corruption)
+### 📟 Live status pane (separate terminal on Box B)
 
 ```bash
-# Setup (5-10 min)
-git clone https://github.com/kapilw25/factorjepa.git && cd factorjepa
-bash setup_env_uv.sh
+# BACKBONE must match the run or every cell reads pending. Auto-backs up outputs/full to HF every 45 min
+# (POC+FULL are backed up; SANITY is throwaway). Point --log at the B4 main tee.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL \
+  --log logs/iter19_full_rest_<ts>.log
+# live refresh:
+# watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL --log logs/iter19_full_rest_<ts>.log'
 ```
+
+---
+
+## 🏁 FINALIZE — cross-plots + HF persist
 
 ```bash
-# Pull tags.json + manifest.json + full_local.json + m04d_motion_features/ (~30 sec, ~160 MB)
-python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/iter16_dl_full_local_resume3_$(date +%Y%m%d_%H%M%S).log
+# Cross-backbone forest + scale-replication + combined scorecard, discovered from the 'full' tree.
+python -u src/m13_eval_plot.py --cross-plots --cross-mode full \
+  2>&1 | tee logs/iter19_cross_plots_$(date +%F_%H%M%S).log
+
+# Persist the full outputs tree (additive, no-delete, token-safe).
+python -u src/utils/hf_outputs.py upload-additive outputs/full \
+  2>&1 | tee logs/iter19_up_full_$(date +%F_%H%M%S).log
 ```
 
-```bash
-# Confirm checkpoint landed (must be ~14.42 MB; otherwise resume falls back to fresh start)
-ls -la data/full_local/m04d_motion_features/.m04d_checkpoint.npz
+---
+
+## 📋 Reference — the 18 `SKIP` arms (dropped from the DAG)
+
+```text
+surgery_3stage_DI_encoder            surgery_noDI_encoder                surgery_3stage_DI_head
+surgery_noDI_head                    surgical_autorgn_encoder            surgery_raw_encoder
+full_ft_encoder                      lpft_encoder                        peft_dora_encoder
+cassle_encoder                       ewc_encoder                         surgery_3stage_DI_replay25_encoder
+surgery_3stage_DI_tccaux_encoder     surgery_3stage_DI_intervene_encoder surgical_3stage_DI_wiseft_encoder
+surgical_intervene_wiseft_f30_encoder  surgical_intervene_wiseft_f50_encoder  surgical_intervene_wiseft_f70_encoder
 ```
 
-```bash
-# Resume m04d on Pro 6000. M10 auto-picks the 256 GB cgroup row (decode=16, queue=16).
-# M8 torch.compile stays ON — Pro 6000's 96 GB VRAM lets AdaptiveBatchSizer converge
-# instead of thrashing (the failure mode that hit Pro 4000).
-CACHE_POLICY_ALL=1 python -u src/m04d_motion_features.py --FULL --local-data data/full_local --subset data/full_local/full_local.json --no-wandb 2>&1 | tee logs/iter16_m04d_resume_$(date +%Y%m%d_%H%M%S).log
-```
+KEPT (5): `pretrain_encoder` · `surgery_3stage_DI_diheavy_encoder` · `peft_lora_encoder` ·
+`surgical_diheavy_wiseft_f50_encoder` · `surgical_diheavy_wiseft_f70_encoder` (+ `frozen`, always evaled).
 
-Expected startup log lines (sanity-check before walking away):
-```
-[M10 motion_decode_scaling] cgroup CPU-RAM=241.0 GB → row[cpu_ram_gb_max=inf]: decode_workers=16, producer_queue=16
-[M8 m04d_compile] mode=default dynamic=False fullgraph=False — compiling RAFT-Large
-RAFT-Large loaded on cuda (weights: C_T_SKHT_V2, compiled, fp16)
-Checkpoint loaded: 98,400 clips from .m04d_checkpoint.npz
-Resuming: 98,400 clips already processed
-m04d motion features:  85%|████████▌ | 98400/115687 [00:00<?, ?clip/s]
-```
-
-#### 🔬 Verification post-2b (run after m04d completes)
-
-```bash
-ls -la data/full_local/m04d_motion_features/
-venv_walkindia/bin/python -c "
-import numpy as np
-f = np.load('data/full_local/m04d_motion_features/motion_features.npy')
-p = np.load('data/full_local/m04d_motion_features/motion_features.paths.npy', allow_pickle=True)
-print(f'features shape: {f.shape}   dtype: {f.dtype}')
-print(f'paths shape   : {p.shape}   first: {p[0]}')
-"
-# Expected: features (115687, 23) float32 · paths (115687,) · first key starts with goa/walking/04YK...
-```
-
-### ⏳ Stage 3 — m10 + m11 factor prep [⚠️ migrate to Pro 6000 for FULL]
-
-```bash
-# 3a) SANITY parallel smoke (Pro 4000 OK, ~5 min, 20 clips × 2 workers)
-#     CACHE_POLICY_ALL=2 = fresh smoke each time (no resume from prior smoke).
-CACHE_POLICY_ALL=2 LOCAL_DATA=data/full_local \
-./scripts/run_factor_prep_parallel.sh \
-configs/train/surgery_3stage_DI_encoder.yaml 2 --SANITY \
-2>&1 | tee logs/iter16_stage3_sanity_$(date +%Y%m%d_%H%M%S).log
-
-# 3b) FULL parallel — Pro 6000 96 GB recommended (~6 hr with M6 + M7 enabled)
-#     Enable M7 (torch.compile DINO) on Pro 6000:
-sed -i 's|enabled:        false             # Pro 4000 default|enabled:        true              # Pro 6000|' \
-    configs/pipeline.yaml
-
-# CACHE_POLICY_ALL=1 = SAFE RESUME (default — keeps per-worker checkpoints
-# so a kill+restart resumes from .m10_checkpoint_*_<fp>.npz; saves ~25-30
-# min per worker). Use =2 only when you want a fresh restart.
-# (Interactive prompts also available if env var unset on a TTY — see
-# `scripts/run_factor_prep_parallel.sh` docstring "Resume semantics".)
-CACHE_POLICY_ALL=1 LOCAL_DATA=data/full_local \
-./scripts/run_factor_prep_parallel.sh \
-configs/train/surgery_3stage_DI_encoder.yaml 6 --FULL \
-2>&1 | tee logs/iter16_stage3_full_$(date +%Y%m%d_%H%M%S).log
-
-# 3c) FALLBACK serial m10 (~180 hr Pro 6000)
-CACHE_POLICY_ALL=1 LOCAL_DATA=data/full_local \
-./scripts/run_factor_prep.sh configs/train/surgery_3stage_DI_encoder.yaml --FULL
-```
-
-### ⏳ Stage 4 — Train 3 HEAD cells on Pro 4000 24 GB (~9 hr total)
-
-```bash
-# 4a) pretrain_encoder FIRST (provides SURGERY_INIT for 4c-4d)
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_encoder --FULL 2>&1 \
-  | tee logs/iter16_full_m09a1_pretrain_encoder_$(date +%Y%m%d_%H%M%S).log
-
-# 4b) pretrain_head
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_head --FULL 2>&1 \
-  | tee logs/iter16_full_m09a2_pretrain_head_$(date +%Y%m%d_%H%M%S).log
-
-# 4c) surgery_3stage_DI_head
-SURGERY_INIT=outputs/full/m09a_pretrain_encoder/m09a_ckpt_best.pt \
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_head --FULL 2>&1 \
-  | tee logs/iter16_full_m09c2_3stage_DI_head_$(date +%Y%m%d_%H%M%S).log
-
-# 4d) surgery_noDI_head
-SURGERY_INIT=outputs/full/m09a_pretrain_encoder/m09a_ckpt_best.pt \
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_head --FULL 2>&1 \
-  | tee logs/iter16_full_m09c2_noDI_head_$(date +%Y%m%d_%H%M%S).log
-```
-
-### ⏳ Stage 5 — Train 3 ENCODER cells on Pro 6000 96 GB [⚠️ migrate instance]
-
-```bash
-# Pre-req on Pro 6000: pull pretrain_encoder ckpt from previous box
-#   rsync -av outputs/full/m09a_pretrain_encoder/ <pro6000>:outputs/full/m09a_pretrain_encoder/
-# OR: push to HF here, pull on Pro 6000
-#   python -u src/utils/hf_outputs.py upload outputs/full
-
-# 5a) pretrain_2X_encoder (2 ep total = 2 × max_epochs.full=1 via shell override)
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh pretrain_2X_encoder --FULL 2>&1 \
-  | tee logs/iter16_full_m09a1_pretrain_2X_encoder_$(date +%Y%m%d_%H%M%S).log
-
-# 5b) surgery_3stage_DI_encoder
-SURGERY_INIT=outputs/full/m09a_pretrain_encoder/m09a_ckpt_best.pt \
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_3stage_DI_encoder --FULL 2>&1 \
-  | tee logs/iter16_full_m09c1_3stage_DI_encoder_$(date +%Y%m%d_%H%M%S).log
-
-# 5c) surgery_noDI_encoder
-SURGERY_INIT=outputs/full/m09a_pretrain_encoder/m09a_ckpt_best.pt \
-CACHE_POLICY_ALL=2 bash scripts/run_train.sh surgery_noDI_encoder --FULL 2>&1 \
-  | tee logs/iter16_full_m09c1_noDI_encoder_$(date +%Y%m%d_%H%M%S).log
-```
-
-### ⏳ Stage 6 — Full 13-stage eval (~3 hr Pro 4000, ~1.5 hr Pro 6000)
-
-```bash
-# Pre-req: pull all 7 cell ckpts to whichever box runs eval
-#   python -u src/utils/hf_outputs.py download outputs/full
-
-CACHE_POLICY_ALL=1 ./scripts/run_eval.sh --FULL 2>&1 \
-  | tee logs/iter16_post_full_eval_$(date +%Y%m%d_%H%M%S).log
-```
-
-### ⏳ Stage 7 — Plot N-run comparisons (CPU, ~5 min)
-
-```bash
-python -u src/probe_plot.py --FULL --training-side \
-    --training-root outputs/full \
-    --output-dir    outputs/full/probe_plot \
-    --no-wandb 2>&1 | tee logs/iter16_probe_plot_train_$(date +%Y%m%d_%H%M%S).log
-```
-
-### ⏳ Stage 8 — Persist to HF (after all 7 cells + eval complete)
-
-```bash
-python -u src/utils/hf_outputs.py upload outputs/full 2>&1 \
-  | tee logs/upload_outputs_full_$(date +%Y%m%d_%H%M%S).log
-
-python -u src/utils/hf_outputs.py upload-data data/full_local 2>&1 \
-  | tee logs/upload_data_full_$(date +%Y%m%d_%H%M%S).log
-```
+> ⚠️ `--skip-arms` will FATAL on an unknown arm. `pretrain_encoder` can NEVER be skipped (it is every arm's
+> init dependency — the scheduler refuses it). All 18 above are valid `scheduler: true` arm names.

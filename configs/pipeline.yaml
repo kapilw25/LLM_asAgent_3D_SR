@@ -865,6 +865,11 @@ eval_corpora:
   - eval_10k
   - subset_10k
   - subset_10k_smoke   # 200-clip code-path validator (separate dir → never contaminates the real subset_10k retest)
+  - full               # iter19 FULL corpus (dial-3 label): scheduler pairs EVAL_CORPUS=full with
+                       # EVAL_SUBSET=data/full_local/full_local.json + LOCAL_DATA=data/full_local so the
+                       # 75/5/20 TEST split (~23k) is built over full_local, NOT eval_10k. Corpus is a
+                       # pure OUTPUT-dir label (outputs/<mode>/<bb>_<size>/eval/full/); the manifest/dir
+                       # are the data selectors and MUST be fed per-run (see run_eval.sh L151-152 overrides).
 
 # -- Motion features (m04d_motion_features.py) --
 motion:
