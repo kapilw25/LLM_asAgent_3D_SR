@@ -359,7 +359,9 @@
       "Bash(hf upload-large-folder *)",
       "Bash(shellcheck -S error setup_env_uv.sh)",
       "Bash(cd /root/.claude/projects/-workspace-factorjepa/1b2336d6-c7ee-4d84-8920-ed3380b1b603/subagents/workflows/wf_f9520981-7d7)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(grep -vE \"^\\\\[\\\\*\\\\]|fixable|^$\")",
+      "Bash(awk -F: '$1>1251')"
     ]
   }
 }

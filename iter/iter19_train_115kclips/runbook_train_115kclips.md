@@ -31,7 +31,7 @@ The two merges have **no train job** — the scheduler builds them from `merge_r
 | ☐ | disk free — Box B (`--cache 1`) | **≥ 350 G** | `ngpu_run.py` gate `FULL {1:350}` |
 | ☐ | `EVAL_CORPUS` | **`full`** (export; also default-derived after the yaml flip) | scheduler L77–78 |
 | ☐ | pipeline data dir flipped | `data.local_data_dir: data/full_local` + `master_manifest_name: full_local.json` | Stage-1 sed below |
-| ☐ | `batch_size` / `max_epochs` / `saves_per_epoch` carry `full:` | inherited from `base_optimization.yaml` (`full: 2 / 1 / 9`) → status ledger prices it; no `full` key ⇒ ledger falls back to priors **loudly, no crash** | base_optimization.yaml |
+| ☐ | `max_epochs` / `saves_per_epoch` / `cache_policy` carry `full:` | `base_optimization.yaml`: `full = 1 / 9 / 2` (verified). `batch_size` is a **scalar `32`** (all modes — not mode-keyed). No `full:` key ⇒ status ledger falls back to priors **loudly, no crash** | base_optimization.yaml |
 | ☐ | `SKIP` string | the 18 non-roster arms (see bottom) | `configs/arm_registry.yaml` |
 | ☐ | backbone | `ITER18_BACKBONE=vjepa_2_1_vitg` (1B) on **every** scheduler + status pane | scheduler L53 default is 2B — MUST export |
 
@@ -45,8 +45,7 @@ export EVAL_CORPUS=full                    # score against the 'full' corpus (23
 
 # Point the whole pipeline at the prepped 116k data (single source; run_train.sh:74-77 reads this).
 # After this flip, TRAINED_CORPUS derives to 'full' automatically for every mode.
-sed -i -e 's|local_data_dir:.*|local_data_dir: "data/full_local"|' \
-       -e 's|master_manifest_name:.*|master_manifest_name: "full_local.json"|' configs/pipeline.yaml
+sed -i -e 's|local_data_dir:.*|local_data_dir: "data/full_local"|' -e 's|master_manifest_name:.*|master_manifest_name: "full_local.json"|' configs/pipeline.yaml
 
 # The 18 arms to DROP = every scheduler:true arm EXCEPT the 5 roster arms
 # (pretrain_encoder, surgery_3stage_DI_diheavy_encoder, peft_lora_encoder,
@@ -71,14 +70,13 @@ python -u src/utils/hf_outputs.py download-data data/full_local \
 
 # A3 · SANITY smoke first (~200 clips, fresh) — code-path green-light before the 19 h seed.
 #      --only trains ONLY pretrain_encoder (no eval, no §3 finale). rm the throwaway smoke tree after.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 1 --cache 2 --only pretrain_encoder \
-  2>&1 | tee logs/iter19_sanity_seed_$(date +%F_%H%M%S).log
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 1 --cache 2 --only pretrain_encoder 2>&1 | tee logs/iter19_sanity_seed_$(date +%F_%H%M%S).log
+# cleanup sanity to save space
 rm -rf outputs/sanity/
 
 # A4 · train the SEED (fresh — outputs/full/ is empty on HF). ~19 h, 1 GPU.
 #      Writes outputs/full/vjepa_2_1_vitg/train/m09a_pretrain_encoder/{student_encoder.pt, m09a_ckpt_best.pt}.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 1 --cache 2 --only pretrain_encoder \
-  2>&1 | tee logs/iter19_full_seed_$(date +%F_%H%M%S).log
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 1 --cache 1 --only pretrain_encoder 2>&1 | tee logs/iter19_full_seed_$(date +%F_%H%M%S).log
 
 # A5 · push the seed so Box B can pull it (additive, no-delete, token-safe).
 python -u src/utils/hf_outputs.py upload-additive outputs/full \
@@ -119,7 +117,7 @@ ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 
 # BACKBONE must match the run or every cell reads pending. Auto-backs up outputs/full to HF every 45 min
 # (POC+FULL are backed up; SANITY is throwaway). Point --log at the B4 main tee.
 ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL \
-  --log logs/iter19_full_rest_<ts>.log
+--log logs/iter19_full_rest_<ts>.log
 # live refresh:
 # watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL --log logs/iter19_full_rest_<ts>.log'
 ```

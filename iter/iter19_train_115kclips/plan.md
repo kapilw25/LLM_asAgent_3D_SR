@@ -7,6 +7,31 @@
 
 ---
 
+## 📋 Run at a glance — live DAG status (`ngpu_run_status.py` view)
+
+> 🔗 **DAG:** 🚂 `pretrain_encoder` (seed) → 🔧 `diheavy` **∥** 🔩 `peft_lora` (parallel, both init from the seed) → 📊 eval all 6 on the held-out test
+>
+> 📦 **116,000 clips**  ▸  🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 **75% train** (~87k)  ·  🟨 **5% val** (~5.75k)  ·  🟦🟦🟦🟦 **20% test** (~23k)  —  a leakage-safe **75 : 5 : 20** split
+
+```text
+┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬────────────────┬──────────────┐
+│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨5%⟩  │ 🟦 test ⟨20%⟩ │ ⏳ wall tr · ev │ 📌 status    │
+├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼──────────────┤
+│ 🚂 pretrain_encoder · SSL seed             │ GPU0  │ 🟩 ~87k       │ 🟨 ~5.75k    │ 🟦 ~23k       │ 18h  · 4h      │ 🔄 running   │
+│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU0  │ 🟩 ~87k       │ 🟨 ~5.75k    │ 🟦 ~23k       │ 18h ∥ · 4h     │ ⬚ pending    │
+│ 🔩 peft_lora_encoder · Best-COMP           │ GPU1  │ 🟩 ~87k       │ 🟨 ~5.75k    │ 🟦 ~23k       │ 18h ∥ · 4h     │ ⬚ pending    │
+│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~23k       │  —   · 4h      │ ⬚ pending    │
+│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~23k       │  —   · 4h      │ ⬚ pending    │
+│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~23k       │  —   · 4h      │ ⬚ pending    │
+├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼──────────────┤
+│ 🏁 TOTAL · critical path (not the sum)     │ 1→2×  │ 🟩 87k =75%   │ 🟨 5.75k =5% │ 🟦 23k =20%   │ 18h→18h∥→24h   │ ⏳ ~2.5 days  │
+└───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴────────────────┴──────────────┘
+```
+
+> **legend:** 🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen  │  🟩 train · 🟨 val · 🟦 test  │  ✅ done · 🔄 running · ⬚ pending · ❌ failed  │  wall `tr·ev` = train · eval hrs (∥ = parallel)
+
+---
+
 ## 🧭 Decisions locked (2026-07-01)
 
 | axis | choice | why |

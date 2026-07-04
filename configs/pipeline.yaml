@@ -40,10 +40,10 @@ data:
   # all Python callers read via cfg["data"]["local_data_dir"] +
   # cfg["data"]["master_manifest_name"]. Retires 30+ hardcoded
   # "data/eval_10k_local/" refs across yaml + shells + src.
-  local_data_dir:        "data/eval_10k_local"     # iter15 / iter16 SANITY+POC
-  # local_data_dir:      "data/full_local"         # iter16 FULL (when m04/m10/m11 ready)
-  master_manifest_name:  "eval_10k.json"           # iter15 / iter16 SANITY+POC master
-  # master_manifest_name: "full_local.json"        # iter16 FULL (after M3 generates it)
+  local_data_dir: "data/full_local"
+  # local_data_dir: "data/full_local"
+  master_manifest_name: "full_local.json"
+  # master_manifest_name: "full_local.json"
   manifest_seed: 99      # gen_full_local_manifest stamp (cosmetic; iter18 H2: was argparse default=99)
   raw_clips_allow_glob: "clips/**/*.mp4"   # iter18 H1: HF raw-clip download allow_pattern (was config.py literal)
   # hf_outputs upload-full/download-full per-dir shard naming contract — pack, purge,

@@ -456,6 +456,18 @@ def train(cfg: dict, args):
     subset_keys = load_subset(args.subset) if args.subset else set()
     val_key_set = load_val_subset(args.val_subset)
 
+    # iter19 (2026-07-04): cap the in-memory val PRELOAD to validation.max_val_clips. At FULL the 5% val split
+    # is ~5,750 clips (~40 GB decoded) → the "Collecting … into memory" step OOMs the ~127 GB cgroup (GPU idle at
+    # 0%, kernel SIGKILL). max_val_clips (base_optimization.yaml:309) was DECLARED but never consumed — a dead
+    # knob; wire it live here. Deterministic (sorted → first N) = reproducible; the probe is a trajectory MONITOR,
+    # not the paper eval (that's Box-B run_eval on the full 23k test). SANITY/POC (val < cap) are untouched → parity-safe.
+    _val_cap = cfg["validation"]["max_val_clips"]
+    if _val_cap and len(val_key_set) > _val_cap:
+        _n_full = len(val_key_set)
+        val_key_set = set(sorted(val_key_set)[:_val_cap])
+        print(f"  [val-cap] validation.max_val_clips={_val_cap}: subsampled val preload {_n_full} → {_val_cap} "
+              f"clips (avoids the FULL val-preload OOM at 'Collecting … into memory')", flush=True)
+
     # Exclude val keys from training (no leakage)
     if subset_keys and val_key_set:
         overlap = subset_keys & val_key_set

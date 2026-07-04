@@ -93,6 +93,7 @@ FACTOR_DIR_CANONICAL="${LOCAL_DATA}/${FACTOR_SUBDIR}"
 # manifest's corpus (config-derived; == the corpus run_eval scores on by default). All paths via output_paths.
 BACKBONE="${BACKBONE:-vjepa_2_1_vitG}"
 TRAIN_CORPUS="${MASTER_MANIFEST_NAME%.json}"
+TRAIN_CORPUS="${TRAIN_CORPUS%_local}"   # iter19 2026-07-04: full_local.json → 'full' — align with output_paths.eval_corpora + ngpu_run._corpus_from_data_dir (strips '_local'). eval_10k.json / subset_10k.json unaffected (no '_local' suffix).
 TRAIN_ROOT="$(python src/utils/output_paths.py train-dir "$mode_dir" "$BACKBONE")"
 LABEL_ACTION_ROOT="$(python src/utils/output_paths.py eval-dir "$mode_dir" "$BACKBONE" "$TRAIN_CORPUS" probe_action)"
 LABEL_TAX_ROOT="$(python src/utils/output_paths.py eval-dir "$mode_dir" "$BACKBONE" "$TRAIN_CORPUS" probe_taxonomy)"

@@ -50,6 +50,13 @@ _V2_MEM_CUR    = "/sys/fs/cgroup/memory.current"
 _V2_PIDS_MAX   = "/sys/fs/cgroup/pids.max"
 _V2_PIDS_CUR   = "/sys/fs/cgroup/pids.current"
 
+# memory.stat exposes the reclaimable/unreclaimable split. 'anon' (v2) / 'total_rss' (v1) is the
+# UNRECLAIMABLE portion the kernel OOM-killer enforces against; 'file' is reclaimable page cache
+# (evicted before any SIGKILL). memory.current/usage counts BOTH → useless as a proximity-to-kill
+# signal on cache-heavy streaming runs (iter19 2026-07-04: 99% current = 91 G cache + 35 G anon).
+_V1_MEM_STAT   = "/sys/fs/cgroup/memory/memory.stat"
+_V2_MEM_STAT   = "/sys/fs/cgroup/memory.stat"
+
 # A v1 cap is "effectively unlimited" when set to 2^63-1-ish (the kernel
 # sentinel). Treat anything ≥ 1 EiB as unlimited.
 _V1_UNLIMITED_SENTINEL = 1 << 60
@@ -81,11 +88,44 @@ def read_cgroup_memory_limit():
 
 
 def read_cgroup_memory_usage():
-    """Return cgroup memory usage in bytes, or None if no cgroup."""
+    """Return cgroup memory usage in bytes, or None if no cgroup.
+
+    NOTE: this is the TOTAL (anon + reclaimable page cache). For proximity-to-SIGKILL use
+    read_cgroup_memory_anon() instead — see its docstring."""
     v1 = _read_int(_V1_MEM_USAGE)
     if v1 is not None:
         return v1
     return _read_int(_V2_MEM_CUR)
+
+
+def _read_stat_field(path: str, field: str):
+    """Return the int value of `field` in a cgroup memory.stat file, or None if missing."""
+    p = Path(path)
+    if not p.exists():
+        return None
+    try:
+        for line in p.read_text().splitlines():
+            k, _, v = line.partition(" ")
+            if k == field:
+                return int(v)
+    except (OSError, ValueError):
+        return None
+    return None
+
+
+def read_cgroup_memory_anon():
+    """Return cgroup ANONYMOUS memory in bytes (RSS-like, UNRECLAIMABLE) — the metric the kernel
+    OOM-killer actually enforces against. v2 'anon' / v1 'total_rss'. None if no cgroup.
+
+    Use this, NOT read_cgroup_memory_usage(): memory.current/usage_in_bytes ALSO count reclaimable
+    file-backed page cache, which the kernel evicts long before any SIGKILL. Thresholding the total
+    false-alarms on cache-heavy (data-streaming) runs — iter19 2026-07-04: a HEALTHY seed sat at 99%
+    memory.current (91 G of reclaimable tar-read cache) with only 35 G real anon and ~90 G of true
+    headroom, yet the watchdog screamed 'IMMINENT SIGKILL' and nearly triggered a panic-kill."""
+    v1 = _read_stat_field(_V1_MEM_STAT, "total_rss")
+    if v1 is not None:
+        return v1
+    return _read_stat_field(_V2_MEM_STAT, "anon")
 
 
 def read_cgroup_pids_limit():
@@ -199,29 +239,31 @@ def start_oom_watchdog(threshold_warn: float = None,
 
     def _watch():
         while True:
-            usage = read_cgroup_memory_usage()
-            if usage is None:
+            # iter19 (2026-07-04): threshold on ANON (unreclaimable), NOT memory.current. The OOM-killer
+            # enforces against anon; page cache (memory.current − anon) is reclaimed before any SIGKILL,
+            # so thresholding the total false-alarms on cache-heavy streaming runs. Show reclaimable cache
+            # as context so a high TOTAL no longer reads as danger.
+            anon = read_cgroup_memory_anon()
+            if anon is None:
                 return
-            pct = usage / mem_limit
+            total = read_cgroup_memory_usage()   # anon + reclaimable cache — context only
+            pct = anon / mem_limit
+            cache = (total - anon) if (total is not None and total >= anon) else None
+            ctx = f" [+{_fmt_gb(cache)} reclaimable cache]" if cache else ""
             # Only emit when crossing a threshold upward, to keep log signal/noise high.
             if pct >= threshold_imminent and state["last_pct"] < threshold_imminent:
-                print(f"\n{prefix} 🔥 IMMINENT SIGKILL: memory "
-                      f"{_fmt_gb(usage)} / {_fmt_gb(mem_limit)} "
-                      f"({100*pct:.1f}%) — kernel may SIGKILL any moment",
-                      flush=True)
+                print(f"\n{prefix} 🔥 IMMINENT SIGKILL: anon(unreclaimable) "
+                      f"{_fmt_gb(anon)} / {_fmt_gb(mem_limit)} ({100*pct:.1f}%){ctx} "
+                      f"— kernel may SIGKILL any moment", flush=True)
             elif pct >= threshold_crit and state["last_pct"] < threshold_crit:
-                print(f"\n{prefix} 🚨 CRITICAL: memory "
-                      f"{_fmt_gb(usage)} / {_fmt_gb(mem_limit)} "
-                      f"({100*pct:.1f}%) — reduce decode_workers / "
-                      f"producer_queue in pipeline.yaml NOW",
-                      flush=True)
+                print(f"\n{prefix} 🚨 CRITICAL: anon(unreclaimable) "
+                      f"{_fmt_gb(anon)} / {_fmt_gb(mem_limit)} ({100*pct:.1f}%){ctx} "
+                      f"— reduce decode_workers / producer_queue / max_val_clips NOW", flush=True)
             elif pct >= threshold_warn and state["last_pct"] < threshold_warn:
-                print(f"\n{prefix} ⚠️  warn: memory "
-                      f"{_fmt_gb(usage)} / {_fmt_gb(mem_limit)} "
-                      f"({100*pct:.1f}%) — approaching cgroup cap",
-                      flush=True)
-            # Also re-emit each 10% above 'warn' to keep the trail visible
-            # in case the OS kills before we hit 'crit'/'imminent'.
+                print(f"\n{prefix} ⚠️  warn: anon(unreclaimable) "
+                      f"{_fmt_gb(anon)} / {_fmt_gb(mem_limit)} ({100*pct:.1f}%){ctx} "
+                      f"— approaching cgroup cap", flush=True)
+            # Re-arm downward too so a later real climb re-triggers (was upward-only).
             state["last_pct"] = pct
             time.sleep(interval_sec)
 

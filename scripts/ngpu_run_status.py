@@ -128,8 +128,15 @@ def _build_ledger(mtag):
 # Per-stage FINAL tqdm bars ("surgery:<name>: 100%|…| S/S [H:MM:SS<00:00" — tqdm omits
 # the hours field under 1h, so HH is optional) — their elapsed sums to the arm's pure
 # in-loop wall; (job wall − Σ) = startup + stage-end probes + finalize = the overhead.
-_RE_FINAL_BAR = re.compile(r"surgery:\S+\s+100%\|[^|]*\|\s*(\d+)/\1\s*\[(?:(\d+):)?(\d+):(\d+)<")
-_RE_LIVE_BAR = re.compile(r"surgery:\S+\s+\d+%\|[^|]*\|\s*(\d+)/(\d+)\s*\[(?:(\d+):)?(\d+):(\d+)<")
+# iter19 (2026-07-04): match ANY tqdm bar prefix (m09a1_pretrain_encoder:, surgery:, peft:, …), not
+# just 'surgery:'. The pretrain seed's bar was 'm09a1_pretrain_encoder:' → NEVER matched → its live rate
+# AND live progress fell through to the ~25s/step prior, pinning the ETA at ~20h vs the true ~14h. \S+ is
+# the desc token (no internal spaces); the %|bar| cur/tot [elapsed< structure keeps it tqdm-specific.
+_RE_FINAL_BAR = re.compile(r"\S+\s+100%\|[^|]*\|\s*(\d+)/\1\s*\[(?:(\d+):)?(\d+):(\d+)<")
+_RE_LIVE_BAR = re.compile(r"\S+\s+\d+%\|[^|]*\|\s*(\d+)/(\d+)\s*\[(?:(\d+):)?(\d+):(\d+)<")
+# The trainer's OWN windowed rate (tqdm postfix). Prefix-agnostic + already smoothed → the authoritative
+# live step-rate ("the real ETA the operator reads off the bar"). Beats span-estimate + prior.
+_RE_TRAIN_RECENT = re.compile(r"recent=([\d.]+)s/step")
 
 
 def _bar_secs(h, m, s):
@@ -565,6 +572,12 @@ def _running_total(jobs, jid, elapsed, prior, calib, ecalib):
                 # current stage's bar hit 100% but its "complete" line hasn't printed
                 # yet (stage-end probe running) → its steps aren't in done_now yet.
                 contrib = stage_tot
+        # iter19 (2026-07-04): the trainer's OWN windowed recent=…s/step is the authoritative live rate —
+        # prefix-agnostic + pre-smoothed, so it beats the _MIN_RATE_STEPS-gated span estimate AND the
+        # ~25s/step prior (what pinned the first arm's ETA at ~20h vs the true ~14h). Overrides live_rate.
+        _recent = _RE_TRAIN_RECENT.findall(txt)
+        if _recent:
+            live_rate = float(_recent[-1])
         progress = min(base + done_now + contrib, total)
         steps_left = total - progress
         # remaining pads: one per not-yet-passed stage end + 1 finalize-equivalent
@@ -1165,11 +1178,22 @@ def main():
     SW, CW = 32, 22
     bar = "─"
     print(f"═══ {args.mode} · {log.name} · now {now_hms} UTC · {gpus} GPU ═══")
+    # iter19 (2026-07-04): draw a row only if it has a job in THIS invocation's (already --only/--skip-
+    # filtered) `jobs` — so a pretrain-only / train-phase run no longer paints the frozen anchor row + an
+    # empty 8b+8c fan for evals it isn't running. frozen shows iff it has an E:/P:/F: job here.
+    _eval_encs = set()
+    for _j in jobs:
+        if _j.startswith("E:"):
+            _eval_encs.add(_j[2:])
+        elif _j.startswith(("P:", "F:")):
+            _eval_encs.add(_j[2:].rsplit(":", 1)[0])
+    _show_frozen = enc_name("frozen") in _eval_encs
     print("┌" + bar * SW + "┬" + bar * CW + "┬" + bar * CW + "┐")
     print("│" + " arm".ljust(SW) + "│" + " train".ljust(CW) + "│" + " eval".ljust(CW) + "│")
     print("├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
-    print("│ " + "📊 frozen (eval-only)".ljust(SW - 1) + "│" + " —".ljust(CW) + "│ "
-          + _eval_group_cell(enc_name("frozen")).ljust(CW - 1) + "│")
+    if _show_frozen:
+        print("│ " + "📊 frozen (eval-only)".ljust(SW - 1) + "│" + " —".ljust(CW) + "│ "
+              + _eval_group_cell(enc_name("frozen")).ljust(CW - 1) + "│")
     for arm in DISPLAY_ORDER:        # incl. the wiseft merge — its row is built like any other
         tj, ej = f"T:{BACKBONE}:{arm}", f"E:{enc_name(ARM2ENC[arm])}"
         if tj not in jobs and ej not in jobs:
@@ -1213,9 +1237,9 @@ def main():
     # 8b (P:, predictor) + 8c (F:, encoder-temporal m12f) columns in ONE fan grid —
     # the tcc job carries BOTH tcc_cycle and tcc_tau (one forward, two headline numbers).
     _FAN = [("P", m) for m in PT_METRICS] + [("F", m) for m in ET_METRICS]
-    enc_rows = ([("frozen", enc_name("frozen"))]
-                + [(a, enc_name(ARM2ENC[a])) for a in DISPLAY_ORDER
-                   if f"E:{enc_name(ARM2ENC[a])}" in jobs])
+    enc_rows = ([("frozen", enc_name("frozen"))] if _show_frozen else []) \
+        + [(a, enc_name(ARM2ENC[a])) for a in DISPLAY_ORDER
+           if f"E:{enc_name(ARM2ENC[a])}" in jobs]
     EW, PW = 26, 5
 
     def _gl(jid):
@@ -1223,19 +1247,22 @@ def main():
     g_top = "┌" + bar * EW + "┬" + bar * 5 + ("┬" + bar * PW) * len(_FAN) + "┐"
     g_mid = "├" + bar * EW + "┼" + bar * 5 + ("┼" + bar * PW) * len(_FAN) + "┤"
     g_bot = "└" + bar * EW + "┴" + bar * 5 + ("┴" + bar * PW) * len(_FAN) + "┘"
-    print(f"\n  Stage-8b+8c metric fan (encoder × {len(_FAN)} metric jobs · ✓ done · 🔄 run · · pend)")
-    print("  " + g_top)
-    print("  │" + " encoder".ljust(EW) + "│" + "2-8".center(5)
-          + "│" + "│".join(_ABBR[m].center(PW) for _, m in _FAN) + "│")
-    print("  " + g_mid)
-    for label, enc in enc_rows:
-        cells = "│".join(_gl(f"{p}:{enc}:{m}").center(PW) for p, m in _FAN)
-        print("  │ " + label.ljust(EW - 1) + "│" + _gl(f"E:{enc}").center(5) + "│" + cells + "│")
-    print("  " + g_bot)
-    _pall = [j for j in jobs if j.startswith(("P:", "F:"))]
-    _pc = {k: sum(1 for j in _pall if classify(j) == k) for k in ("done", "running", "pending")}
-    print(f"  {_pc['done']}✓ done · {_pc['running']}🔄 running · {_pc['pending']}· pending"
-          f"  of {len(_pall)} metric jobs (8b + 8c)")
+    if not enc_rows:
+        print("\n  (no eval jobs in this run — --only / train phase; the 8b+8c metric fan renders on the eval box)")
+    else:
+        print(f"\n  Stage-8b+8c metric fan (encoder × {len(_FAN)} metric jobs · ✓ done · 🔄 run · · pend)")
+        print("  " + g_top)
+        print("  │" + " encoder".ljust(EW) + "│" + "2-8".center(5)
+              + "│" + "│".join(_ABBR[m].center(PW) for _, m in _FAN) + "│")
+        print("  " + g_mid)
+        for label, enc in enc_rows:
+            cells = "│".join(_gl(f"{p}:{enc}:{m}").center(PW) for p, m in _FAN)
+            print("  │ " + label.ljust(EW - 1) + "│" + _gl(f"E:{enc}").center(5) + "│" + cells + "│")
+        print("  " + g_bot)
+        _pall = [j for j in jobs if j.startswith(("P:", "F:"))]
+        _pc = {k: sum(1 for j in _pall if classify(j) == k) for k in ("done", "running", "pending")}
+        print(f"  {_pc['done']}✓ done · {_pc['running']}🔄 running · {_pc['pending']}· pending"
+              f"  of {len(_pall)} metric jobs (8b + 8c)")
 
     # ── summary + run ETA ──
     end_utc = datetime.now(timezone.utc) + timedelta(seconds=eta_secs)

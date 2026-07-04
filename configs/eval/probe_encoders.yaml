@@ -290,6 +290,10 @@ encoders:
   vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # iter19 (2026-07-04): the diheavy WiSE-FT merges (Best-OUR sweep, arm_registry rows added same day) — same 1B
+  # dims; without these run_eval's kind-lookup FATALs on the §3 finale eval of the 2 diheavy merges (same bug as L287).
+  vjepa_2_1_vitg_surgical_diheavy_wiseft_f50_encoder:   {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_diheavy_wiseft_f70_encoder:   {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   # vjepa_2_0_vitg (1B, version axis) — same dims (2.0 g): https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
   vjepa_2_0_vitg_pretrain_encoder:           {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
   vjepa_2_0_vitg_pretrain_2X_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}

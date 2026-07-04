@@ -390,6 +390,36 @@ def main():
     else:
         print(f"  [cpu-preflight] {cores} cores ≥ ~{need_cores} (gpus×6) — OK", flush=True)
 
+    # ram-preflight (iter19 2026-07-04): the RAM sibling of disk/cpu. m09a1 preloads the val split
+    # into HOST RAM ("Collecting N val clips into memory") — a DATA-SCALED anon footprint that OOM'd
+    # iter19's FULL seed (5,750 val clips ≈ 40 G) while SANITY's 232-clip val never neared the cap
+    # (a resource-scaling bug no small-data smoke catches). Check the val-preload upper bound (bounded
+    # by validation.max_val_clips) vs the cgroup ANON cap so an oversized cap / small box FATALs HERE,
+    # not 3 min into a 19 h run. Projects the FULL footprint even from a SANITY invocation (#4).
+    from utils.ram_preflight import estimate_for_backbone
+    _ram = estimate_for_backbone(BACKBONE)
+    _clipspec = (f"max_val_clips={_ram['max_val_clips']} × {_ram['per_clip_mb']:.1f}MB/clip "
+                 f"@ {_ram['num_frames']}f×{_ram['crop']}²")
+    if _ram["cap_gb"] is None:
+        print(f"  [ram-preflight] no cgroup cap (unlimited host) · val-preload≈{_ram['val_preload_gb']:.0f}G "
+              f"({_clipspec})", flush=True)
+    else:
+        _valpct = 100.0 * _ram["val_preload_gb"] / _ram["cap_gb"]
+        print(f"  [ram-preflight] cgroup_cap={_ram['cap_gb']:.0f}G · val-preload≈{_ram['val_preload_gb']:.0f}G "
+              f"({_valpct:.0f}% of cap; {_clipspec}) · anon-now≈{_ram['anon_now_gb'] or 0:.0f}G", flush=True)
+        # Threshold calibrated to the iter19 incident: the uncapped 5,750-clip val was ~30% of cap and THAT
+        # thrashed — because the non-val anon baseline (producer + model + optimizer) also measured ~30% of cap
+        # (anon-now ≈41G/128G at max_val_clips=1000), so val+baseline blew the reclaim headroom. FATAL when the
+        # val preload alone exceeds 25% of cap (⇒ val+baseline > ~55%, the thrash zone); WARN at 12%. A valid
+        # run (max_val_clips=1000 ≈ 5%) clears both.
+        if _valpct > 25.0 and not args.dry_run:
+            sys.exit(f"FATAL: val preload ≈{_ram['val_preload_gb']:.0f}G = {_valpct:.0f}% of the {_ram['cap_gb']:.0f}G "
+                     f"cgroup cap — with the ~30%-of-cap producer+model+optimizer baseline it WILL OOM-thrash "
+                     f"(iter19 incident). Lower validation.max_val_clips (base_optimization.yaml) or use a bigger-RAM box.")
+        elif _valpct > 12.0:
+            print(f"  ⚠️  [ram-preflight] val preload is {_valpct:.0f}% of the cap — tight once the "
+                  f"producer+model baseline stacks on; watch the oom-watchdog's anon% (not memory.current).", flush=True)
+
     done, failed, running = set(), {}, {}   # running: gpu→(jid, Popen, logfile)
 
     # iter18 (2026-06-20) backbone-first tree: a cross-set corpus (EVAL_CORPUS=subset_10k) reuses the
