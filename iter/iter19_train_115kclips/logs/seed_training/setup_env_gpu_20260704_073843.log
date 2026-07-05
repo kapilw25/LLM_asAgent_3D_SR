@@ -1,0 +1,1267 @@
+============================================
+WalkIndia-200K Environment Setup (UV)
+============================================
+Detected OS: Linux
+
+Installing:  tree
+Hit:1 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64  InRelease
+Hit:2 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:3 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following NEW packages will be installed:
+  tree
+0 upgraded, 1 newly installed, 0 to remove and 54 not upgraded.
+Need to get 47.4 kB of archives.
+After this operation, 111 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 tree amd64 2.1.1-2ubuntu3.24.04.2 [47.4 kB]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 47.4 kB in 0s (600 kB/s)
+Selecting previously unselected package tree.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 42488 files and directories currently installed.)
+Preparing to unpack .../tree_2.1.1-2ubuntu3.24.04.2_amd64.deb ...
+Unpacking tree (2.1.1-2ubuntu3.24.04.2) ...
+Setting up tree (2.1.1-2ubuntu3.24.04.2) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Python 3.12: Python 3.12.13
+UV: uv 0.11.19 (x86_64-unknown-linux-gnu)
+
+Creating virtual environment (Python 3.12)...
+Using CPython 3.12.13 interpreter at: /venv/main/bin/python3.12
+Creating virtual environment at: venv_walkindia
+Activate with: source venv_walkindia/bin/activate
+
+Installing base requirements (UV - fast)...
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 68 packages in 576ms
+Downloading hf-xet (4.3MiB)
+Downloading kiwisolver (1.4MiB)
+Downloading openai (1.3MiB)
+Downloading fonttools (4.8MiB)
+Downloading matplotlib (9.6MiB)
+Downloading aiohttp (1.7MiB)
+Downloading pyarrow (46.6MiB)
+Downloading yt-dlp (3.0MiB)
+Downloading ruff (11.0MiB)
+Downloading py-spy (2.8MiB)
+Downloading llvmlite (57.1MiB)
+Downloading opencv-python (70.4MiB)
+Downloading pillow (6.6MiB)
+Downloading numpy (15.8MiB)
+Downloading scipy (33.7MiB)
+Downloading pandas (10.4MiB)
+Downloading pymupdf (24.5MiB)
+Downloading numba (3.7MiB)
+Downloading scikit-learn (8.7MiB)
+Downloading pydantic-core (2.0MiB)
+ Downloaded kiwisolver
+ Downloaded aiohttp
+ Downloaded pydantic-core
+ Downloaded py-spy
+ Downloaded hf-xet
+ Downloaded fonttools
+ Downloaded pillow
+ Downloaded numba
+ Downloaded yt-dlp
+ Downloaded scikit-learn
+ Downloaded ruff
+ Downloaded openai
+ Downloaded matplotlib
+ Downloaded numpy
+ Downloaded pymupdf
+ Downloaded llvmlite
+ Downloaded opencv-python
+ Downloaded scipy
+ Downloaded pandas
+ Downloaded pyarrow
+Prepared 68 packages in 3.90s
+Installed 68 packages in 655ms
+ + aiohappyeyeballs==2.7.1
+ + aiohttp==3.14.1
+ + aiosignal==1.4.0
+ + annotated-types==0.7.0
+ + anyio==4.14.1
+ + attrs==26.1.0
+ + certifi==2026.6.17
+ + charset-normalizer==3.4.7
+ + click==8.4.2
+ + contourpy==1.3.3
+ + cycler==0.12.1
+ + datasets==5.0.0
+ + dill==0.4.1
+ + distro==1.9.0
+ + filelock==3.29.5
+ + fonttools==4.63.0
+ + frozenlist==1.8.0
+ + fsspec==2026.4.0
+ + h11==0.16.0
+ + hf-xet==1.5.1
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + huggingface-hub==1.22.0
+ + idna==3.18
+ + jiter==0.16.0
+ + joblib==1.5.3
+ + kiwisolver==1.5.0
+ + llvmlite==0.48.0
+ + matplotlib==3.11.0
+ + multidict==6.7.1
+ + multiprocess==0.70.19
+ + narwhals==2.23.0
+ + numba==0.66.0
+ + numpy==2.3.5
+ + openai==2.44.0
+ + opencv-python==5.0.0.93
+ + packaging==26.2
+ + pandas==3.0.3
+ + pillow==12.3.0
+ + platformdirs==4.10.0
+ + propcache==0.5.2
+ + py-spy==0.4.2
+ + pyarrow==24.0.0
+ + pydantic==2.13.4
+ + pydantic-core==2.46.4
+ + pymupdf==1.28.0
+ + pynndescent==0.6.0
+ + pyparsing==3.3.2
+ + python-dateutil==2.9.0.post0
+ + python-dotenv==1.2.2
+ + pyyaml==6.0.3
+ + requests==2.34.2
+ + ruff==0.15.20
+ + scenedetect==0.7
+ + scikit-learn==1.9.0
+ + scipy==1.18.0
+ + seaborn==0.13.2
+ + six==1.17.0
+ + sniffio==1.3.1
+ + threadpoolctl==3.6.0
+ + tqdm==4.68.3
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.2
+ + umap-learn==0.5.12
+ + urllib3==2.7.0
+ + xxhash==3.8.0
+ + yarl==1.24.2
+ + yt-dlp==2026.6.9
+
+Creating directories...
+
+Base setup complete.
+
+============================================
+GPU Setup (Linux + Nvidia ONLY)
+============================================
+Loaded .env (HF_TOKEN set)
+
+Cloning facebookresearch/vjepa2 (contains V-JEPA 2.0 + 2.1)...
+Cloning into 'deps/vjepa2'...
+vjepa2 cloned to deps/vjepa2/
+vjepa2 RoPE dtype patch applied (#44)
+Checkpoint download [group=trainable] → checkpoints/ : 2 file(s)
+  - vjepa2_1_vitG_384.pt  ←  https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt
+  - vjepa2_1_vitg_384.pt  ←  https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitg_384.pt
+[1/2]   Downloading vjepa2_1_vitG_384.pt ← https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitG_384.pt
+
+07/04 07:38:57 [[1;32mNOTICE[0m] Downloading 1 item(s)
+[#cd2a83 5.5MiB/28GiB(0%) CN:16 DL:10MiB ETA:44m41s]
+[#cd2a83 113MiB/28GiB(0%) CN:16 DL:74MiB ETA:6m23s]
+[#cd2a83 223MiB/28GiB(0%) CN:16 DL:89MiB ETA:5m20s]
+[#cd2a83 333MiB/28GiB(1%) CN:16 DL:95MiB ETA:4m58s]
+[#cd2a83 443MiB/28GiB(1%) CN:16 DL:98MiB ETA:4m46s]
+[#cd2a83 554MiB/28GiB(1%) CN:16 DL:101MiB ETA:4m39s]
+[#cd2a83 664MiB/28GiB(2%) CN:16 DL:102MiB ETA:4m34s]
+[#cd2a83 774MiB/28GiB(2%) CN:16 DL:103MiB ETA:4m30s]
+[#cd2a83 885MiB/28GiB(3%) CN:16 DL:104MiB ETA:4m26s]
+[#cd2a83 0.9GiB/28GiB(3%) CN:16 DL:105MiB ETA:4m23s]
+[#cd2a83 1.0GiB/28GiB(3%) CN:16 DL:111MiB ETA:4m8s]
+[#cd2a83 1.1GiB/28GiB(4%) CN:16 DL:111MiB ETA:4m7s]
+[#cd2a83 1.2GiB/28GiB(4%) CN:16 DL:110MiB ETA:4m9s]
+[#cd2a83 1.3GiB/28GiB(4%) CN:16 DL:102MiB ETA:4m27s]
+[#cd2a83 1.3GiB/28GiB(4%) CN:16 DL:94MiB ETA:4m51s]
+[#cd2a83 1.3GiB/28GiB(4%) CN:16 DL:85MiB ETA:5m19s]
+[#cd2a83 1.4GiB/28GiB(5%) CN:16 DL:84MiB ETA:5m22s]
+[#cd2a83 1.5GiB/28GiB(5%) CN:16 DL:76MiB ETA:5m56s]
+[#cd2a83 1.5GiB/28GiB(5%) CN:16 DL:66MiB ETA:6m48s]
+[#cd2a83 1.5GiB/28GiB(5%) CN:16 DL:59MiB ETA:7m36s]
+[#cd2a83 1.6GiB/28GiB(5%) CN:16 DL:59MiB ETA:7m35s]
+[#cd2a83 1.7GiB/28GiB(6%) CN:16 DL:59MiB ETA:7m34s]
+[#cd2a83 1.9GiB/28GiB(6%) CN:16 DL:64MiB ETA:6m53s]
+[#cd2a83 2.0GiB/28GiB(7%) CN:16 DL:73MiB ETA:6m4s]
+[#cd2a83 2.1GiB/28GiB(7%) CN:16 DL:82MiB ETA:5m22s]
+[#cd2a83 2.2GiB/28GiB(7%) CN:16 DL:85MiB ETA:5m11s]
+[#cd2a83 2.3GiB/28GiB(8%) CN:16 DL:91MiB ETA:4m49s]
+[#cd2a83 2.4GiB/28GiB(8%) CN:16 DL:100MiB ETA:4m21s]
+[#cd2a83 2.5GiB/28GiB(9%) CN:16 DL:110MiB ETA:3m56s]
+[#cd2a83 2.6GiB/28GiB(9%) CN:16 DL:111MiB ETA:3m53s]
+[#cd2a83 2.7GiB/28GiB(9%) CN:16 DL:111MiB ETA:3m52s]
+[#cd2a83 2.8GiB/28GiB(10%) CN:16 DL:111MiB ETA:3m51s]
+[#cd2a83 2.9GiB/28GiB(10%) CN:16 DL:111MiB ETA:3m50s]
+[#cd2a83 3.0GiB/28GiB(10%) CN:16 DL:111MiB ETA:3m49s]
+[#cd2a83 3.1GiB/28GiB(11%) CN:16 DL:111MiB ETA:3m48s]
+[#cd2a83 3.3GiB/28GiB(11%) CN:16 DL:111MiB ETA:3m47s]
+[#cd2a83 3.4GiB/28GiB(12%) CN:16 DL:111MiB ETA:3m46s]
+[#cd2a83 3.5GiB/28GiB(12%) CN:16 DL:111MiB ETA:3m45s]
+[#cd2a83 3.6GiB/28GiB(12%) CN:16 DL:111MiB ETA:3m44s]
+[#cd2a83 3.7GiB/28GiB(13%) CN:16 DL:111MiB ETA:3m43s]
+[#cd2a83 3.8GiB/28GiB(13%) CN:16 DL:111MiB ETA:3m42s]
+[#cd2a83 3.9GiB/28GiB(14%) CN:16 DL:111MiB ETA:3m42s]
+[#cd2a83 4.0GiB/28GiB(14%) CN:16 DL:111MiB ETA:3m41s]
+[#cd2a83 4.1GiB/28GiB(14%) CN:16 DL:111MiB ETA:3m40s]
+[#cd2a83 4.2GiB/28GiB(15%) CN:16 DL:111MiB ETA:3m40s]
+[#cd2a83 4.3GiB/28GiB(15%) CN:16 DL:110MiB ETA:3m39s]
+[#cd2a83 4.4GiB/28GiB(15%) CN:16 DL:111MiB ETA:3m37s]
+[#cd2a83 4.5GiB/28GiB(16%) CN:16 DL:110MiB ETA:3m39s]
+[#cd2a83 4.6GiB/28GiB(16%) CN:16 DL:109MiB ETA:3m38s]
+[#cd2a83 4.7GiB/28GiB(17%) CN:16 DL:109MiB ETA:3m38s]
+[#cd2a83 4.9GiB/28GiB(17%) CN:16 DL:109MiB ETA:3m37s]
+[#cd2a83 5.0GiB/28GiB(17%) CN:16 DL:109MiB ETA:3m36s]
+[#cd2a83 5.1GiB/28GiB(18%) CN:16 DL:109MiB ETA:3m35s]
+[#cd2a83 5.2GiB/28GiB(18%) CN:16 DL:110MiB ETA:3m33s]
+[#cd2a83 5.3GiB/28GiB(18%) CN:16 DL:110MiB ETA:3m30s]
+[#cd2a83 5.4GiB/28GiB(19%) CN:16 DL:111MiB ETA:3m29s]
+[#cd2a83 5.5GiB/28GiB(19%) CN:16 DL:109MiB ETA:3m31s]
+[#cd2a83 5.6GiB/28GiB(20%) CN:16 DL:111MiB ETA:3m27s]
+[#cd2a83 5.7GiB/28GiB(20%) CN:16 DL:112MiB ETA:3m24s]
+[#cd2a83 5.8GiB/28GiB(20%) CN:16 DL:112MiB ETA:3m23s]
+ *** Download Progress Summary as of Sat Jul  4 07:39:57 2026 *** 
+===============================================================================
+[#cd2a83 5.9GiB/28GiB(21%) CN:16 DL:111MiB ETA:3m23s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#cd2a83 5.9GiB/28GiB(21%) CN:16 DL:111MiB ETA:3m23s]
+[#cd2a83 6.0GiB/28GiB(21%) CN:16 DL:111MiB ETA:3m22s]
+[#cd2a83 6.2GiB/28GiB(22%) CN:16 DL:111MiB ETA:3m20s]
+[#cd2a83 6.3GiB/28GiB(22%) CN:16 DL:111MiB ETA:3m20s]
+[#cd2a83 6.4GiB/28GiB(22%) CN:16 DL:111MiB ETA:3m19s]
+[#cd2a83 6.5GiB/28GiB(23%) CN:16 DL:111MiB ETA:3m18s]
+[#cd2a83 6.6GiB/28GiB(23%) CN:16 DL:111MiB ETA:3m16s]
+[#cd2a83 6.7GiB/28GiB(23%) CN:16 DL:111MiB ETA:3m16s]
+[#cd2a83 6.8GiB/28GiB(24%) CN:16 DL:110MiB ETA:3m17s]
+[#cd2a83 6.9GiB/28GiB(24%) CN:16 DL:110MiB ETA:3m17s]
+[#cd2a83 7.0GiB/28GiB(25%) CN:16 DL:110MiB ETA:3m15s]
+[#cd2a83 7.1GiB/28GiB(25%) CN:16 DL:110MiB ETA:3m14s]
+[#cd2a83 7.2GiB/28GiB(25%) CN:16 DL:110MiB ETA:3m13s]
+[#cd2a83 7.3GiB/28GiB(26%) CN:16 DL:110MiB ETA:3m12s]
+[#cd2a83 7.4GiB/28GiB(26%) CN:16 DL:110MiB ETA:3m11s]
+[#cd2a83 7.5GiB/28GiB(26%) CN:16 DL:110MiB ETA:3m10s]
+[#cd2a83 7.7GiB/28GiB(27%) CN:16 DL:110MiB ETA:3m9s]
+[#cd2a83 7.8GiB/28GiB(27%) CN:16 DL:110MiB ETA:3m8s]
+[#cd2a83 7.9GiB/28GiB(28%) CN:16 DL:110MiB ETA:3m7s]
+[#cd2a83 8.0GiB/28GiB(28%) CN:16 DL:110MiB ETA:3m6s]
+[#cd2a83 8.1GiB/28GiB(28%) CN:16 DL:110MiB ETA:3m5s]
+[#cd2a83 8.2GiB/28GiB(29%) CN:16 DL:110MiB ETA:3m4s]
+[#cd2a83 8.3GiB/28GiB(29%) CN:16 DL:110MiB ETA:3m3s]
+[#cd2a83 8.4GiB/28GiB(30%) CN:16 DL:110MiB ETA:3m2s]
+[#cd2a83 8.5GiB/28GiB(30%) CN:16 DL:110MiB ETA:3m1s]
+[#cd2a83 8.6GiB/28GiB(30%) CN:16 DL:110MiB ETA:3m]
+[#cd2a83 8.7GiB/28GiB(31%) CN:16 DL:110MiB ETA:2m59s]
+[#cd2a83 8.8GiB/28GiB(31%) CN:16 DL:110MiB ETA:2m58s]
+[#cd2a83 8.9GiB/28GiB(31%) CN:16 DL:110MiB ETA:2m57s]
+[#cd2a83 9.0GiB/28GiB(32%) CN:16 DL:110MiB ETA:2m56s]
+[#cd2a83 9.1GiB/28GiB(32%) CN:16 DL:110MiB ETA:2m55s]
+[#cd2a83 9.3GiB/28GiB(33%) CN:16 DL:110MiB ETA:2m54s]
+[#cd2a83 9.4GiB/28GiB(33%) CN:16 DL:110MiB ETA:2m53s]
+[#cd2a83 9.5GiB/28GiB(33%) CN:16 DL:110MiB ETA:2m52s]
+[#cd2a83 9.6GiB/28GiB(34%) CN:16 DL:110MiB ETA:2m51s]
+[#cd2a83 9.7GiB/28GiB(34%) CN:16 DL:110MiB ETA:2m50s]
+[#cd2a83 9.8GiB/28GiB(34%) CN:16 DL:110MiB ETA:2m49s]
+[#cd2a83 9.9GiB/28GiB(35%) CN:16 DL:110MiB ETA:2m48s]
+[#cd2a83 10GiB/28GiB(35%) CN:16 DL:110MiB ETA:2m47s]
+[#cd2a83 10GiB/28GiB(36%) CN:16 DL:111MiB ETA:2m45s]
+[#cd2a83 10GiB/28GiB(36%) CN:16 DL:110MiB ETA:2m45s]
+[#cd2a83 10GiB/28GiB(36%) CN:16 DL:110MiB ETA:2m44s]
+[#cd2a83 10GiB/28GiB(37%) CN:16 DL:110MiB ETA:2m43s]
+[#cd2a83 10GiB/28GiB(37%) CN:16 DL:110MiB ETA:2m42s]
+[#cd2a83 10GiB/28GiB(37%) CN:16 DL:110MiB ETA:2m41s]
+[#cd2a83 10GiB/28GiB(38%) CN:16 DL:110MiB ETA:2m40s]
+[#cd2a83 10GiB/28GiB(38%) CN:16 DL:110MiB ETA:2m39s]
+[#cd2a83 11GiB/28GiB(39%) CN:16 DL:110MiB ETA:2m38s]
+[#cd2a83 11GiB/28GiB(39%) CN:16 DL:110MiB ETA:2m37s]
+[#cd2a83 11GiB/28GiB(39%) CN:16 DL:111MiB ETA:2m35s]
+[#cd2a83 11GiB/28GiB(40%) CN:16 DL:110MiB ETA:2m35s]
+[#cd2a83 11GiB/28GiB(40%) CN:16 DL:110MiB ETA:2m34s]
+[#cd2a83 11GiB/28GiB(41%) CN:16 DL:110MiB ETA:2m33s]
+[#cd2a83 11GiB/28GiB(41%) CN:16 DL:110MiB ETA:2m32s]
+[#cd2a83 11GiB/28GiB(41%) CN:16 DL:110MiB ETA:2m31s]
+[#cd2a83 11GiB/28GiB(42%) CN:16 DL:110MiB ETA:2m30s]
+[#cd2a83 11GiB/28GiB(42%) CN:16 DL:110MiB ETA:2m29s]
+[#cd2a83 12GiB/28GiB(42%) CN:16 DL:110MiB ETA:2m28s]
+[#cd2a83 12GiB/28GiB(43%) CN:16 DL:110MiB ETA:2m27s]
+[#cd2a83 12GiB/28GiB(43%) CN:16 DL:110MiB ETA:2m26s]
+[#cd2a83 12GiB/28GiB(44%) CN:16 DL:110MiB ETA:2m25s]
+ *** Download Progress Summary as of Sat Jul  4 07:40:58 2026 *** 
+===============================================================================
+[#cd2a83 12GiB/28GiB(44%) CN:16 DL:110MiB ETA:2m25s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#cd2a83 12GiB/28GiB(44%) CN:16 DL:110MiB ETA:2m25s]
+[#cd2a83 12GiB/28GiB(44%) CN:16 DL:110MiB ETA:2m24s]
+[#cd2a83 12GiB/28GiB(45%) CN:16 DL:110MiB ETA:2m23s]
+[#cd2a83 12GiB/28GiB(45%) CN:16 DL:110MiB ETA:2m22s]
+[#cd2a83 12GiB/28GiB(45%) CN:16 DL:110MiB ETA:2m21s]
+[#cd2a83 13GiB/28GiB(46%) CN:16 DL:110MiB ETA:2m20s]
+[#cd2a83 13GiB/28GiB(46%) CN:16 DL:110MiB ETA:2m19s]
+[#cd2a83 13GiB/28GiB(47%) CN:16 DL:110MiB ETA:2m18s]
+[#cd2a83 13GiB/28GiB(47%) CN:16 DL:110MiB ETA:2m17s]
+[#cd2a83 13GiB/28GiB(47%) CN:16 DL:111MiB ETA:2m14s]
+[#cd2a83 13GiB/28GiB(48%) CN:16 DL:111MiB ETA:2m14s]
+[#cd2a83 13GiB/28GiB(48%) CN:16 DL:111MiB ETA:2m12s]
+[#cd2a83 13GiB/28GiB(49%) CN:16 DL:111MiB ETA:2m11s]
+[#cd2a83 13GiB/28GiB(49%) CN:16 DL:111MiB ETA:2m10s]
+[#cd2a83 14GiB/28GiB(49%) CN:16 DL:111MiB ETA:2m9s]
+[#cd2a83 14GiB/28GiB(50%) CN:16 DL:111MiB ETA:2m9s]
+[#cd2a83 14GiB/28GiB(50%) CN:16 DL:111MiB ETA:2m8s]
+[#cd2a83 14GiB/28GiB(50%) CN:16 DL:111MiB ETA:2m7s]
+[#cd2a83 14GiB/28GiB(51%) CN:16 DL:111MiB ETA:2m6s]
+[#cd2a83 14GiB/28GiB(51%) CN:16 DL:111MiB ETA:2m4s]
+[#cd2a83 14GiB/28GiB(52%) CN:16 DL:111MiB ETA:2m4s]
+[#cd2a83 14GiB/28GiB(52%) CN:16 DL:111MiB ETA:2m3s]
+[#cd2a83 14GiB/28GiB(52%) CN:16 DL:111MiB ETA:2m2s]
+[#cd2a83 14GiB/28GiB(53%) CN:16 DL:111MiB ETA:2m1s]
+[#cd2a83 15GiB/28GiB(53%) CN:16 DL:111MiB ETA:2m]
+[#cd2a83 15GiB/28GiB(53%) CN:16 DL:111MiB ETA:1m59s]
+[#cd2a83 15GiB/28GiB(54%) CN:16 DL:111MiB ETA:1m58s]
+[#cd2a83 15GiB/28GiB(54%) CN:16 DL:111MiB ETA:1m57s]
+[#cd2a83 15GiB/28GiB(55%) CN:16 DL:111MiB ETA:1m56s]
+[#cd2a83 15GiB/28GiB(55%) CN:16 DL:111MiB ETA:1m54s]
+[#cd2a83 15GiB/28GiB(55%) CN:16 DL:111MiB ETA:1m54s]
+[#cd2a83 15GiB/28GiB(56%) CN:16 DL:111MiB ETA:1m53s]
+[#cd2a83 15GiB/28GiB(56%) CN:16 DL:111MiB ETA:1m52s]
+[#cd2a83 16GiB/28GiB(57%) CN:16 DL:111MiB ETA:1m51s]
+[#cd2a83 16GiB/28GiB(57%) CN:16 DL:111MiB ETA:1m50s]
+[#cd2a83 16GiB/28GiB(57%) CN:16 DL:111MiB ETA:1m49s]
+[#cd2a83 16GiB/28GiB(58%) CN:16 DL:111MiB ETA:1m48s]
+[#cd2a83 16GiB/28GiB(58%) CN:16 DL:111MiB ETA:1m47s]
+[#cd2a83 16GiB/28GiB(58%) CN:16 DL:111MiB ETA:1m46s]
+[#cd2a83 16GiB/28GiB(59%) CN:16 DL:111MiB ETA:1m45s]
+[#cd2a83 16GiB/28GiB(59%) CN:16 DL:111MiB ETA:1m44s]
+[#cd2a83 16GiB/28GiB(60%) CN:16 DL:111MiB ETA:1m43s]
+[#cd2a83 17GiB/28GiB(60%) CN:16 DL:111MiB ETA:1m42s]
+[#cd2a83 17GiB/28GiB(60%) CN:16 DL:111MiB ETA:1m41s]
+[#cd2a83 17GiB/28GiB(61%) CN:16 DL:111MiB ETA:1m40s]
+[#cd2a83 17GiB/28GiB(61%) CN:16 DL:111MiB ETA:1m39s]
+[#cd2a83 17GiB/28GiB(62%) CN:16 DL:111MiB ETA:1m38s]
+[#cd2a83 17GiB/28GiB(62%) CN:16 DL:111MiB ETA:1m37s]
+[#cd2a83 17GiB/28GiB(62%) CN:16 DL:111MiB ETA:1m36s]
+[#cd2a83 17GiB/28GiB(63%) CN:16 DL:111MiB ETA:1m35s]
+[#cd2a83 17GiB/28GiB(63%) CN:16 DL:111MiB ETA:1m34s]
+[#cd2a83 17GiB/28GiB(63%) CN:16 DL:111MiB ETA:1m33s]
+[#cd2a83 18GiB/28GiB(64%) CN:16 DL:111MiB ETA:1m32s]
+[#cd2a83 18GiB/28GiB(64%) CN:16 DL:111MiB ETA:1m31s]
+[#cd2a83 18GiB/28GiB(65%) CN:16 DL:111MiB ETA:1m30s]
+[#cd2a83 18GiB/28GiB(65%) CN:16 DL:111MiB ETA:1m29s]
+[#cd2a83 18GiB/28GiB(65%) CN:16 DL:111MiB ETA:1m28s]
+[#cd2a83 18GiB/28GiB(66%) CN:16 DL:111MiB ETA:1m27s]
+[#cd2a83 18GiB/28GiB(66%) CN:16 DL:111MiB ETA:1m26s]
+[#cd2a83 18GiB/28GiB(66%) CN:16 DL:111MiB ETA:1m25s]
+[#cd2a83 18GiB/28GiB(67%) CN:16 DL:110MiB ETA:1m25s]
+ *** Download Progress Summary as of Sat Jul  4 07:41:58 2026 *** 
+===============================================================================
+[#cd2a83 19GiB/28GiB(67%) CN:16 DL:110MiB ETA:1m24s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#cd2a83 19GiB/28GiB(67%) CN:16 DL:110MiB ETA:1m24s]
+[#cd2a83 19GiB/28GiB(67%) CN:16 DL:103MiB ETA:1m29s]
+[#cd2a83 19GiB/28GiB(67%) CN:16 DL:95MiB ETA:1m36s]
+[#cd2a83 19GiB/28GiB(68%) CN:16 DL:88MiB ETA:1m43s]
+[#cd2a83 19GiB/28GiB(68%) CN:16 DL:81MiB ETA:1m51s]
+[#cd2a83 19GiB/28GiB(68%) CN:16 DL:75MiB ETA:2m]
+[#cd2a83 19GiB/28GiB(68%) CN:16 DL:68MiB ETA:2m12s]
+[#cd2a83 19GiB/28GiB(68%) CN:16 DL:61MiB ETA:2m27s]
+[#cd2a83 19GiB/28GiB(68%) CN:16 DL:54MiB ETA:2m44s]
+[#cd2a83 19GiB/28GiB(69%) CN:16 DL:48MiB ETA:3m4s]
+[#cd2a83 19GiB/28GiB(69%) CN:16 DL:44MiB ETA:3m21s]
+[#cd2a83 19GiB/28GiB(69%) CN:16 DL:45MiB ETA:3m13s]
+[#cd2a83 19GiB/28GiB(69%) CN:16 DL:51MiB ETA:2m50s]
+[#cd2a83 19GiB/28GiB(70%) CN:16 DL:55MiB ETA:2m34s]
+[#cd2a83 19GiB/28GiB(70%) CN:16 DL:61MiB ETA:2m19s]
+[#cd2a83 19GiB/28GiB(70%) CN:16 DL:65MiB ETA:2m9s]
+[#cd2a83 19GiB/28GiB(70%) CN:16 DL:69MiB ETA:2m]
+[#cd2a83 20GiB/28GiB(71%) CN:16 DL:75MiB ETA:1m50s]
+[#cd2a83 20GiB/28GiB(71%) CN:16 DL:78MiB ETA:1m44s]
+[#cd2a83 20GiB/28GiB(71%) CN:16 DL:81MiB ETA:1m40s]
+[#cd2a83 20GiB/28GiB(72%) CN:16 DL:84MiB ETA:1m35s]
+[#cd2a83 20GiB/28GiB(72%) CN:16 DL:83MiB ETA:1m35s]
+[#cd2a83 20GiB/28GiB(72%) CN:16 DL:80MiB ETA:1m39s]
+[#cd2a83 20GiB/28GiB(72%) CN:16 DL:75MiB ETA:1m44s]
+[#cd2a83 20GiB/28GiB(72%) CN:16 DL:71MiB ETA:1m48s]
+[#cd2a83 20GiB/28GiB(73%) CN:16 DL:68MiB ETA:1m53s]
+[#cd2a83 20GiB/28GiB(73%) CN:16 DL:63MiB ETA:2m1s]
+[#cd2a83 20GiB/28GiB(73%) CN:16 DL:59MiB ETA:2m8s]
+[#cd2a83 20GiB/28GiB(73%) CN:16 DL:57MiB ETA:2m11s]
+[#cd2a83 20GiB/28GiB(73%) CN:16 DL:55MiB ETA:2m15s]
+[#cd2a83 20GiB/28GiB(73%) CN:16 DL:54MiB ETA:2m17s]
+[#cd2a83 20GiB/28GiB(74%) CN:16 DL:55MiB ETA:2m13s]
+[#cd2a83 20GiB/28GiB(74%) CN:16 DL:57MiB ETA:2m8s]
+[#cd2a83 21GiB/28GiB(74%) CN:16 DL:57MiB ETA:2m8s]
+[#cd2a83 21GiB/28GiB(74%) CN:16 DL:57MiB ETA:2m7s]
+[#cd2a83 21GiB/28GiB(74%) CN:16 DL:57MiB ETA:2m5s]
+[#cd2a83 21GiB/28GiB(75%) CN:16 DL:58MiB ETA:2m1s]
+[#cd2a83 21GiB/28GiB(75%) CN:16 DL:58MiB ETA:2m1s]
+[#cd2a83 21GiB/28GiB(75%) CN:16 DL:57MiB ETA:2m1s]
+[#cd2a83 21GiB/28GiB(75%) CN:16 DL:57MiB ETA:2m2s]
+[#cd2a83 21GiB/28GiB(75%) CN:16 DL:55MiB ETA:2m4s]
+[#cd2a83 21GiB/28GiB(76%) CN:16 DL:54MiB ETA:2m6s]
+[#cd2a83 21GiB/28GiB(76%) CN:16 DL:53MiB ETA:2m7s]
+[#cd2a83 21GiB/28GiB(76%) CN:16 DL:53MiB ETA:2m5s]
+[#cd2a83 21GiB/28GiB(76%) CN:16 DL:54MiB ETA:2m4s]
+[#cd2a83 21GiB/28GiB(76%) CN:16 DL:53MiB ETA:2m3s]
+[#cd2a83 21GiB/28GiB(77%) CN:16 DL:54MiB ETA:2m2s]
+[#cd2a83 21GiB/28GiB(77%) CN:16 DL:54MiB ETA:2m]
+[#cd2a83 21GiB/28GiB(77%) CN:16 DL:54MiB ETA:1m59s]
+[#cd2a83 21GiB/28GiB(77%) CN:16 DL:54MiB ETA:1m58s]
+[#cd2a83 21GiB/28GiB(77%) CN:16 DL:54MiB ETA:1m57s]
+[#cd2a83 21GiB/28GiB(77%) CN:16 DL:54MiB ETA:1m55s]
+[#cd2a83 22GiB/28GiB(78%) CN:16 DL:55MiB ETA:1m54s]
+[#cd2a83 22GiB/28GiB(78%) CN:16 DL:56MiB ETA:1m49s]
+[#cd2a83 22GiB/28GiB(78%) CN:16 DL:58MiB ETA:1m44s]
+[#cd2a83 22GiB/28GiB(78%) CN:16 DL:60MiB ETA:1m39s]
+[#cd2a83 22GiB/28GiB(79%) CN:16 DL:63MiB ETA:1m34s]
+[#cd2a83 22GiB/28GiB(79%) CN:16 DL:65MiB ETA:1m30s]
+[#cd2a83 22GiB/28GiB(79%) CN:16 DL:67MiB ETA:1m26s]
+[#cd2a83 22GiB/28GiB(79%) CN:16 DL:68MiB ETA:1m24s]
+[#cd2a83 22GiB/28GiB(80%) CN:16 DL:69MiB ETA:1m22s]
+ *** Download Progress Summary as of Sat Jul  4 07:42:59 2026 *** 
+===============================================================================
+[#cd2a83 22GiB/28GiB(80%) CN:16 DL:70MiB ETA:1m20s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#cd2a83 22GiB/28GiB(80%) CN:16 DL:70MiB ETA:1m20s]
+[#cd2a83 22GiB/28GiB(80%) CN:16 DL:68MiB ETA:1m22s]
+[#cd2a83 22GiB/28GiB(80%) CN:16 DL:66MiB ETA:1m23s]
+[#cd2a83 22GiB/28GiB(80%) CN:16 DL:63MiB ETA:1m26s]
+[#cd2a83 22GiB/28GiB(81%) CN:16 DL:61MiB ETA:1m28s]
+[#cd2a83 22GiB/28GiB(81%) CN:16 DL:59MiB ETA:1m30s]
+[#cd2a83 22GiB/28GiB(81%) CN:16 DL:59MiB ETA:1m29s]
+[#cd2a83 23GiB/28GiB(81%) CN:16 DL:58MiB ETA:1m30s]
+[#cd2a83 23GiB/28GiB(81%) CN:16 DL:58MiB ETA:1m28s]
+[#cd2a83 23GiB/28GiB(82%) CN:16 DL:58MiB ETA:1m27s]
+[#cd2a83 23GiB/28GiB(82%) CN:16 DL:60MiB ETA:1m23s]
+[#cd2a83 23GiB/28GiB(82%) CN:16 DL:61MiB ETA:1m22s]
+[#cd2a83 23GiB/28GiB(82%) CN:16 DL:60MiB ETA:1m21s]
+[#cd2a83 23GiB/28GiB(83%) CN:16 DL:62MiB ETA:1m18s]
+[#cd2a83 23GiB/28GiB(83%) CN:16 DL:64MiB ETA:1m14s]
+[#cd2a83 23GiB/28GiB(83%) CN:16 DL:67MiB ETA:1m10s]
+[#cd2a83 23GiB/28GiB(83%) CN:16 DL:68MiB ETA:1m7s]
+[#cd2a83 23GiB/28GiB(84%) CN:16 DL:71MiB ETA:1m4s]
+[#cd2a83 23GiB/28GiB(84%) CN:16 DL:72MiB ETA:1m1s]
+[#cd2a83 23GiB/28GiB(84%) CN:16 DL:75MiB ETA:58s]
+[#cd2a83 23GiB/28GiB(85%) CN:16 DL:76MiB ETA:56s]
+[#cd2a83 24GiB/28GiB(85%) CN:16 DL:77MiB ETA:54s]
+[#cd2a83 24GiB/28GiB(85%) CN:16 DL:79MiB ETA:52s]
+[#cd2a83 24GiB/28GiB(85%) CN:16 DL:81MiB ETA:50s]
+[#cd2a83 24GiB/28GiB(86%) CN:16 DL:80MiB ETA:49s]
+[#cd2a83 24GiB/28GiB(86%) CN:16 DL:78MiB ETA:50s]
+[#cd2a83 24GiB/28GiB(86%) CN:16 DL:75MiB ETA:51s]
+[#cd2a83 24GiB/28GiB(86%) CN:16 DL:73MiB ETA:52s]
+[#cd2a83 24GiB/28GiB(86%) CN:16 DL:70MiB ETA:53s]
+[#cd2a83 24GiB/28GiB(87%) CN:16 DL:67MiB ETA:55s]
+[#cd2a83 24GiB/28GiB(87%) CN:16 DL:65MiB ETA:56s]
+[#cd2a83 24GiB/28GiB(87%) CN:16 DL:63MiB ETA:57s]
+[#cd2a83 24GiB/28GiB(87%) CN:16 DL:60MiB ETA:59s]
+[#cd2a83 24GiB/28GiB(87%) CN:16 DL:57MiB ETA:1m1s]
+[#cd2a83 24GiB/28GiB(88%) CN:16 DL:56MiB ETA:1m1s]
+[#cd2a83 24GiB/28GiB(88%) CN:16 DL:55MiB ETA:1m]
+[#cd2a83 24GiB/28GiB(88%) CN:16 DL:55MiB ETA:59s]
+[#cd2a83 24GiB/28GiB(88%) CN:16 DL:56MiB ETA:58s]
+[#cd2a83 25GiB/28GiB(88%) CN:16 DL:56MiB ETA:57s]
+[#cd2a83 25GiB/28GiB(89%) CN:16 DL:56MiB ETA:55s]
+[#cd2a83 25GiB/28GiB(89%) CN:16 DL:57MiB ETA:53s]
+[#cd2a83 25GiB/28GiB(89%) CN:16 DL:58MiB ETA:51s]
+[#cd2a83 25GiB/28GiB(89%) CN:16 DL:59MiB ETA:49s]
+[#cd2a83 25GiB/28GiB(89%) CN:16 DL:60MiB ETA:47s]
+[#cd2a83 25GiB/28GiB(90%) CN:16 DL:61MiB ETA:46s]
+[#cd2a83 25GiB/28GiB(90%) CN:16 DL:61MiB ETA:45s]
+[#cd2a83 25GiB/28GiB(90%) CN:16 DL:60MiB ETA:44s]
+[#cd2a83 25GiB/28GiB(90%) CN:16 DL:60MiB ETA:44s]
+[#cd2a83 25GiB/28GiB(90%) CN:16 DL:59MiB ETA:44s]
+[#cd2a83 25GiB/28GiB(91%) CN:16 DL:58MiB ETA:44s]
+[#cd2a83 25GiB/28GiB(91%) CN:16 DL:57MiB ETA:44s]
+[#cd2a83 25GiB/28GiB(91%) CN:16 DL:56MiB ETA:43s]
+[#cd2a83 25GiB/28GiB(91%) CN:16 DL:56MiB ETA:43s]
+[#cd2a83 25GiB/28GiB(91%) CN:16 DL:56MiB ETA:41s]
+[#cd2a83 25GiB/28GiB(92%) CN:16 DL:57MiB ETA:40s]
+[#cd2a83 25GiB/28GiB(92%) CN:16 DL:57MiB ETA:38s]
+[#cd2a83 26GiB/28GiB(92%) CN:16 DL:59MiB ETA:36s]
+[#cd2a83 26GiB/28GiB(92%) CN:16 DL:60MiB ETA:34s]
+[#cd2a83 26GiB/28GiB(92%) CN:16 DL:61MiB ETA:33s]
+[#cd2a83 26GiB/28GiB(93%) CN:16 DL:59MiB ETA:33s]
+[#cd2a83 26GiB/28GiB(93%) CN:16 DL:61MiB ETA:31s]
+ *** Download Progress Summary as of Sat Jul  4 07:43:59 2026 *** 
+===============================================================================
+[#cd2a83 26GiB/28GiB(93%) CN:16 DL:61MiB ETA:30s]
+FILE: checkpoints/vjepa2_1_vitG_384.pt
+-------------------------------------------------------------------------------
+
+[#cd2a83 26GiB/28GiB(93%) CN:16 DL:61MiB ETA:30s]
+[#cd2a83 26GiB/28GiB(93%) CN:16 DL:61MiB ETA:28s]
+[#cd2a83 26GiB/28GiB(94%) CN:16 DL:60MiB ETA:28s]
+[#cd2a83 26GiB/28GiB(94%) CN:16 DL:59MiB ETA:28s]
+[#cd2a83 26GiB/28GiB(94%) CN:16 DL:59MiB ETA:27s]
+[#cd2a83 26GiB/28GiB(94%) CN:16 DL:57MiB ETA:26s]
+[#cd2a83 26GiB/28GiB(94%) CN:16 DL:58MiB ETA:25s]
+[#cd2a83 26GiB/28GiB(95%) CN:16 DL:58MiB ETA:24s]
+[#cd2a83 26GiB/28GiB(95%) CN:16 DL:58MiB ETA:23s]
+[#cd2a83 26GiB/28GiB(95%) CN:16 DL:59MiB ETA:22s]
+[#cd2a83 26GiB/28GiB(95%) CN:16 DL:58MiB ETA:21s]
+[#cd2a83 26GiB/28GiB(95%) CN:16 DL:56MiB ETA:21s]
+[#cd2a83 27GiB/28GiB(95%) CN:16 DL:56MiB ETA:20s]
+[#cd2a83 27GiB/28GiB(96%) CN:16 DL:56MiB ETA:19s]
+[#cd2a83 27GiB/28GiB(96%) CN:16 DL:56MiB ETA:18s]
+[#cd2a83 27GiB/28GiB(96%) CN:16 DL:56MiB ETA:17s]
+[#cd2a83 27GiB/28GiB(96%) CN:16 DL:55MiB ETA:17s]
+[#cd2a83 27GiB/28GiB(96%) CN:16 DL:54MiB ETA:16s]
+[#cd2a83 27GiB/28GiB(97%) CN:16 DL:54MiB ETA:15s]
+[#cd2a83 27GiB/28GiB(97%) CN:16 DL:52MiB ETA:15s]
+[#cd2a83 27GiB/28GiB(97%) CN:16 DL:52MiB ETA:14s]
+[#cd2a83 27GiB/28GiB(97%) CN:16 DL:52MiB ETA:13s]
+[#cd2a83 27GiB/28GiB(97%) CN:16 DL:52MiB ETA:12s]
+[#cd2a83 27GiB/28GiB(97%) CN:16 DL:52MiB ETA:11s]
+[#cd2a83 27GiB/28GiB(98%) CN:16 DL:50MiB ETA:10s]
+[#cd2a83 27GiB/28GiB(98%) CN:16 DL:51MiB ETA:9s]
+[#cd2a83 27GiB/28GiB(98%) CN:16 DL:51MiB ETA:8s]
+[#cd2a83 27GiB/28GiB(98%) CN:16 DL:54MiB ETA:6s]
+[#cd2a83 27GiB/28GiB(99%) CN:16 DL:58MiB ETA:4s]
+[#cd2a83 27GiB/28GiB(99%) CN:14 DL:63MiB ETA:2s]
+[#cd2a83 28GiB/28GiB(99%) CN:7 DL:65MiB ETA:1s]
+[#cd2a83 28GiB/28GiB(99%) CN:6 DL:63MiB ETA:1s]
+[#cd2a83 28GiB/28GiB(99%) CN:4 DL:60MiB]
+[#cd2a83 28GiB/28GiB(99%) CN:2 DL:56MiB]
+[#cd2a83 28GiB/28GiB(99%) CN:1 DL:54MiB]
+[#cd2a83 28GiB/28GiB(99%) CN:1 DL:49MiB]
+
+07/04 07:44:34 [[1;32mNOTICE[0m] Download complete: checkpoints/vjepa2_1_vitG_384.pt
+
+Download Results:
+gid   |stat|avg speed  |path/URI
+======+====+===========+=======================================================
+cd2a83|OK  |    85MiB/s|checkpoints/vjepa2_1_vitG_384.pt
+
+Status Legend:
+(OK):download completed.
+[2/2]   Downloading vjepa2_1_vitg_384.pt ← https://dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitg_384.pt
+
+07/04 07:44:34 [[1;32mNOTICE[0m] Downloading 1 item(s)
+[#eb2472 3.6MiB/15GiB(0%) CN:16 DL:8.0MiB ETA:33m30s]
+[#eb2472 89MiB/15GiB(0%) CN:16 DL:61MiB ETA:4m18s]
+[#eb2472 189MiB/15GiB(1%) CN:16 DL:77MiB ETA:3m24s]
+[#eb2472 288MiB/15GiB(1%) CN:16 DL:84MiB ETA:3m8s]
+[#eb2472 385MiB/15GiB(2%) CN:16 DL:87MiB ETA:2m59s]
+[#eb2472 482MiB/15GiB(3%) CN:16 DL:89MiB ETA:2m54s]
+[#eb2472 569MiB/15GiB(3%) CN:16 DL:89MiB ETA:2m54s]
+[#eb2472 638MiB/15GiB(3%) CN:16 DL:86MiB ETA:2m58s]
+[#eb2472 693MiB/15GiB(4%) CN:16 DL:82MiB ETA:3m6s]
+[#eb2472 729MiB/15GiB(4%) CN:16 DL:77MiB ETA:3m17s]
+[#eb2472 743MiB/15GiB(4%) CN:16 DL:74MiB ETA:3m26s]
+[#eb2472 765MiB/15GiB(4%) CN:16 DL:66MiB ETA:3m51s]
+[#eb2472 801MiB/15GiB(4%) CN:16 DL:59MiB ETA:4m17s]
+[#eb2472 859MiB/15GiB(5%) CN:16 DL:55MiB ETA:4m35s]
+[#eb2472 0.9GiB/15GiB(5%) CN:16 DL:52MiB ETA:4m46s]
+[#eb2472 1.0GiB/15GiB(6%) CN:16 DL:52MiB ETA:4m44s]
+[#eb2472 1.1GiB/15GiB(7%) CN:16 DL:55MiB ETA:4m28s]
+[#eb2472 1.2GiB/15GiB(7%) CN:16 DL:60MiB ETA:4m4s]
+[#eb2472 1.3GiB/15GiB(8%) CN:16 DL:67MiB ETA:3m39s]
+[#eb2472 1.4GiB/15GiB(8%) CN:16 DL:75MiB ETA:3m12s]
+[#eb2472 1.5GiB/15GiB(9%) CN:16 DL:85MiB ETA:2m49s]
+[#eb2472 1.5GiB/15GiB(10%) CN:16 DL:89MiB ETA:2m41s]
+[#eb2472 1.6GiB/15GiB(10%) CN:16 DL:89MiB ETA:2m41s]
+[#eb2472 1.6GiB/15GiB(10%) CN:16 DL:85MiB ETA:2m47s]
+[#eb2472 1.7GiB/15GiB(10%) CN:16 DL:80MiB ETA:2m57s]
+[#eb2472 1.7GiB/15GiB(11%) CN:16 DL:74MiB ETA:3m10s]
+[#eb2472 1.7GiB/15GiB(11%) CN:16 DL:67MiB ETA:3m30s]
+[#eb2472 1.8GiB/15GiB(11%) CN:16 DL:61MiB ETA:3m52s]
+[#eb2472 1.8GiB/15GiB(11%) CN:16 DL:54MiB ETA:4m21s]
+[#eb2472 1.9GiB/15GiB(12%) CN:16 DL:47MiB ETA:4m58s]
+[#eb2472 1.9GiB/15GiB(12%) CN:16 DL:43MiB ETA:5m26s]
+[#eb2472 2.0GiB/15GiB(12%) CN:16 DL:43MiB ETA:5m22s]
+[#eb2472 2.0GiB/15GiB(13%) CN:16 DL:45MiB ETA:5m9s]
+[#eb2472 2.1GiB/15GiB(13%) CN:16 DL:47MiB ETA:4m55s]
+[#eb2472 2.1GiB/15GiB(13%) CN:16 DL:47MiB ETA:4m54s]
+[#eb2472 2.1GiB/15GiB(13%) CN:16 DL:46MiB ETA:4m55s]
+[#eb2472 2.2GiB/15GiB(14%) CN:16 DL:49MiB ETA:4m36s]
+[#eb2472 2.3GiB/15GiB(14%) CN:16 DL:52MiB ETA:4m21s]
+[#eb2472 2.3GiB/15GiB(15%) CN:16 DL:55MiB ETA:4m4s]
+[#eb2472 2.4GiB/15GiB(15%) CN:16 DL:58MiB ETA:3m50s]
+[#eb2472 2.5GiB/15GiB(16%) CN:16 DL:61MiB ETA:3m40s]
+[#eb2472 2.6GiB/15GiB(16%) CN:16 DL:62MiB ETA:3m33s]
+[#eb2472 2.6GiB/15GiB(16%) CN:16 DL:62MiB ETA:3m33s]
+[#eb2472 2.7GiB/15GiB(17%) CN:16 DL:63MiB ETA:3m30s]
+[#eb2472 2.7GiB/15GiB(17%) CN:16 DL:65MiB ETA:3m23s]
+[#eb2472 2.8GiB/15GiB(17%) CN:16 DL:64MiB ETA:3m24s]
+[#eb2472 2.9GiB/15GiB(18%) CN:16 DL:66MiB ETA:3m17s]
+[#eb2472 2.9GiB/15GiB(19%) CN:16 DL:68MiB ETA:3m10s]
+[#eb2472 3.0GiB/15GiB(19%) CN:16 DL:70MiB ETA:3m2s]
+[#eb2472 3.1GiB/15GiB(20%) CN:16 DL:73MiB ETA:2m54s]
+[#eb2472 3.2GiB/15GiB(20%) CN:16 DL:76MiB ETA:2m45s]
+[#eb2472 3.3GiB/15GiB(21%) CN:16 DL:79MiB ETA:2m38s]
+[#eb2472 3.4GiB/15GiB(22%) CN:16 DL:84MiB ETA:2m28s]
+[#eb2472 3.5GiB/15GiB(22%) CN:16 DL:88MiB ETA:2m19s]
+[#eb2472 3.6GiB/15GiB(23%) CN:16 DL:88MiB ETA:2m19s]
+[#eb2472 3.6GiB/15GiB(23%) CN:16 DL:88MiB ETA:2m19s]
+[#eb2472 3.7GiB/15GiB(23%) CN:16 DL:87MiB ETA:2m20s]
+[#eb2472 3.8GiB/15GiB(24%) CN:16 DL:86MiB ETA:2m21s]
+[#eb2472 3.8GiB/15GiB(24%) CN:16 DL:83MiB ETA:2m25s]
+[#eb2472 3.9GiB/15GiB(25%) CN:16 DL:80MiB ETA:2m30s]
+ *** Download Progress Summary as of Sat Jul  4 07:45:34 2026 *** 
+===============================================================================
+[#eb2472 4.0GiB/15GiB(25%) CN:16 DL:75MiB ETA:2m38s]
+FILE: checkpoints/vjepa2_1_vitg_384.pt
+-------------------------------------------------------------------------------
+
+[#eb2472 4.0GiB/15GiB(25%) CN:16 DL:75MiB ETA:2m38s]
+[#eb2472 4.0GiB/15GiB(25%) CN:16 DL:72MiB ETA:2m44s]
+[#eb2472 4.1GiB/15GiB(26%) CN:16 DL:69MiB ETA:2m50s]
+[#eb2472 4.2GiB/15GiB(26%) CN:16 DL:67MiB ETA:2m54s]
+[#eb2472 4.2GiB/15GiB(27%) CN:16 DL:69MiB ETA:2m49s]
+[#eb2472 4.3GiB/15GiB(27%) CN:16 DL:69MiB ETA:2m47s]
+[#eb2472 4.4GiB/15GiB(28%) CN:16 DL:70MiB ETA:2m43s]
+[#eb2472 4.5GiB/15GiB(28%) CN:16 DL:72MiB ETA:2m38s]
+[#eb2472 4.6GiB/15GiB(29%) CN:16 DL:74MiB ETA:2m32s]
+[#eb2472 4.6GiB/15GiB(29%) CN:16 DL:76MiB ETA:2m28s]
+[#eb2472 4.7GiB/15GiB(30%) CN:16 DL:78MiB ETA:2m22s]
+[#eb2472 4.8GiB/15GiB(30%) CN:16 DL:79MiB ETA:2m20s]
+[#eb2472 4.9GiB/15GiB(31%) CN:16 DL:77MiB ETA:2m22s]
+[#eb2472 4.9GiB/15GiB(31%) CN:16 DL:73MiB ETA:2m30s]
+[#eb2472 4.9GiB/15GiB(31%) CN:16 DL:67MiB ETA:2m43s]
+[#eb2472 4.9GiB/15GiB(31%) CN:16 DL:61MiB ETA:2m58s]
+[#eb2472 4.9GiB/15GiB(31%) CN:16 DL:57MiB ETA:3m11s]
+[#eb2472 5.0GiB/15GiB(32%) CN:16 DL:53MiB ETA:3m25s]
+[#eb2472 5.0GiB/15GiB(32%) CN:16 DL:47MiB ETA:3m47s]
+[#eb2472 5.1GiB/15GiB(32%) CN:16 DL:44MiB ETA:4m3s]
+[#eb2472 5.1GiB/15GiB(32%) CN:16 DL:40MiB ETA:4m23s]
+[#eb2472 5.2GiB/15GiB(33%) CN:16 DL:38MiB ETA:4m36s]
+[#eb2472 5.2GiB/15GiB(33%) CN:16 DL:39MiB ETA:4m28s]
+[#eb2472 5.3GiB/15GiB(34%) CN:16 DL:43MiB ETA:4m5s]
+[#eb2472 5.4GiB/15GiB(34%) CN:16 DL:48MiB ETA:3m36s]
+[#eb2472 5.4GiB/15GiB(34%) CN:16 DL:53MiB ETA:3m14s]
+[#eb2472 5.5GiB/15GiB(35%) CN:16 DL:53MiB ETA:3m15s]
+[#eb2472 5.5GiB/15GiB(35%) CN:16 DL:54MiB ETA:3m10s]
+[#eb2472 5.6GiB/15GiB(35%) CN:16 DL:55MiB ETA:3m6s]
+[#eb2472 5.6GiB/15GiB(36%) CN:16 DL:55MiB ETA:3m5s]
+[#eb2472 5.7GiB/15GiB(36%) CN:16 DL:55MiB ETA:3m6s]
+[#eb2472 5.7GiB/15GiB(36%) CN:16 DL:54MiB ETA:3m6s]
+[#eb2472 5.8GiB/15GiB(36%) CN:16 DL:53MiB ETA:3m11s]
+[#eb2472 5.8GiB/15GiB(37%) CN:16 DL:50MiB ETA:3m19s]
+[#eb2472 5.8GiB/15GiB(37%) CN:16 DL:49MiB ETA:3m24s]
+[#eb2472 5.9GiB/15GiB(37%) CN:16 DL:47MiB ETA:3m29s]
+[#eb2472 5.9GiB/15GiB(38%) CN:16 DL:48MiB ETA:3m24s]
+[#eb2472 6.0GiB/15GiB(38%) CN:16 DL:50MiB ETA:3m14s]
+[#eb2472 6.1GiB/15GiB(38%) CN:16 DL:52MiB ETA:3m5s]
+[#eb2472 6.2GiB/15GiB(39%) CN:16 DL:56MiB ETA:2m53s]
+[#eb2472 6.2GiB/15GiB(39%) CN:16 DL:58MiB ETA:2m45s]
+[#eb2472 6.3GiB/15GiB(40%) CN:16 DL:60MiB ETA:2m38s]
+[#eb2472 6.4GiB/15GiB(40%) CN:16 DL:65MiB ETA:2m26s]
+[#eb2472 6.4GiB/15GiB(41%) CN:16 DL:68MiB ETA:2m17s]
+[#eb2472 6.5GiB/15GiB(41%) CN:16 DL:72MiB ETA:2m8s]
+[#eb2472 6.6GiB/15GiB(42%) CN:16 DL:74MiB ETA:2m4s]
+[#eb2472 6.7GiB/15GiB(42%) CN:16 DL:75MiB ETA:2m2s]
+[#eb2472 6.7GiB/15GiB(43%) CN:16 DL:72MiB ETA:2m6s]
+[#eb2472 6.8GiB/15GiB(43%) CN:16 DL:70MiB ETA:2m8s]
+[#eb2472 6.8GiB/15GiB(43%) CN:16 DL:67MiB ETA:2m14s]
+[#eb2472 6.9GiB/15GiB(44%) CN:16 DL:65MiB ETA:2m16s]
+[#eb2472 6.9GiB/15GiB(44%) CN:16 DL:64MiB ETA:2m19s]
+[#eb2472 7.0GiB/15GiB(44%) CN:16 DL:60MiB ETA:2m27s]
+[#eb2472 7.0GiB/15GiB(44%) CN:16 DL:58MiB ETA:2m31s]
+[#eb2472 7.1GiB/15GiB(45%) CN:16 DL:55MiB ETA:2m37s]
+[#eb2472 7.1GiB/15GiB(45%) CN:16 DL:54MiB ETA:2m41s]
+[#eb2472 7.2GiB/15GiB(46%) CN:16 DL:56MiB ETA:2m32s]
+[#eb2472 7.3GiB/15GiB(46%) CN:16 DL:59MiB ETA:2m24s]
+[#eb2472 7.4GiB/15GiB(47%) CN:16 DL:63MiB ETA:2m14s]
+[#eb2472 7.5GiB/15GiB(47%) CN:16 DL:67MiB ETA:2m4s]
+[#eb2472 7.5GiB/15GiB(48%) CN:16 DL:71MiB ETA:1m55s]
+ *** Download Progress Summary as of Sat Jul  4 07:46:35 2026 *** 
+===============================================================================
+[#eb2472 7.6GiB/15GiB(48%) CN:16 DL:75MiB ETA:1m49s]
+FILE: checkpoints/vjepa2_1_vitg_384.pt
+-------------------------------------------------------------------------------
+
+[#eb2472 7.6GiB/15GiB(48%) CN:16 DL:75MiB ETA:1m49s]
+[#eb2472 7.7GiB/15GiB(49%) CN:16 DL:78MiB ETA:1m43s]
+[#eb2472 7.8GiB/15GiB(49%) CN:16 DL:81MiB ETA:1m39s]
+[#eb2472 7.9GiB/15GiB(50%) CN:16 DL:83MiB ETA:1m35s]
+[#eb2472 8.0GiB/15GiB(50%) CN:16 DL:86MiB ETA:1m31s]
+[#eb2472 8.0GiB/15GiB(51%) CN:16 DL:86MiB ETA:1m30s]
+[#eb2472 8.1GiB/15GiB(51%) CN:16 DL:84MiB ETA:1m32s]
+[#eb2472 8.2GiB/15GiB(52%) CN:16 DL:80MiB ETA:1m36s]
+[#eb2472 8.2GiB/15GiB(52%) CN:16 DL:75MiB ETA:1m41s]
+[#eb2472 8.2GiB/15GiB(52%) CN:16 DL:71MiB ETA:1m45s]
+[#eb2472 8.3GiB/15GiB(53%) CN:16 DL:67MiB ETA:1m52s]
+[#eb2472 8.3GiB/15GiB(53%) CN:16 DL:64MiB ETA:1m56s]
+[#eb2472 8.4GiB/15GiB(53%) CN:16 DL:62MiB ETA:1m58s]
+[#eb2472 8.5GiB/15GiB(54%) CN:16 DL:61MiB ETA:1m59s]
+[#eb2472 8.6GiB/15GiB(54%) CN:16 DL:61MiB ETA:1m57s]
+[#eb2472 8.7GiB/15GiB(55%) CN:16 DL:64MiB ETA:1m51s]
+[#eb2472 8.8GiB/15GiB(56%) CN:16 DL:68MiB ETA:1m42s]
+[#eb2472 8.8GiB/15GiB(56%) CN:16 DL:73MiB ETA:1m34s]
+[#eb2472 8.9GiB/15GiB(57%) CN:16 DL:77MiB ETA:1m28s]
+[#eb2472 9.0GiB/15GiB(57%) CN:16 DL:80MiB ETA:1m24s]
+[#eb2472 9.1GiB/15GiB(57%) CN:16 DL:82MiB ETA:1m21s]
+[#eb2472 9.1GiB/15GiB(58%) CN:16 DL:82MiB ETA:1m21s]
+[#eb2472 9.2GiB/15GiB(58%) CN:16 DL:81MiB ETA:1m21s]
+[#eb2472 9.3GiB/15GiB(59%) CN:16 DL:78MiB ETA:1m23s]
+[#eb2472 9.3GiB/15GiB(59%) CN:16 DL:76MiB ETA:1m24s]
+[#eb2472 9.4GiB/15GiB(59%) CN:16 DL:72MiB ETA:1m29s]
+[#eb2472 9.4GiB/15GiB(60%) CN:16 DL:68MiB ETA:1m33s]
+[#eb2472 9.5GiB/15GiB(60%) CN:16 DL:64MiB ETA:1m37s]
+[#eb2472 9.5GiB/15GiB(60%) CN:16 DL:63MiB ETA:1m39s]
+[#eb2472 9.6GiB/15GiB(61%) CN:16 DL:61MiB ETA:1m42s]
+[#eb2472 9.6GiB/15GiB(61%) CN:16 DL:59MiB ETA:1m43s]
+[#eb2472 9.7GiB/15GiB(62%) CN:16 DL:58MiB ETA:1m44s]
+[#eb2472 9.8GiB/15GiB(62%) CN:16 DL:58MiB ETA:1m44s]
+[#eb2472 9.8GiB/15GiB(62%) CN:16 DL:57MiB ETA:1m44s]
+[#eb2472 9.9GiB/15GiB(63%) CN:16 DL:57MiB ETA:1m43s]
+[#eb2472 9.9GiB/15GiB(63%) CN:16 DL:58MiB ETA:1m41s]
+[#eb2472 10GiB/15GiB(63%) CN:16 DL:56MiB ETA:1m42s]
+[#eb2472 10GiB/15GiB(63%) CN:16 DL:55MiB ETA:1m44s]
+[#eb2472 10GiB/15GiB(64%) CN:16 DL:54MiB ETA:1m44s]
+[#eb2472 10GiB/15GiB(64%) CN:16 DL:54MiB ETA:1m44s]
+[#eb2472 10GiB/15GiB(64%) CN:16 DL:53MiB ETA:1m44s]
+[#eb2472 10GiB/15GiB(65%) CN:16 DL:52MiB ETA:1m46s]
+[#eb2472 10GiB/15GiB(65%) CN:16 DL:51MiB ETA:1m47s]
+[#eb2472 10GiB/15GiB(65%) CN:16 DL:51MiB ETA:1m46s]
+[#eb2472 10GiB/15GiB(66%) CN:16 DL:51MiB ETA:1m45s]
+[#eb2472 10GiB/15GiB(66%) CN:16 DL:51MiB ETA:1m44s]
+[#eb2472 10GiB/15GiB(66%) CN:16 DL:53MiB ETA:1m39s]
+[#eb2472 10GiB/15GiB(67%) CN:16 DL:53MiB ETA:1m37s]
+[#eb2472 10GiB/15GiB(67%) CN:16 DL:53MiB ETA:1m36s]
+[#eb2472 10GiB/15GiB(67%) CN:16 DL:54MiB ETA:1m35s]
+[#eb2472 10GiB/15GiB(68%) CN:16 DL:54MiB ETA:1m33s]
+[#eb2472 10GiB/15GiB(68%) CN:16 DL:55MiB ETA:1m31s]
+[#eb2472 10GiB/15GiB(68%) CN:16 DL:56MiB ETA:1m28s]
+[#eb2472 10GiB/15GiB(69%) CN:16 DL:56MiB ETA:1m27s]
+[#eb2472 10GiB/15GiB(69%) CN:16 DL:56MiB ETA:1m25s]
+[#eb2472 11GiB/15GiB(70%) CN:16 DL:57MiB ETA:1m24s]
+[#eb2472 11GiB/15GiB(70%) CN:16 DL:57MiB ETA:1m22s]
+[#eb2472 11GiB/15GiB(70%) CN:16 DL:57MiB ETA:1m21s]
+[#eb2472 11GiB/15GiB(71%) CN:16 DL:56MiB ETA:1m21s]
+[#eb2472 11GiB/15GiB(71%) CN:16 DL:56MiB ETA:1m21s]
+[#eb2472 11GiB/15GiB(71%) CN:16 DL:55MiB ETA:1m21s]
+ *** Download Progress Summary as of Sat Jul  4 07:47:35 2026 *** 
+===============================================================================
+[#eb2472 11GiB/15GiB(72%) CN:16 DL:55MiB ETA:1m21s]
+FILE: checkpoints/vjepa2_1_vitg_384.pt
+-------------------------------------------------------------------------------
+
+[#eb2472 11GiB/15GiB(72%) CN:16 DL:55MiB ETA:1m21s]
+[#eb2472 11GiB/15GiB(72%) CN:16 DL:54MiB ETA:1m21s]
+[#eb2472 11GiB/15GiB(72%) CN:16 DL:52MiB ETA:1m24s]
+[#eb2472 11GiB/15GiB(73%) CN:16 DL:52MiB ETA:1m22s]
+[#eb2472 11GiB/15GiB(73%) CN:16 DL:55MiB ETA:1m17s]
+[#eb2472 11GiB/15GiB(74%) CN:16 DL:58MiB ETA:1m11s]
+[#eb2472 11GiB/15GiB(74%) CN:16 DL:63MiB ETA:1m4s]
+[#eb2472 11GiB/15GiB(75%) CN:16 DL:68MiB ETA:58s]
+[#eb2472 11GiB/15GiB(75%) CN:16 DL:72MiB ETA:53s]
+[#eb2472 12GiB/15GiB(76%) CN:16 DL:78MiB ETA:48s]
+[#eb2472 12GiB/15GiB(76%) CN:16 DL:81MiB ETA:45s]
+[#eb2472 12GiB/15GiB(77%) CN:16 DL:80MiB ETA:45s]
+[#eb2472 12GiB/15GiB(77%) CN:16 DL:79MiB ETA:45s]
+[#eb2472 12GiB/15GiB(77%) CN:16 DL:75MiB ETA:47s]
+[#eb2472 12GiB/15GiB(78%) CN:16 DL:72MiB ETA:48s]
+[#eb2472 12GiB/15GiB(78%) CN:16 DL:70MiB ETA:49s]
+[#eb2472 12GiB/15GiB(79%) CN:16 DL:70MiB ETA:47s]
+[#eb2472 12GiB/15GiB(79%) CN:16 DL:70MiB ETA:46s]
+[#eb2472 12GiB/15GiB(80%) CN:16 DL:69MiB ETA:45s]
+[#eb2472 12GiB/15GiB(80%) CN:16 DL:69MiB ETA:44s]
+[#eb2472 12GiB/15GiB(81%) CN:16 DL:73MiB ETA:40s]
+[#eb2472 12GiB/15GiB(82%) CN:16 DL:80MiB ETA:35s]
+[#eb2472 12GiB/15GiB(82%) CN:16 DL:87MiB ETA:31s]
+[#eb2472 13GiB/15GiB(83%) CN:16 DL:90MiB ETA:30s]
+[#eb2472 13GiB/15GiB(83%) CN:16 DL:89MiB ETA:29s]
+[#eb2472 13GiB/15GiB(83%) CN:16 DL:86MiB ETA:30s]
+[#eb2472 13GiB/15GiB(84%) CN:16 DL:82MiB ETA:30s]
+[#eb2472 13GiB/15GiB(84%) CN:16 DL:78MiB ETA:31s]
+[#eb2472 13GiB/15GiB(84%) CN:16 DL:73MiB ETA:33s]
+[#eb2472 13GiB/15GiB(85%) CN:16 DL:68MiB ETA:34s]
+[#eb2472 13GiB/15GiB(85%) CN:16 DL:64MiB ETA:36s]
+[#eb2472 13GiB/15GiB(85%) CN:16 DL:59MiB ETA:38s]
+[#eb2472 13GiB/15GiB(86%) CN:16 DL:56MiB ETA:38s]
+[#eb2472 13GiB/15GiB(86%) CN:16 DL:57MiB ETA:37s]
+[#eb2472 13GiB/15GiB(87%) CN:16 DL:58MiB ETA:35s]
+[#eb2472 13GiB/15GiB(87%) CN:16 DL:58MiB ETA:34s]
+[#eb2472 13GiB/15GiB(87%) CN:16 DL:59MiB ETA:33s]
+[#eb2472 13GiB/15GiB(88%) CN:16 DL:60MiB ETA:31s]
+[#eb2472 13GiB/15GiB(88%) CN:16 DL:60MiB ETA:30s]
+[#eb2472 13GiB/15GiB(88%) CN:16 DL:61MiB ETA:28s]
+[#eb2472 14GiB/15GiB(89%) CN:16 DL:62MiB ETA:27s]
+[#eb2472 14GiB/15GiB(89%) CN:16 DL:61MiB ETA:26s]
+[#eb2472 14GiB/15GiB(90%) CN:16 DL:61MiB ETA:26s]
+[#eb2472 14GiB/15GiB(90%) CN:16 DL:61MiB ETA:24s]
+[#eb2472 14GiB/15GiB(90%) CN:16 DL:61MiB ETA:23s]
+[#eb2472 14GiB/15GiB(91%) CN:16 DL:61MiB ETA:22s]
+[#eb2472 14GiB/15GiB(91%) CN:16 DL:60MiB ETA:22s]
+[#eb2472 14GiB/15GiB(91%) CN:16 DL:59MiB ETA:21s]
+[#eb2472 14GiB/15GiB(92%) CN:16 DL:58MiB ETA:21s]
+[#eb2472 14GiB/15GiB(92%) CN:16 DL:59MiB ETA:20s]
+[#eb2472 14GiB/15GiB(92%) CN:16 DL:58MiB ETA:19s]
+[#eb2472 14GiB/15GiB(93%) CN:16 DL:58MiB ETA:18s]
+[#eb2472 14GiB/15GiB(93%) CN:16 DL:58MiB ETA:17s]
+[#eb2472 14GiB/15GiB(94%) CN:16 DL:57MiB ETA:16s]
+[#eb2472 14GiB/15GiB(94%) CN:16 DL:56MiB ETA:16s]
+[#eb2472 14GiB/15GiB(94%) CN:16 DL:56MiB ETA:15s]
+[#eb2472 14GiB/15GiB(95%) CN:16 DL:56MiB ETA:14s]
+[#eb2472 14GiB/15GiB(95%) CN:16 DL:56MiB ETA:13s]
+[#eb2472 15GiB/15GiB(95%) CN:16 DL:56MiB ETA:12s]
+[#eb2472 15GiB/15GiB(96%) CN:16 DL:57MiB ETA:10s]
+[#eb2472 15GiB/15GiB(96%) CN:16 DL:56MiB ETA:10s]
+ *** Download Progress Summary as of Sat Jul  4 07:48:36 2026 *** 
+===============================================================================
+[#eb2472 15GiB/15GiB(96%) CN:16 DL:55MiB ETA:9s]
+FILE: checkpoints/vjepa2_1_vitg_384.pt
+-------------------------------------------------------------------------------
+
+[#eb2472 15GiB/15GiB(96%) CN:16 DL:55MiB ETA:9s]
+[#eb2472 15GiB/15GiB(97%) CN:16 DL:55MiB ETA:8s]
+[#eb2472 15GiB/15GiB(97%) CN:16 DL:55MiB ETA:7s]
+[#eb2472 15GiB/15GiB(97%) CN:16 DL:55MiB ETA:6s]
+[#eb2472 15GiB/15GiB(98%) CN:16 DL:56MiB ETA:5s]
+[#eb2472 15GiB/15GiB(98%) CN:15 DL:56MiB ETA:4s]
+[#eb2472 15GiB/15GiB(98%) CN:12 DL:56MiB ETA:3s]
+[#eb2472 15GiB/15GiB(99%) CN:9 DL:54MiB ETA:2s]
+[#eb2472 15GiB/15GiB(99%) CN:8 DL:53MiB ETA:1s]
+[#eb2472 15GiB/15GiB(99%) CN:6 DL:52MiB ETA:1s]
+[#eb2472 15GiB/15GiB(99%) CN:5 DL:48MiB]
+[#eb2472 15GiB/15GiB(99%) CN:2 DL:45MiB]
+
+07/04 07:48:47 [[1;32mNOTICE[0m] Download complete: checkpoints/vjepa2_1_vitg_384.pt
+
+Download Results:
+gid   |stat|avg speed  |path/URI
+======+====+===========+=======================================================
+eb2472|OK  |    63MiB/s|checkpoints/vjepa2_1_vitg_384.pt
+
+Status Legend:
+(OK):download completed.
+Done [group=trainable]: 2 downloaded, 0 already present (2 total ckpt files in checkpoints/).
+
+Detected GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+
+=== Downloading prebuilt wheels ===
+Downloading prebuilt sm_120 wheels from: github.com/kapilw25/factorjepa/releases/tag/sm120-cu128-py312
+  Downloading: faiss-1.14.1-cp312-cp312-linux_x86_64.whl
+  Downloading: flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl
+Downloaded 2 wheel(s) to wheels/
+
+[1/10] Installing PyTorch 2.12.0.dev20260408+cu128 (Blackwell — pinned)...
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 29 packages in 605ms
+Downloading networkx (2.0MiB)
+Downloading setuptools (1.2MiB)
+Downloading sympy (6.0MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (84.0MiB)
+Downloading nvidia-curand-cu12 (60.7MiB)
+Downloading nvidia-nccl-cu12 (280.0MiB)
+Downloading triton (278.0MiB)
+Downloading torch (794.0MiB)
+Downloading nvidia-cusparse-cu12 (274.9MiB)
+Downloading nvidia-cublas-cu12 (566.8MiB)
+ Downloaded setuptools
+Downloading cuda-bindings (11.6MiB)
+ Downloaded networkx
+ Downloaded sympy
+ Downloaded cuda-bindings
+ Downloaded nvidia-curand-cu12
+Downloading nvidia-cufile-cu12 (1.1MiB)
+Downloading nvidia-cusparselt-cu12 (273.9MiB)
+Downloading nvidia-nvjitlink-cu12 (37.4MiB)
+Downloading nvidia-cudnn-cu12 (627.4MiB)
+Downloading nvidia-cufft-cu12 (184.2MiB)
+Downloading nvidia-nvshmem-cu12 (132.7MiB)
+Downloading nvidia-cuda-cupti-cu12 (9.8MiB)
+Downloading nvidia-cusolver-cu12 (255.1MiB)
+ Downloaded nvidia-nccl-cu12
+ Downloaded nvidia-cuda-nvrtc-cu12
+ Downloaded nvidia-cufile-cu12
+ Downloaded nvidia-cusparse-cu12
+ Downloaded nvidia-cublas-cu12
+ Downloaded nvidia-cusparselt-cu12
+ Downloaded nvidia-nvjitlink-cu12
+ Downloaded triton
+ Downloaded nvidia-cudnn-cu12
+ Downloaded nvidia-cufft-cu12
+ Downloaded nvidia-cuda-cupti-cu12
+ Downloaded nvidia-nvshmem-cu12
+ Downloaded nvidia-cusolver-cu12
+ Downloaded torch
+Prepared 26 packages in 2m 54s
+Installed 26 packages in 1.34s
+ + cuda-bindings==12.9.4
+ + cuda-pathfinder==1.2.2
+ + cuda-toolkit==12.8.1
+ + jinja2==3.1.6
+ + markupsafe==3.0.2
+ + mpmath==1.3.0
+ + networkx==3.6.1
+ + nvidia-cublas-cu12==12.8.4.1
+ + nvidia-cuda-cupti-cu12==12.8.90
+ + nvidia-cuda-nvrtc-cu12==12.8.93
+ + nvidia-cuda-runtime-cu12==12.8.90
+ + nvidia-cudnn-cu12==9.20.0.48
+ + nvidia-cufft-cu12==11.3.3.83
+ + nvidia-cufile-cu12==1.13.1.3
+ + nvidia-curand-cu12==10.3.9.90
+ + nvidia-cusolver-cu12==11.7.3.90
+ + nvidia-cusparse-cu12==12.5.8.93
+ + nvidia-cusparselt-cu12==0.7.1
+ + nvidia-nccl-cu12==2.29.7
+ + nvidia-nvjitlink-cu12==12.8.93
+ + nvidia-nvshmem-cu12==3.4.5
+ + nvidia-nvtx-cu12==12.8.90
+ + setuptools==78.1.0
+ + sympy==1.14.0
+ + torch==2.12.0.dev20260408+cu128
+ + triton==3.7.0+git282c8251
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 1 package in 205ms
+Downloading torchvision (7.9MiB)
+ Downloaded torchvision
+Prepared 1 package in 373ms
+Installed 1 package in 40ms
+ + torchvision==0.27.0.dev20260407+cu128
+
+[2/10] Verifying PyTorch + CUDA...
+PyTorch: 2.12.0.dev20260408+cu128, CUDA: 12.8, GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+torchvision: 0.27.0.dev20260407+cu128 (installed --no-deps, ABI import OK)
+
+[3/10] Installing GPU requirements (UV - fast)...
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 135 packages in 1.46s
+Downloading pygments (1.2MiB)
+Downloading cuda-bindings (6.3MiB)
+Downloading transformers (9.8MiB)
+Downloading av (33.9MiB)
+Downloading hf-transfer (3.4MiB)
+Downloading torchvision (7.3MiB)
+Downloading sentencepiece (1.3MiB)
+Downloading nvidia-cuda-runtime (2.1MiB)
+Downloading tokenizers (3.1MiB)
+Downloading timm (2.5MiB)
+Downloading nvidia-nvjitlink (38.8MiB)
+Downloading torchcodec (2.8MiB)
+Downloading bitsandbytes (57.8MiB)
+Downloading wandb (25.5MiB)
+Downloading nvidia-cublas (403.5MiB)
+Downloading nvidia-cusparse (139.2MiB)
+Downloading nvidia-cuda-nvrtc (86.0MiB)
+Downloading nvidia-cufile (1.2MiB)
+Downloading nvidia-cuda-cupti (10.2MiB)
+Downloading nvidia-cufft (204.2MiB)
+Downloading nvidia-cusparselt-cu13 (162.3MiB)
+Downloading nvidia-nvshmem-cu13 (57.6MiB)
+Downloading triton (188.6MiB)
+Downloading nvidia-curand (56.8MiB)
+Downloading torch (507.6MiB)
+Downloading nvidia-nccl-cu13 (196.4MiB)
+Downloading nvidia-cusolver (191.6MiB)
+Downloading decord (13.0MiB)
+Downloading nvidia-cudnn-cu13 (349.2MiB)
+   Building iopath==0.1.10
+      Built iopath==0.1.10
+ Downloaded pygments
+ Downloaded nvidia-cufile
+ Downloaded sentencepiece
+ Downloaded nvidia-cuda-runtime
+ Downloaded timm
+ Downloaded torchcodec
+ Downloaded tokenizers
+ Downloaded hf-transfer
+ Downloaded cuda-bindings
+ Downloaded torchvision
+ Downloaded transformers
+ Downloaded nvidia-cuda-cupti
+ Downloaded decord
+ Downloaded wandb
+ Downloaded av
+ Downloaded nvidia-nvjitlink
+ Downloaded nvidia-curand
+ Downloaded bitsandbytes
+ Downloaded nvidia-nvshmem-cu13
+ Downloaded nvidia-cuda-nvrtc
+ Downloaded nvidia-cusparse
+ Downloaded nvidia-cusparselt-cu13
+ Downloaded triton
+ Downloaded nvidia-cusolver
+ Downloaded nvidia-nccl-cu13
+ Downloaded nvidia-cufft
+ Downloaded nvidia-cudnn-cu13
+ Downloaded nvidia-cublas
+ Downloaded torch
+Prepared 61 packages in 1m 09s
+Uninstalled 6 packages in 426ms
+Installed 61 packages in 1.39s
+ + accelerate==1.14.0
+ + annotated-doc==0.0.4
+ + av==18.0.0
+ + bitsandbytes==0.49.2
+ - cuda-bindings==12.9.4
+ + cuda-bindings==13.3.1
+ - cuda-pathfinder==1.2.2
+ + cuda-pathfinder==1.5.6
+ - cuda-toolkit==12.8.1
+ + cuda-toolkit==13.0.2
+ + decord==0.6.0
+ + einops==0.8.2
+ + ffmpeg-python==0.2.0
+ + ftfy==6.3.1
+ + future==1.0.0
+ + gitdb==4.0.12
+ + gitpython==3.1.50
+ + hf-transfer==0.1.9
+ + imageio==2.37.3
+ + iniconfig==2.3.0
+ + iopath==0.1.10
+ + markdown-it-py==4.2.0
+ + mdurl==0.1.2
+ + nvidia-cublas==13.1.1.3
+ + nvidia-cuda-cupti==13.0.85
+ + nvidia-cuda-nvrtc==13.0.88
+ + nvidia-cuda-runtime==13.0.96
+ + nvidia-cudnn-cu13==9.20.0.48
+ + nvidia-cufft==12.0.0.61
+ + nvidia-cufile==1.15.1.6
+ + nvidia-curand==10.4.0.35
+ + nvidia-cusolver==12.0.4.66
+ + nvidia-cusparse==12.6.3.3
+ + nvidia-cusparselt-cu13==0.8.1
+ + nvidia-nccl-cu13==2.29.7
+ + nvidia-nvjitlink==13.0.88
+ + nvidia-nvshmem-cu13==3.4.5
+ + nvidia-nvtx==13.0.85
+ + peft==0.19.1
+ + pluggy==1.6.0
+ + portalocker==3.2.0
+ + protobuf==7.35.1
+ + psutil==7.2.2
+ + pycocotools==2.0.11
+ + pygments==2.20.0
+ + pytest==9.1.1
+ + qwen-vl-utils==0.0.14
+ + regex==2026.6.28
+ + rich==15.0.0
+ + safetensors==0.8.0
+ + sentencepiece==0.2.1
+ + sentry-sdk==2.64.0
+ + shellingham==1.5.4
+ + smmap==5.0.3
+ + timm==1.0.27
+ + tokenizers==0.22.2
+ - torch==2.12.0.dev20260408+cu128
+ + torch==2.12.1
+ + torchcodec==0.14.0
+ - torchvision==0.27.0.dev20260407+cu128
+ + torchvision==0.27.1
+ + transformers==5.5.4
+ - triton==3.7.0+git282c8251
+ + triton==3.7.1
+ + typer==0.26.8
+ + wandb==0.28.0
+ + wcwidth==0.8.2
+
+[4/10] Installing Flash-Attention 2...
+GPU compute capability: sm_120
+Installing FA2 from prebuilt wheel...
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 31 packages in 358ms
+Prepared 1 package in 1.26s
+Installed 1 package in 117ms
+ + flash-attn==2.8.3 (from file:///workspace/factorjepa/wheels/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl)
+
+[5/10] Installing FAISS-GPU (CUDA 12)...
+Installing libopenblas-dev (FAISS runtime dependency)...
+Installing FAISS-GPU from prebuilt wheel...
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 3 packages in 287ms
+Prepared 1 package in 87ms
+Installed 1 package in 27ms
+ + faiss==1.14.1 (from file:///workspace/factorjepa/wheels/faiss-1.14.1-cp312-cp312-linux_x86_64.whl)
+Fixed RPATH for FAISS .so files in /workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/faiss
+
+[6/10] Installing cuML (GPU UMAP)...
+Using Python 3.12.13 environment at: venv_walkindia
+Resolved 55 packages in 1.58s
+Downloading cudf-cu12 (2.6MiB)
+Downloading nvidia-libnvcomp-cu12 (30.8MiB)
+Downloading cupy-cuda12x (127.3MiB)
+Downloading pandas (11.8MiB)
+Downloading pyarrow (45.4MiB)
+Downloading llvmlite (53.7MiB)
+Downloading cuda-bindings (7.3MiB)
+Downloading numba-cuda (1.8MiB)
+Downloading cuda-core (29.4MiB)
+Downloading numba (3.6MiB)
+Downloading nvidia-cusolver-cu12 (322.5MiB)
+Downloading nvidia-cuda-cccl-cu12 (3.0MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (85.4MiB)
+Downloading nvidia-cublas-cu12 (554.3MiB)
+Downloading nvidia-cuda-runtime-cu12 (3.3MiB)
+Downloading libnvforest-cu12 (77.6MiB)
+Downloading nvidia-cuda-nvcc-cu12 (38.7MiB)
+Downloading nvidia-nvjitlink-cu12 (37.9MiB)
+Downloading cuml-cu12 (5.3MiB)
+Downloading pylibcudf-cu12 (7.9MiB)
+Downloading librmm-cu12 (4.3MiB)
+ Downloaded cudf-cu12
+ Downloaded nvidia-cuda-cccl-cu12
+ Downloaded numba-cuda
+ Downloaded numba
+ Downloaded cuda-bindings
+ Downloaded nvidia-libnvcomp-cu12
+ Downloaded pandas
+ Downloaded cuda-core
+ Downloaded pyarrow
+ Downloaded llvmlite
+ Downloaded cupy-cuda12x
+ Downloaded nvidia-cuda-runtime-cu12
+ Downloaded nvidia-cusolver-cu12
+ Downloaded nvidia-cuda-nvrtc-cu12
+Downloading nvidia-cufft-cu12 (191.6MiB)
+ Downloaded libnvforest-cu12
+ Downloaded nvidia-cuda-nvcc-cu12
+ Downloaded cuml-cu12
+ Downloaded nvidia-cublas-cu12
+ Downloaded nvidia-nvjitlink-cu12
+Downloading libcudf-cu12 (684.1MiB)
+ Downloaded pylibcudf-cu12
+Downloading nvidia-cusparse-cu12 (349.5MiB)
+ Downloaded librmm-cu12
+Downloading nvidia-curand-cu12 (65.1MiB)
+Downloading libkvikio-cu12 (2.3MiB)
+Downloading libraft-cu12 (21.6MiB)
+Downloading libcuml-cu12 (362.4MiB)
+ Downloaded nvidia-cufft-cu12
+ Downloaded libkvikio-cu12
+ Downloaded libcudf-cu12
+ Downloaded nvidia-cusparse-cu12
+ Downloaded nvidia-curand-cu12
+ Downloaded libraft-cu12
+ Downloaded libcuml-cu12
+Prepared 39 packages in 1m 32s
+Uninstalled 14 packages in 124ms
+Installed 39 packages in 1.08s
+ + cachetools==7.1.4
+ - cuda-bindings==13.3.1
+ + cuda-bindings==12.9.7
+ + cuda-core==0.7.0
+ + cuda-python==12.9.7
+ - cuda-toolkit==13.0.2
+ + cuda-toolkit==12.9.2.0
+ + cudf-cu12==26.6.0
+ + cuml-cu12==26.6.0
+ + cupy-cuda12x==14.1.1
+ + libcudf-cu12==26.6.0
+ + libcuml-cu12==26.6.0
+ + libkvikio-cu12==26.6.0
+ + libnvforest-cu12==26.6.0
+ + libraft-cu12==26.6.0
+ + librmm-cu12==26.6.0
+ - llvmlite==0.48.0
+ + llvmlite==0.46.0
+ - numba==0.66.0
+ + numba==0.64.0
+ + numba-cuda==0.28.2
+ + nvforest-cu12==26.6.0
+ - nvidia-cublas-cu12==12.8.4.1
+ + nvidia-cublas-cu12==12.9.2.10
+ + nvidia-cuda-cccl-cu12==12.9.27
+ + nvidia-cuda-nvcc-cu12==12.9.86
+ - nvidia-cuda-nvrtc-cu12==12.8.93
+ + nvidia-cuda-nvrtc-cu12==12.9.86
+ - nvidia-cuda-runtime-cu12==12.8.90
+ + nvidia-cuda-runtime-cu12==12.9.79
+ - nvidia-cufft-cu12==11.3.3.83
+ + nvidia-cufft-cu12==11.4.1.4
+ - nvidia-curand-cu12==10.3.9.90
+ + nvidia-curand-cu12==10.3.10.19
+ - nvidia-cusolver-cu12==11.7.3.90
+ + nvidia-cusolver-cu12==11.7.5.82
+ - nvidia-cusparse-cu12==12.5.8.93
+ + nvidia-cusparse-cu12==12.5.10.65
+ + nvidia-libnvcomp-cu12==5.2.0.13
+ - nvidia-nvjitlink-cu12==12.8.93
+ + nvidia-nvjitlink-cu12==12.9.86
+ + nvtx==0.2.15
+ - pandas==3.0.3
+ + pandas==2.3.3
+ - pyarrow==24.0.0
+ + pyarrow==23.0.1
+ + pylibcudf-cu12==26.6.0
+ + pylibraft-cu12==26.6.0
+ + pytz==2026.2
+ + rapids-logger==0.2.3
+ + rmm-cu12==26.6.0
+ + treelite==4.7.0
+ + tzdata==2026.2
+
+[7/10] Installing wandb...
+Using Python 3.12.13 environment at: venv_walkindia
+Checked 1 package in 69ms
+
+[8/10] Installing SAM 3.1 from source (--no-deps to preserve numpy>=2.3)...
+Using Python 3.12.13 environment at: venv_walkindia
+   Updating https://github.com/facebookresearch/sam3.git (HEAD)
+    Updated https://github.com/facebookresearch/sam3.git (5dd401d1c5c1d5c3eedff06d41b77af824517619)
+Resolved 1 package in 2.92s
+   Building sam3 @ git+https://github.com/facebookresearch/sam3.git@5dd401d1c5c1d5c3eedff06d41b77af824517619
+      Built sam3 @ git+https://github.com/facebookresearch/sam3.git@5dd401d1c5c1d5c3eedff06d41b77af824517619
+Prepared 1 package in 395ms
+Installed 1 package in 14ms
+ + sam3==0.1.0 (from git+https://github.com/facebookresearch/sam3.git@5dd401d1c5c1d5c3eedff06d41b77af824517619)
+
+[9/10] Pre-downloading Grounding DINO (IDEA-Research/grounding-dino-base, ~1.8 GB)...
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files:  20%|██        | 2/10 [00:00<00:00, 12.86it/s]Fetching 10 files:  20%|██        | 2/10 [00:19<00:00, 12.86it/s]Fetching 10 files:  40%|████      | 4/10 [00:28<00:50,  8.40s/it]Fetching 10 files: 100%|██████████| 10/10 [00:28<00:00,  2.86s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/volume/hf_cache/hub/models--IDEA-Research--grounding-dino-base/snapshots/12bdfa3120f3e7ec7b434d90674b3396eccf88eb
+Grounding DINO cached at /workspace/volume/hf_cache/hub/models--IDEA-Research--grounding-dino-base
+
+[10/11] Pre-downloading HF SAM 3 (facebook/sam3, ~12 GB, HF_TRANSFER parallel)...
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:  17%|█▋        | 2/12 [00:00<00:00, 15.02it/s]Fetching 12 files:  17%|█▋        | 2/12 [00:19<00:00, 15.02it/s]Fetching 12 files:  50%|█████     | 6/12 [01:05<01:12, 12.09s/it]Fetching 12 files: 100%|██████████| 12/12 [01:05<00:00,  5.45s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/volume/hf_cache/hub/models--facebook--sam3/snapshots/3c879f39826c281e95690f02c7821c4de09afae7
+HF SAM 3 cached at /workspace/volume/hf_cache/hub/models--facebook--sam3
+
+[11/11] Pre-downloading SAM 3.1 checkpoint (facebook/sam3.1, future-upgrade path, non-fatal)...
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:   8%|▊         | 1/12 [00:00<00:01,  7.35it/s]Fetching 12 files:  33%|███▎      | 4/12 [00:00<00:01,  7.63it/s]Fetching 12 files:  67%|██████▋   | 8/12 [00:41<00:24,  6.25s/it]Fetching 12 files: 100%|██████████| 12/12 [00:41<00:00,  3.45s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/volume/hf_cache/hub/models--facebook--sam3.1/snapshots/daa63191845a41281374e725f4c9e51c7a824460
+SAM 3.1 cached at /workspace/volume/hf_cache/hub/models--facebook--sam3.1
+
+Verifying GPU setup...
+PyTorch:        2.12.1+cu130
+CUDA:           13.0
+GPU:            NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+GPU Arch:       sm_120
+VRAM:           102 GB
+FAISS:          1.14.1 (1 GPU(s) available)
+Flash-Attn:     2.8.3
+Transformers:   5.5.4
+cuML:           26.06.00
+wandb:          0.28.0
+Datasets:       OK
+Grounding DINO: cached (fast tokenizer=True)
+HF SAM 3:       cached (TrackerVideo + Video processors loadable)
+
+SUCCESS: All GPU components verified
+
+[Dependency health] uv pip check...
+OK — 5 known-OK incompatibilities (allowlist: numpy/ftfy/cuda-bindings/cuda-toolkit/decord), 0 unexpected
+
+vLLM: SKIPPED (transformers 2.5x faster for offline batch, see vLLM_plan_Blackwell.md)
+
+============================================
+GPU Setup Complete! (UV)
+============================================
+
+Venv:
+  source venv_walkindia/bin/activate   # m00-m11 pipeline (FAISS, cuML, V-JEPA, SAM 3.1)
+
+Usage:
+  ./scripts/run_evaluate.sh --FULL            # transformers VLM tagging (m04)
+

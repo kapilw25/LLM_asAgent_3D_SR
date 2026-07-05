@@ -1,0 +1,8 @@
+[M1 Opt X] mode=full: subsampled 115,687/115,687 clips (100.00%)
+  [motion-flow] magnitude quartiles: Q1=111.117  Q2=164.707  Q3=244.492
+  [motion-flow] 14 classes: ['fast__downward', 'fast__upward', 'medium__downward', 'medium__leftward', 'medium__rightward', 'medium__upward', 'slow__downward', 'slow__leftward', 'slow__rightward', 'slow__upward', 'still__downward', 'still__leftward', 'still__rightward', 'still__upward']
+  [motion-flow] kept 115626 clips, dropped 61 (dropped counts: {'fast__rightward': 44, 'fast__leftward': 17})
+Loaded 115626 labeled clips from data/full_local/full_local.json (14 motion-flow classes)
+[stratified_split] video-disjoint iter16+ mode: N_clips=115626, N_videos=1559, N_classes=14; train/val/test = 86770/5750/23106
+  [class-edges] wrote outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/class_edges.json (quartiles + 14 class_names) — reuse via --class-edges for cross-set eval
+Wrote: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json  +  class_counts.json

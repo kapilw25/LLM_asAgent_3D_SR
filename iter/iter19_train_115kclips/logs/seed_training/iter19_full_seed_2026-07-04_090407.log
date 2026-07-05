@@ -1,0 +1,6 @@
+  [--only] restricted to ['pretrain_encoder'] — eval jobs + §3 finale SKIPPED
+  [disk-preflight] free=755G · required≈500G
+  [cpu-preflight] 64 cores ≥ ~6 (gpus×6) — OK
+  [cpuset] GPU slots pinned: GPU0→0..63(64t)
+═══ N-GPU scheduler · mode=FULL · backbone=vjepa_2_1_vitg · corpus=full · gpus=1 · cache=2 · 1 jobs (1 train + 0 eval) ═══
+[09:04:07] GPU0 ◀ T:vjepa_2_1_vitg:pretrain_encoder  → logs/ngpu_run_full_train_pretrain_encoder_20260704_090407.log
