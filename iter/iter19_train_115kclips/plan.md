@@ -10,21 +10,23 @@
 ## 📋 Run at a glance — live DAG status (`ngpu_run_status.py` view)
 
 ```text
-┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬────────────────┬───────────────┐
-│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ │ ⏳ wall tr · ev │ 📌 status     │
-├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼───────────────┤
-│ 🚂 pretrain_encoder · SSL seed             │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h✓ · 4h      │ ✅ done · HF   │
-│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ next · BoxB │
-│ 🔩 peft_lora_encoder · Best-COMP           │ GPU1  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ next · BoxB │
-│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending     │
-│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending     │
-│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending     │
-├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼───────────────┤
-│ 🏁 TOTAL · critical path (not the sum)     │ 1→2×  │ 🟩 87k =75%   │ 🟨 0.9k =~1% │ 🟦 28k =24%   │ 18h→18h∥→24h   │ ⏳ ~2.5 days   │
-├───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴────────────────┴───────────────┤
-│ DAG  🚂 seed → 🔧 diheavy ∥ 🔩 peft_lora → 📊 eval 6 on the 🟦 28k leakage-free test    ·    116k re-split 75 : ~1 : 24              │
-│ key  🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen   ·   ✅ done · 🔄 running · ⬚ pending · ❌ failed             │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬─────────────────────┬─────────────────────┐
+│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ │ ⏳ wall train·eval   │ 📌 train · eval      │
+├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼─────────────────────┼─────────────────────┤
+│ 🚂 pretrain_encoder · SSL seed             │   —   │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h✓ · ~9h          │ ✅ train · ⏳ eval   │
+│ 🔩 peft_lora_encoder · Best-COMP           │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ ~20h · ~9h          │ 🔄 train · ⏳ eval   │
+│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU1  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ ~22h · ~9h          │ 🔄 train · ⏳ eval   │
+│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · ~9h          │ 🚫 train · ⏳ eval   │
+│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · ~9h          │ 🚫 train · ⏳ eval   │
+│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · ~9h          │ 🚫 train · ⏳ eval   │
+├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼─────────────────────┼─────────────────────┤
+│ 🏁 TOTAL · 1✅ 2🔄 69⏳ 0❌ / 72 jobs        │  2×   │ 🟩 87k =75%   │ 🟨 0.9k =~1% │ 🟦 28k =24%   │ 22h∥ + 54h eval     │ ⏳ ~77h · 3.2 days   │
+├───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴─────────────────────┴─────────────────────┤
+│ DAG  🚂 seed✅ → 🔧 diheavy ∥ 🔩 peft 🔄 training → 📊 eval 6 × ~9h wall on 🟦 28k held-out test  ·  Σ eval ~111h GPU-time (0✓/60)              │
+│ status  FULL run LIVE (started 11:10 UTC) · ETA ~77h → ~09:34 PDT +3d · 🟨 val = 0.9k stratified / 14 motion classes                        │
+│ 📌 train·eval per arm:  ✅ done · 🔄 running · ⏳ pending · 🚫 skipped / no train · ❌ failed                                                 │
+│ key  🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen                                                                         │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---

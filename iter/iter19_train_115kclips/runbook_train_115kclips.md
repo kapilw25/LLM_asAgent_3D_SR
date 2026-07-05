@@ -1,7 +1,7 @@
 # 🚀 iter19 — FULL 115k runbook (1B `vjepa_2_1_vitg`)
 
 > 🎯 Two-box, seed-then-parallel FULL run driven by the **verified** `scripts/ngpu_run.py` (`--mode FULL`).
-> Trains the paper's headline trio on **116k clips (1 epoch)**, evals 6 encoders on the **23k test**.
+> Trains the paper's headline trio on **116k clips (1 epoch)**, evals 6 encoders on the **~28k held-out test**.
 > Box A trains the SSL seed serially; Box B trains Best-OUR ∥ Best-COMP, evals all 6, runs the §3 finale.
 
 ---
@@ -40,21 +40,21 @@ The two merges have **no train job** — the scheduler builds them from `merge_r
 ## 🌐 Shared env — set on BOTH boxes, every pane
 
 ```bash
-export ITER18_BACKBONE=vjepa_2_1_vitg     # 1B (scheduler default is the 2B vitG → MUST export)
-export EVAL_CORPUS=full                    # score against the 'full' corpus (23k test)
+export ITER18_BACKBONE=vjepa_2_1_vitg     # 1B (scheduler default is 2B vitG → MUST export)
+export EVAL_CORPUS=full                    # score against the 'full' corpus
 
-# Point the whole pipeline at the prepped 116k data (single source; run_train.sh:74-77 reads this).
-# After this flip, TRAINED_CORPUS derives to 'full' automatically for every mode.
+# Point the pipeline at the 116k data (single source); corpus derives to 'full'.
 sed -i -e 's|local_data_dir:.*|local_data_dir: "data/full_local"|' -e 's|master_manifest_name:.*|master_manifest_name: "full_local.json"|' configs/pipeline.yaml
 
-# The 18 arms to DROP = every scheduler:true arm EXCEPT the 5 roster arms
-# (pretrain_encoder, surgery_3stage_DI_diheavy_encoder, peft_lora_encoder,
-#  surgical_diheavy_wiseft_f50_encoder, surgical_diheavy_wiseft_f70_encoder).
+# Drop the 18 non-roster arms (keep the 5 roster arms).
 export SKIP="surgery_3stage_DI_encoder surgery_noDI_encoder surgery_3stage_DI_head surgery_noDI_head \
 surgical_autorgn_encoder surgery_raw_encoder full_ft_encoder lpft_encoder peft_dora_encoder \
 cassle_encoder ewc_encoder surgery_3stage_DI_replay25_encoder surgery_3stage_DI_tccaux_encoder \
 surgery_3stage_DI_intervene_encoder surgical_3stage_DI_wiseft_encoder surgical_intervene_wiseft_f30_encoder \
 surgical_intervene_wiseft_f50_encoder surgical_intervene_wiseft_f70_encoder"
+
+# Verify the yaml flip landed (must print data/full_local + full_local.json).
+grep -E "^\s*local_data_dir|^\s*master_manifest_name" configs/pipeline.yaml
 ```
 
 ---
@@ -62,23 +62,21 @@ surgical_intervene_wiseft_f50_encoder surgical_intervene_wiseft_f70_encoder"
 ## 📦 BOX A — 1× 96 GB — train the SEED only (~19 h)
 
 ```bash
-# A1 · pull the prepped full data (~120 GB; m04d + m10 SAM + m11 factor are already in the tree).
+# A1 · pull the prepped 116k data (~214 GB).
 python -u src/utils/hf_outputs.py download-data data/full_local \
   2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
 
-# A2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, the yaml flip) — from the block above.
+# A2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, yaml flip) — from the block above.
 
-# A3 · SANITY smoke first (~200 clips, fresh) — code-path green-light before the 19 h seed.
-#      --only trains ONLY pretrain_encoder (no eval, no §3 finale). rm the throwaway smoke tree after.
+# A3 · SANITY smoke (200 clips) — code-path green-light before the seed.
 ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 1 --cache 2 --only pretrain_encoder 2>&1 | tee logs/iter19_sanity_seed_$(date +%F_%H%M%S).log
-# cleanup sanity to save space
+# remove sanity artifacts to save disk space form explooding during full training
 rm -rf outputs/sanity/
 
-# A4 · train the SEED (fresh — outputs/full/ is empty on HF). ~19 h, 1 GPU.
-#      Writes outputs/full/vjepa_2_1_vitg/train/m09a_pretrain_encoder/{student_encoder.pt, m09a_ckpt_best.pt}.
+# A4 · train the SEED (~18 h, 1 GPU) → student_encoder.pt + m09a_ckpt_best.pt.
 ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 1 --cache 1 --only pretrain_encoder 2>&1 | tee logs/iter19_full_seed_$(date +%F_%H%M%S).log
 
-# A5 · push the seed so Box B can pull it (additive, no-delete, token-safe).
+# A5 · push the seed for Box B (additive, no-delete).
 python -u src/utils/hf_outputs.py upload-additive outputs/full \
 2>&1 | tee logs/iter19_upload_pretrain_seed_$(date +%F_%H%M%S).log
 ```
@@ -89,52 +87,33 @@ python -u src/utils/hf_outputs.py upload-additive outputs/full \
 
 > Spin up **after** Box A's seed lands on HF. `--cache 1` resume-skips the seed's train job, then trains
 > `diheavy` (GPU0) ∥ `peft_lora` (GPU1), evals all kept encoders, and the §3 finale evals `frozen` + the
-> two diheavy WiSE-FT merges on the 23k test.
+> two diheavy WiSE-FT merges on the ~28k held-out test.
 
 ```bash
-# B1 · pull the full data + the seed Box A trained.
-python -u src/utils/hf_outputs.py download-data data/full_local \
-  2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
-python -u src/utils/hf_outputs.py download outputs/full \
-  2>&1 | tee logs/iter19_dl_seed_$(date +%F_%H%M%S).log
+# B1 · pull the seed + the 116k data. (NO outputs/poc — the eval trains its own heads inline; see B2b.)
+python -u src/utils/hf_outputs.py download outputs/full 2>&1 | tee logs/iter19_dl_seed_$(date +%F_%H%M%S).log
+python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
 
-# B2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, the yaml flip, SKIP) — from the block above.
+# B2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, yaml flip, SKIP) — from the block above.
 
-# B2b · iter19 (2026-07-05) LEAKAGE-FREE test-all eval — export BEFORE the run so every eval subprocess
-#       (E:/P:/F:/§3, launched by ngpu_run) inherits it (run_eval reads EVAL_SUBSET/PROBE_SPLIT/…-reuse
-#       from the env). Scores ONLY the held-out test_split.json (27,947 never-SSL-trained clips, incl. the
-#       4,750 moved from val by val_repartition) → n_test = 27,947 → tightest, honest CIs + NO encoder
-#       leakage (the old default scored the internal split of ALL 115,687 clips, ~87k of them SSL-seen).
-#       The 13 head-free metrics (all predictor + encoder-temporal — the paper headline) run directly under
-#       test-all; the 2 transfer-head metrics (action top-1, taxonomy F1) REUSE the disjoint POC eval_10k
-#       heads (same pattern as plan_test_disjoint_10k.md) → no head-train pass needed.
-export EVAL_SUBSET="${LOCAL_DATA:-data/full_local}/test_split.json"
-export PROBE_SPLIT=test-all
-export EVAL_HEAD_REUSE_ROOT="$(python src/utils/output_paths.py eval-root poc vjepa_2_1_vitg eval_10k)"
-export CLASS_EDGES="outputs/poc/_xset_edges/class_edges.json"
-# PREREQ (add to B1): also pull the POC eval_10k heads + class_edges (they're on HF):
-#   python -u src/utils/hf_outputs.py download outputs/poc 2>&1 | tee logs/iter19_dl_poc_heads_$(date +%F_%H%M%S).log
-# If the heads are absent, run Stage-A instead (13 head-free metrics on the full test, no head metrics):
-#   export SKIP_STAGES=3,11,4,12,13   # drops the 2 transfer-head probe-train stages
+# B2b · NO extra eval env, NO new command. Default eval (PROBE_SPLIT=stratified) trains action+taxonomy
+#       heads INLINE (Stage 3/11, KEEP_PROBE_HEADS=1) → all 15 metrics for all 6 encoders, scored on the
+#       held-out test (leakage-free: clip_splits excludes test from the SSL train_pool). Same as v5_1B POC.
 
-# B3 · SANITY smoke first (2 GPU, fresh, same SKIP) — green-light before the 19 h arms.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 2 --cache 2 --skip-arms $SKIP \
-  2>&1 | tee logs/iter19_sanity_rest_$(date +%F_%H%M%S).log
+# B3 · SANITY smoke (2 GPU, same SKIP) — green-light before the arms.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 2 --cache 2 --skip-arms $SKIP 2>&1 | tee logs/iter19_sanity_rest_$(date +%F_%H%M%S).log
+# remove sanity artifacts to save disk space form explooding during full training
 rm -rf outputs/sanity/
 
-# B4 · the real FULL run. --cache 1 resume-skips pretrain, trains diheavy ∥ peft_lora, evals all 6,
-#      then the §3 finale builds frozen + the two diheavy WiSE-FT merges. ~19 h + eval.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 --skip-arms $SKIP \
-  2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
+# B4 · FULL run: --cache 1 skips the seed, trains diheavy ∥ peft_lora, evals all 6 + finale.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
 ```
 
 ### 📟 Live status pane (separate terminal on Box B)
 
 ```bash
-# BACKBONE must match the run or every cell reads pending. Auto-backs up outputs/full to HF every 45 min
-# (POC+FULL are backed up; SANITY is throwaway). Point --log at the B4 main tee.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL \
---log logs/iter19_full_rest_<ts>.log
+# BACKBONE must match; auto-backs up outputs/full to HF every 45 min. Point --log at B4's tee.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL --log logs/iter19_full_rest_<ts>.log
 # live refresh:
 # watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL --log logs/iter19_full_rest_<ts>.log'
 ```
@@ -144,11 +123,11 @@ ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL 
 ## 🏁 FINALIZE — cross-plots + HF persist
 
 ```bash
-# Cross-backbone forest + scale-replication + combined scorecard, discovered from the 'full' tree.
+# Cross-backbone forest + scale-replication plots from the 'full' tree.
 python -u src/m13_eval_plot.py --cross-plots --cross-mode full \
   2>&1 | tee logs/iter19_cross_plots_$(date +%F_%H%M%S).log
 
-# Persist the full outputs tree (additive, no-delete, token-safe).
+# Persist the full outputs tree (additive, no-delete).
 python -u src/utils/hf_outputs.py upload-additive outputs/full \
 2>&1 | tee logs/iter19_upload_pretrain_FULL_$(date +%F_%H%M%S).log
 ```

@@ -361,7 +361,12 @@
       "Bash(cd /root/.claude/projects/-workspace-factorjepa/1b2336d6-c7ee-4d84-8920-ed3380b1b603/subagents/workflows/wf_f9520981-7d7)",
       "Bash(python3 -c ' *)",
       "Bash(grep -vE \"^\\\\[\\\\*\\\\]|fixable|^$\")",
-      "Bash(awk -F: '$1>1251')"
+      "Bash(awk -F: '$1>1251')",
+      "Bash(awk '{print \"  \"$5\"  \"$NF}')",
+      "Bash(grep -nA4 \"max_epochs:\" configs/train/base_optimization.yaml)",
+      "Bash(ps -eo pid,etime,%cpu,rss,cmd)",
+      "Bash(ps -eo pid,etime,%cpu,cmd)",
+      "Bash(nvidia-smi --query-gpu=index,utilization.gpu,memory.used,power.draw --format=csv,noheader)"
     ]
   }
 }
