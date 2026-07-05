@@ -9,26 +9,23 @@
 
 ## 📋 Run at a glance — live DAG status (`ngpu_run_status.py` view)
 
-> 🔗 **DAG:** 🚂 `pretrain_encoder` (seed) → 🔧 `diheavy` **∥** 🔩 `peft_lora` (parallel, both init from the seed) → 📊 eval all 6 on the held-out test
->
-> 📦 **116,000 clips**  ▸  🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 **75% train** (~87k)  ·  🟨 **~1% val** (~0.9k · stratified)  ·  🟦🟦🟦🟦🟦 **24% test** (~28k)  —  re-partitioned **75 : ~1 : 24** (val → stratified 1k, +4.8k moved to a leakage-free test)
-
 ```text
-┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬────────────────┬──────────────┐
-│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ │ ⏳ wall tr · ev │ 📌 status    │
-├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼──────────────┤
-│ 🚂 pretrain_encoder · SSL seed             │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h  · 4h      │ 🔄 running   │
-│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ pending    │
-│ 🔩 peft_lora_encoder · Best-COMP           │ GPU1  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ pending    │
-│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending    │
-│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending    │
-│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending    │
-├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼──────────────┤
-│ 🏁 TOTAL · critical path (not the sum)     │ 1→2×  │ 🟩 87k =75%   │ 🟨 0.9k =~1% │ 🟦 28k =24%   │ 18h→18h∥→24h   │ ⏳ ~2.5 days  │
-└───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴────────────────┴──────────────┘
+┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬────────────────┬───────────────┐
+│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ │ ⏳ wall tr · ev │ 📌 status     │
+├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼───────────────┤
+│ 🚂 pretrain_encoder · SSL seed             │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h✓ · 4h      │ ✅ done · HF   │
+│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ next · BoxB │
+│ 🔩 peft_lora_encoder · Best-COMP           │ GPU1  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ next · BoxB │
+│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending     │
+│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending     │
+│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending     │
+├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼───────────────┤
+│ 🏁 TOTAL · critical path (not the sum)     │ 1→2×  │ 🟩 87k =75%   │ 🟨 0.9k =~1% │ 🟦 28k =24%   │ 18h→18h∥→24h   │ ⏳ ~2.5 days   │
+├───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴────────────────┴───────────────┤
+│ DAG  🚂 seed → 🔧 diheavy ∥ 🔩 peft_lora → 📊 eval 6 on the 🟦 28k leakage-free test    ·    116k re-split 75 : ~1 : 24              │
+│ key  🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen   ·   ✅ done · 🔄 running · ⬚ pending · ❌ failed             │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
-
-> **legend:** 🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen  │  🟩 train · 🟨 val · 🟦 test  │  ✅ done · 🔄 running · ⬚ pending · ❌ failed  │  wall `tr·ev` = train · eval hrs (∥ = parallel)
 
 ---
 
