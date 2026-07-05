@@ -456,17 +456,18 @@ def train(cfg: dict, args):
     subset_keys = load_subset(args.subset) if args.subset else set()
     val_key_set = load_val_subset(args.val_subset)
 
-    # iter19 (2026-07-04): cap the in-memory val PRELOAD to validation.max_val_clips. At FULL the 5% val split
-    # is ~5,750 clips (~40 GB decoded) → the "Collecting … into memory" step OOMs the ~127 GB cgroup (GPU idle at
-    # 0%, kernel SIGKILL). max_val_clips (base_optimization.yaml:309) was DECLARED but never consumed — a dead
-    # knob; wire it live here. Deterministic (sorted → first N) = reproducible; the probe is a trajectory MONITOR,
-    # not the paper eval (that's Box-B run_eval on the full 23k test). SANITY/POC (val < cap) are untouched → parity-safe.
+    # iter19 (2026-07-05): the val subsample is done ONCE upstream by src/utils/val_repartition.py (invoked in
+    # run_train.sh) — val_split.json is already a STRATIFIED ≤max_val_clips draw (motion-class balanced), and the
+    # freed clips were moved into the test split. So there is NO per-module cap here anymore: the old
+    # `sorted(val)[:N]` slice was a NON-stratified alphabetical prefix that biased best-ckpt selection (fixed via
+    # the shared, single-source split per CLAUDE.md SHARED-DERIVATION). FAIL LOUD if a caller ever hands us an
+    # oversized val — that means the repartition step was skipped, and silently slicing would re-introduce the bias.
     _val_cap = cfg["validation"]["max_val_clips"]
-    if _val_cap and len(val_key_set) > _val_cap:
-        _n_full = len(val_key_set)
-        val_key_set = set(sorted(val_key_set)[:_val_cap])
-        print(f"  [val-cap] validation.max_val_clips={_val_cap}: subsampled val preload {_n_full} → {_val_cap} "
-              f"clips (avoids the FULL val-preload OOM at 'Collecting … into memory')", flush=True)
+    if len(val_key_set) > _val_cap:
+        raise RuntimeError(
+            f"val_split has {len(val_key_set)} clips > validation.max_val_clips={_val_cap} — the val_repartition "
+            f"step (run_train.sh, src/utils/val_repartition.py) did not run. Re-run it so val is a stratified "
+            f"≤{_val_cap} draw; do NOT slice here (that re-introduces the sorted-prefix bias).")
 
     # Exclude val keys from training (no leakage)
     if subset_keys and val_key_set:
@@ -1329,36 +1330,18 @@ def train(cfg: dict, args):
         gc.enable()
 
     # Cooldown phase: switch to 64f, linear LR decay (V-JEPA 2.1 recipe).
-    # cooldown.enabled is declared in base_optimization.yaml (single source) — read
-    # directly; KeyError = fail loud if the block is missing.
+    # iter19 (2026-07-05): the 64f cooldown was a STUB — the old block only walked the optimizer LR
+    # (zero 64f data/forward/backward, "full implementation needs producer restart") yet printed a
+    # "=== COOLDOWN PHASE === Frames 16→64" banner, so the log falsely advertised a cooldown that never
+    # ran. Disabled in base_optimization.yaml (the model already trains without it, matching the
+    # no-cooldown POC → clean scale-replication; a faithful 64f epoch costs +60-90h/arm). FAIL LOUD if
+    # re-enabled before the real producer restart at 64f exists — never silently no-op + fake-log again.
     cooldown_cfg = cfg["cooldown"]
     if cooldown_cfg["enabled"] and not args.SANITY:
-        print("\n=== COOLDOWN PHASE ===")
-        print(f"  Frames: {cfg['data']['num_frames']} → {cooldown_cfg['num_frames']}")
-        print(f"  LR: {scheduler.get_last_lr()[0]:.2e} → {cooldown_cfg['final_lr']}")
-        print(f"  Epochs: {cooldown_cfg['epochs']}")
-        print(f"  Warmup: {cooldown_cfg['warmup_steps']} steps")
-        # Store current LR for linear decay
-        current_lr = scheduler.get_last_lr()[0]
-        cooldown_final_lr = cooldown_cfg["final_lr"]
-        cooldown_steps = int(steps_per_epoch * cooldown_cfg["epochs"])
-        # Update num_frames in config for producer
-        cfg["data"]["num_frames"] = cooldown_cfg["num_frames"]
-        # Linear decay: LR drops from current to final over cooldown_steps
-        for pg in optimizer.param_groups:
-            pg["lr"] = current_lr
-        for cd_step in range(cooldown_steps):
-            frac = cd_step / max(cooldown_steps - 1, 1)
-            cd_lr = current_lr + frac * (cooldown_final_lr - current_lr)
-            for pg in optimizer.param_groups:
-                pg["lr"] = cd_lr
-            # Note: full cooldown training loop (data loading, forward, backward)
-            # would require restarting the producer thread with 64f.
-            # For now, log the schedule; full implementation needs producer restart.
-        print(f"  Cooldown LR schedule: {current_lr:.2e} → {cooldown_final_lr:.2e} "
-              f"over {cooldown_steps} steps (linear)")
-        print("  NOTE: Full cooldown with 64f data loading requires producer restart.")
-        print("  Cooldown is a paper-quality enhancement. POC results valid without it.")
+        raise NotImplementedError(
+            "cooldown.enabled=true but the 64f cooldown is NOT implemented — the removed stub only "
+            "stepped the LR with zero 64f training. Set cooldown.enabled=false (the model already "
+            "trains without it, matching POC), OR implement the real 64f producer restart first.")
 
     # Bug B fix (iter13, mirrors m09c #55): fail-hard if zero successful training
     # steps completed. Without this, m09a would silently export the *initial*

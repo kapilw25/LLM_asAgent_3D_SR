@@ -174,6 +174,17 @@ python -u src/utils/probe_train_subset.py \
 python -u src/utils/probe_train_subset.py \
     --action-labels "$ACTION_LABELS" --split test --output "$TEST_SPLIT"
 
+# ── iter19 (2026-07-05): re-partition val → STRATIFIED validation.max_val_clips (motion-class balanced)
+#    + move the freed val clips into TEST. SINGLE SOURCE for every trainer's val_split.json (m09a1/c1/b
+#    all read $VAL_SPLIT), replacing the old per-module sorted(val)[:N] slice that biased best-ckpt
+#    selection. TRAIN-POOL-PRESERVING: val∪test is unchanged, so the clip_splits pool below is identical
+#    (a running seed stays valid). Idempotent — a no-op when val ≤ target (SANITY/POC).
+TARGET_VAL=$(scripts/lib/yaml_extract.py configs/train/base_optimization.yaml validation.max_val_clips)
+python -u src/utils/val_repartition.py \
+    --val-split "$VAL_SPLIT" --test-split "$TEST_SPLIT" \
+    --motion-features "${LOCAL_DATA}/m04d_motion_features/motion_features.npy" \
+    --target-val "$TARGET_VAL"
+
 # ── iter17 (2026-05-26): leakage-safe TRAIN POOL — built ONCE, consumed by ALL ──
 # Every trainer's --subset = this pool = universe − (val ∪ test). Fixes the iter15
 # bugs where each trainer derived its own pool internally (m09c1 excluded val but

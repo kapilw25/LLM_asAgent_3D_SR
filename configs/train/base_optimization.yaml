@@ -291,8 +291,14 @@ training_pool:
   universe: broad_manifest        # iter17 user decision 2026-05-26 (broad SSL pool)
 
 # -- Cooldown phase (V-JEPA 2.1: switch to 64f + linear LR decay) --
+# iter19 (2026-07-05): DISABLED. The m09a1 implementation was a STUB — it only walked the optimizer
+# LR (no 64f data/forward/backward, "full impl needs producer restart") yet printed "COOLDOWN PHASE",
+# so the log falsely advertised a cooldown that never ran. Kept OFF because (a) the model already
+# trains without it, matching the no-cooldown POC results (clean POC↔FULL scale-replication), and
+# (b) a faithful 64f epoch costs +60-90h/arm. m09a1 now FAILS LOUD if this is flipped true before the
+# real 64f producer restart is implemented (no more silent no-op + fake banner).
 cooldown:
-  enabled: true                   # Run cooldown after main training
+  enabled: false                  # was true (stub no-op) — see note above; do NOT re-enable until implemented
   num_frames: 64                  # Match eval frame count (VJEPA_FRAMES_PER_CLIP)
   epochs: 1                       # 1 epoch for continual training (Meta: 40 for from-scratch)
   lr_schedule: linear_decay       # Linear decay to final_lr (not cosine)

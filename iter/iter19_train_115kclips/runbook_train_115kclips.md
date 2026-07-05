@@ -100,6 +100,23 @@ python -u src/utils/hf_outputs.py download outputs/full \
 
 # B2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, the yaml flip, SKIP) — from the block above.
 
+# B2b · iter19 (2026-07-05) LEAKAGE-FREE test-all eval — export BEFORE the run so every eval subprocess
+#       (E:/P:/F:/§3, launched by ngpu_run) inherits it (run_eval reads EVAL_SUBSET/PROBE_SPLIT/…-reuse
+#       from the env). Scores ONLY the held-out test_split.json (27,947 never-SSL-trained clips, incl. the
+#       4,750 moved from val by val_repartition) → n_test = 27,947 → tightest, honest CIs + NO encoder
+#       leakage (the old default scored the internal split of ALL 115,687 clips, ~87k of them SSL-seen).
+#       The 13 head-free metrics (all predictor + encoder-temporal — the paper headline) run directly under
+#       test-all; the 2 transfer-head metrics (action top-1, taxonomy F1) REUSE the disjoint POC eval_10k
+#       heads (same pattern as plan_test_disjoint_10k.md) → no head-train pass needed.
+export EVAL_SUBSET="${LOCAL_DATA:-data/full_local}/test_split.json"
+export PROBE_SPLIT=test-all
+export EVAL_HEAD_REUSE_ROOT="$(python src/utils/output_paths.py eval-root poc vjepa_2_1_vitg eval_10k)"
+export CLASS_EDGES="outputs/poc/_xset_edges/class_edges.json"
+# PREREQ (add to B1): also pull the POC eval_10k heads + class_edges (they're on HF):
+#   python -u src/utils/hf_outputs.py download outputs/poc 2>&1 | tee logs/iter19_dl_poc_heads_$(date +%F_%H%M%S).log
+# If the heads are absent, run Stage-A instead (13 head-free metrics on the full test, no head metrics):
+#   export SKIP_STAGES=3,11,4,12,13   # drops the 2 transfer-head probe-train stages
+
 # B3 · SANITY smoke first (2 GPU, fresh, same SKIP) — green-light before the 19 h arms.
 ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpus 2 --cache 2 --skip-arms $SKIP \
   2>&1 | tee logs/iter19_sanity_rest_$(date +%F_%H%M%S).log
