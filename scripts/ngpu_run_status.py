@@ -350,13 +350,8 @@ _REGEN_COLD_PRIOR = {"etheads": {"poc": 150 * 60, "sanity": 4 * 60, "full": 375 
 # Back up outputs/<mtag> to HF this often (minutes) WHILE the run goes, so the final backup at the end
 # is tiny and the paid node can be killed right away. Driven by the 60s `watch` refresh + a stamp file.
 UPLOAD_EVERY_MIN = 45   # iter18 2026-06-06: full-artifact backups are heavier — user chose 45m
-# 2026-06-07: re-enabled after the manual every-file mirror completed (08:53 run:
-# "Upload complete: 1781s", 12 churned files transferred, rest deduped). Flip True
-# only while a MANUAL upload is in flight (concurrent commits race).
-# 2026-06-08: DISABLED by user — manual `python src/utils/hf_outputs.py upload outputs/poc`
-# is running; the watch's auto-backup would race its commit (the rc=1 042554 failure was
-# exactly this collision). Flip back to False once the manual upload finishes.
-AUTO_BACKUP_DISABLED = True
+# True ONLY while a manual HF upload runs (commit race); False = auto-backup outputs every 45m.
+AUTO_BACKUP_DISABLED = False
 # Rebuild the §3-style preview plots from whatever evals are DONE this often (minutes). CPU-only.
 PLOT_EVERY_MIN = 15
 
@@ -1269,6 +1264,22 @@ def main():
     end_pdt = end_utc - timedelta(hours=7)   # user reads PDT
     print(f"\n  {counts['done']}✅  {counts['running']}🔄  {counts['pending']}⬚  "
           f"{counts['failed']}❌  / {len(jobs)} jobs")
+    # iter19 --eval-first: if the run launched with the SSL-head gate, surface its progress here so the
+    # pre-training go/no-go is visible at a glance (arm training is HELD until every gate eval finishes).
+    _gate_m = re.search(r"SSL-head GATE:.*?for \[([^\]]*)\]", text)
+    if _gate_m:
+        _garms = re.findall(r"'([^']+)'", _gate_m.group(1))
+        _gencs = [enc_name("frozen") if a == "frozen" else enc_name(ARM2ENC[a])
+                  for a in _garms if a == "frozen" or a in ARM2ENC]
+        _gjobs = [j for j in jobs if any(
+            j == f"E:{e}" or j.startswith(f"P:{e}:") or j.startswith(f"F:{e}:") for e in _gencs)]
+        _gdone = sum(1 for j in _gjobs if classify(j) == "done")
+        _grun = sum(1 for j in _gjobs if classify(j) == "running")
+        if _gjobs and _gdone == len(_gjobs):
+            print(f"  🚦 E0 SSL-head gate ({', '.join(_garms)}): ✅ CLEARED → arm training released")
+        elif _gjobs:
+            print(f"  🚦 E0 SSL-head gate ({', '.join(_garms)}): 🔄 {_gdone}/{len(_gjobs)} evals done, "
+                  f"{_grun} running — ARM TRAINING HELD until it clears")
     fully_done = bool(s3 and s3.group(1) == "0") or only_complete
     settled = counts["done"] + counts["failed"] == len(jobs)
     plot_msg = (maybe_plot(mtag, args.mode)

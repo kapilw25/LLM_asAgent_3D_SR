@@ -332,11 +332,23 @@ def main():
                          "train + no other stages + no §3 finale. Runs on the TRAINED corpus (eval_10k "
                          "defaults — do NOT export the cross-set env first). Replaces the ~12-18 h single-GPU "
                          "8c pass. Use --cache 2 for a fresh build; --cache 1 resumes.")
+    ap.add_argument("--eval-first", nargs="+", default=None, metavar="ARM",
+                    help="iter19 SSL-head gate (Prof Das): run these encoders' eval jobs BEFORE any "
+                         "pending arm training — every pending train job gains a dep on them, so on a "
+                         "2-GPU box the gate evals grab both cards first, finish, THEN training starts, "
+                         "landing the go/no-go numbers (e.g. pretrain vs frozen) BEFORE the ~20 h spend. "
+                         "Each ARM must be already-trained (a resume-skipped 'pretrain_encoder') or "
+                         "'frozen' (no train) — gating a pending arm on its own eval would cycle. "
+                         "Composes with --skip-arms; mutually exclusive with --only.")
     args = ap.parse_args()
     if args.taxheads_only and args.etheads_only:
         sys.exit("FATAL: --taxheads-only and --etheads-only are mutually exclusive.")
     if (args.taxheads_only or args.etheads_only) and args.only:
         sys.exit("FATAL: --taxheads-only/--etheads-only and --only are mutually exclusive.")
+    if args.eval_first and args.only:
+        sys.exit("FATAL: --eval-first and --only are mutually exclusive (--only drops all eval jobs).")
+    if args.eval_first and (args.taxheads_only or args.etheads_only):
+        sys.exit("FATAL: --eval-first and --taxheads-only/--etheads-only are mutually exclusive.")
 
     jobs, mtag = build_jobs(args.mode, taxheads_only=args.taxheads_only, etheads_only=args.etheads_only)
 
@@ -462,6 +474,40 @@ def main():
                 et_done += 1
         if et_done:
             print(f"  [resume --cache 1] skipping {et_done} already-done Stage-8c metric jobs",
+                  flush=True)
+
+    # iter19 (2026-07-05) --eval-first SSL-head gate (Prof Das): hold every PENDING arm-train job until
+    # the named encoders' eval jobs finish, so the go/no-go numbers (e.g. pretrain vs frozen) land BEFORE
+    # the ~20 h train spend, not after it. Pure dependency injection — the ready() gate does the ordering,
+    # so no dict-reorder needed. Runs AFTER the --cache 1 resume so `done` is populated (resume-skipped seed).
+    # Legal gate encoders: a resume-skipped seed or 'frozen' (train done/absent → no train⇢eval⇢train cycle).
+    if args.eval_first:
+        gate_encs, gate_ids = [], set()
+        for a in args.eval_first:
+            if a == "frozen":
+                gate_encs.append(enc_name("frozen"))
+            elif a in ARM2ENC:
+                if f"T:{BACKBONE}:{a}" in jobs and f"T:{BACKBONE}:{a}" not in done:
+                    sys.exit(f"FATAL: --eval-first {a} but its train job is still PENDING — gating a "
+                             f"train on its own eval cycles. Only a resume-skipped seed or 'frozen' can gate.")
+                gate_encs.append(enc_name(ARM2ENC[a]))
+            else:
+                sys.exit(f"FATAL: --eval-first unknown arm {a} — choices: frozen + {sorted(ARM2ENC)}")
+        for encn in gate_encs:
+            gate_ids |= {jid for jid in jobs
+                         if jid == f"E:{encn}" or jid.startswith(f"P:{encn}:") or jid.startswith(f"F:{encn}:")}
+        gate_ids -= done   # already-evaled (resume) gate jobs don't block anything
+        if not gate_ids:
+            print(f"  [--eval-first] all gate evals for {args.eval_first} already done (resume) — no hold added",
+                  flush=True)
+        else:
+            n_gated = 0
+            for jid, j in jobs.items():
+                if j["kind"] == "train" and jid not in done:
+                    j["deps"] |= gate_ids
+                    n_gated += 1
+            print(f"  [--eval-first] SSL-head GATE: {len(gate_ids)} eval job(s) for {args.eval_first} run "
+                  f"FIRST → {n_gated} pending train job(s) now wait on them (go/no-go before the train spend)",
                   flush=True)
 
     # CPU-set pinning (iter18 2026-06-07): one private core slice per GPU slot —

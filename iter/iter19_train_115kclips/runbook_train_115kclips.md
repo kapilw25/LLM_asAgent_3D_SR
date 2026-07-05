@@ -105,8 +105,13 @@ ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode SANITY --gpu
 # remove sanity artifacts to save disk space form explooding during full training
 rm -rf outputs/sanity/
 
-# B4 · FULL run: --cache 1 skips the seed, trains diheavy ∥ peft_lora, evals all 6 + finale.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 --skip-arms $SKIP 2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
+# B4 · FULL run with the E0 SSL-head gate folded in (--eval-first, Prof Das): pretrain + frozen eval run
+#      FIRST (~9h, 2-wide), THEN diheavy ∥ peft_lora train + eval all 6 + §3 finale. --cache 1 skips the seed.
+#      Go/no-go lands BEFORE the 20h train spend → watch the E0 rows; Ctrl-C if pretrain ≪ frozen (SSL hurt).
+#      The status pane shows a "🚦 E0 SSL-head gate" line (HELD → CLEARED). Drop --eval-first to run straight.
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 \
+  --eval-first pretrain_encoder frozen --skip-arms $SKIP 2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
+# the gate's go/no-go rows: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_plot/*/eval_metrics.csv
 ```
 
 ### 📟 Live status pane (separate terminal on Box B)
@@ -114,6 +119,9 @@ ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 
 ```bash
 # BACKBONE must match; auto-backs up outputs/full to HF every 45 min. Point --log at B4's tee.
 ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL --log logs/iter19_full_rest_<ts>.log
+# Unattended/overnight — detached so an SSH drop can't kill the pane or its 45-min HF backup:
+nohup env ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL \
+  --log logs/iter19_full_rest_<ts>.log > logs/status_pane_$(date +%F_%H%M%S).log 2>&1 &
 # live refresh:
 # watch -n60 'ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --mode FULL --log logs/iter19_full_rest_<ts>.log'
 ```
