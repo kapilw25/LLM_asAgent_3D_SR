@@ -1,7 +1,7 @@
 # 🚀 iter19 — Full-scale **115k** training + eval on the **1B** backbone (AAAI headline run)
 
-> 🎯 **One decisive run.** Train the paper's headline trio on **116k clips** (75/5/20 split, `n_test ≈ 23k`),
-> on the cheaper **1B** backbone (`vjepa_2_1_vitg`), then eval them + frozen on the **23k** test →
+> 🎯 **One decisive run.** Train the paper's headline trio on **116k clips** (75/5/20 base split, re-partitioned to a stratified **~1k val** + `n_test ≈ 28k`),
+> on the cheaper **1B** backbone (`vjepa_2_1_vitg`), then eval them + frozen on the **~28k** leakage-free test →
 > **decisive CIs (~3.5× tighter than the 10k POC)** + a full-scale answer to "does it hold at scale?".
 > Scope kept to the **3 arms that matter** (best-OUR + best-COMP + seed) → budget-feasible on personal funding.
 
@@ -11,20 +11,20 @@
 
 > 🔗 **DAG:** 🚂 `pretrain_encoder` (seed) → 🔧 `diheavy` **∥** 🔩 `peft_lora` (parallel, both init from the seed) → 📊 eval all 6 on the held-out test
 >
-> 📦 **116,000 clips**  ▸  🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 **75% train** (~87k)  ·  🟨 **5% val** (~5.75k)  ·  🟦🟦🟦🟦 **20% test** (~23k)  —  a leakage-safe **75 : 5 : 20** split
+> 📦 **116,000 clips**  ▸  🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 **75% train** (~87k)  ·  🟨 **~1% val** (~0.9k · stratified)  ·  🟦🟦🟦🟦🟦 **24% test** (~28k)  —  re-partitioned **75 : ~1 : 24** (val → stratified 1k, +4.8k moved to a leakage-free test)
 
 ```text
 ┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬────────────────┬──────────────┐
-│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨5%⟩  │ 🟦 test ⟨20%⟩ │ ⏳ wall tr · ev │ 📌 status    │
+│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ │ ⏳ wall tr · ev │ 📌 status    │
 ├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼──────────────┤
-│ 🚂 pretrain_encoder · SSL seed             │ GPU0  │ 🟩 ~87k       │ 🟨 ~5.75k    │ 🟦 ~23k       │ 18h  · 4h      │ 🔄 running   │
-│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU0  │ 🟩 ~87k       │ 🟨 ~5.75k    │ 🟦 ~23k       │ 18h ∥ · 4h     │ ⬚ pending    │
-│ 🔩 peft_lora_encoder · Best-COMP           │ GPU1  │ 🟩 ~87k       │ 🟨 ~5.75k    │ 🟦 ~23k       │ 18h ∥ · 4h     │ ⬚ pending    │
-│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~23k       │  —   · 4h      │ ⬚ pending    │
-│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~23k       │  —   · 4h      │ ⬚ pending    │
-│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~23k       │  —   · 4h      │ ⬚ pending    │
+│ 🚂 pretrain_encoder · SSL seed             │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h  · 4h      │ 🔄 running   │
+│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ pending    │
+│ 🔩 peft_lora_encoder · Best-COMP           │ GPU1  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h ∥ · 4h     │ ⬚ pending    │
+│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending    │
+│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending    │
+│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · 4h      │ ⬚ pending    │
 ├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼────────────────┼──────────────┤
-│ 🏁 TOTAL · critical path (not the sum)     │ 1→2×  │ 🟩 87k =75%   │ 🟨 5.75k =5% │ 🟦 23k =20%   │ 18h→18h∥→24h   │ ⏳ ~2.5 days  │
+│ 🏁 TOTAL · critical path (not the sum)     │ 1→2×  │ 🟩 87k =75%   │ 🟨 0.9k =~1% │ 🟦 28k =24%   │ 18h→18h∥→24h   │ ⏳ ~2.5 days  │
 └───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴────────────────┴──────────────┘
 ```
 

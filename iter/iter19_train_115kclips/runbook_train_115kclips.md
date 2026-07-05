@@ -80,7 +80,7 @@ ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 
 
 # A5 · push the seed so Box B can pull it (additive, no-delete, token-safe).
 python -u src/utils/hf_outputs.py upload-additive outputs/full \
-  2>&1 | tee logs/iter19_up_seed_$(date +%F_%H%M%S).log
+2>&1 | tee logs/iter19_upload_pretrain_seed_$(date +%F_%H%M%S).log
 ```
 
 ---
@@ -150,7 +150,7 @@ python -u src/m13_eval_plot.py --cross-plots --cross-mode full \
 
 # Persist the full outputs tree (additive, no-delete, token-safe).
 python -u src/utils/hf_outputs.py upload-additive outputs/full \
-  2>&1 | tee logs/iter19_up_full_$(date +%F_%H%M%S).log
+2>&1 | tee logs/iter19_upload_pretrain_FULL_$(date +%F_%H%M%S).log
 ```
 
 ---
