@@ -786,7 +786,7 @@
 
       <div class="author-block">
         <span>Kapil Wanaskar<sup>1</sup></span> &nbsp;
-        <span>Gaytri Jena<sup>4</sup></span> &nbsp;
+        <span>Gaytri Jena<sup>5</sup></span> &nbsp;
         <span>Vinija Jain<sup>2</sup></span> &nbsp;
         <span>Aman Chadha<sup>3</sup></span> &nbsp;
         <span>Amitava Das<sup>4</sup></span>
@@ -795,7 +795,8 @@
         <sup>1</sup>Canva Research, USA &nbsp;&nbsp;
         <sup>2</sup>Google, USA &nbsp;&nbsp;
         <sup>3</sup>Apple, USA &nbsp;&nbsp;
-        <sup>4</sup>Pragya Lab, BITS Pilani Goa, India
+        <sup>4</sup>Pragya Lab, BITS Pilani Goa, India &nbsp;&nbsp;
+        <sup>5</sup>UC Berkeley, USA
       </div>
 
       <div class="badge-row">
@@ -1375,15 +1376,66 @@
       </div>
     </div>
 
-    <!-- ── What's running now ── -->
-    <div style="background: var(--bg-cream); border: 1px dashed var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.4rem; margin-top: 1rem;">
-      <p style="font-weight: 700; margin-bottom: 0.3rem;">🔭 In progress &mdash; fine-tuning-technique ablation (13 arms)</p>
-      <p style="color: var(--text-secondary); font-size: 0.93rem; margin-bottom: 0;">
-        On the champion backbone, factor surgery is now being compared against the standard adaptation arsenal &mdash;
-        full fine-tune, LP-FT, LoRA, DoRA, AutoRGN, CaSSLe, EWC, raw-data surgery control and head-only variants &mdash;
-        same data, same checkpoint-selection rule (held-out future-frame&nbsp;L1), same 451-clip held-out validation pool.
-        Results land here as the hero grid + paired-&Delta; CIs.
-      </p>
+    <!-- ── COMPLETED: fine-tuning-technique ablation + scale transfer (iter18, both backbones) ── -->
+    <h3 class="title is-4 has-text-centered" style="margin-top: 2.5rem;">Fine-tuning-technique ablation &amp; scale transfer <span style="font-weight: 300; font-size: 0.9rem; color: var(--text-secondary);">&mdash; surgery vs the full adaptation arsenal, replicated 2B &rarr; 1B</span></h3>
+    <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+      13 arms &times; the 15-metric TEST eval on both backbones (n=1,825, 95% BCa CI). Every figure is a vector PDF &mdash; click to open the crisp version.
+    </p>
+
+    <!-- findings F4-F6 -->
+    <div class="columns is-multiline" style="margin-bottom: 1.5rem;">
+      <div class="column is-4">
+        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-green); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F4 &middot; Surgery &#8811; frozen &mdash; decisive, at both scales</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">Surgery separates from the frozen backbone by <strong>5&ndash;47 CI-widths</strong> on every predictive + motion metric &mdash; future-frame MSE (47&times; at 2B, 27&times; at 1B), causal L1 (29&times;/19&times;), motion-cosine (27&times;/26&times;), mask-ratio (22&times;/16&times;). The cost, reported: the frame-timing (TCC) metrics regress.</p>
+        </div>
+      </div>
+      <div class="column is-4">
+        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-green); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F5 &middot; It beats even the strongest fine-tune on prediction</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">Against the best non-ours arm (full fine-tune / LoRA), surgery&rsquo;s future-frame MSE lead still clears significance &mdash; <strong>6.3&times;</strong> CI-widths (2B) / <strong>4.8&times;</strong> (1B), <strong>+1.7% / +1.4%</strong> raw &mdash; and causal L1 too. It concedes motion-cosine to full fine-tune (&minus;44.9% / &minus;33.4%): a stated semantic trade.</p>
+        </div>
+      </div>
+      <div class="column is-4">
+        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-green); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F6 &middot; The cheap 1B faithfully replicates the 2B</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">Headline metrics rank-correlate 2B&rarr;1B at <strong>Spearman &rho; 0.89&ndash;0.98</strong> (causal 0.978, motion-cos 0.952, future-frame 0.938, mask-ratio 0.895); <strong>12 of 15</strong> replicate &mdash; so the 1B is a sound, ~&frac12;-cost proxy for the 2B champion, greenlighting the full-scale 116K run on the 1B. 3 secondary metrics don&rsquo;t transfer (flagged).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- the 5 result figures (vector PDF click-through) -->
+    <div class="columns is-multiline">
+      <div class="column is-6">
+        <div class="plot-container">
+          <a href="static/images/forest_plot_best_ci.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_best_ci.png" alt="Forest plot — surgery advantage over the best competitor in CI-widths, per metric, at 2B and 1B; green past the dashed line = statistically separated"></a>
+          <p class="plot-caption">⚔️ <strong>Surgery vs the strongest competitor &mdash; statistical.</strong> Advantage over the best non-ours arm, in CI-widths (green past the dashed line = significant). Future-frame MSE (6.3&times;/4.8&times;) and causal L1 (2.3&times;/2.7&times;) clear it at 2B/1B; motion-cosine is conceded to full fine-tune (far left).</p>
+        </div>
+      </div>
+      <div class="column is-6">
+        <div class="plot-container">
+          <a href="static/images/forest_plot_best_mean.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_best_mean.png" alt="Forest plot — surgery advantage over the best competitor as a raw percentage, per metric, at 2B and 1B"></a>
+          <p class="plot-caption">📏 <strong>&hellip; effect size (raw %).</strong> The predictive lead is small-but-consistent &mdash; future-frame +1.7%/+1.4%, mask-ratio +1.1%/+2.9%, exposure-bias +3.8% (1B). The motion-cosine deficit (&minus;44.9%/&minus;33.4%) is the deliberate prediction-vs-semantics trade.</p>
+        </div>
+      </div>
+      <div class="column is-12">
+        <div class="plot-container">
+          <a href="static/images/forest_plot_frozen_ci.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_frozen_ci.png" alt="Forest plot — surgery advantage over the frozen backbone in CI-widths, per metric, at 2B and 1B; the paper's central claim"></a>
+          <p class="plot-caption">🏆 <strong>The paper claim: surgery &minus; frozen.</strong> Surgery separates from frozen by 5&ndash;47 CI-widths on every predictive + motion metric at BOTH scales (future-frame 47&times;/27&times;, motion-cos 27&times;/26&times;). Grey/negative rows are the coherence (TCC) metrics frozen still owns &mdash; the reported trade, not a hidden loss.</p>
+        </div>
+      </div>
+      <div class="column is-12">
+        <div class="plot-container">
+          <a href="static/images/scale_replication.pdf" target="_blank" rel="noopener"><img src="static/images/scale_replication.png" alt="15-panel scatter — each metric's 2B value (x) vs 1B value (y) with Spearman rho; green title = replicates, red = fails"></a>
+          <p class="plot-caption">🔁 <strong>Scale transfer: does the 1B rank like the 2B?</strong> One scatter per metric (2B on x, 1B on y), Spearman &rho;. Causal L1 &rho;=0.978, motion-cos 0.952, future-frame 0.938, mask-ratio 0.895 &mdash; the core metrics replicate strongly; the 3 red panels (rollout, exposure-bias, temporal-order) do not.</p>
+        </div>
+      </div>
+      <div class="column is-12">
+        <div class="plot-container">
+          <a href="static/images/eval_scorecard_combined.pdf" target="_blank" rel="noopener"><img src="static/images/eval_scorecard_combined.png" alt="Combined scorecard — the 2B champion (top) and 1B (bottom), every arm times all 15 metrics with 95% BCa CIs"></a>
+          <p class="plot-caption">📋 <strong>Full appendix scorecard &mdash; 2B champion (top) + 1B (bottom).</strong> Every arm &times; all 15 metrics with BCa CIs. The three-behaviour split is the same shape at both scales: surgery (green) wins prediction, full fine-tune / vanilla SSL win semantics, frozen wins coherence.</p>
+        </div>
+      </div>
     </div>
 
   </div>

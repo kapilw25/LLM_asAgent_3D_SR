@@ -109,4 +109,6 @@ __pycache__/
 
 # Claude Code session backup — synced via scp, never to git
 .claude_sessions/
-.claude_sessions/*
+.claude_sessions/*logs/.upload_outputs_*.LAST
+logs/.upload_outputs_*.LOCK
+logs/.upload_outputs_*.DONE

@@ -248,7 +248,9 @@ streaming:
   # (loader-bound shallow stages were 38.9 → 189 s/step under 4-arm contention).
   train_frame_cache:
     enabled: true
-    min_free_gb: 200            # stop creating NEW entries below this free-disk floor; a partial
+    min_free_gb: 350            # RAISED 200->350 (2026-07-06): the 200G floor let the train cache reach 512G,
+                                # then eval/checkpoint writes ate the reserve -> ENOSPC crashed diheavy at 17.3h.
+                                # 350 leaves room for the FULL eval outputs (features + heads) + arm checkpoints. a partial
                                 # cache stays correct (miss → fresh decode). FULL (116k ≈ 2.3T) will
                                 # cap out — hottest clips still serve hits.
   heartbeat_interval_s: 30.0  # iter18 H6: hf_outputs _UploadHeartbeat pulse (was signature default)
@@ -729,9 +731,15 @@ probe:
     subdir:            "m12_frame_cache"  # cache dir under LOCAL_DATA (durable, gitignored). iter18: ALSO used by
                                      # build_probe_clips' decode workers — the 451 probe clips are identical across
                                      # all 13 arms (same val split, same nf=16) → arm 1 decodes, arms 2-13 + evals HIT
-    min_free_gb:       80            # stop writing NEW cache entries when free disk < this. clips decode at
-                                     # native ~360x640 → nf16 ≈ 11 MB/clip (full 9130-clip universe ≈ 100 GB);
-                                     # 80 GB floor self-bounds nf64/pace growth + leaves room for eval transients
+    min_free_gb:       80            # LEGACY fallback (superseded by max_cache_gb): a free-disk floor reserves
+                                     # NOTHING, so other writers eat through it (the 2026-07-06 ENOSPC crash).
+                                     # Only used when EVAL_FRAME_CACHE_MAX_GB is unset. clips decode at native
+                                     # ~360x640 → nf16 ≈ 11 MB/clip.
+    max_cache_gb:      300           # iter19 2026-07-06 PRIMARY cap (SHARED dir — read by BOTH train + eval writers,
+                                     # single source; stream_autotune + run_eval.sh + prewarm set the env from here).
+                                     # HARD ceiling on the cache's OWN total bytes → video_io._frame_cache_store
+                                     # LRU-evicts oldest entries to stay under, so the cache can NEVER fill the disk.
+                                     # 300 leaves ~700G for tars + arm checkpoints + eval outputs on the 999G box.
   future_regress:                    # probe_future_regress.py: future-frame regressor MLP
     epochs:            50            # was REGRESSOR_EPOCHS module constant
     batch_size:        64            # was REGRESSOR_BATCH

@@ -6,6 +6,8 @@ All pipeline scripts (m04d, m05, m05b, m05c, m09, m10, m11) import from here.
 USAGE:
     from utils.video_io import get_clip_key, decode_video_bytes, create_stream
 """
+import contextlib
+import fcntl
 import json
 import os
 import shutil
@@ -182,19 +184,94 @@ def _frame_cache_load(cache_path: str):
         return None  # partial/corrupt cache file → fall through to a fresh decode
 
 
+# ── Bounded LRU cap (iter19 2026-07-06) ────────────────────────────────────────
+# The old min_free_gb "free-disk floor" RESERVED NOTHING — it only stopped the cache from ADDING
+# below the floor, so checkpoint/eval writes ate straight through the reserve and the FULL run
+# crashed on ENOSPC (the cache had ballooned to 512 G). The permanent fix: cap the cache's OWN
+# footprint. EVAL_FRAME_CACHE_MAX_GB is a HARD ceiling on the cache dir's total .npy bytes; a store
+# that would exceed it LRU-evicts oldest entries first (least-recently-STORED — robust under
+# noatime). The cache therefore can NEVER fill the disk — the rest is guaranteed-free for tars +
+# checkpoints + eval. Eviction is serialized across the concurrent writers (diheavy ∥ peft ∥ evals)
+# by an flock, and batch-evicts to a low-water mark so the O(N) scan is amortized; a running
+# .cache_bytes counter keeps the common path O(1) and each eviction recomputes truth → self-heals.
+_FRAME_CACHE_MAX_ENV = "EVAL_FRAME_CACHE_MAX_GB"
+_EVICT_LOW_WATER = 0.85   # on overflow, evict down to this fraction of the cap (amortizes the scan)
+
+
+def _cache_npy_bytes(cache_dir: str) -> int:
+    """True total bytes of the cached .npy files (scandir — the source of truth)."""
+    total = 0
+    with contextlib.suppress(OSError):
+        with os.scandir(cache_dir) as it:
+            for e in it:
+                if e.name.endswith(".npy"):
+                    with contextlib.suppress(OSError):
+                        total += e.stat().st_size
+    return total
+
+
+def _evict_to(cache_dir: str, target_bytes: float) -> int:
+    """Delete oldest-STORED .npy files (by mtime) until the dir is <= target_bytes; return the true
+    post-eviction total. Caller holds the flock so concurrent writers never double-evict."""
+    entries = []
+    with contextlib.suppress(OSError):
+        with os.scandir(cache_dir) as it:
+            for e in it:
+                if not e.name.endswith(".npy"):
+                    continue
+                with contextlib.suppress(OSError):
+                    st = e.stat()
+                    entries.append((st.st_mtime, st.st_size, e.path))
+    total = sum(sz for _, sz, _ in entries)
+    entries.sort(key=lambda t: t[0])   # oldest store-time first = least-recently-stored
+    for _mt, sz, path in entries:
+        if total <= target_bytes:
+            break
+        with contextlib.suppress(OSError):
+            os.unlink(path)
+            total -= sz
+    return total
+
+
 def _frame_cache_store(cache_path: str, frames) -> None:
-    """Atomically memoize the decoded tensor. The cache is a pure speed optimization, so a
-    write failure WARNs and continues — the decode already returned the correct frames.
-    Atomic = unique temp in the same dir + os.replace (POSIX-atomic); racing writers write
-    identical bytes so last-rename-wins is safe. A free-disk floor stops the cache from
-    filling the disk on large (FULL) runs: it just stops growing, reads still hit."""
+    """Atomically memoize the decoded tensor under a HARD size cap (EVAL_FRAME_CACHE_MAX_GB) with
+    LRU eviction; falls back to the legacy free-disk floor (EVAL_FRAME_CACHE_MIN_FREE_GB) only when
+    no cap is set. The cache is a pure speed optimization, so a write/evict failure WARNs and
+    continues — the decode already returned the correct frames. Atomic = unique temp + os.replace."""
     try:
         cache_dir = os.path.dirname(cache_path)
         os.makedirs(cache_dir, exist_ok=True)
-        min_free_gb = float(os.environ.get(_FRAME_CACHE_MIN_FREE_ENV, "20"))
-        if shutil.disk_usage(cache_dir).free < min_free_gb * (1024 ** 3):
-            return  # disk getting tight → stop adding entries (existing ones still serve hits)
         arr = frames.numpy() if hasattr(frames, "numpy") else np.asarray(frames)
+        new_bytes = int(arr.nbytes)
+
+        max_gb = os.environ.get(_FRAME_CACHE_MAX_ENV)
+        if max_gb is not None:
+            # HARD CAP + LRU — bound the cache's own footprint so it can NEVER fill the disk.
+            max_bytes = float(max_gb) * (1024 ** 3)
+            if new_bytes > max_bytes:
+                return  # a single clip bigger than the whole cap (never in practice) → skip
+            counter = os.path.join(cache_dir, ".cache_bytes")
+            with open(os.path.join(cache_dir, ".cache.lock"), "w") as lf:
+                fcntl.flock(lf, fcntl.LOCK_EX)
+                try:
+                    try:
+                        with open(counter) as cf:
+                            total = int(cf.read().strip())
+                    except (OSError, ValueError):
+                        total = _cache_npy_bytes(cache_dir)   # missing/corrupt → recompute truth
+                    if total + new_bytes > max_bytes:
+                        total = _evict_to(cache_dir, _EVICT_LOW_WATER * max_bytes - new_bytes)
+                    with contextlib.suppress(OSError):
+                        with open(counter, "w") as cf:
+                            cf.write(str(total + new_bytes))
+                finally:
+                    fcntl.flock(lf, fcntl.LOCK_UN)
+        else:
+            # Legacy fallback: free-disk floor (kept for callers that don't set the cap).
+            min_free_gb = float(os.environ.get(_FRAME_CACHE_MIN_FREE_ENV, "20"))
+            if shutil.disk_usage(cache_dir).free < min_free_gb * (1024 ** 3):
+                return  # disk getting tight → stop adding entries (existing ones still serve hits)
+
         fd, tmp = tempfile.mkstemp(dir=cache_dir, suffix=".npy.tmp")
         try:
             with os.fdopen(fd, "wb") as fh:

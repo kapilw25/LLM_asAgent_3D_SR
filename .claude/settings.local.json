@@ -368,7 +368,9 @@
       "Bash(ps -eo pid,etime,%cpu,cmd)",
       "Bash(nvidia-smi --query-gpu=index,utilization.gpu,memory.used,power.draw --format=csv,noheader)",
       "Bash(grep -nE \"jobs$|/ \\\\{len|✅  |❌ |run ETA|🏁|def render|txt ?=|log_txt|read_text\\\\\\(\\\\\\)|main_log|\\\\.format\\\\\\(ts\" scripts/ngpu_run_status.py)",
-      "Bash(grep -nE \"✅.{0,6}🔄|len\\\\\\(jobs\\\\\\)|/ \\\\{\" scripts/ngpu_run_status.py)"
+      "Bash(grep -nE \"✅.{0,6}🔄|len\\\\\\(jobs\\\\\\)|/ \\\\{\" scripts/ngpu_run_status.py)",
+      "Bash(awk '{print \" 2B ckpt \\(1B run does NOT use it\\): \"$5}')",
+      "Skill(artifact-design)"
     ]
   }
 }

@@ -29,7 +29,7 @@ import subprocess
 from pathlib import Path
 
 from utils.config import get_cgroup_memory_gb, get_pipeline_config
-from utils.video_io import _FRAME_CACHE_ENV, _FRAME_CACHE_MIN_FREE_ENV
+from utils.video_io import _FRAME_CACHE_ENV, _FRAME_CACHE_MIN_FREE_ENV, _FRAME_CACHE_MAX_ENV
 
 
 def _detect_concurrency() -> int:
@@ -71,10 +71,12 @@ def enable_train_frame_cache(local_data: str) -> None:
         print("  [train-frame-cache] disabled (streaming.train_frame_cache.enabled=false)",
               flush=True)
         return
+    _max_gb = _pcfg["probe"]["eval_frame_cache"]["max_cache_gb"]   # single source: the SHARED-dir hard cap
     cache_dir = str(Path(local_data) / _pcfg["probe"]["eval_frame_cache"]["subdir"])
     os.environ[_FRAME_CACHE_ENV] = cache_dir
     os.environ[_FRAME_CACHE_MIN_FREE_ENV] = str(tfc["min_free_gb"])
-    print(f"  [train-frame-cache] ON → {cache_dir} (min_free={tfc['min_free_gb']}G) — "
+    os.environ[_FRAME_CACHE_MAX_ENV] = str(_max_gb)   # PRIMARY: LRU-evict to stay under -> can never fill disk
+    print(f"  [train-frame-cache] ON → {cache_dir} (max_cache={_max_gb}G, LRU-evict) — "
           f"deterministic decode memoized; shared across epochs/stages/arms/evals", flush=True)
 
 

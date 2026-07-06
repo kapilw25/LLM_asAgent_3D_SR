@@ -32,6 +32,7 @@ import numpy as np
 import torch
 
 from utils.data_download import iter_clips_parallel
+from utils.config import get_pipeline_config
 from utils.video_io import (
     _frame_cache_load, _frame_cache_path, _frame_cache_store, decode_video_bytes)
 
@@ -98,6 +99,8 @@ def prewarm_frame_cache(keys, local_data, cache_dir, num_frames, min_free_gb, wo
     torch.set_num_threads(1)
     os.environ["EVAL_FRAME_CACHE_DIR"] = str(cache_dir)
     os.environ["EVAL_FRAME_CACHE_MIN_FREE_GB"] = str(min_free_gb)
+    os.environ["EVAL_FRAME_CACHE_MAX_GB"] = str(  # PRIMARY hard cap (single source) -> LRU-evict, never fills disk
+        get_pipeline_config()["probe"]["eval_frame_cache"]["max_cache_gb"])
     os.makedirs(cache_dir, exist_ok=True)
     nfs = [int(x) for x in (num_frames.split(",") if isinstance(num_frames, str) else num_frames)]
     key_list = _load_keys(keys) if isinstance(keys, str) else [str(k) for k in keys]

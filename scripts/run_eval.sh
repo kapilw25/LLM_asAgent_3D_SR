@@ -271,8 +271,9 @@ case "$FRAME_CACHE_ENABLED" in
         FRAME_CACHE_SUBDIR="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.subdir)"  # single source with build_probe_clips (iter18)
         export EVAL_FRAME_CACHE_DIR="${EVAL_FRAME_CACHE_DIR:-${LOCAL_DATA}/${FRAME_CACHE_SUBDIR}}"  # in the DATASET dir → durable + reused across iterations (data/ is gitignored)
         export EVAL_FRAME_CACHE_MIN_FREE_GB="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.min_free_gb)"
+        export EVAL_FRAME_CACHE_MAX_GB="$(scripts/lib/yaml_extract.py configs/pipeline.yaml probe.eval_frame_cache.max_cache_gb)"  # PRIMARY hard cap → LRU-evict, never fills disk
         mkdir -p "$EVAL_FRAME_CACHE_DIR"
-        echo "  ✓ eval frame cache:     $EVAL_FRAME_CACHE_DIR (min free ${EVAL_FRAME_CACHE_MIN_FREE_GB} GB)" ;;
+        echo "  ✓ eval frame cache:     $EVAL_FRAME_CACHE_DIR (max ${EVAL_FRAME_CACHE_MAX_GB} GB, LRU-evict)" ;;
 esac
 
 # iter13 v12 (2026-05-05) / iter15 (2026-05-15): MOTION-flow probe class

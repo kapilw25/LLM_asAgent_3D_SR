@@ -27,7 +27,7 @@ groups:
   # they are DROPPED from the download list → setup_env fetches ONLY the 2B (~16 GB). vjepa2_1_vitG_384.pt
   # also appears under eval_baselines (no URL duplication — the catalog above is the single filename→url source).
   trainable:
-    - vjepa2_1_vitG_384.pt
+    # - vjepa2_1_vitG_384.pt
     - vjepa2_1_vitg_384.pt        # 1B ViT-g — uncommented for the iter18 1B replication (runbook_v5);
                                   # fresh Box-B/C have no local copy, so setup_env must fetch it (~14 GB)
 
