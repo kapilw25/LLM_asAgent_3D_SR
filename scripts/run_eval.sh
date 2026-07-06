@@ -136,7 +136,7 @@ DEFAULT_OUTPUT_PREFIX=$(python "$EX" "$PIPELINE_YAML" "output_roots.${mode_key}"
 # outputs/<mode>/<backbone>_<size>/eval/<corpus>/  while encoder READS come from .../<backbone>_<size>/train/.
 # EVAL_BACKBONE mirrors the scheduler's ITER18_BACKBONE default; EVAL_CORPUS is the score corpus (eval_10k
 # default; subset_10k for the cross-set retest). All paths via src/utils/output_paths.py (single source).
-EVAL_BACKBONE="${ITER18_BACKBONE:-vjepa_2_1_vitG}"
+EVAL_BACKBONE="${ITER18_BACKBONE:-$(scripts/lib/yaml_extract.py configs/pipeline.yaml default_backbone)}"
 EVAL_CORPUS="${EVAL_CORPUS:-eval_10k}"
 EVAL_PREFIX="$(python src/utils/output_paths.py eval-root "$mode_key" "$EVAL_BACKBONE" "$EVAL_CORPUS")"
 declare -A _TRAIN_ROOT_CACHE                     # memoize the per-backbone train dir (1 python call per distinct bb)
@@ -175,7 +175,10 @@ case "${KEEP_PROBE_HEADS,,}" in
     *) KEEP_HEADS_FLAG="--keep-probe-heads"; KEEP_ET_HEADS_FLAG="--keep-heads" ;;
 esac
 TAGS_JSON="${TAGS_JSON:-${LOCAL_DATA}/tags.json}"
-ENCODER_CKPT="${ENCODER_CKPT:-checkpoints/vjepa2_1_vitG_384.pt}"
+# iter19 2026-07-06: base encoder ckpt PER BACKBONE — single source pipeline.yaml backbone_checkpoints
+# (same map frozen_ckpt_for uses; NO hardcoded path here). ${ENCODER_CKPT:-...} honors an explicit override.
+# Was a hardcoded 2B default that FATAL'd the 1B run's L:labels preflight (2B ckpt absent, only 1B present).
+ENCODER_CKPT="${ENCODER_CKPT:-$(scripts/lib/yaml_extract.py configs/pipeline.yaml backbone_checkpoints.${EVAL_BACKBONE})}"
 OUTPUT_ACTION="${OUTPUT_ACTION:-${EVAL_PREFIX}/probe_action}"
 OUTPUT_COS="${OUTPUT_COS:-${EVAL_PREFIX}/probe_motion_cos}"
 OUTPUT_MSE="${OUTPUT_MSE:-${EVAL_PREFIX}/probe_future_mse}"
@@ -201,13 +204,16 @@ ET_HEAD_BS="$(_ET_Y head_batch_size)"
 ET_HEAD_CAP="$(_ET_Y head_train_cap)"
 OUTPUT_TAXONOMY="${OUTPUT_TAXONOMY:-${EVAL_PREFIX}/probe_taxonomy}"
 OUTPUT_PLOTS="${OUTPUT_PLOTS:-${EVAL_PREFIX}/probe_plot}"
-TAG_TAXONOMY="${TAG_TAXONOMY:-configs/tag_taxonomy.json}"
+TAG_TAXONOMY="${TAG_TAXONOMY:-$(scripts/lib/yaml_extract.py configs/pipeline.yaml config_paths.tag_taxonomy)}"
 # Priority: --encoders CLI > ENCODERS env > default list.
 if [ -n "$ENCODERS_CLI" ]; then
     ENCODERS="$ENCODERS_CLI"
     echo "  [encoders] source = --encoders CLI flag"
 fi
-ENCODERS="${ENCODERS:-vjepa_2_1_frozen vjepa_2_1_pretrain_encoder vjepa_2_1_pretrain_2X_encoder vjepa_2_1_surgical_3stage_DI_encoder vjepa_2_1_surgical_noDI_encoder vjepa_2_1_pretrain_head vjepa_2_1_surgical_3stage_DI_head vjepa_2_1_surgical_noDI_head}"
+# iter19 2026-07-06: derive the roster from the SINGLE SOURCE (configs/arm_registry.yaml via
+# arm_registry.py eval-tokens), prefixed with the resolved backbone — was a stale 8-encoder literal
+# (the H7 anti-pattern). Only evaluated on a bare call; the scheduler always passes --encoders above.
+ENCODERS="${ENCODERS:-$(for t in frozen $(python src/utils/arm_registry.py eval-tokens); do printf '%s ' "${EVAL_BACKBONE}_$t"; done)}"
 SKIP_STAGES="${SKIP_STAGES:-}"
 # iter18 2026-06-08: RUNTIME extra skip-list — lets PENDING evals launched by an ALREADY-RUNNING
 # scheduler drop stages (e.g. 11 = STAGE 3.5 taxonomy, ~49 min/encoder) WITHOUT a scheduler restart.

@@ -12,6 +12,8 @@ scripts/tests_streaming/test_parity.py.
 This module is pure: no globals, no side effects, no RNG. Deterministic given
 (mp4_bytes, mask_npz_path, factor_type, factor_cfg).
 """
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -189,13 +191,83 @@ def _load_tube_cache(path: Path) -> List[np.ndarray]:
     return [d[f"t{i}"] for i in range(n)]
 
 
+# ── Bounded LRU cap for the D_I tube cache (iter19 2026-07-06) ───────────────────
+# The surgery mines interaction tubes and caches one .npz per (clip, cfg-hash) with NO size
+# limit — on FULL it reached 314G and was draining the disk ~20G/hr (uncapped). Same fix as the
+# frame cache: EVAL_TUBE_CACHE_MAX_GB is a HARD ceiling on the tube-cache dir's total .npz bytes;
+# a store that would exceed it LRU-evicts oldest entries (least-recently-STORED) so the cache can
+# NEVER fill the disk. Serialized across fork-workers by an flock; a running .tube_bytes counter
+# keeps the common path O(1) and each eviction recomputes truth → self-heals. A miss just recomputes.
+_TUBE_CACHE_MAX_ENV = "EVAL_TUBE_CACHE_MAX_GB"
+_TUBE_EVICT_LOW_WATER = 0.85
+
+
+def _tube_dir_bytes(cache_dir: str) -> int:
+    """True total bytes of the cached .npz tube files (scandir = source of truth)."""
+    total = 0
+    with contextlib.suppress(OSError):
+        with os.scandir(cache_dir) as it:
+            for e in it:
+                if e.name.endswith(".npz"):
+                    with contextlib.suppress(OSError):
+                        total += e.stat().st_size
+    return total
+
+
+def _tube_evict_to(cache_dir: str, target_bytes: float) -> int:
+    """Delete oldest-STORED .npz tubes until the dir is <= target_bytes; return the true
+    post-eviction total. Caller holds the flock so racing fork-workers never double-evict."""
+    entries = []
+    with contextlib.suppress(OSError):
+        with os.scandir(cache_dir) as it:
+            for e in it:
+                if not e.name.endswith(".npz"):
+                    continue
+                with contextlib.suppress(OSError):
+                    st = e.stat()
+                    entries.append((st.st_mtime, st.st_size, e.path))
+    total = sum(sz for _, sz, _ in entries)
+    entries.sort(key=lambda t: t[0])   # oldest store-time first = least-recently-stored
+    for _mt, sz, ep in entries:
+        if total <= target_bytes:
+            break
+        with contextlib.suppress(OSError):
+            os.unlink(ep)
+            total -= sz
+    return total
+
+
 def _save_tube_cache_atomic(path: Path, tubes: List[np.ndarray]) -> None:
-    """Atomically write the whole tube list to `path`. Write to a temp file in the
+    """Atomically write the whole tube list to `path` under a HARD size cap
+    (EVAL_TUBE_CACHE_MAX_GB) with LRU eviction. Write to a temp file in the
     SAME dir then os.replace (atomic on POSIX) so a concurrent reader never sees a
     half-written file and two fork-workers racing the same clip don't corrupt it
     (last writer wins; both wrote identical bytes — the fn is deterministic).
     Empty list → n=0, no t* arrays (handled symmetrically by _load_tube_cache)."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    cache_dir = str(path.parent)
+    _max_gb = os.environ.get(_TUBE_CACHE_MAX_ENV)
+    if _max_gb is not None:
+        # HARD CAP + LRU — bound the tube cache's own footprint so it can NEVER fill the disk.
+        _max_bytes = float(_max_gb) * (1024 ** 3)
+        _new_bytes = int(sum(int(t.nbytes) for t in tubes)) + 4096  # +header estimate
+        if _new_bytes <= _max_bytes:
+            _counter = os.path.join(cache_dir, ".tube_bytes")
+            with open(os.path.join(cache_dir, ".tube.lock"), "w") as _lf:
+                fcntl.flock(_lf, fcntl.LOCK_EX)
+                try:
+                    try:
+                        with open(_counter) as _cf:
+                            _total = int(_cf.read().strip())
+                    except (OSError, ValueError):
+                        _total = _tube_dir_bytes(cache_dir)   # missing/corrupt → recompute truth
+                    if _total + _new_bytes > _max_bytes:
+                        _total = _tube_evict_to(cache_dir, _TUBE_EVICT_LOW_WATER * _max_bytes - _new_bytes)
+                    with contextlib.suppress(OSError):
+                        with open(_counter, "w") as _cf:
+                            _cf.write(str(_total + _new_bytes))
+                finally:
+                    fcntl.flock(_lf, fcntl.LOCK_UN)
     arrays = {"n": np.int64(len(tubes))}
     for i, t in enumerate(tubes):
         arrays[f"t{i}"] = t

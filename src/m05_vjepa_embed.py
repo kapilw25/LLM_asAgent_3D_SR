@@ -70,6 +70,16 @@ except ImportError as e:
 # Blocked until torchcodec fixes destructor bug. Using PyAV (CPU) as fallback.
 # Constants
 _pcfg = get_pipeline_config()
+
+
+def _vjepa_native_processor_id() -> str:
+    """HF video processor for the native V-JEPA family — V-JEPA 2.1 has no HF release, so it reuses
+    2.0's processor (same resolution + normalization). Single source: the 2.0 model config's
+    hf_model_id (configs/model/vjepa2_0.yaml), path from pipeline.yaml backbone_model_configs — was a
+    hardcoded 'facebook/vjepa2-vitg-fpc64-384' literal at two sites (iter19 2026-07-06)."""
+    return get_model_config(_pcfg["backbone_model_configs"]["vjepa_2_0_vitg"])["model"]["hf_model_id"]
+
+
 MAX_STREAM_RETRIES = _pcfg["streaming"]["max_retries"]
 PREFETCH_QUEUE_SIZE = _pcfg["streaming"]["prefetch_queue_embed"]
 CHECKPOINT_EVERY = _pcfg["streaming"]["checkpoint_every"]
@@ -629,7 +639,7 @@ def worker_main(args):
 
             model = model.to(device=device, dtype=torch.float16)
             # V-JEPA 2.1 has no HF release → use 2.0's processor (same resolution, same normalization)
-            proc_id = hf_model_id if hf_model_id else "facebook/vjepa2-vitg-fpc64-384"
+            proc_id = hf_model_id if hf_model_id else _vjepa_native_processor_id()
             processor = AutoVideoProcessor.from_pretrained(proc_id)
 
         elif hf_model_id is None:
@@ -673,7 +683,7 @@ def worker_main(args):
             model = model.to(device=device, dtype=torch.bfloat16)
             model.eval()
             is_adapted = True  # Use the native forward path in get_batch_embeddings()
-            processor = AutoVideoProcessor.from_pretrained("facebook/vjepa2-vitg-fpc64-384")
+            processor = AutoVideoProcessor.from_pretrained(_vjepa_native_processor_id())
 
         else:
             # Standard HF model (frozen baseline — V-JEPA 2.0 via HuggingFace)

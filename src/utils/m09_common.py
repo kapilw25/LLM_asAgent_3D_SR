@@ -17,12 +17,13 @@ Public API:
                                        with --probe-action-labels CLI override.
                                        Returns (probe_clips, probe_labels).
 """
+import os
 import sys
 from pathlib import Path
 
 from utils.config import (
     add_subset_arg, add_local_data_arg,
-    add_model_config_arg, add_train_config_arg,
+    add_model_config_arg, add_train_config_arg, get_pipeline_config,
 )
 from utils.cache_policy import add_cache_policy_arg
 from utils.multi_task_loss import merge_multi_task_config
@@ -189,6 +190,8 @@ def merge_m09_common_config(cfg: dict, args, mode_key: str) -> None:
     if im is not None and im.get("tube_cache", {}).get("enabled"):
         im["tube_cache"]["dir"] = str(
             data_paths.tube_cache_dir(cfg["data"]["local_data"]))
+        os.environ["EVAL_TUBE_CACHE_MAX_GB"] = str(  # PRIMARY hard cap -> LRU-evict, never fills disk
+            get_pipeline_config()["data"]["tube_cache_max_gb"])
 
     # 2) optimization overrides
     # Per-mode flatten: max_epochs may be a dict {sanity, poc, full} OR scalar.

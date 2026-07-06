@@ -70,6 +70,11 @@ data:
   # RANDOM tube-pick stays in the caller → training is bit-equivalent. Cache MISS on any
   # cfg-field change (margin/blacklist/enabled) or num_frames change (key includes them).
   tube_cache_subdir:     "m12_tube_cache"          # sibling of m10/m11; one .npz per (clip,cfg-hash)
+  tube_cache_max_gb:     250                        # iter19 2026-07-06 HARD cap on m12_tube_cache (D_I tubes):
+                                                    # the surgery mines tubes UNBOUNDED (hit 314G, uncapped) ->
+                                                    # factor_streaming._save_tube_cache_atomic LRU-evicts oldest .npz
+                                                    # to stay under, so it can NEVER fill the disk. 250 stops the
+                                                    # growth + frees headroom; a miss just recomputes (correct, slower).
 
   clips_per_shard: 1000       # m03/m00d: WebDataset shard size (≈1 GB each at 480p MP4 × 1000 clips)
   data_prep_workers: 10       # m00b: concurrent duration fetchers
@@ -735,11 +740,12 @@ probe:
                                      # NOTHING, so other writers eat through it (the 2026-07-06 ENOSPC crash).
                                      # Only used when EVAL_FRAME_CACHE_MAX_GB is unset. clips decode at native
                                      # ~360x640 → nf16 ≈ 11 MB/clip.
-    max_cache_gb:      300           # iter19 2026-07-06 PRIMARY cap (SHARED dir — read by BOTH train + eval writers,
+    max_cache_gb:      200           # iter19 2026-07-06 PRIMARY cap (SHARED dir — read by BOTH train + eval writers,
                                      # single source; stream_autotune + run_eval.sh + prewarm set the env from here).
                                      # HARD ceiling on the cache's OWN total bytes → video_io._frame_cache_store
                                      # LRU-evicts oldest entries to stay under, so the cache can NEVER fill the disk.
-                                     # 300 leaves ~700G for tars + arm checkpoints + eval outputs on the 999G box.
+                                     # SIZED for the 999G box: tars alone are 465G (measured), so 200G cache leaves
+                                     # ~320G for arm checkpoints + eval feature/head outputs (300 was too tight: ~120G).
   future_regress:                    # probe_future_regress.py: future-frame regressor MLP
     epochs:            50            # was REGRESSOR_EPOCHS module constant
     batch_size:        64            # was REGRESSOR_BATCH
@@ -817,12 +823,15 @@ config_paths:
 
 # ── Shell dispatch maps (iter18 H7: were case-statement literals in run_train.sh /
 #    run_eval.sh; shells resolve via scripts/lib/yaml_extract.py) ──
+default_backbone: vjepa_2_1_vitG                       # champion default when ITER18_BACKBONE/BACKBONE unset
+                                                       # (was hardcoded in run_train.sh/run_eval.sh/ngpu_run.py)
 backbone_model_configs:
   vjepa_2_1_vitG: "configs/model/vjepa2_1.yaml"        # 2B ViT-G (canonical)
   vjepa_2_1_vitg: "configs/model/vjepa2_1_vitg.yaml"   # 1B ViT-g scale axis
   vjepa_2_1_vitL: "configs/model/vjepa2_1_vitL.yaml"   # 300M ViT-L scale axis
   vjepa_2_0_vitg: "configs/model/vjepa2_0.yaml"        # 2.0 ViT-g version axis
 backbone_checkpoints:
+  vjepa_2_1_vitG: "checkpoints/vjepa2_1_vitG_384.pt"   # 2B champion — was the hardcoded run_eval.sh:178 default
   vjepa_2_1_vitg: "checkpoints/vjepa2_1_vitg_384.pt"
   vjepa_2_1_vitL: "checkpoints/vjepa2_1_vitl_dist_vitG_384.pt"
   vjepa_2_0_vitg: "checkpoints/vjepa2_0_vitg_384.pt"

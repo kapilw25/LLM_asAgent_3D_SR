@@ -91,7 +91,7 @@ FACTOR_DIR_CANONICAL="${LOCAL_DATA}/${FACTOR_SUBDIR}"
 # eval-corpus labels → <bb>_<size>/eval/<corpus>/probe_{action,taxonomy}. BACKBONE is set HERE (same default
 # as L192, idempotent) so the pre-train label bootstrap below can resolve these. TRAIN_CORPUS = the master
 # manifest's corpus (config-derived; == the corpus run_eval scores on by default). All paths via output_paths.
-BACKBONE="${BACKBONE:-vjepa_2_1_vitG}"
+BACKBONE="${BACKBONE:-$(scripts/lib/yaml_extract.py configs/pipeline.yaml default_backbone)}"
 TRAIN_CORPUS="${MASTER_MANIFEST_NAME%.json}"
 TRAIN_CORPUS="${TRAIN_CORPUS%_local}"   # iter19 2026-07-04: full_local.json → 'full' — align with output_paths.eval_corpora + ngpu_run._corpus_from_data_dir (strips '_local'). eval_10k.json / subset_10k.json unaffected (no '_local' suffix).
 TRAIN_ROOT="$(python src/utils/output_paths.py train-dir "$mode_dir" "$BACKBONE")"
@@ -211,7 +211,7 @@ python -u src/utils/clip_splits.py \
 # iter17: backbone selector. ViT-G keeps its canonical config (also the
 # get_model_config(None) default); other backbones use configs/model/<backbone>.yaml.
 # Per-backbone output namespace below: outputs/<mode>/<backbone>/<arm>/.
-BACKBONE="${BACKBONE:-vjepa_2_1_vitG}"
+BACKBONE="${BACKBONE:-$(scripts/lib/yaml_extract.py configs/pipeline.yaml default_backbone)}"
 # iter18 H7: backbone→model-yaml map lives in pipeline.yaml backbone_model_configs
 # (was an inline case of literals); unregistered backbones derive the conventional path.
 _MCFG=$(scripts/lib/yaml_extract.py configs/pipeline.yaml "backbone_model_configs.${BACKBONE}" 2>/dev/null) || _MCFG=""

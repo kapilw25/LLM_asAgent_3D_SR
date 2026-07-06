@@ -1275,6 +1275,12 @@ def train(cfg: dict, args):
             print("  [probe] traceback follows; aborting per CLAUDE.md FAIL HARD:", flush=True)
             raise
 
+    # Resume-into-completed-run guard (iter19 2026-07-06): optimizer/scheduler are (re)built INSIDE
+    # the stage loop (per stage), so if EVERY stage is skipped — resumed from a stage-COMPLETE anchor,
+    # i.e. the prior run FINISHED training but was killed before finalization — they'd be UnboundLocal
+    # at the post-loop ckpt_best save. Init to None; that save passes include_optimizer=False so it
+    # never dereferences them (training.py:1314). (scaler is already built pre-loop.)
+    optimizer = scheduler = None
     try:
         for stage_idx, stage_cfg in enumerate(stages):
             if stage_idx <= resume_after_stage:

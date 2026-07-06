@@ -50,7 +50,7 @@ from utils.config import get_pipeline_config  # noqa: E402  (SINGLE source for t
 # runs the 2B champion (vjepa_2_1_vitG, default) or the 1B scale-axis backbone (vjepa_2_1_vitg). The
 # status tool reads it back from the run banner (or this same env) so its job-ids match. Set it once
 # in BOTH the launch and the watch panes (or rely on the banner parse in the status tool).
-BACKBONE = os.environ.get("ITER18_BACKBONE", "vjepa_2_1_vitG")
+BACKBONE = os.environ.get("ITER18_BACKBONE") or get_pipeline_config()["default_backbone"]
 # iter18 (2026-06-20) backbone-first tree (plan_output_restructure.md): eval outputs land under
 # outputs/<mode>/<backbone>_<size>/eval/<corpus>/ and encoder reads under .../train/, all via
 # src/utils/output_paths.py. EVAL_CORPUS is inherited by each run_eval.sh subprocess; the scheduler reads
@@ -381,12 +381,15 @@ def main():
               f"will cover the remaining encoders only", flush=True)
 
     # disk-preflight (per mode × cache): POC = 13 arms × ~14G ckpts ≈ 185G + eval artifacts ≈ ~210G;
-    # SANITY is throwaway-tiny; FULL keeps the SAME per-arm ckpt size (model params, not clip count) but
-    # its eval feature/prediction caches scale with the ~116k corpus (≈15× POC) — 350G is a resume floor,
-    # a fresh full-eval build needs more. Tune from the measured full_local footprint if it trips wrongly.
+    # SANITY is throwaway-tiny. FULL cache=1 (RESUME): the frame + tube caches are now HARD-CAPPED
+    # (video_io + factor_streaming LRU; pipeline.yaml max_cache_gb 200/250), so they no longer scale
+    # unbounded with the corpus. On resume an over-cap cache LRU-trims to its cap on the first training
+    # stores (frees 150G+ here), so the old 350G floor was obsolete + deadlocked resume when the on-disk
+    # caches were oversized — a small "can-start" floor is correct. cache=2 (fresh full-eval build from
+    # scratch) keeps its larger floor. Tune from the measured footprint if it trips.
     import shutil
     free_gb = shutil.disk_usage(str(REPO)).free / 1e9
-    REQ_GB = {"POC": {"1": 80, "2": 250}, "SANITY": {"1": 30, "2": 30}, "FULL": {"1": 350, "2": 500}}
+    REQ_GB = {"POC": {"1": 80, "2": 250}, "SANITY": {"1": 30, "2": 30}, "FULL": {"1": 90, "2": 500}}
     req_gb = REQ_GB[args.mode][args.cache]
     print(f"  [disk-preflight] free={free_gb:.0f}G · required≈{req_gb}G", flush=True)
     if free_gb < req_gb and not args.dry_run:
