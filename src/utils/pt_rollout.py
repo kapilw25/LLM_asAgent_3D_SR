@@ -13,9 +13,12 @@ import numpy as np
 from utils.predictor_eval import perclip_slope, rollout_l1_per_horizon, to_pixel
 
 
-def compute(encoder, predictor, batch, num_frames) -> np.ndarray:
-    """batch (B,T,3,H,W) cpu → per-clip drift slope (B,)."""
+def compute(encoder, predictor, batch, num_frames, h_full=None) -> np.ndarray:
+    """batch (B,T,3,H,W) cpu → per-clip drift slope (B,).
+
+    h_full: optional batch-shared full_target_h (m12e --metric all reuses one encode; bit-identical).
+    None → rollout_l1_per_horizon encodes internally (current path)."""
     pixel = to_pixel(batch)
-    L = rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, free_running=True)  # (B, Tp-1)
+    L = rollout_l1_per_horizon(encoder, predictor, pixel, num_frames, free_running=True, h_full=h_full)  # (B, Tp-1)
     horizons = list(range(1, L.shape[1] + 1))
     return perclip_slope(L, horizons)

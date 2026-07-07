@@ -17,8 +17,11 @@ from utils.predictor_eval import (
 _MIN_SWEEP_POINTS = 2   # iter18 W7: slope needs ≥2 Δt points
 
 
-def compute(encoder, predictor, batch, num_frames) -> np.ndarray:
-    """batch (B,T,3,H,W) cpu → per-clip slope of L1 vs Δt (B,). Higher slope = faster decay."""
+def compute(encoder, predictor, batch, num_frames, h_full=None) -> np.ndarray:
+    """batch (B,T,3,H,W) cpu → per-clip slope of L1 vs Δt (B,). Higher slope = faster decay.
+
+    h_full: optional batch-shared full_target_h (m12e --metric all reuses one encode across metrics;
+    bit-identical). None → compute per-metric (current path)."""
     Tp, _, _, _ = token_grid(num_frames)
     ctx = 0
     deltas = [d for d in PT_DELTAS if ctx + d < Tp]
@@ -27,7 +30,8 @@ def compute(encoder, predictor, batch, num_frames) -> np.ndarray:
     pixel = to_pixel(batch)
     b = pixel.shape[0]
     m_enc = expand_mask(temporal_token_idx(num_frames, [ctx]), b)
-    h_full = full_target_h(encoder, pixel)   # h-memo: one target encode reused across all Δt (None when off)
+    if h_full is None:                       # iter19: reuse a batch-shared h across metrics if passed
+        h_full = full_target_h(encoder, pixel)  # h-memo: one target encode reused across all Δt (None when off)
     cols = []
     for d in deltas:
         m_pred = expand_mask(temporal_token_idx(num_frames, [ctx + d]), b)

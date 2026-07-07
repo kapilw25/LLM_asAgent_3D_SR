@@ -10,23 +10,24 @@
 ## 📋 Run at a glance — live DAG status (`ngpu_run_status.py` view)
 
 ```text
-┌───────────────────────────────────────────┬───────┬───────────────┬──────────────┬───────────────┬─────────────────────┬─────────────────────┐
-│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ │ ⏳ wall train·eval   │ 📌 train · eval      │
-├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼─────────────────────┼─────────────────────┤
-│ 🚂 pretrain_encoder · SSL seed             │   —   │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ 18h✓ · ~9h          │ ✅ train · ⏳ eval   │
-│ 🔩 peft_lora_encoder · Best-COMP           │ GPU0  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ ~20h · ~9h          │ 🔄 train · ⏳ eval   │
-│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU1  │ 🟩 ~87k       │ 🟨 ~0.9k     │ 🟦 ~28k       │ ~22h · ~9h          │ 🔄 train · ⏳ eval   │
-│ 🧊 frozen · anchor (eval-only)             │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · ~9h          │ 🚫 train · ⏳ eval   │
-│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · ~9h          │ 🚫 train · ⏳ eval   │
-│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ n/a           │ n/a          │ 🟦 ~28k       │  —   · ~9h          │ 🚫 train · ⏳ eval   │
-├───────────────────────────────────────────┼───────┼───────────────┼──────────────┼───────────────┼─────────────────────┼─────────────────────┤
-│ 🏁 TOTAL · 1✅ 2🔄 69⏳ 0❌ / 72 jobs        │  2×   │ 🟩 87k =75%   │ 🟨 0.9k =~1% │ 🟦 28k =24%   │ 22h∥ + 54h eval     │ ⏳ ~77h · 3.2 days   │
-├───────────────────────────────────────────┴───────┴───────────────┴──────────────┴───────────────┴─────────────────────┴─────────────────────┤
-│ DAG  🚂 seed✅ → 🔧 diheavy ∥ 🔩 peft 🔄 training → 📊 eval 6 × ~9h wall on 🟦 28k held-out test  ·  Σ eval ~111h GPU-time (0✓/60)              │
-│ status  FULL run LIVE (started 11:10 UTC) · ETA ~77h → ~09:34 PDT +3d · 🟨 val = 0.9k stratified / 14 motion classes                        │
-│ 📌 train·eval per arm:  ✅ done · 🔄 running · ⏳ pending · 🚫 skipped / no train · ❌ failed                                                 │
-│ key  🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen                                                                         │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────┬───────┬──────────────────────────────────┬──────────────┬──────────────────────────┐
+│ 🎬 encoder · role                          │ 💻 GPU │ 🟩 train ⟨75%⟩ · clips·wall·$     │ 🟨 val ⟨~1%⟩ │ 🟦 test ⟨24%⟩ · clips·eval │
+├───────────────────────────────────────────┼───────┼──────────────────────────────────┼──────────────┼──────────────────────────┤
+│ 🚂 pretrain_encoder · SSL seed             │   —   │ ✅ 87k · 17.7h · $32              │ 🟨 ~0.9k     │ ⏳ 28k · ~9h              │
+│ 🔩 peft_lora_encoder · Best-COMP           │ GPU0  │ ✅ 87k · 29h56m · $54            │ 🟨 ~0.9k     │ ⏳ 28k · ~9h              │
+│ 🔧 surgery_3stage_DI_diheavy · Best-OUR    │ GPU1  │ ✅ 87k · 29h47m · $54            │ 🟨 ~0.9k     │ ⏳ 28k · ~9h              │
+│ 🧊 frozen · anchor (eval-only)             │   —   │ 🚫 no train                      │ n/a          │ 🔄 28k · ~9h              │
+│ 🔀 diheavy + wiseft_f50 · merge α=0.5      │   —   │ ✅ merge · 22s · ~$0             │ n/a          │ ⏳ 28k · ~9h              │
+│ 🔀 diheavy + wiseft_f70 · merge α=0.3      │   —   │ ✅ merge · 23s · ~$0             │ n/a          │ ⏳ 28k · ~9h              │
+├───────────────────────────────────────────┼───────┼──────────────────────────────────┼──────────────┼──────────────────────────┤
+│ 🏁 TOTAL · 6✅ 2🔄 64⬚ / 72 jobs           │  2×   │ ✅ 87k · 77.4h train · $139       │ 🟨 0.9k      │ 🔄 28k · 0✓/60 · Σ~111h   │
+├───────────────────────────────────────────┴───────┴──────────────────────────────────┴──────────────┴──────────────────────────┤
+│ MEASURED train (done) @ $1.8/hr = $1.5 × 1.2 (debug+restart): pretrain 17.7h $32 + peft 29h56m $54 ∥ diheavy 29h47m $54 = 77.4h · $139 │
+│ DAG  🚂 seed✅ → 🔧 diheavy ∥ 🔩 peft ✅ trained → 📊 eval 6 × ~9h wall on 🟦 28k held-out test · Σ eval ~111h GPU-time (0✓/60, LIVE)  │
+│ status  train DONE · eval LIVE (frozen 🔄) · run ETA ~57h → ~04:00 UTC +2.4d · 🟨 val = 0.9k stratified / 14 motion classes           │
+│ cols  🟩 train = clips·wall·cost·status  ·  🟦 test = clips·eval·status   │  ✅ done · 🔄 running · ⏳ pending · 🚫 no train         │
+│ key  🚂 pretrain · 🔧 surgery · 🔩 FT baseline · 🔀 merge · 🧊 frozen                                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---

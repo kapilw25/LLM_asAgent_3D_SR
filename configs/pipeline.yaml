@@ -740,12 +740,22 @@ probe:
                                      # NOTHING, so other writers eat through it (the 2026-07-06 ENOSPC crash).
                                      # Only used when EVAL_FRAME_CACHE_MAX_GB is unset. clips decode at native
                                      # ~360x640 → nf16 ≈ 11 MB/clip.
-    max_cache_gb:      200           # iter19 2026-07-06 PRIMARY cap (SHARED dir — read by BOTH train + eval writers,
+    max_cache_gb:      600           # iter19 2026-07-07 PRIMARY cap (SHARED dir — read by BOTH train + eval writers,
                                      # single source; stream_autotune + run_eval.sh + prewarm set the env from here).
                                      # HARD ceiling on the cache's OWN total bytes → video_io._frame_cache_store
                                      # LRU-evicts oldest entries to stay under, so the cache can NEVER fill the disk.
-                                     # SIZED for the 999G box: tars alone are 465G (measured), so 200G cache leaves
-                                     # ~320G for arm checkpoints + eval feature/head outputs (300 was too tight: ~120G).
+                                     # SIZED to hold ONLY the RE-READ set: the 10 metrics re-decode the 23,106 TEST
+                                     # clips (across all 6 encoders) → 23,106 × 19.68 MB (nf16, MEASURED native 640²,
+                                     # not the stale 11 MB note) = 454G + margin. Train (86,770) + val are read ONCE by
+                                     # the probe feature extraction, which now passes cache_frames=False (frozen_features
+                                     # extract_features_for_keys → decode_to_tensor) so it does NOT churn/evict the test
+                                     # set → NO thrash, metrics HIT at POC's 0.2s/clip (not 0.6s). The old 200G held <½
+                                     # the test set → constant re-decode → the FULL eval blew up ~4x to ~35h; caching the
+                                     # full 2.25TB set was overkill (train never re-read). This is PLUMBING, NOT the eval
+                                     # set (correctly 12.7x-scaled from POC's 9,130 — NEVER cap the eval set: breaks POC↔
+                                     # FULL parity). Fits the 999G box AFTER deleting ~318G training-only intermediates
+                                     # (m12_tube_cache 232G + m10_sam_segment 73G + m11_factor_datasets + resume anchors).
+                                     # The disk-preflight (ngpu_run.py) FAILS LOUD if the disk can't hold this growth.
   future_regress:                    # probe_future_regress.py: future-frame regressor MLP
     epochs:            50            # was REGRESSOR_EPOCHS module constant
     batch_size:        64            # was REGRESSOR_BATCH
@@ -754,6 +764,11 @@ probe:
     mlp_hidden:        4096          # was REGRESSOR_MLP_HIDDEN
   predictor_temporal:                # m12e_predictor_temporal.py (Stages 8b/9b) — iter16 §3.3/§3.4
     batch_size:        4             # EMPIRICAL: BS 4→32 gave ~0× (2.9→3.28 s/clip, 12% SLOWER) — m12e is compute-bound at 98% util (per-clip sequential predictor rollout), NOT batch-starved; low VRAM was a red herring. Reverted to 4. m12e _safe_metric OOM-backoff.
+    decode_workers:    16            # iter19 2026-07-07: parallel clip-DECODE pool. m12e decoded clips
+                                     # SERIALLY in its main loop → on FULL cache-misses GPU0 idled at 60%
+                                     # (POC was 98%, all cache-hits). PyAV decode releases the GIL so N
+                                     # threads decode concurrently → feeds the GPU → recovers ~1.6x. Metrics
+                                     # are per-clip order/batch-invariant (see batch_size note) → safe.
     deltas:            [1, 2, 4, 8]  # §3.4: was pt_tdist._DELTAS — Δt target-offset sweep (frames)
     mask_ratios:       [0.3, 0.5, 0.7, 0.9]  # §3.4: was pt_maskratio._RATIOS — masked-token fraction
     seed:              0             # §3.4: was pt_maskratio._SEED / pt_order._SEED (det. partition)

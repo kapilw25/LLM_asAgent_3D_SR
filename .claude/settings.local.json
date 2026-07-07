@@ -370,7 +370,8 @@
       "Bash(grep -nE \"jobs$|/ \\\\{len|✅  |❌ |run ETA|🏁|def render|txt ?=|log_txt|read_text\\\\\\(\\\\\\)|main_log|\\\\.format\\\\\\(ts\" scripts/ngpu_run_status.py)",
       "Bash(grep -nE \"✅.{0,6}🔄|len\\\\\\(jobs\\\\\\)|/ \\\\{\" scripts/ngpu_run_status.py)",
       "Bash(awk '{print \" 2B ckpt \\(1B run does NOT use it\\): \"$5}')",
-      "Skill(artifact-design)"
+      "Skill(artifact-design)",
+      "Bash(CUDA_VISIBLE_DEVICES=0 PYTHONPATH=src timeout 300 venv_walkindia/bin/python -u /tmp/claude-0/-workspace-factorjepa/1b2336d6-c7ee-4d84-8920-ed3380b1b603/scratchpad/compile_test2.py)"
     ]
   }
 }

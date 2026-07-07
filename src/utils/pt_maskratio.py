@@ -17,15 +17,20 @@ from utils.predictor_eval import (
 )
 
 
-def compute(encoder, predictor, batch, num_frames) -> np.ndarray:
-    """batch (B,T,3,H,W) cpu → per-clip slope of L1 vs mask-ratio (B,)."""
+def compute(encoder, predictor, batch, num_frames, h_full=None) -> np.ndarray:
+    """batch (B,T,3,H,W) cpu → per-clip slope of L1 vs mask-ratio (B,).
+
+    h_full: optional batch-shared full_target_h(encoder, pixel) — when m12e runs --metric all it computes
+    the mask-independent encode ONCE and passes it here so the 5 shareable metrics reuse it (bit-identical;
+    full_target_h is a deterministic eval/no_grad forward). None → compute per-metric (current path)."""
     Tp, _, _, S = token_grid(num_frames)
     n_tok = Tp * S
     pixel = to_pixel(batch)
     b = pixel.shape[0]
     g = torch.Generator().manual_seed(PT_SEED)
     perm = torch.randperm(n_tok, generator=g)        # fixed partition, shared across clips
-    h_full = full_target_h(encoder, pixel)           # h-memo: one target encode reused across all r (None when off)
+    if h_full is None:                               # iter19: reuse a batch-shared h across metrics if passed
+        h_full = full_target_h(encoder, pixel)       # h-memo: one target encode reused across all r (None when off)
     cols = []
     for r in PT_MASK_RATIOS:
         k = max(1, int(round(n_tok * r)))            # # predicted (masked) tokens

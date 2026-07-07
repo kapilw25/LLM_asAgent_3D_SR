@@ -286,7 +286,7 @@ def _frame_cache_store(cache_path: str, frames) -> None:
 
 
 def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
-                       num_frames: int) -> torch.Tensor:
+                       num_frames: int, cache_frames: bool = True) -> torch.Tensor:
     """Write mp4 bytes to temp file, decode frames, delete temp file.
 
     Args:
@@ -341,6 +341,6 @@ def decode_video_bytes(mp4_bytes: bytes, tmp_dir: str, key: str,
                 os.unlink(tmp_path)
             except OSError:
                 print(f"  WARN: failed to delete temp file {tmp_path}")
-    if cache_path is not None and result is not None:
-        _frame_cache_store(cache_path, result)
+    if cache_path is not None and result is not None and cache_frames:
+        _frame_cache_store(cache_path, result)   # cache_frames=False → read-once probe decodes skip the store
     return result

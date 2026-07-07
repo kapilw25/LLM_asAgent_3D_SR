@@ -276,13 +276,18 @@ def build_jobs(mode, taxheads_only=False, etheads_only=False):
             cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_PERENC_NO8B} "
                  f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
             log=f"logs/ngpu_run_{mtag}_eval_{encn}_{{ts}}.log")
-        for m in PT_METRICS:
-            pjid = f"P:{encn}:{m}"
-            jobs[pjid] = dict(
-                id=pjid, kind="eval", deps=set(deps), needs_labels=True,
-                cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8B} PT_METRIC={m} "
-                     f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
-                log=f"logs/ngpu_run_{mtag}_pt_{encn}_{m}_{{ts}}.log")
+        # iter19 2026-07-07: ONE combined 8b job (PT_METRIC=all) instead of 6 per-metric jobs, so m12e
+        # computes the mask-independent encode h=encoder(pixel) ONCE per batch and SHARES it across the 5
+        # reusable metrics (order self-encodes: it permutes frames). MEASURED 1.80× on the pt-metric compute
+        # (34.8→19.3s/8clips), PROVEN bit-identical (scratchpad/hfull_parity: 0.0 diff). No parallelism lost:
+        # on 2 GPUs the pt-metrics ran serially on one GPU anyway (the other runs the E: probe-fit). m12e
+        # --metric all cache-skips already-done metrics internally, so --cache 1 resume still works per-metric.
+        pjid = f"P:{encn}:all"
+        jobs[pjid] = dict(
+            id=pjid, kind="eval", deps=set(deps), needs_labels=True,
+            cmd=(f"EVAL_CORPUS={EVAL_CORPUS} CUDA_VISIBLE_DEVICES={{gpu}} SKIP_STAGES={EVAL_SKIP_ONLY_8B} PT_METRIC=all "
+                 f"CACHE_POLICY_ALL={{cache}} {{pin}}./scripts/run_eval.sh {mflag} --encoders {encn}"),
+            log=f"logs/ngpu_run_{mtag}_pt_{encn}_all_{{ts}}.log")
         # iter18 m12f revival (#1): Stage 8c fans into 4 F: jobs (one encoder_temporal metric
         # each), gated on TRAIN like P: — runs concurrent with stages 2-8. If a F: job lands
         # before this encoder's Stage-2 features exist, m12f's share-features falls back to
@@ -374,7 +379,7 @@ def main():
                 | {f"X:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --taxheads-only jobs
                 | {f"Y:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --etheads-only jobs
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}
-                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in PT_METRICS}
+                | {f"P:{enc_name(ARM2ENC[a])}:all" for a in args.skip_arms}
                 | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in args.skip_arms for m in ET_METRICS})
         jobs = {jid: j for jid, j in jobs.items() if jid not in drop}
         print(f"  [--skip-arms] dropped {sorted(args.skip_arms)} (train+eval+8b/8c-metrics) — §3 finale "
@@ -391,12 +396,30 @@ def main():
     free_gb = shutil.disk_usage(str(REPO)).free / 1e9
     REQ_GB = {"POC": {"1": 80, "2": 250}, "SANITY": {"1": 30, "2": 30}, "FULL": {"1": 90, "2": 500}}
     req_gb = REQ_GB[args.mode][args.cache]
-    print(f"  [disk-preflight] free={free_gb:.0f}G · required≈{req_gb}G", flush=True)
+    # iter19 2026-07-07: the eval frame cache LRU-grows to its HARD cap (probe.eval_frame_cache.max_cache_gb),
+    # now sized to hold the full ~2.25TB eval working set so every metric re-read HITS instead of re-decoding
+    # (the 4x eval blow-up vs POC was cache-miss thrash at the old 200G cap, NOT the eval set). The disk MUST
+    # be able to hold that growth or the eval ENOSPCs mid-run → require free ≥ (cap − on-disk-now). FAIL LOUD
+    # BEFORE the run so the operator provisions the ≥3TB disk. Only when eval jobs are actually scheduled.
+    if any(jid.startswith(("E:", "P:", "F:")) for jid in jobs):
+        _efc = get_pipeline_config()["probe"]["eval_frame_cache"]
+        _cache_dir = REPO / get_pipeline_config()["data"]["local_data_dir"] / _efc["subdir"]
+        _now_gb = 0.0
+        if _cache_dir.is_dir():
+            with os.scandir(_cache_dir) as _it:
+                _now_gb = sum(f.stat().st_size for f in _it if f.is_file()) / 1e9
+        req_gb = max(req_gb, (_efc["max_cache_gb"] - _now_gb) + 40)   # +40G margin: eval outputs / ckpt churn
+        print(f"  [disk-preflight] eval-frame-cache cap={_efc['max_cache_gb']}G · on-disk={_now_gb:.0f}G "
+              f"→ must hold {_efc['max_cache_gb'] - _now_gb:.0f}G more (full re-read set → per-clip parity)",
+              flush=True)
+    print(f"  [disk-preflight] free={free_gb:.0f}G · required≈{req_gb:.0f}G", flush=True)
     if free_gb < req_gb and not args.dry_run:
-        sys.exit(f"FATAL: insufficient disk — {free_gb:.0f}G free < {req_gb}G for {args.mode}.")
+        _cap = get_pipeline_config()["probe"]["eval_frame_cache"]["max_cache_gb"]
+        sys.exit(f"FATAL: insufficient disk — {free_gb:.0f}G free < {req_gb:.0f}G for {args.mode}. The eval "
+                 f"frame cache must be able to grow to its {_cap}G cap (holds the full eval working set so "
+                 f"metrics HIT, not re-decode → per-clip parity with POC). Provision a larger disk.")
 
     # cpu-preflight: each job spawns ~6-8 CPU threads (TAR decode + factor-streaming workers).
-    import os
     cores = os.cpu_count() or 0
     need_cores = args.gpus * 6
     if cores < need_cores:

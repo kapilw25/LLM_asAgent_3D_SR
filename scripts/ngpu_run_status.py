@@ -43,7 +43,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "src"))
 import json  # noqa: E402
 from ngpu_run import (  # noqa: E402  (canonical DAG — single source for naming + jobs + the corpus derivation)
-    ARM2DIR, ARM2ENC, BACKBONE, ET_METRICS, EVAL_CORPUS, PT_METRICS, S3_SKIP_PERENC, build_jobs, enc_name,
+    ARM2DIR, ARM2ENC, BACKBONE, ET_METRICS, EVAL_CORPUS, S3_SKIP_PERENC, build_jobs, enc_name,
     enc_prefix)
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 from utils.arm_registry import display_arms              # noqa: E402  (single-source arm roster)
@@ -417,6 +417,28 @@ def _dur(secs):
     h, rem = divmod(secs, 3600)
     m, s = divmod(rem, 60)
     return f"{h}h{m:02d}m" if h else (f"{m}m{s:02d}s" if m else f"{s}s")
+
+
+def _prior_run_dur(arm):
+    """Duration of a resume-skipped train arm (trained in a PRIOR run — e.g. the pretrain seed on
+    another box — whose ◀/✓ aren't in THIS run's log, so its consumed=0 → the misleading
+    '(prior run)'). Sum the ◀→✓ span of its T: job across archived scheduler logs (this run's
+    logs/ + iter*/logs seed dirs), using the logs' OWN timestamps — mtime is unreliable (later
+    sync/upload touches inflate it)."""
+    total, seen = 0.0, set()
+    for f in list(REPO.glob("logs/*seed*.log")) + list(REPO.glob("iter/*/logs/**/*seed*.log")):
+        if f in seen:
+            continue
+        seen.add(f)
+        try:
+            txt = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        lau = re.findall(rf"\[(\d\d:\d\d:\d\d)\] GPU\d+ ◀ T:\S*:{re.escape(arm)}\b", txt)
+        don = re.findall(rf"\[(\d\d:\d\d:\d\d)\] GPU\d+ ✓ T:\S*:{re.escape(arm)}\b", txt)
+        if lau and don:
+            total += (_sod(don[-1]) - _sod(lau[0])) % 86400
+    return total
 
 
 def _arm_of(jid):
@@ -824,7 +846,7 @@ def main():
         os.environ.setdefault("ITER18_SKIP_ARMS", " ".join(sorted(skip)))
         drop = ({f"T:{BACKBONE}:{a}" for a in skip}
                 | {f"E:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}
-                | {f"P:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in PT_METRICS}
+                | {f"P:{enc_name(ARM2ENC[a])}:all" for a in skip if a in ARM2ENC}   # iter19: 8b is one --metric all job
                 | {f"F:{enc_name(ARM2ENC[a])}:{m}" for a in skip if a in ARM2ENC for m in ET_METRICS}
                 | {f"X:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC}   # --taxheads-only regen
                 | {f"Y:{enc_name(ARM2ENC[a])}" for a in skip if a in ARM2ENC})  # --etheads-only regen
@@ -1123,7 +1145,8 @@ def main():
             if tot:
                 return f"✅ {_dur(tot)}"
             if done.get(jid) == "resume":
-                return "✅ (prior run)"
+                _pd = _prior_run_dur(jid.split(":")[-1])   # 2.1: real span from the seed logs, not '(prior run)'
+                return f"✅ {_dur(_pd)} (prior)" if _pd else "✅ (prior run)"
             return f"✅ {_dur((_sod(done[jid]) - _sod(launched[jid])) % 86400)}"
         if st == "failed":
             return "❌ FAILED"
@@ -1138,7 +1161,7 @@ def main():
         # metric each). They run in PARALLEL across the GPU pool, so the group's remaining is the
         # MAX finish, not the sum. `·8b D✓R▶/6` = D done, R running of the 6 metric jobs — so the
         # one rolled-up cell reconciles with the 🔄 job counter (3 parallel metrics here = 3▶).
-        group = [j for j in ([f"E:{enc}"] + [f"P:{enc}:{m}" for m in PT_METRICS]
+        group = [j for j in ([f"E:{enc}", f"P:{enc}:all"]   # iter19: 8b = ONE --metric all job (shared encode)
                              + [f"F:{enc}:{m}" for m in ET_METRICS]) if j in jobs]
         if not group:
             return "—"
@@ -1147,19 +1170,16 @@ def main():
             return f"✅ {_dur(sum(consumed.get(j, 0) for j in group))}"
         if any(s == "failed" for s in sts):
             return "❌ FAILED"
-        n8 = sum(1 for j in group if j.startswith("P:"))
-        n8done = sum(1 for j in group if j.startswith("P:") and classify(j) == "done")
-        n8run = sum(1 for j in group if j.startswith("P:") and classify(j) == "running")
-        nc = sum(1 for j in group if j.startswith("F:"))
-        ncdone = sum(1 for j in group if j.startswith("F:") and classify(j) == "done")
-        ncrun = sum(1 for j in group if j.startswith("F:") and classify(j) == "running")
-        rem = max((finish.get(j, 0.0) for j in group), default=0.0)
-        glyph = "🔄" if any(s == "running" for s in sts) else "⬚"
-        # compact counters: "6✓/6" when nothing runs, "1✓3▶/4" while 3 jobs are live —
-        # the zero-count "0🔄" tokens read as noise (user 06-12), so zero is simply omitted.
-        tag = ((f"·8b {n8done}✓{f'{n8run}▶' if n8run else ''}/{n8}" if n8 else "")
-               + (f"·8c {ncdone}✓{f'{ncrun}▶' if ncrun else ''}/{nc}" if nc else ""))
-        return f"{glyph}{tag}·~{_dur(rem)}"
+        # per-CELL OWN duration (user 2026-07-07): [completed · ~estimated] for THIS encoder's eval
+        # ONLY — NOT the DAG-cumulative queue finish (finish[] counts every encoder ahead in the pool,
+        # so a pending cell reads ~34h when its OWN eval is ~13h). The queue ETA lives in the Σ TOTAL
+        # row. Basis = each job's standalone consumed/remaining, so the cells SUM to Σ TOTAL (eval).
+        completed = (sum(consumed.get(j, 0) for j in group if classify(j) == "done")
+                     + sum(elapsed(j) for j in group if classify(j) == "running"))
+        rem = sum(remaining.get(j, 0.0) for j in group if classify(j) in ("running", "pending"))
+        if any(s == "running" for s in sts):
+            return f"🔄 {_dur(completed)}·~{_dur(rem)}"
+        return f"⬚ ~{_dur(rem)}"
 
     def kemoji(arm):
         if arm in MERGE_ARMS:
@@ -1228,10 +1248,11 @@ def main():
     _GLYPH = {"done": "✓", "running": "🔄", "pending": "·", "failed": "✗"}   # 🔄 not ▶ (user order 06-12: the running marker must be the same emoji everywhere)
     _ABBR = {"rollout": "roll", "causal": "caus", "tdist": "tdis",
              "teacher_free": "t-fr", "maskratio": "mask", "order": "ordr",
-             "aot": "aot", "tov": "tov", "pace": "pace", "tcc": "tcc"}
-    # 8b (P:, predictor) + 8c (F:, encoder-temporal m12f) columns in ONE fan grid —
-    # the tcc job carries BOTH tcc_cycle and tcc_tau (one forward, two headline numbers).
-    _FAN = [("P", m) for m in PT_METRICS] + [("F", m) for m in ET_METRICS]
+             "aot": "aot", "tov": "tov", "pace": "pace", "tcc": "tcc", "all": "8b·6"}
+    # iter19 2026-07-07: 8b is now ONE P:<enc>:all job (m12e --metric all, shared encode) → one "8b·6"
+    # column (the 6 pt-metrics run inside it; per-metric progress is in per_clip_<metric>.npy). 8c (F:,
+    # encoder-temporal m12f) still fans into 4 columns. tcc carries BOTH tcc_cycle and tcc_tau.
+    _FAN = [("P", "all")] + [("F", m) for m in ET_METRICS]
     enc_rows = ([("frozen", enc_name("frozen"))] if _show_frozen else []) \
         + [(a, enc_name(ARM2ENC[a])) for a in DISPLAY_ORDER
            if f"E:{enc_name(ARM2ENC[a])}" in jobs]

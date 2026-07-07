@@ -313,6 +313,7 @@ def run_features_stage(args, wb) -> None:
             args, model, enc_kind, crop, embed_dim,
             keys, enc_dir, label=f"features_{split}",
             pool_tokens=(args.pool_tokens if args.pool_tokens > 0 else None),
+            cache_frames=(split == "test"),   # warm the shared cache with the re-read TEST set only
         )
         elapsed = time.time() - t0
         # iter15 Phase 6 audit (2026-05-16): optional motion_aux head augment.
@@ -504,6 +505,7 @@ def run_train_stage(args, wb) -> None:
             args, model, enc_kind, crop, embed_dim,
             by_split[split], enc_dir, label=f"features_{split}",
             pool_tokens=(args.pool_tokens if args.pool_tokens > 0 else None),
+            cache_frames=(split == "test"),   # warm the shared cache with the re-read TEST set only
         )
         if ma_head_lazy is not None:
             from utils.frozen_features import apply_motion_aux_head_to_features

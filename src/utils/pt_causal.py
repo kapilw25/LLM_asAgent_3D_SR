@@ -15,13 +15,16 @@ from utils.predictor_eval import (
 )
 
 
-def compute(encoder, predictor, batch, num_frames) -> "np.ndarray":
-    """batch (B,T,3,H,W) cpu → per-clip causal-future L1 (B,)."""
+def compute(encoder, predictor, batch, num_frames, h_full=None) -> "np.ndarray":
+    """batch (B,T,3,H,W) cpu → per-clip causal-future L1 (B,).
+
+    h_full: optional batch-shared full_target_h(encoder, pixel) (m12e --metric all reuses one encode across
+    metrics; bit-identical). None → masked_predict_l1 encodes internally (current path)."""
     Tp, _, _, _ = token_grid(num_frames)
     half = Tp // 2
     pixel = to_pixel(batch)
     b = pixel.shape[0]
     m_enc = expand_mask(temporal_token_idx(num_frames, range(0, half)), b)
     m_pred = expand_mask(temporal_token_idx(num_frames, range(half, Tp)), b)
-    l1, _, _ = masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred)
+    l1, _, _ = masked_predict_l1(encoder, predictor, pixel, m_enc, m_pred, h_full=h_full)
     return l1

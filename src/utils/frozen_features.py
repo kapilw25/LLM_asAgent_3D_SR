@@ -256,11 +256,18 @@ def resize_and_normalize(frames_np: np.ndarray, crop: int) -> torch.Tensor:
 
 
 def decode_to_tensor(mp4_bytes: bytes, tmp_dir: str, clip_key: str,
-                    num_frames: int, crop: int):
+                    num_frames: int, crop: int, cache_frames: bool = True):
     """Decode MP4 bytes → preprocessed (T, 3, crop, crop) fp32 tensor.
     Returns None on decode failure (caller skips).
+
+    cache_frames=False skips storing the decoded frames in the eval frame cache — for the probe
+    feature extraction, which reads each clip exactly ONCE (caching it only churns the shared cache
+    and evicts the metrics' re-read TEST set → the 4x eval blow-up). The METRICS call this with the
+    default True so their re-read test frames DO cache (decode once → hit for the other 9 metrics × 6
+    encoders); the cache then holds ONLY the ~454G test set, not the 2.25TB full working set.
     """
-    frames_t = decode_video_bytes(mp4_bytes, tmp_dir, clip_key, num_frames=num_frames)
+    frames_t = decode_video_bytes(mp4_bytes, tmp_dir, clip_key, num_frames=num_frames,
+                                  cache_frames=cache_frames)
     if frames_t is None:
         return None
     f = frames_t.permute(0, 2, 3, 1).numpy()
@@ -406,7 +413,7 @@ def _flush_batch(pending_tensors, pending_keys, model, encoder_kind, num_frames,
 
 def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_dim: int,
                               keys, output_dir: Path, *, label: str = "feat",
-                              pool_tokens: int = None):
+                              pool_tokens: int = None, cache_frames: bool = True):
     """Producer-consumer feature extraction over local TARs.
 
     Args:
@@ -543,7 +550,12 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
                 break
             ck, mp4_bytes = item
             try:
-                dt = decode_to_tensor(mp4_bytes, tmp_dir, ck, args.num_frames, crop)
+                # cache_frames threads from the caller: the TEST extraction caches (test is re-read by the
+                # 10 metrics × 6 encoders → caching here WARMS the shared cache fast, at decode speed ~8/s,
+                # instead of the slow compute-bound metrics warming it ~1.3/s). TRAIN/VAL pass False (read
+                # ONCE → caching them only churns/evicts the 454G test set → thrash). So the cache holds
+                # ONLY the test set, and it's warm before the metrics need it.
+                dt = decode_to_tensor(mp4_bytes, tmp_dir, ck, args.num_frames, crop, cache_frames=cache_frames)
             except Exception as e:          # per-clip FAIL-SOFT (matches serial path's None-skip)
                 print(f"  SKIP (decode error {ck}): {e}")
                 dt = None

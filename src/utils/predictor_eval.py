@@ -160,6 +160,9 @@ def load_encoder_predictor(ckpt_path, num_frames, model_cfg=None):
     if p_loaded / max(p_total, 1) < _MIN_LOADED_FRAC:
         sys.exit(f"FATAL: predictor only {p_loaded}/{p_total} loaded — random init = garbage")
     predictor = predictor.to(device="cuda", dtype=torch.bfloat16).eval()
+    # iter19 2026-07-07: torch.compile TESTED + REJECTED here — on this V-JEPA RoPE/SDPA arch it compiles and
+    # is ~1.38× faster BUT changes the encoder output (max|diff|≈1.9-2.4 vs eager, both with AND without the
+    # #130098 SDPA monkey-patch) → it would silently corrupt every predictor-temporal metric. Do NOT re-add.
     return encoder, predictor, embed_dim_concat
 
 
@@ -202,17 +205,22 @@ def to_pixel(batch: torch.Tensor) -> torch.Tensor:
 # iter18 (2026-06-05): moved here from m12e_predictor_temporal._safe_metric so
 # the in-training probe (utils/probe_trio.py) and the §2.2 eval (m12e) run the
 # SAME implementation — single source, no drift.
-def safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1):
+def safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1, h_full=None):
     """Run a metric on `batch`, sub-batching with OOM backoff (mirrors AdaptiveBatchSizer
     intent). Returns concatenated per-clip array.
     The retry runs OUTSIDE the except block (iter18 2026-06-12, found via the m12f smoke):
     an exception's __traceback__ pins the FAILED forward's activations, so recursing inside
     `except` accumulates every failed attempt's VRAM — on a small card the halvings then OOM
     all the way down to min_bs. Leaving the except scope releases the pinned tensors before
-    the retry; the 96 GB boxes never surfaced this only because of headroom."""
+    the retry; the 96 GB boxes never surfaced this only because of headroom.
+    h_full: optional batch-shared full_target_h (m12e --metric all). None → call fn WITHOUT it
+    (backward-compat for metrics that don't take it: pt_order + every m12f/probe_trio metric).
+    On OOM sub-batching it is split alongside the clip batch (h_full[:mid]/[mid:])."""
     oom = False
     try:
-        return fn(encoder, predictor, batch, num_frames)
+        if h_full is None:
+            return fn(encoder, predictor, batch, num_frames)
+        return fn(encoder, predictor, batch, num_frames, h_full)
     except torch.cuda.OutOfMemoryError:
         if batch.shape[0] <= min_bs:
             raise
@@ -220,8 +228,10 @@ def safe_metric(fn, encoder, predictor, batch, num_frames, min_bs=1):
     assert oom
     cuda_cleanup()
     mid = batch.shape[0] // 2
-    lo = safe_metric(fn, encoder, predictor, batch[:mid], num_frames, min_bs)
-    hi = safe_metric(fn, encoder, predictor, batch[mid:], num_frames, min_bs)
+    hlo = None if h_full is None else h_full[:mid]
+    hhi = None if h_full is None else h_full[mid:]
+    lo = safe_metric(fn, encoder, predictor, batch[:mid], num_frames, min_bs, h_full=hlo)
+    hi = safe_metric(fn, encoder, predictor, batch[mid:], num_frames, min_bs, h_full=hhi)
     return np.concatenate([lo, hi], axis=0)
 
 

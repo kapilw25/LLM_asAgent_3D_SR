@@ -32,6 +32,8 @@ import queue
 import sys
 import tempfile
 import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -52,7 +54,7 @@ from utils.data_download import ensure_local_data, iter_clips_parallel
 from utils.frozen_features import ENCODERS, decode_to_tensor
 from utils.gpu_batch import cleanup_temp
 from utils.predictor_eval import (
-    CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_predictor,
+    CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_predictor, to_pixel,
     safe_metric as _safe_metric,  # iter18: moved to predictor_eval — shared with utils/probe_trio in-training probes
 )
 from utils.progress import make_pbar
@@ -158,8 +160,18 @@ def run_forward_stage(args, wb) -> None:
             if not pend_t:
                 return
             batch = torch.stack(pend_t)
+            # iter19 2026-07-07: with --metric all, compute the mask-independent encode h=encoder(pixel) ONCE
+            # per batch and share it across the metrics that can reuse it (all but 'order', which permutes
+            # frames → its own pixel). PROVEN bit-identical (scratchpad/hfull_parity: 0.0 diff on all 5) →
+            # saves 5× redundant 1B full-encodes ≈ 1.8× on the pt-metric half. Inert when 1 metric runs.
+            h_shared = None
+            if len(todo) > 1:
+                with torch.no_grad():
+                    _hf = encoder(to_pixel(batch))
+                    h_shared = torch.cat(list(_hf), -1) if isinstance(_hf, (list, tuple)) else _hf
             for m in todo:
-                vals = _safe_metric(METRICS[m][0], encoder, predictor, batch, args.num_frames)
+                mh = None if m == "order" else h_shared   # order re-encodes its permuted pixel → cannot share
+                vals = _safe_metric(METRICS[m][0], encoder, predictor, batch, args.num_frames, h_full=mh)
                 if len(vals) != len(pend_k):
                     sys.exit(f"FATAL: metric {m} returned {len(vals)} vals for {len(pend_k)} clips")
                 acc[m].extend(float(v) for v in vals)
@@ -168,30 +180,51 @@ def run_forward_stage(args, wb) -> None:
             n_since += len(pend_k)
             pend_t, pend_k = [], []
 
+        # iter19 2026-07-07: PARALLEL decode pool. Was a serial decode_to_tensor here → on FULL
+        # cache-misses GPU0 idled at 60% waiting one decode at a time. The pool decodes up to 2×workers
+        # clips concurrently (PyAV releases the GIL) while the main thread runs the serial GPU forward →
+        # GPU stays fed (~1.6x). torch single-threaded so the decode crop can't oversubscribe cores.
+        torch.set_num_threads(1)
+        n_dec = max(1, args.decode_workers)
         try:
-            while True:
-                try:
-                    item = clip_q.get(timeout=300)
-                except queue.Empty:
-                    print("  WARN: clip queue timeout — flushing pending")
-                    break
-                if item is None:
-                    break
-                clip_key, mp4 = item
-                t = decode_to_tensor(mp4, tmp_dir, clip_key, args.num_frames, CROP)
-                if t is None:
-                    continue
-                pend_t.append(t)
-                pend_k.append(clip_key)
-                if len(pend_t) >= bs:
-                    _flush()
-                    if n_since >= CHECKPOINT_EVERY:
-                        np.savez(ckpt.with_suffix(".tmp.npz"),
-                                 keys=np.array(keys_acc, dtype=object),
-                                 **{m: np.array(acc[m], dtype=np.float32) for m in todo})
-                        ckpt.with_suffix(".tmp.npz").replace(ckpt)
-                        n_since = 0
-            _flush()
+            with ThreadPoolExecutor(max_workers=n_dec) as pool:
+                futs = deque()
+                exhausted = False
+
+                def _fill():
+                    nonlocal exhausted
+                    while not exhausted and len(futs) < n_dec * 2:
+                        try:
+                            it = clip_q.get(timeout=300)
+                        except queue.Empty:
+                            print("  WARN: clip queue timeout — draining pending")
+                            exhausted = True
+                            return
+                        if it is None:
+                            exhausted = True
+                            return
+                        ck, mp4 = it
+                        futs.append((pool.submit(decode_to_tensor, mp4, tmp_dir, ck,
+                                                 args.num_frames, CROP), ck))
+
+                _fill()
+                while futs:
+                    fut, clip_key = futs.popleft()
+                    _fill()                       # refill as we drain → keep the pool saturated
+                    t = fut.result()
+                    if t is None:
+                        continue
+                    pend_t.append(t)
+                    pend_k.append(clip_key)
+                    if len(pend_t) >= bs:
+                        _flush()
+                        if n_since >= CHECKPOINT_EVERY:
+                            np.savez(ckpt.with_suffix(".tmp.npz"),
+                                     keys=np.array(keys_acc, dtype=object),
+                                     **{m: np.array(acc[m], dtype=np.float32) for m in todo})
+                            ckpt.with_suffix(".tmp.npz").replace(ckpt)
+                            n_since = 0
+                _flush()
         finally:
             tar_stop.set()
             pbar.close()
@@ -283,6 +316,10 @@ def build_parser() -> argparse.ArgumentParser:
                    default=_PCFG["gpu"]["inference_predictor_temporal_bs"],
                    help="clips per forward (predictor fwd is heavy; OOM-subbatched "
                         "downward). Default: pipeline.yaml gpu.inference_predictor_temporal_bs.")
+    p.add_argument("--decode-workers", type=int,
+                   default=_PCFG["probe"]["predictor_temporal"]["decode_workers"],
+                   help="parallel clip-decode threads feeding the GPU (PyAV releases the GIL, so this "
+                        "hides decode latency). Default: pipeline.yaml probe.predictor_temporal.decode_workers.")
     p.add_argument("--seed", type=int, default=_PCFG["probe"]["seed"])
     add_cache_policy_arg(p)
     add_wandb_args(p)
