@@ -135,7 +135,7 @@ from utils.training import (
     run_trio_at_val, track_block_drift_at_val,
     apply_val_cycle_triggers, finalize_training,
 )
-from utils.clear_resume_anchors import clear_anchors_on_completion  # noqa: E402
+from utils.clear_resume_anchors import assert_finalized, clear_anchors_on_completion  # noqa: E402
 from utils.multi_task_loss import (
     build_multi_task_head_from_cfg,
     attach_head_to_optimizer, run_multi_task_step,
@@ -1266,7 +1266,7 @@ def train(cfg: dict, args):
     # i.e. the prior run FINISHED training but was killed before finalization — they'd be UnboundLocal
     # at the post-loop ckpt_best save. Init to None; that save passes include_optimizer=False so it
     # never dereferences them (training.py:1314). (scaler is already built pre-loop.)
-    optimizer = scheduler = None
+    optimizer = scheduler = jepa_val = None   # 2026-07-08: +jepa_val (in-loop val loss → summary "final_loss") — same skip-all finalize-resume gap as opt/sched
     try:
         for stage_idx, stage_cfg in enumerate(stages):
             if stage_idx <= resume_after_stage:
@@ -1853,6 +1853,7 @@ def train(cfg: dict, args):
     # KEEPS student_encoder.pt + the predictor-bearing `_best.pt` (both outside the
     # latest/stage/step name patterns; the helper verifies they exist first).
     clear_anchors_on_completion(output_dir)
+    assert_finalized(output_dir)   # self-check (iter19): FAIL LOUD if finalize left no *ckpt_best* or an uncleaned anchor
 
     # Trajectory stats across stage boundaries. Single-probe-set regime so BWT
     # degenerates to net top-1 improvement (R[-1]-R[0]). Non-zero max_drop

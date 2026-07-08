@@ -44,8 +44,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))   # iter18 (2026-06-14): arm roster single-source (configs/arm_registry.yaml)
 from utils.arm_registry import (  # noqa: E402
     arm2enc as _arm2enc, arm2dir as _arm2dir, merge_arms as _merge_arms, merge_recipe)
-from utils.output_paths import eval_dir as _eval_dir, train_dir as _train_dir  # noqa: E402
+from utils.output_paths import eval_dir as _eval_dir, train_dir as _train_dir, head_stage_done  # noqa: E402
 from utils.config import get_pipeline_config  # noqa: E402  (SINGLE source for the data-dir → corpus derivation)
+from utils.clear_resume_anchors import finalize_missing, is_finalized  # noqa: E402  (trainer-owned "is this arm finalized?" policy)
 # iter18 2026-06-08: BACKBONE is the run's encoder family, switchable via env so the SAME scheduler
 # runs the 2B champion (vjepa_2_1_vitG, default) or the 1B scale-axis backbone (vjepa_2_1_vitg). The
 # status tool reads it back from the run banner (or this same env) so its job-ids match. Set it once
@@ -374,7 +375,18 @@ def main():
         if bad:
             sys.exit(f"FATAL: unknown arm(s) {bad} — choices: {sorted(ARM2ENC)}")
         if "pretrain_encoder" in args.skip_arms:
-            sys.exit("FATAL: cannot skip pretrain_encoder — it is every arm's init dependency.")
+            # iter19 2026-07-08 (user order): the seed CAN be eval-skipped ONCE it is already trained — a
+            # pure-eval resume where every arm that inits from it also already has its student_encoder.pt.
+            # Skipping an UNtrained seed still FATALs (a dependent's train job would then have no init ckpt);
+            # a dependent that is somehow still untrained FATALs loud in run_train on the missing init (same
+            # trust model as --only), never silently here. Ckpt-check mirrors the resume detection below.
+            _seed_ckpt = REPO / f"{_train_dir(args.mode, BACKBONE)}/{ARM2DIR['pretrain_encoder']}/student_encoder.pt"
+            if not _seed_ckpt.exists():
+                sys.exit("FATAL: cannot skip pretrain_encoder — it is every arm's init dependency and its "
+                         f"trained ckpt is absent ({_seed_ckpt}). Skip it only on a resume where the seed "
+                         "(and its dependents) are already trained.")
+            print("  [--skip-arms] pretrain_encoder eval-skipped — trained seed ckpt present (pure-eval "
+                  "resume); its already-trained dependents no longer need it to init.", flush=True)
         drop = ({f"T:{BACKBONE}:{a}" for a in args.skip_arms}
                 | {f"X:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --taxheads-only jobs
                 | {f"Y:{enc_name(ARM2ENC[a])}" for a in args.skip_arms}   # --etheads-only jobs
@@ -468,8 +480,18 @@ def main():
             if j["kind"] != "train":
                 continue
             _, bb, arm = jid.split(":")
-            if (REPO / f"{_train_dir(args.mode, bb)}/{ARM2DIR[arm]}/student_encoder.pt").exists():
+            # iter19 2026-07-08 (user order): the "is this arm trained?" POLICY lives WITH the trainers, in
+            # utils.clear_resume_anchors.is_finalized (student_encoder.pt + *ckpt_best* present, no surviving
+            # resume anchors) — this orchestrator only ASKS, it does NOT re-implement the check. A crashed-at-
+            # finalize arm (peft_lora: student but no _best + a surviving ckpt_stage0) is NOT finalized → its
+            # train job RE-RUNS (resume→finalize), never laundered into 'already-trained' off student alone
+            # (which is written BEFORE the _best save). Warn loudly with the exact missing artifacts.
+            _adir = REPO / f"{_train_dir(args.mode, bb)}/{ARM2DIR[arm]}"
+            if is_finalized(_adir):
                 done.add(jid)
+            elif (_adir / "student_encoder.pt").exists():
+                print(f"  ⚠️  [resume] {arm}: NOT a clean finalize — {finalize_missing(_adir)}. Its train job "
+                      f"RE-RUNS to finalize (its predictor metrics had been SILENTLY skipped).", flush=True)
         n_train_done = len(done)
         if n_train_done:
             print(f"  [resume --cache 1] skipping {n_train_done} already-trained arms: "
@@ -500,6 +522,20 @@ def main():
                 et_done += 1
         if et_done:
             print(f"  [resume --cache 1] skipping {et_done} already-done Stage-8c metric jobs",
+                  flush=True)
+        # E: (Stage 2-8 head-metric bundle) jobs — iter19 2026-07-08 (user order): skip on resume when the
+        # encoder's head-metric outputs already exist (utils.output_paths.head_stage_done — the SINGLE 'is E: done'
+        # source, shared with the status pane's 2-8 cell so they can't drift). WITHOUT this the E: job was NEVER
+        # resume-skipped (only P:/F: were) → it re-launched and stage-2 re-extracted the NON-DURABLE test features
+        # (~2-3h/enc of waste): a completed frozen eval re-ran its 23k-clip feature pass every restart. Nothing
+        # depends on E:, so marking a done bundle done is safe; any marker absent ⇒ E: still runs (a fresh encoder).
+        e_done = 0
+        for jid in jobs:
+            if jid.startswith("E:") and head_stage_done(args.mode, BACKBONE, EVAL_CORPUS, jid[2:]):
+                done.add(jid)
+                e_done += 1
+        if e_done:
+            print(f"  [resume --cache 1] skipping {e_done} already-done E: (Stage 2-8 head-metric) job(s)",
                   flush=True)
 
     # iter19 (2026-07-05) --eval-first SSL-head gate (Prof Das): hold every PENDING arm-train job until

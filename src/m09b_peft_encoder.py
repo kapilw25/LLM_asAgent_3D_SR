@@ -136,7 +136,7 @@ from utils.training import (
     run_trio_at_val, track_block_drift_at_val,
     apply_val_cycle_triggers, finalize_training,
 )
-from utils.clear_resume_anchors import clear_anchors_on_completion  # noqa: E402
+from utils.clear_resume_anchors import assert_finalized, clear_anchors_on_completion  # noqa: E402
 from peft import LoraConfig, get_peft_model   # iter18 B1: HuggingFace PEFT — LoRA/DoRA adapter injection
 from utils.multi_task_loss import (
     build_multi_task_head_from_cfg,
@@ -1279,8 +1279,11 @@ def train(cfg: dict, args):
     # the stage loop (per stage), so if EVERY stage is skipped — resumed from a stage-COMPLETE anchor,
     # i.e. the prior run FINISHED training but was killed before finalization — they'd be UnboundLocal
     # at the post-loop ckpt_best save. Init to None; that save passes include_optimizer=False so it
-    # never dereferences them (training.py:1314). (scaler is already built pre-loop.)
-    optimizer = scheduler = None
+    # never dereferences them (training.py:1314). (scaler is already built pre-loop.) 2026-07-08: jepa_val (the
+    # val loss, assigned IN-loop → the training-summary's "final_loss") is the SAME class of gap — init it too,
+    # so a skip-all finalize-resume doesn't UnboundLocal at the summary build → crash → retry → re-train from
+    # scratch (exactly what bit peft_lora's recovery). None = the honest "no training this run" record.
+    optimizer = scheduler = jepa_val = None
     try:
         for stage_idx, stage_cfg in enumerate(stages):
             if stage_idx <= resume_after_stage:
@@ -1873,6 +1876,7 @@ def train(cfg: dict, args):
     # KEEPS student_encoder.pt + the predictor-bearing `_best.pt` (both outside the
     # latest/stage/step name patterns; the helper verifies they exist first).
     clear_anchors_on_completion(output_dir)
+    assert_finalized(output_dir)   # self-check (iter19): FAIL LOUD if finalize left no *ckpt_best* or an uncleaned anchor
 
     # Trajectory stats across stage boundaries. Single-probe-set regime so BWT
     # degenerates to net top-1 improvement (R[-1]-R[0]). Non-zero max_drop

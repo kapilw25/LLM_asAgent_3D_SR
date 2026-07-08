@@ -76,6 +76,21 @@ def eval_dir(mode: str, backbone: str, corpus: str, metric_family: str) -> str:
     return f"{eval_root(mode, backbone, corpus)}/{metric_family}"
 
 
+# The E: (Stage 2-8 head-metric) bundle's 4 result files — the SINGLE 'is E: done' marker set, shared by the
+# ngpu_run resume-skip AND the status pane's 2-8 cell so the two can't drift (iter19 2026-07-08). A resume-
+# skipped E: emits no log ◀/✓, so the pane must check the outputs directly or it shows a finished arm as pending.
+_HEAD_STAGE_MARKERS = (("probe_action", "test_metrics.json"), ("probe_taxonomy", "test_metrics.json"),
+                       ("probe_motion_cos", "intra_inter_ratio.json"), ("probe_future_mse", "aggregate_mse.json"))
+
+
+def head_stage_done(mode: str, backbone: str, corpus: str, enc: str) -> bool:
+    """True iff the per-encoder E: bundle produced ALL 4 head-metric result files (action + taxonomy
+    test_metrics.json · motion_cos intra_inter_ratio.json · future_mse aggregate_mse.json)."""
+    root = Path(__file__).resolve().parents[2]
+    return all((root / eval_dir(mode, backbone, corpus, art) / enc / fn).exists()
+               for art, fn in _HEAD_STAGE_MARKERS)
+
+
 def plot_dir(mode: str, backbone: str, corpus: str) -> str:
     """…/eval/<corpus>/plot — m13's figures for this (backbone × corpus)."""
     return f"{eval_root(mode, backbone, corpus)}/plot"

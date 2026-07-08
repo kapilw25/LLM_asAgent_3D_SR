@@ -51,7 +51,8 @@ export SKIP="surgery_3stage_DI_encoder surgery_noDI_encoder surgery_3stage_DI_he
 surgical_autorgn_encoder surgery_raw_encoder full_ft_encoder lpft_encoder peft_dora_encoder \
 cassle_encoder ewc_encoder surgery_3stage_DI_replay25_encoder surgery_3stage_DI_tccaux_encoder \
 surgery_3stage_DI_intervene_encoder surgical_3stage_DI_wiseft_encoder surgical_intervene_wiseft_f30_encoder \
-surgical_intervene_wiseft_f50_encoder surgical_intervene_wiseft_f70_encoder"
+surgical_intervene_wiseft_f50_encoder surgical_intervene_wiseft_f70_encoder \
+pretrain_encoder surgical_diheavy_wiseft_f50_encoder surgical_diheavy_wiseft_f70_encoder"
 
 # Verify the yaml flip landed (must print data/full_local + full_local.json).
 grep -E "^\s*local_data_dir|^\s*master_manifest_name" configs/pipeline.yaml
@@ -63,8 +64,7 @@ grep -E "^\s*local_data_dir|^\s*master_manifest_name" configs/pipeline.yaml
 
 ```bash
 # A1 · pull the prepped 116k data (~214 GB).
-python -u src/utils/hf_outputs.py download-data data/full_local \
-  2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
+python -u src/utils/hf_outputs.py download-data data/full_local 2>&1 | tee logs/iter19_dl_full_local_$(date +%F_%H%M%S).log
 
 # A2 · shared env (ITER18_BACKBONE, EVAL_CORPUS, yaml flip) — from the block above.
 
@@ -109,9 +109,25 @@ rm -rf outputs/sanity/
 #      FIRST (~9h, 2-wide), THEN diheavy ∥ peft_lora train + eval all 6 + §3 finale. --cache 1 skips the seed.
 #      Go/no-go lands BEFORE the 20h train spend → watch the E0 rows; Ctrl-C if pretrain ≪ frozen (SSL hurt).
 #      The status pane shows a "🚦 E0 SSL-head gate" line (HELD → CLEARED). Drop --eval-first to run straight.
-ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 \
-  --eval-first pretrain_encoder frozen --skip-arms $SKIP 2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 2 --cache 1 --eval-first pretrain_encoder frozen --skip-arms $SKIP 2>&1 | tee logs/iter19_full_rest_$(date +%F_%H%M%S).log
 # the gate's go/no-go rows: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_plot/*/eval_metrics.csv
+```
+
+### 🔧 B4b · Finalize-recovery — re-write a crashed arm's predictor ckpt (`m09c_ckpt_best.pt`)
+
+```bash
+# Crashed-at-finalize arm has student_encoder.pt but no m09c_ckpt_best.pt → eval silently drops its 7 predictor metrics.
+# is_finalized gate re-runs only un-finalized arms; a clean arm is a no-op. resume→finalize ~10-15 min, no training.
+# peft_lora — NEEDS this (missing _best):
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 1 --cache 1 --only peft_lora_encoder 2>&1 | tee logs/iter19_peftlora_finalize_$(date +%F_%H%M%S).log
+# diheavy — already clean → safe no-op (gate skips it); run only to double-check:
+ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run.py --mode FULL --gpus 1 --cache 1 --only surgery_3stage_DI_diheavy_encoder 2>&1 | tee logs/iter19_diheavy_finalize_$(date +%F_%H%M%S).log
+# confirm both m09c_ckpt_best.pt exist, then resume B4 → peft_lora P:all + Stage-8 future_mse recompute:
+ls -lh \
+outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt \
+outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt \
+outputs/full/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt \
+outputs/full/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/student_encoder.pt
 ```
 
 ### 📟 Live status pane (separate terminal on Box B)
@@ -136,8 +152,7 @@ python -u src/m13_eval_plot.py --cross-plots --cross-mode full \
   2>&1 | tee logs/iter19_cross_plots_$(date +%F_%H%M%S).log
 
 # Persist the full outputs tree (additive, no-delete).
-python -u src/utils/hf_outputs.py upload-additive outputs/full \
-2>&1 | tee logs/iter19_upload_pretrain_FULL_$(date +%F_%H%M%S).log
+python -u src/utils/hf_outputs.py upload-additive outputs/ 2>&1 | tee logs/iter19_upload_outputs_FULL_$(date +%F_%H%M%S).log
 ```
 
 ---

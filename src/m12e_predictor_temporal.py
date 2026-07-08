@@ -114,6 +114,12 @@ def run_forward_stage(args, wb) -> None:
     if not test_keys:
         sys.exit("FATAL: 0 test clips in action_labels.json — re-run the labels stage")
     print(f"Forward {todo} on {len(test_keys)} test clips, variant={args.variant}")
+    _shr = [m for m in todo if m != "order"]
+    if len(todo) > 1 and _shr:
+        print(f"  [h-share] ON: encoder(pixel) computed ONCE/batch, reused by {len(_shr)}/{len(todo)} "
+              f"metrics {_shr} (order self-encodes) — ~1.8x, parity-tested bit-identical.", flush=True)
+    else:
+        print(f"  [h-share] OFF: {len(todo)} metric(s) in this job — nothing to share", flush=True)
     from utils import predictor_eval as _pe  # noqa: E402 — local import to read the live flag
     print(f"  h-memoization (PT_H_MEMO): {'ON — target encode reused across mask sweep' if _pe._H_MEMO else 'OFF — recomputed each call (legacy)'}")
 

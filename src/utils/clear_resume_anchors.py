@@ -129,6 +129,49 @@ def clear_anchors_on_completion(arm_dir: Path) -> int:
     return freed
 
 
+# ── Training-completion GATE (iter19 2026-07-08, user order) ─────────────────────────────────────────────
+# The SINGLE definition of "did an m09 arm finalize cleanly?" — reused (same anchor patterns as
+# clear_anchors_on_completion above, one source) by BOTH each m09 trainer (assert_finalized at its own exit →
+# FAIL LOUD) AND the ngpu_run orchestrator's --cache 1 resume (is_finalized → RE-RUN an incomplete arm, never
+# skip it). The POLICY of what "trained" means lives HERE with the trainers, not scattered in the orchestrator.
+# A CLEAN finalize leaves student_encoder.pt + a *ckpt_best* (predictor-bearing, needed for eval Stage 8/8b)
+# AND ZERO resume anchors. peft_lora's 2026-07-06 run FATAL'd at the post-loop _best save → student present but
+# NO _best and a SURVIVING ckpt_stage0 anchor ⇒ NOT finalized; the old student-only check silently shipped it
+# minus its 7 predictor metrics.
+
+
+def finalize_missing(arm_dir) -> list:
+    """Finalize artifacts ABSENT / not-cleaned in arm_dir — EMPTY list ⇒ a clean finalize. Checks the two
+    durable eval deliverables (student_encoder.pt + any *ckpt_best*.pt) AND that no resume anchor survived."""
+    arm_dir = Path(arm_dir)
+    missing = []
+    if not (arm_dir / "student_encoder.pt").exists():
+        missing.append("student_encoder.pt")
+    if not any(_BEST_SUBSTRING in p.name for p in arm_dir.glob("*.pt")):
+        missing.append(f"*{_BEST_SUBSTRING}*.pt (predictor-bearing best ckpt)")
+    missing += [f"UNCLEANED-anchor:{p.name}" for p in sorted(arm_dir.glob("*.pt"))
+                if any(s in p.name for s in _COMPLETION_ANCHOR_SUBSTRINGS)]
+    return missing
+
+
+def is_finalized(arm_dir) -> bool:
+    """True iff arm_dir is a clean m09 finalize (student_encoder.pt + *ckpt_best* present, no surviving resume
+    anchors). The orchestrator's resume-skip gate: an arm returning False is RE-RUN (resume→finalize), never
+    laundered into 'already-trained' off student_encoder.pt alone (that file is written BEFORE the _best save)."""
+    return not finalize_missing(arm_dir)
+
+
+def assert_finalized(arm_dir, label: str = ""):
+    """FAIL LOUD (SystemExit) if arm_dir did not finalize cleanly. Each m09 trainer calls this as its LAST step,
+    right after clear_anchors_on_completion, so a botched finalize (missing _best, uncleaned anchor) is caught AT
+    TRAINING TIME by the trainer itself — never silently inherited as 'trained' by a downstream resume."""
+    miss = finalize_missing(arm_dir)
+    if miss:
+        sys.exit(f"FATAL [train-completion{': ' + label if label else ''}]: {Path(arm_dir)} did NOT finalize "
+                 f"cleanly — missing/uncleaned {miss}. Eval needs student_encoder.pt + the predictor-bearing "
+                 f"*{_BEST_SUBSTRING}*.pt, and clear_anchors_on_completion must have removed every resume anchor.")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", type=Path, required=True,

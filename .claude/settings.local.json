@@ -371,7 +371,11 @@
       "Bash(grep -nE \"✅.{0,6}🔄|len\\\\\\(jobs\\\\\\)|/ \\\\{\" scripts/ngpu_run_status.py)",
       "Bash(awk '{print \" 2B ckpt \\(1B run does NOT use it\\): \"$5}')",
       "Skill(artifact-design)",
-      "Bash(CUDA_VISIBLE_DEVICES=0 PYTHONPATH=src timeout 300 venv_walkindia/bin/python -u /tmp/claude-0/-workspace-factorjepa/1b2336d6-c7ee-4d84-8920-ed3380b1b603/scratchpad/compile_test2.py)"
+      "Bash(CUDA_VISIBLE_DEVICES=0 PYTHONPATH=src timeout 300 venv_walkindia/bin/python -u /tmp/claude-0/-workspace-factorjepa/1b2336d6-c7ee-4d84-8920-ed3380b1b603/scratchpad/compile_test2.py)",
+      "Bash(xargs -r ls -la)",
+      "Bash(awk '{print \" \"$5\" \"$6\" \"$7\" \"$8\" \"$9}')",
+      "Bash(awk '{print \"  keys: \"$5\" \"$9}')",
+      "Bash(awk '/_CATALOG *=/{f=1} f{print NR\": \"$0} f&&/^\\\\]|^\\\\}/{exit}' src/m13_eval_plot.py)"
     ]
   }
 }

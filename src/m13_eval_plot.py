@@ -57,6 +57,9 @@ from utils.plots import (COLORS, ENCODER_COLORS, init_style, save_fig,
 from utils.progress import make_pbar
 from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
 from utils.bootstrap import N_BOOTSTRAP
+from utils.metric_names import (   # SINGLE source for the metric registry → configs/metric_names.json
+    names as _load_metric_names, ordered_keys as _mn_keys,
+    forest_keys as _mn_forest, direction as _mn_dir)
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
 from utils.validity import (criterion_rho, family_summary,  # iter19 §2b construct validity
                             orient_higher_better, pairwise_spearman)
@@ -1853,16 +1856,19 @@ def _skip_encoders_from_env(encoders):
 _VALIDITY_SHORT2LONG = {"act": "action_top1", "tax": "taxonomy_f1",
                         "mcos": "motion_cos", "fut": "future_mse"}  # eval_metrics.json key ↔ _CATALOG key
 _VALIDITY_CONSTRUCT = {"HEAD": "head/probe", "PRED": "predictor", "ENC": "encoder-temporal"}
-# Human metric names for FIGURE tick labels — mirrors the CLAUDE.md GLOSSARY (the single source for
-# prose metric names). Short keys stay in the CSV per "short keys live in code/csv/json ONLY".
-_VALIDITY_PLAIN = {
-    "act": "Action top-1 accuracy", "tax": "taxonomy F1", "mcos": "motion-cosine separation",
-    "fut": "future-frame MSE", "rollout": "rollout drift slope", "causal": "causal future-block L1",
-    "tdist": "L1-vs-Δt decay slope", "teacher_free": "free-running exposure-bias gap",
-    "maskratio": "mask-ratio robustness slope", "order": "frame-order sensitivity",
-    "aot": "Arrow-of-Time accuracy", "tov": "temporal-order (frame-permutation) acc",
-    "pace": "playback-pace accuracy", "tcc_tau": "TCC Kendall τ", "tcc_cycle": "TCC cycle-back error",
-}
+# Human metric names for FIGURE tick labels — the SINGLE SOURCE is configs/metric_names.json (read via
+# utils.metric_names). The scorecard's _MW_EVAL_METRICS AND the forest/scale _XB_* lists below all derive
+# their names from THIS dict, so a rename in the json propagates to every plot at once — no re-typed variants
+# (the 2026-07-08 forest "Teacher-free gap" vs scorecard "free-running exposure-bias gap" split is impossible now).
+_VALIDITY_PLAIN = _load_metric_names()   # {key: full display name} ← configs/metric_names.json (FAIL LOUD if absent)
+
+
+def _mn_hilo(_k):   # json better-direction → the forest/scale "hi"/"lo" ('signed' order shown positive = "hi")
+    return "lo" if _mn_dir(_k) == "lower" else "hi"
+
+
+def _mn_word(_k):   # json better-direction → the scorecard "higher"/"lower" ('signed' order shown "higher")
+    return "lower" if _mn_dir(_k) == "lower" else "higher"
 _VALIDITY_FAM_ORDER = {"head/probe": 0, "predictor": 1, "encoder-temporal": 2}
 # DESIRABILITY colormap (overrides the textbook red=+/blue=- sign-convention — labeled on the
 # colorbar): BLUE = +1 (metrics agree → convergent validity, BEST) · WHITE = 0 (independent) ·
@@ -2304,19 +2310,10 @@ _MW_TRAIN_METRICS = [
     ("maskratio",     "mask-ratio",    "lower"),
     ("val_jepa_loss", "val JEPA loss", "lower"),
 ]
-_MW_EVAL_METRICS = [   # titles = the CLAUDE.md glossary FULL names (prose-canonical, not the short keys)
-    ("act", "Action top-1 accuracy", "higher"), ("tax", "taxonomy F1", "higher"),
-    ("mcos", "motion-cosine separation", "higher"), ("fut", "future-frame MSE", "lower"),
-    ("rollout", "rollout drift slope", "lower"), ("causal", "causal future-block L1", "lower"),
-    ("tdist", "L1-vs-Δt decay slope", "lower"), ("maskratio", "mask-ratio robustness slope", "lower"),
-    # order: the SCORECARD treats higher ΔL1 = relies MORE on frame order = USES time = better (so it gets a
-    # real ↑ badge + rotation, not "± diagnostic"). _CATALOG keeps order 'signed' for hero/validity win-counting.
-    ("order", "frame-order sensitivity", "higher"),
-    ("teacher_free", "free-running exposure-bias gap", "lower"),
-    ("aot", "Arrow-of-Time accuracy", "higher"), ("tov", "temporal-order (frame-permutation) acc", "higher"),
-    ("pace", "playback-pace accuracy", "higher"), ("tcc_cycle", "TCC cycle-back error", "lower"),
-    ("tcc_tau", "TCC Kendall τ", "higher"),
-]
+# scorecard panels (key, NAME, direction) — EVERYTHING derived from configs/metric_names.json: keys+order
+# from ordered_keys(), name from _VALIDITY_PLAIN, direction from the json ('order' is canonical 'signed' →
+# shown "higher" per the scorecard's "uses-time = better" convention, via _mn_word). No metric literals here.
+_MW_EVAL_METRICS = [(_k, _VALIDITY_PLAIN[_k], _mn_word(_k)) for _k in _mn_keys()]
 _MW_EVAL_RAW_KEYS = ["act", "tax", "mcos", "fut", "rollout", "causal", "tdist", "maskratio",
                      "order", "teacher_free", "aot", "tov", "pace", "tcc_cycle", "tcc_tau"]
 _MW_TRAIN_PROBE_KEYS = ["step", "probe_top1", "motion_cos", "future_l1", "causal_l1",
@@ -2587,22 +2584,15 @@ def _pdf_to_png(pdf_path, png_path, dpi=120):
 # combined scorecard: surgery novelty = dark green (#2E7D32), competitors keep their own hues. OURs vs
 # COMPetitors is derived SINGLE-SOURCE from that colour (dark-green == our surgery novelty).
 _XB_OURS_GREEN = "#2E7D32"
-_XB_METRICS = [   # (key, "hi"|"lo", label) — the forest rows (mirrors the 13-metric reference set)
-    ("fut", "lo", "Future-frame L1"), ("causal", "lo", "Causal L1"), ("tcc_cycle", "lo", "TCC cycle-back"),
-    ("maskratio", "lo", "Mask-ratio slope"), ("tov", "hi", "Temporal-order"), ("pace", "hi", "Playback-pace"),
-    ("aot", "hi", "Arrow-of-time"), ("act", "hi", "Action top-1"), ("tdist", "lo", "t-dist decay"),
-    ("tcc_tau", "hi", "TCC Kendall τ"), ("rollout", "lo", "Rollout drift"),
-    ("teacher_free", "lo", "Teacher-free gap"), ("mcos", "hi", "Motion-cosine"),
-]
+# forest rows (key, "hi"|"lo", NAME) — ALL derived from configs/metric_names.json: the 13 keys from
+# forest_keys() (tax + order omitted there), direction via _mn_hilo, name from _VALIDITY_PLAIN. No literals,
+# so every forest tick == the scorecard panel title ("free-running exposure-bias gap", never "Teacher-free gap").
+_XB_METRICS = [(_k, _mn_hilo(_k), _VALIDITY_PLAIN[_k]) for _k in _mn_forest()]
 # task2 2026-07-01: scale_replication covers ALL 15 metrics (the eval_metrics glossary), not just 4. The
 # forest keeps its 13-row _XB_METRICS; this superset adds taxonomy-F1 + frame-order for the 5×3 scatter grid.
-_XB_ALL15 = [
-    ("act", "hi", "Action top-1"), ("tax", "hi", "Taxonomy F1"), ("mcos", "hi", "Motion-cosine"),
-    ("fut", "lo", "Future-frame L1"), ("rollout", "lo", "Rollout drift"), ("causal", "lo", "Causal L1"),
-    ("tdist", "lo", "t-dist decay"), ("teacher_free", "lo", "Teacher-free gap"), ("maskratio", "lo", "Mask-ratio slope"),
-    ("order", "hi", "Frame-order"), ("aot", "hi", "Arrow-of-time"), ("tov", "hi", "Temporal-order"),
-    ("pace", "hi", "Playback-pace"), ("tcc_tau", "hi", "TCC Kendall τ"), ("tcc_cycle", "lo", "TCC cycle-back"),
-]
+# scale-replication panels (key, "hi"|"lo", NAME) for ALL 15 — derived from configs/metric_names.json
+# (ordered_keys + _mn_hilo + _VALIDITY_PLAIN). No metric literals; panels re-sort by ρ at render time.
+_XB_ALL15 = [(_k, _mn_hilo(_k), _VALIDITY_PLAIN[_k]) for _k in _mn_keys()]
 
 
 def _xb_is_ours(suffix):
@@ -2645,7 +2635,7 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci")
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
     n = len(backbones)
-    fig, axes = plt.subplots(1, n, figsize=(8.5 * n, 6.8), squeeze=False)
+    fig, axes = plt.subplots(1, n, figsize=(9.6 * n, 6.8), squeeze=False)   # wider: full-name y-labels (from json)
     for ax, (label, data) in zip(axes[0], backbones):
         rows = []
         for key, dr, lbl in _XB_METRICS:
@@ -2694,7 +2684,7 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci")
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(
             lambda v, _p: "0" if v == 0 else ("-" if v < 0 else "") + f"{abs(v):g}"))
         ax.set_yticks(range(len(rows)))
-        ax.set_yticklabels([r[0] for r in rows], fontsize=10)
+        ax.set_yticklabels([r[0] for r in rows], fontsize=9)   # 9pt: fits the full metric names (from json)
         ax.axvline(0, color="#607D8B", lw=1.2, zorder=1)             # null: surgery == baseline
         if mode == "ci":
             ax.axvline(1, color=_XB_OURS_GREEN, ls="--", lw=1.4, zorder=1)
@@ -2710,7 +2700,7 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci")
             if mode == "ci" else
             f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · surgery_raw ∈ OURs)")
     fig.suptitle(_sup, fontsize=15, fontweight="bold")
-    fig.subplots_adjust(top=0.90, wspace=0.45, left=0.13, right=0.97, bottom=0.10)
+    fig.subplots_adjust(top=0.90, wspace=0.62, left=0.18, right=0.97, bottom=0.10)   # room for full-name y-labels
     save_fig(fig, str(Path(out_dir) / stem))
     plt.close(fig)
 
@@ -2743,7 +2733,7 @@ def plot_scale_replication(backbones, out_dir):
         pad = (hi - lo) * 0.08 or 0.01
         ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], ls="--", color="#90A4AE", lw=1.0, zorder=1)
         tcol = "#C62828" if (rho != rho or rho < FAIL) else ("#2E7D32" if rho >= 0.5 else "#555")
-        ax.set_title(f"{lbl} {'↑' if _dir == 'hi' else '↓'}\nρ = {rho:.3f}", fontsize=10, fontweight="bold", color=tcol)
+        ax.set_title(f"{lbl} {'↑' if _dir == 'hi' else '↓'}\nρ = {rho:.3f}", fontsize=8, fontweight="bold", color=tcol)   # 8pt: full names fit the small grid panels
         ax.set_xlabel(xlbl, fontsize=8)
         ax.set_ylabel(ylbl, fontsize=8)
         ax.tick_params(labelsize=7)

@@ -48,7 +48,7 @@ from ngpu_run import (  # noqa: E402  (canonical DAG — single source for namin
 from utils.config import get_pipeline_config, load_merged_config  # noqa: E402  (trainers' own loader)
 from utils.arm_registry import display_arms              # noqa: E402  (single-source arm roster)
 from utils.output_paths import (  # noqa: E402  (single source for the backbone-first tree)
-    eval_dir as _eval_dir, eval_root as _eval_root, train_dir as _train_dir)
+    eval_dir as _eval_dir, eval_root as _eval_root, train_dir as _train_dir, head_stage_done)
 
 EMOJI = {"done": "✅", "running": "🔄", "pending": "⬚", "failed": "❌"}
 _MIN_EVAL_POINTS = 5     # eval rate needs a few clips before extrapolating
@@ -1260,6 +1260,18 @@ def main():
 
     def _gl(jid):
         return _GLYPH[classify(jid)] if jid in jobs else " "
+
+    def _e_gl(enc):
+        # the 2-8 (E:) cell: a resume-SKIPPED E: emits no log ◀/✓ so classify()='pending', but if its 4
+        # head-metric outputs exist it IS done → check them directly (head_stage_done, the SAME 'is E: done'
+        # source the scheduler resume-skip uses, so cell and scheduler can't disagree). iter19 2026-07-08.
+        jid = f"E:{enc}"
+        if jid not in jobs:
+            return " "
+        st = classify(jid)
+        if st == "pending" and head_stage_done(mtag, BACKBONE, EVAL_CORPUS, enc):
+            st = "done"
+        return _GLYPH[st]
     g_top = "┌" + bar * EW + "┬" + bar * 5 + ("┬" + bar * PW) * len(_FAN) + "┐"
     g_mid = "├" + bar * EW + "┼" + bar * 5 + ("┼" + bar * PW) * len(_FAN) + "┤"
     g_bot = "└" + bar * EW + "┴" + bar * 5 + ("┴" + bar * PW) * len(_FAN) + "┘"
@@ -1273,7 +1285,7 @@ def main():
         print("  " + g_mid)
         for label, enc in enc_rows:
             cells = "│".join(_gl(f"{p}:{enc}:{m}").center(PW) for p, m in _FAN)
-            print("  │ " + label.ljust(EW - 1) + "│" + _gl(f"E:{enc}").center(5) + "│" + cells + "│")
+            print("  │ " + label.ljust(EW - 1) + "│" + _e_gl(enc).center(5) + "│" + cells + "│")
         print("  " + g_bot)
         _pall = [j for j in jobs if j.startswith(("P:", "F:"))]
         _pc = {k: sum(1 for j in _pall if classify(j) == k) for k in ("done", "running", "pending")}
