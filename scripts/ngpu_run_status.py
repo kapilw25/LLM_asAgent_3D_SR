@@ -1306,10 +1306,20 @@ def main():
                   for a in _garms if a == "frozen" or a in ARM2ENC]
         _gjobs = [j for j in jobs if any(
             j == f"E:{e}" or j.startswith(f"P:{e}:") or j.startswith(f"F:{e}:") for e in _gencs)]
-        _gdone = sum(1 for j in _gjobs if classify(j) == "done")
+        # a resume-SKIPPED gate E: emits no log ◀/✓ so classify()='pending' — count it done when its head-metric
+        # outputs exist (head_stage_done, same fix as the 2-8 cell), else the gate reads 5/6 forever (iter19 07-08).
+        _gdone = sum(1 for j in _gjobs if classify(j) == "done"
+                     or (j.startswith("E:") and head_stage_done(mtag, BACKBONE, EVAL_CORPUS, j[2:])))
         _grun = sum(1 for j in _gjobs if classify(j) == "running")
+        # the gate holds ONLY train jobs (ngpu_run.py:568). If 0 are pending (both arms already trained on a
+        # resume) it holds NOTHING — never print "ARM TRAINING HELD", which reads as a deadlock when it is not.
+        _ng_m = re.search(r"→ (\d+) pending train job", text)
+        _ngated = int(_ng_m.group(1)) if _ng_m else None
         if _gjobs and _gdone == len(_gjobs):
             print(f"  🚦 E0 SSL-head gate ({', '.join(_garms)}): ✅ CLEARED → arm training released")
+        elif _ngated == 0:
+            print(f"  🚦 E0 SSL-head gate ({', '.join(_garms)}): ✅ moot — 0 arm-train jobs to hold "
+                  f"(both arms already trained); {_gdone}/{len(_gjobs)} gate evals done, {_grun} running")
         elif _gjobs:
             print(f"  🚦 E0 SSL-head gate ({', '.join(_garms)}): 🔄 {_gdone}/{len(_gjobs)} evals done, "
                   f"{_grun} running — ARM TRAINING HELD until it clears")
