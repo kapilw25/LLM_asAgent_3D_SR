@@ -762,6 +762,11 @@ probe:
     lr:                1.0e-3        # was REGRESSOR_LR
     wd:                0.05          # was REGRESSOR_WD
     mlp_hidden:        4096          # was REGRESSOR_MLP_HIDDEN
+  future_mse:                        # m12d_future_mse.py (Stage 8 future-frame MSE)
+    decode_workers:    16            # iter19 2026-07-09: zero-idle DecodeFeeder (utils/decode_feeder,
+                                     # SHARED by m12d/e/f). m12d was the last SERIAL decoder — one
+                                     # decode_to_tensor per clip in its forward loop between predictor
+                                     # forwards; feeder workers decode continuously into a bounded ready_q.
   predictor_temporal:                # m12e_predictor_temporal.py (Stages 8b/9b) — iter16 §3.3/§3.4
     batch_size:        4             # EMPIRICAL: BS 4→32 gave ~0× (2.9→3.28 s/clip, 12% SLOWER) — m12e is compute-bound at 98% util (per-clip sequential predictor rollout), NOT batch-starved; low VRAM was a red herring. Reverted to 4. m12e _safe_metric OOM-backoff.
     decode_workers:    16            # iter19 2026-07-07: parallel clip-DECODE pool. m12e decoded clips
@@ -775,6 +780,12 @@ probe:
   encoder_temporal:                  # m12f_encoder_temporal.py (Stages 8c/9c) — iter18 revival + speedups #1-#8
     batch_size:        32            # §opt 4→32: fills idle VRAM; iter18 #4: OOM now HALVES the clip batch
                                      # (recursive sub-batch, m12e safe_metric pattern) instead of sys.exit
+    decode_workers:    16            # iter19 2026-07-08: parallel clip-DECODE pool — mirror of predictor_
+                                     # temporal's 07-07 fix (m12f kept the old serial decode). MEASURED on
+                                     # FULL: pace's uncacheable 64f oversample-decode (a 64f test-set ≈650G
+                                     # > the 600G frame-cache cap → cold every run) decoded one-at-a-time in
+                                     # the forward loop → GPU0 17% util / 0.72 clip/s, while tov (16f cache-
+                                     # hits) ran 99% / 1.18 clip/s. Pool feeds the GPU → forward-bound again.
     tubelet_size:      2             # V-JEPA 2.1 ViT-G tubelet (matches configs/model/vjepa2_1.yaml)
     tov_n_permutations: 4            # TOV/VCOP: identity + 3 frame-shuffles
     pace_strides:      "1,2,4"       # Pace playback rates (sorted, distinct)

@@ -40,9 +40,9 @@ USAGE:
 import argparse
 import json
 import os
-import queue
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -61,6 +61,7 @@ from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog  # noqa
 from utils.checkpoint import save_array_checkpoint, save_json_checkpoint  # noqa: E402
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config  # noqa: E402
 from utils.data_download import ensure_local_data, iter_clips_parallel  # noqa: E402
+from utils.decode_feeder import DecodeFeeder  # noqa: E402
 from utils.frozen_features import ENCODERS, decode_to_tensor  # noqa: E402
 from utils.gpu_batch import cleanup_temp, cuda_cleanup  # noqa: E402
 from utils.predictor_eval import CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_only  # noqa: E402
@@ -291,15 +292,32 @@ def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir
                   f"— discarding (full re-extract)")
     processed = set(clip_ids_all)
 
+    # iter19 2026-07-09: ckpt save OFF the hot path — the inline torch.cat + np.savez of the whole
+    # cumulative feature set (GBs, O(n) per save) stalled the GPU every CHECKPOINT_EVERY clips.
+    # Snapshot = shallow list copies (tensors are append-only, never mutated) → ONE background
+    # writer cats+savez's while the forwards continue; ≤1 outstanding (join before respawn); the
+    # atomic os.replace publish is unchanged, so a crash mid-write never corrupts the ckpt.
+    _ckpt_thread = [None]
+
     def _save_ckpt():
-        arrays = {"metrics": np.array(list(metrics), dtype=object),
-                  "clip_ids": np.array(clip_ids_all, dtype=object)}
-        for m in metrics:
-            arrays[f"feats_{m}"] = torch.cat(feats_all[m], dim=0).numpy()
-            arrays[f"labels_{m}"] = torch.cat(labels_all[m], dim=0).numpy()
-        tmp = out_dir / f".m12f_ckpt_{split_name}.tmp.npz"   # .npz suffix → np.savez keeps it
-        np.savez(tmp, **arrays)
-        os.replace(tmp, ckpt)                                # atomic publish
+        snap_f = {m: list(feats_all[m]) for m in metrics}
+        snap_l = {m: list(labels_all[m]) for m in metrics}
+        snap_ids = list(clip_ids_all)
+        if _ckpt_thread[0] is not None:
+            _ckpt_thread[0].join()
+
+        def _write():
+            arrays = {"metrics": np.array(list(metrics), dtype=object),
+                      "clip_ids": np.array(snap_ids, dtype=object)}
+            for m in metrics:
+                arrays[f"feats_{m}"] = torch.cat(snap_f[m], dim=0).numpy()
+                arrays[f"labels_{m}"] = torch.cat(snap_l[m], dim=0).numpy()
+            tmp = out_dir / f".m12f_ckpt_{split_name}.tmp.npz"   # .npz suffix → np.savez keeps it
+            np.savez(tmp, **arrays)
+            os.replace(tmp, ckpt)
+
+        _ckpt_thread[0] = threading.Thread(target=_write, daemon=True)
+        _ckpt_thread[0].start()                                # atomic publish
 
     clip_q, tar_stop, _r = iter_clips_parallel(
         local_data=args.local_data, subset_keys=set(split_keys), processed_keys=processed)
@@ -327,25 +345,27 @@ def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir
             _save_ckpt()
             since_ckpt = 0
 
+    # iter19 2026-07-09: zero-idle DecodeFeeder (utils/decode_feeder — SHARED by m12d/e/f). The
+    # 07-08 submit-refill pool still square-waved the GPU (measured post-restart: pace duty-cycled
+    # ~75%): its refill only ran on the MAIN thread between future-pops, so during each 32-clip
+    # forward the workers drained and idled. Feeder workers own clip_q→decode→ready_q and never
+    # pause; 3 batches always sit decoded-and-ready when a forward ends. Pixels BYTE-IDENTICAL
+    # (same decode_to_tensor, same args). CPU smoke: 24/24 clips exactly once, consumer wait 7ms
+    # mean vs ~2000ms serial.
+    feeder = DecodeFeeder(
+        clip_q,
+        decode_one=lambda ck, mp4: decode_to_tensor(mp4, tmp_dir, ck, decode_T, CROP),
+        n_workers=max(1, args.decode_workers), ready_depth=args.batch_size * 3, timeout_s=300)
     try:
-        while True:
-            try:
-                item = clip_q.get(timeout=300)
-            except queue.Empty:
-                print(f"  WARN: clip queue timeout on {metrics}/{split_name} — flushing")
-                break
-            if item is None:
-                break
-            clip_key, mp4 = item
-            t = decode_to_tensor(mp4, tmp_dir, clip_key, decode_T, CROP)
-            if t is None:
-                continue
+        for clip_key, t in feeder:
             pend_t.append(t)
             pend_k.append(clip_key)
             if len(pend_t) >= args.batch_size:
                 _flush()
         _flush()
     finally:
+        if _ckpt_thread[0] is not None:
+            _ckpt_thread[0].join()          # let the last background ckpt writer land (atomic publish)
         tar_stop.set()
         pbar.close()
 
@@ -719,6 +739,11 @@ def build_parser():
                    help="encoder tubelet size (V-JEPA 2.1 ViT-G = 2); per model-config")
     p.add_argument("--batch-size", type=int, default=4,
                    help="clips per encoder forward (OOM-protected; lower if Pace OOMs)")
+    p.add_argument("--decode-workers", type=int,
+                   default=_PCFG["probe"]["encoder_temporal"]["decode_workers"],
+                   help="parallel clip-decode threads feeding the forward loop (iter19: pace's uncacheable "
+                        "64f decode starved the GPU serially). Default: pipeline.yaml "
+                        "probe.encoder_temporal.decode_workers.")
     p.add_argument("--seed", type=int, default=_PCFG["probe"]["seed"])
     # — per-metric sweep params (NO defaults — must come from pipeline.yaml at §3.3) —
     p.add_argument("--tov-n-permutations", type=int, required=False,

@@ -29,7 +29,6 @@ USAGE (priority 1: forward on V-JEPA frozen only — DINOv2 path intentionally a
 import argparse
 import json
 import os
-import queue
 import sys
 import tempfile
 import time
@@ -49,6 +48,7 @@ from utils.cache_policy import (
 from utils.checkpoint import save_array_checkpoint, save_json_checkpoint
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config
 from utils.data_download import ensure_local_data, iter_clips_parallel
+from utils.decode_feeder import DecodeFeeder
 from utils.frozen_features import (
     ENCODERS,
     decode_to_tensor,
@@ -310,20 +310,16 @@ def run_forward_stage(args, wb) -> None:
 
         pending_tensors, pending_keys = [], []
         n_since_ckpt = 0
+        # iter19 2026-07-09: zero-idle DecodeFeeder (utils/decode_feeder — SHARED by m12d/e/f).
+        # m12d was the last SERIAL decoder: one decode_to_tensor per clip in the main thread
+        # (~150ms/clip even on cache hits — the torch resize runs on every read) between predictor
+        # forwards. Feeder workers decode continuously; pixels BYTE-IDENTICAL (same call, same args).
+        feeder = DecodeFeeder(
+            clip_q,
+            decode_one=lambda ck, mp4: decode_to_tensor(mp4, tmp_dir, ck, args.num_frames, CROP),
+            n_workers=max(1, args.decode_workers), ready_depth=_PENDING_FLUSH_N * 3, timeout_s=300)
         try:
-            while True:
-                try:
-                    item = clip_q.get(timeout=300)
-                except queue.Empty:
-                    print("  WARN: clip queue timeout (5 min) -- flushing pending")
-                    break
-                if item is None:
-                    break
-                clip_key, mp4_bytes = item
-                t = decode_to_tensor(mp4_bytes, tmp_dir, clip_key, args.num_frames, CROP)
-                if t is None:
-                    print(f"  SKIP (decode fail): {clip_key}")
-                    continue
+            for clip_key, t in feeder:
                 pending_tensors.append(t)
                 pending_keys.append(clip_key)
 
@@ -525,6 +521,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="probe_action output dir (provides action_labels.json test split)")
     p.add_argument("--output-root", type=Path, required=True)
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT)
+    p.add_argument("--decode-workers", type=int,
+                   default=_PCFG["probe"]["future_mse"]["decode_workers"],
+                   help="parallel clip-decode threads feeding the forward loop (iter19 zero-idle "
+                        "DecodeFeeder). Default: pipeline.yaml probe.future_mse.decode_workers.")
     p.add_argument("--seed", type=int, default=_PCFG["probe"]["seed"])   # was 99 literal
     add_cache_policy_arg(p)
     add_wandb_args(p)

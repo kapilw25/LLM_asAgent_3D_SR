@@ -780,6 +780,58 @@ def maybe_metrics_plots(mtag, mode):
         print(f"  📊 {_comb}")
 
 
+_BURN_RE = re.compile(r"^ngpu_run_(?P<mode>[a-z]+)_(?P<rest>.+)_(?P<ts>\d{8}_\d{6})\.log$")
+_BURN_METRICS = ("teacher_free", "maskratio", "rollout", "causal", "tdist", "order",
+                 "all", "aot", "tov", "pace", "tcc")
+
+
+def _logs_burn():
+    """Audited GPU burn (iter19 2026-07-09, user order: the research-group compute bill).
+    EVERY logs/ngpu_run_*.log is one GPU-job execution; its wall = mtime − filename start-stamp
+    (validated: tov 162457 → 5h50m45s vs its own pbar 5:50:15). Summing ALL segments prices the
+    TRUE burn — aborted attempts, retries, redone evals, sanity smokes — unlike the projection
+    table (current roster, done+estimated). Buckets: arm → {train,eval} (frozen under 'frozen';
+    eval col = E:+P:+F: wrappers); 'labels+merges' pooled; every non-FULL mode pooled under
+    'sanity'. The m09a seed trained on Box A; 07-08 its wrappers were copied into logs/ (from
+    iter/iter19_train_115kclips/logs/seed_training) with mtimes RESTORED from log content (the copy
+    had stamped all files 08:25:35) — so the seed's 18h05m train wall is now priced like the rest."""
+    enc2arm = {enc_name(e): a for a, e in ARM2ENC.items()}
+    enc2arm[enc_name("frozen")] = "frozen"
+    burn = {}
+
+    def _add(bucket, col, secs):
+        burn.setdefault(bucket, {"train": 0.0, "eval": 0.0})[col] += secs
+
+    for p in (REPO / "logs").glob("ngpu_run_*.log"):
+        m = _BURN_RE.match(p.name)
+        if not m:
+            continue
+        try:
+            start = datetime.strptime(m["ts"], "%Y%m%d_%H%M%S").timestamp()
+            secs = max(0.0, p.stat().st_mtime - start)   # still-running logs → burn-to-now
+        except (ValueError, OSError):
+            continue
+        mode, rest = m["mode"], m["rest"]
+        if mode != "full":
+            _add("sanity", "train" if rest.startswith("train_") else "eval", secs)
+        elif rest.startswith("train_"):
+            _add(rest[6:], "train", secs)
+        elif rest.startswith("eval_"):
+            _add(enc2arm.get(rest[5:], rest[5:]), "eval", secs)
+        elif rest.startswith(("pt_", "et_")):
+            body = rest.split("_", 1)[1]
+            for met in _BURN_METRICS:
+                if body.endswith("_" + met):
+                    body = body[: -len(met) - 1]
+                    break
+            _add(enc2arm.get(body, body), "eval", secs)
+        elif rest == "labels" or rest.startswith("merge_"):
+            _add("labels+merges", "eval", secs)
+        else:
+            _add("other", "eval", secs)
+    return burn
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["POC", "SANITY", "FULL"], default="POC")
@@ -891,6 +943,18 @@ def main():
     now_hms = datetime.now(timezone.utc).strftime("%H:%M:%S")
     now_s = _sod(now_hms)
 
+    _hsd_cache = {}
+
+    def _e_skip_done(enc):
+        # a resume-SKIPPED E: emits no ◀/✓ (classify's log markers) yet IS done when its 4 head-metric
+        # outputs exist — the same disk-truth the scheduler's skip / the 2-8 fan cell / the E0 gate line
+        # use (head_stage_done). Overlaying it HERE makes the arm-table group cell, the Σ totals and every
+        # other classify() consumer agree at once — 07-08 frozen read '⬚ ~9h10m' after ~59h of real burn
+        # because its E: was skip-resumed with no log marker. Memoized: classify runs 100s×/render.
+        if enc not in _hsd_cache:
+            _hsd_cache[enc] = head_stage_done(mtag, BACKBONE, EVAL_CORPUS, enc)
+        return _hsd_cache[enc]
+
     def classify(jid):
         if jid in done:
             return "done"
@@ -898,6 +962,8 @@ def main():
             return "failed"
         if jid in launched:
             return "running"
+        if jid.startswith("E:") and _e_skip_done(jid[2:]):
+            return "done"
         return "pending"
 
     def elapsed(jid):
@@ -1209,6 +1275,25 @@ def main():
     if _show_frozen:
         print("│ " + "📊 frozen (eval-only)".ljust(SW - 1) + "│" + " —".ljust(CW) + "│ "
               + _eval_group_cell(enc_name("frozen")).ljust(CW - 1) + "│")
+    # iter19 2026-07-09 (user order): the SEED row — pretrain_encoder is skip-arms'd out of this
+    # run's jobs, but the research-group bill needs it visible. eval = audited wall of its prior-run
+    # E:/P:/F: wrapper logs on THIS box (_logs_burn); train ran on Box A whose logs never came here
+    # → shown unpriced ("Box A, unlogged"), never an invented number.
+    _burn = _logs_burn()
+    _pt = "pretrain_encoder"
+    _pt_extra = {"train": 0.0, "eval": 0.0}   # the seed row's audited walls — folded into Σ TOTAL below
+    if (_pt in ARM2ENC and f"T:{BACKBONE}:{_pt}" not in jobs
+            and f"E:{enc_name(ARM2ENC[_pt])}" not in jobs and _pt in _burn):
+        _ptb = _pt_extra = _burn[_pt]
+        _tr = f"✅ {_dur(_ptb['train'])} (audit)" if _ptb["train"] else "✅ (Box A, unlogged)"
+        # eval verdict from disk, not from the log's exit code: the seed's E: was killed mid-run when it
+        # was SKIP'd post-gate — its 4 head-metric outputs never landed, so head_stage_done=False → the
+        # burn is real but the eval is ABORTED/incomplete, and the group table must say so (user 07-08).
+        _pt_ok = head_stage_done(mtag, BACKBONE, EVAL_CORPUS, enc_name(ARM2ENC[_pt]))
+        _ev = ((f"✅ {_dur(_ptb['eval'])} (audit)" if _pt_ok else f"❌ {_dur(_ptb['eval'])} (aborted)")
+               if _ptb["eval"] else " —")
+        print("│ " + f"🚂 {_pt} (seed)".ljust(SW - 1) + "│ "
+              + _tr.ljust(CW - 1) + "│ " + _ev.ljust(CW - 1) + "│")
     for arm in DISPLAY_ORDER:        # incl. the wiseft merge — its row is built like any other
         tj, ej = f"T:{BACKBONE}:{arm}", f"E:{enc_name(ARM2ENC[arm])}"
         if tj not in jobs and ej not in jobs:
@@ -1236,11 +1321,48 @@ def main():
         return tot
 
     t_tot, e_tot = _col_total("train"), _col_total("eval")
+    # iter19 2026-07-08 (user task2/3): fold the seed row into the Σ bill — _col_total prices only this
+    # run's `jobs`, so the skip-arms'd seed was missing: Σ train read 59h59m when the true trained-hours
+    # are ≈78h (18h05m seed + 30h11m peft_lora + 29h47m diheavy). Its aborted 10h21m eval burn counts
+    # too (real GPU spend). Gated on the seed row actually rendering (_pt_extra stays 0 otherwise), so a
+    # run that trains the seed itself (T: job in `jobs`) is never double-counted.
+    t_tot += _pt_extra["train"]
+    e_tot += _pt_extra["eval"]
     print("├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
     print("│ " + "Σ TOTAL (done + estimated)".ljust(SW - 1) + "│ "
           + f"Σ {_dur(t_tot)}".ljust(CW - 1) + "│ " + f"Σ {_dur(e_tot)}".ljust(CW - 1) + "│")
     print("└" + bar * SW + "┴" + bar * CW + "┴" + bar * CW + "┘")
     print(f"  Σ compute bill (train+eval, done+estimated): ~{_dur(t_tot + e_tot)} GPU-time")
+
+    # ── 💰 audited GPU burn — the ACTUAL bill from logs/ (all runs: aborted, retried, redone,
+    # sanity), vs the projection table above. iter19 2026-07-09, user order (research-group bill).
+    _blabel = {"frozen": "📊 frozen", "labels+merges": "🏷 labels+merges",
+               "sanity": "🧪 sanity smokes (all)", "other": "❓ other"}
+    _border = ([_pt] if _pt in _burn else []) \
+        + [a for a in DISPLAY_ORDER if a in _burn and a != _pt] \
+        + [k for k in ("frozen", "labels+merges", "sanity", "other") if k in _burn]
+    print("\n  💰 audited GPU burn from logs/ (every run segment on this box, incl. aborted/redone)")
+    print("  ┌" + bar * SW + "┬" + bar * CW + "┬" + bar * CW + "┐")
+    print("  │" + " burn bucket".ljust(SW) + "│" + " train (actual)".ljust(CW) + "│" + " eval (actual)".ljust(CW) + "│")
+    print("  ├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
+    _bt = _be = 0.0
+    for k in _border:
+        v = _burn[k]
+        _bt, _be = _bt + v["train"], _be + v["eval"]
+        lbl = _blabel.get(k, f"{kemoji(k)} {k}" + (" (seed)" if k == _pt else ""))
+        tr = f"{_dur(v['train'])}" if v["train"] else ("(Box A, unlogged)" if k == _pt else "—")
+        print("  │ " + lbl.ljust(SW - 1) + "│ " + tr.ljust(CW - 1) + "│ "
+              + (_dur(v["eval"]) if v["eval"] else "—").ljust(CW - 1) + "│")
+    print("  ├" + bar * SW + "┼" + bar * CW + "┼" + bar * CW + "┤")
+    print("  │ " + "Σ audited so far".ljust(SW - 1) + "│ " + f"Σ {_dur(_bt)}".ljust(CW - 1)
+          + "│ " + f"Σ {_dur(_be)}".ljust(CW - 1) + "│")
+    print("  └" + bar * SW + "┴" + bar * CW + "┴" + bar * CW + "┘")
+    _rem_tot = sum(remaining.get(j, 0.0) for j in jobs if classify(j) in ("running", "pending"))
+    # the Box-A footnote self-retires: 07-08 the seed's Box-A wrappers were copied into logs/ (from
+    # iter/iter19_train_115kclips/logs/seed_training, mtimes restored from log content) → counted.
+    _note = "" if _burn.get(_pt, {}).get("train") else "  (excl. Box-A seed train — unlogged here)"
+    print(f"  💰 audited so far ≈ {_dur(_bt + _be)} GPU-time · + est. remaining {_dur(_rem_tot)}"
+          f" → grand ≈ {_dur(_bt + _be + _rem_tot)}{_note}")
 
     # ── Stage-8b metric fan: encoder × 6 predictor-temporal metrics, LIVE grid (iter18 2026-06-07) ──
     # Makes the metric-parallel fan-out visible — each cell = the P:<enc>:<metric> job's state.

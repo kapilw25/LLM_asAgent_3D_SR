@@ -375,7 +375,8 @@
       "Bash(xargs -r ls -la)",
       "Bash(awk '{print \" \"$5\" \"$6\" \"$7\" \"$8\" \"$9}')",
       "Bash(awk '{print \"  keys: \"$5\" \"$9}')",
-      "Bash(awk '/_CATALOG *=/{f=1} f{print NR\": \"$0} f&&/^\\\\]|^\\\\}/{exit}' src/m13_eval_plot.py)"
+      "Bash(awk '/_CATALOG *=/{f=1} f{print NR\": \"$0} f&&/^\\\\]|^\\\\}/{exit}' src/m13_eval_plot.py)",
+      "Bash(awk '{print \"  disk: \"$3\" used, \"$4\" free, \"$5}')"
     ]
   }
 }
