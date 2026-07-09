@@ -193,7 +193,11 @@ def token_grid(num_frames):
 def temporal_token_idx(num_frames, t_slots) -> torch.Tensor:
     """LongTensor of token indices belonging to the given temporal slot ids."""
     _, _, _, S = token_grid(num_frames)
-    return torch.tensor([t * S + j for t in t_slots for j in range(S)], dtype=torch.long)
+    # iter19 2026-07-09 (CPU→GPU audit): vectorized the O(len(t_slots)·S) python double-loop (built up to
+    # ~18k elems element-by-element) into deterministic index arithmetic. Same t*S+j row-major order →
+    # byte-identical (smoke: torch.equal vs the old comprehension across single/multi/empty t_slots).
+    t = torch.as_tensor(list(t_slots), dtype=torch.long)
+    return (t.unsqueeze(1) * S + torch.arange(S, dtype=torch.long)).reshape(-1)
 
 
 def to_pixel(batch: torch.Tensor) -> torch.Tensor:
@@ -351,7 +355,10 @@ def perclip_slope(L: np.ndarray, x) -> np.ndarray:
 
 def expand_mask(idx: torch.Tensor, B: int) -> torch.Tensor:
     """(n,) token-index LongTensor → (B, n) on cuda (same mask broadcast across the batch)."""
-    return idx.unsqueeze(0).expand(B, -1).contiguous().to("cuda")
+    # iter19 2026-07-09 (CPU→GPU audit): move the (n,) index to cuda BEFORE the B× expand+contiguous, so
+    # the host→device copy is n longs (~0.15 MB) not B·n (~4.2 MB at B=32, n≈16.5k) — the expand then
+    # materializes on-GPU. Byte-identical integer broadcast (device placement doesn't change values).
+    return idx.to("cuda").unsqueeze(0).expand(B, -1).contiguous()
 
 
 __all__ = [

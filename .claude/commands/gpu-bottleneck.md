@@ -62,9 +62,16 @@ pool worker gets 1 thread, so the multi-thread number lies about worker cost (22
 (b) H2D is almost never the wall (113 MB @ PCIe gen4 ≈ 5 ms) — don't "optimize" it first;
 (c) a cumulative `np.savez` ckpt is O(n) and GROWS — time it at current n, not at n=0.
 
-### Step 3b — AUDIT every remaining CPU op for CUDA-movability
-Grep the hot path (consumer/main thread): `torch\.(stack|cat)|index_select|\.cpu\(\)|np\.` — then
-apply the rubric per op: (1) per-batch or one-shot? one-shot ≈ never worth it; (2) measured share of
+### Step 3b — AUDIT every CPU op for CUDA-movability — READ the compute paths, do NOT grep them
+Grep alone MISSES the biggest wins and has burned this twice (07-09): a metric that is 100% CPU — e.g.
+an N×N cosine similarity built entirely in numpy — has ZERO `.to("cuda")`/`index_select` sites, so a
+grep for movable ops returns nothing while the whole bottleneck hides in plain sight (I grepped, declared
+"only the tcc gather needs it", and the user had to spot the numpy matmul by eye). So when ≥2 files are in
+scope, launch ONE audit agent PER FILE, all in a single parallel batch (Agent tool): each READS its file's
+hot path end-to-end — the per-clip / per-batch / per-metric compute AND the helpers it calls in utils/ —
+and returns a table `file:line | op | size | A=pure-move(byte-identical)/B=value-changing | per-clip /
+per-batch / one-shot`. Grep is only a supplement to confirm a site, never the audit itself. Then apply the
+rubric per op: (1) per-batch or one-shot? one-shot ≈ never worth it; (2) measured share of
 the batch wall — <1% skip; (3) VALUE-CHANGING (matmul/resize/interp/reductions → validity-gated,
 clean-slate only) vs pure DATA MOVEMENT (stack/cat/flip/permute/index_select → byte-identical,
 PROVE with `torch.equal(cpu_out, gpu_out.cpu())`); (4) the mover is usually ONE line at the dispatch

@@ -451,14 +451,20 @@ def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
     for i, ck in enumerate(test_clip_ids):
         a = labels_map[ck]["class_id"]  # action_labels schema: {class, class_id, split}
         by_action.setdefault(a, []).append(i)
-    pairs_a, pairs_b = [], []
+    # iter19 2026-07-09 (CPU→GPU audit): the enumeration below was an O(P) python triple-loop — ~70M
+    # list.append calls (~10s single-thread at 0% GPU, bracketing the already-GPU pairwise matmul).
+    # Vectorized per action group with np.triu_indices(k=1), which yields the IDENTICAL (ii<jj) row-major
+    # order as the double loop → pairs_a/pairs_b byte-identical, so the chunked gather + np.add.at means
+    # downstream are unchanged (smoke-verified array-equal). Pure index construction; no fp math.
+    _pa_parts, _pb_parts = [], []
     for _a, idxs in by_action.items():
         if len(idxs) < 2:
             continue
-        for ii in range(len(idxs)):
-            for jj in range(ii + 1, len(idxs)):
-                pairs_a.append(idxs[ii])
-                pairs_b.append(idxs[jj])
+        _idx = np.asarray(idxs)
+        _ii, _jj = np.triu_indices(len(idxs), k=1)
+        _pa_parts.append(_idx[_ii]); _pb_parts.append(_idx[_jj])
+    pairs_a = np.concatenate(_pa_parts) if _pa_parts else np.empty(0, dtype=np.intp)
+    pairs_b = np.concatenate(_pb_parts) if _pb_parts else np.empty(0, dtype=np.intp)
     n_pairs = len(pairs_a)
     if n_pairs == 0:
         raise SystemExit("FATAL: TCC produced 0 pairs — every action class has <2 test clips")
@@ -472,8 +478,11 @@ def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
     # (index_select). Byte-identical; feats on-GPU BEFORE the chunk-size heuristic so free_b accounts for
     # it; + a progress bar so it can never be a silent stall again.
     feats = feats.to(dev)
-    pa = torch.as_tensor(np.asarray(pairs_a), dtype=torch.long, device=dev)
-    pb = torch.as_tensor(np.asarray(pairs_b), dtype=torch.long, device=dev)
+    # pa/pb stay NUMPY: device_gather converts each chunk slice pa[s:e] to a GPU long tensor internally
+    # (a ~0.5MB H2D per chunk, negligible), AND the per-clip np.add.at accumulation below (~L499-504)
+    # requires numpy indices — making pa/pb CUDA tensors crashed np.add.at ("can't convert cuda tensor
+    # to numpy"): the pairwise loop ran (34.8M pairs/95s) but the aggregation right after it aborted.
+    pa, pb = np.asarray(pairs_a), np.asarray(pairs_b)
     cyc_all = np.empty(n_pairs, dtype=np.float64)
     tau_all = np.empty(n_pairs, dtype=np.float64)
     chunk = _resolve_tcc_pair_chunk(args.tcc_pair_chunk, feats.shape[1], feats.shape[2], n_pairs)
