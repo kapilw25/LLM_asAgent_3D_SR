@@ -49,7 +49,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.action_labels import load_action_labels
-from utils.bootstrap import bootstrap_ci, paired_bca
+from utils.bootstrap import bootstrap_ci, paired_bca, parallel_bca
 from utils.cache_policy import (
     add_cache_policy_arg,
     guarded_delete,
@@ -744,7 +744,10 @@ def run_paired_delta_stage(args, wb) -> None:
     # Pairwise alignment: per-encoder key order is non-deterministic (Stage 2
     # iter_clips_parallel uses N concurrent TAR readers), so we intersect keys
     # for each pair separately. Pattern ported from probe_future_mse.py:447-529.
+    # iter19 2026-07-09: collect the (pair) deltas then ONE parallel_bca (byte-identical fixed-seed BCa),
+    # consistent with the taxonomy/predictor finale stages; same schema/order/values.
     pairwise_deltas = {}
+    _units, _slots = [], []
     for i, a in enumerate(available):
         for b in available[i + 1:]:
             ka, kb = enc_data[a]["keys"], enc_data[b]["keys"]
@@ -757,17 +760,19 @@ def run_paired_delta_stage(args, wb) -> None:
             a_arr = np.array([enc_data[a]["preds"][ai[k]] for k in shared], dtype=np.float32)
             b_arr = np.array([enc_data[b]["preds"][bi[k]] for k in shared], dtype=np.float32)
             delta = a_arr - b_arr
-            bca = paired_bca(delta)
-            pairwise_deltas[f"{a}_minus_{b}"] = {
-                "n_shared":       int(len(shared)),
-                "delta_pp":       round(float(delta.mean()) * 100, 4),
-                "ci_lo_pp":       round(float(bca["ci_lo"]) * 100, 4),
-                "ci_hi_pp":       round(float(bca["ci_hi"]) * 100, 4),
-                "ci_half_pp":     round(float(bca["ci_half"]) * 100, 4),
-                "p_value":        float(bca["p_value_vs_zero"]),
-                "gate_pass":      bool(bca["ci_lo"] > 0),
-                "interpretation": f"{a} - {b} > 0 means {a} more accurate than {b}",
-            }
+            _units.append(delta)
+            _slots.append((a, b, int(len(shared)), round(float(delta.mean()) * 100, 4)))
+    for (a, b, n_shared, dpp), bca in zip(_slots, parallel_bca(_units)):
+        pairwise_deltas[f"{a}_minus_{b}"] = {
+            "n_shared":       n_shared,
+            "delta_pp":       dpp,
+            "ci_lo_pp":       round(float(bca["ci_lo"]) * 100, 4),
+            "ci_hi_pp":       round(float(bca["ci_hi"]) * 100, 4),
+            "ci_half_pp":     round(float(bca["ci_half"]) * 100, 4),
+            "p_value":        float(bca["p_value_vs_zero"]),
+            "gate_pass":      bool(bca["ci_lo"] > 0),
+            "interpretation": f"{a} - {b} > 0 means {a} more accurate than {b}",
+        }
 
     # iter15 Phase 8 (2026-05-17): paper-Δ definitions moved from hardcoded
     # ITER14_DELTAS list to configs/eval/paired_deltas.yaml. Single source of

@@ -6,7 +6,7 @@ USAGE:
     # clean MIRROR [delete file on HF, if doesnt exist on disk]
     HF_UPLOAD_MODE=reuse python -u src/utils/hf_outputs.py upload outputs/poc/ 2>&1 | tee logs/upload_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     # only ADDITIVE (token-safe, no-delete — reads HF_TOKEN from .env). USE THIS, not the bare `hf` CLI below,
-    python -u src/utils/hf_outputs.py upload-additive outputs/poc 2>&1 | tee logs/upload_large_folder_outputs_poc_$(date +%Y%m%d_%H%M%S).log
+    python -u src/utils/hf_outputs.py upload-additive outputs/ 2>&1 | tee logs/upload_large_outputs_pocNfull_$(date +%Y%m%d_%H%M%S).log
     # VERIFY UPLOAD
     python -u src/utils/hf_outputs.py verify outputs/poc 2>&1 | tee logs/verify_outputs_poc_$(date +%Y%m%d_%H%M%S).log
 
@@ -1505,7 +1505,12 @@ def upload_additive(subfolder: str):
     print(f"upload-additive (no-delete, auth from .env): {sub}/**  ->  {HF_OUTPUTS_REPO}")
     HfApi(token=token).upload_large_folder(
         repo_id=HF_OUTPUTS_REPO, repo_type="dataset", folder_path=".",
-        allow_patterns=[f"{sub}/**"], ignore_patterns=["**/.*"],
+        # ignore dotfile scratch (.m12f_ckpt / .probe_*) AND the transient per-clip decode dirs. A LIVE
+        # eval job creates+deletes tmp_decode_*/tmp*/<clip>.mp4 between the upload's path-scan and its
+        # per-file stat() → FileNotFoundError crash (2026-07-09). These are regenerable scratch, never
+        # meant for HF, so excluding them both fixes the race AND keeps the upload complete.
+        allow_patterns=[f"{sub}/**"],
+        ignore_patterns=["**/.*", "**/tmp_decode_*/**", "**/tmp_decode_*"],
     )
     print(f"upload-additive complete: {sub}/** committed additively (remote-only files preserved)")
     return True

@@ -81,6 +81,27 @@ def paired_bca(deltas: np.ndarray, n_boot: int = N_BOOTSTRAP,
     }
 
 
+def parallel_bca(deltas, n_boot: int = N_BOOTSTRAP, ci: float = CI_LEVEL,
+                 seed: int = _DEFAULT_SEED, max_workers: int = None) -> list:
+    """BYTE-IDENTICAL parallel of ``[paired_bca(d, n_boot, ci, seed) for d in deltas]``.
+
+    iter19 2026-07-09: each unit seeds a FRESH ``default_rng(seed)`` with the fixed ``_DEFAULT_SEED``,
+    so its BCa CI is order- and worker-count-INDEPENDENT — fanning the independent metric×pair (or
+    dim×pair) units across processes gives bit-for-bit the SAME CIs/p-values as the serial loop (the
+    RNG is preserved; unlike a GPU port). Built for the finale paired-Δ stages: taxonomy's 16 dims × 3
+    pairs × 10K resamples ran ~14 min single-core; fanned across the box's cores it's ~1-2 min. ≤1 unit
+    → serial (no pool overhead). fork start-method shares the already-imported scipy/numpy → cheap
+    spawn; each unit's bootstrap is index-bound (not BLAS-bound), so PROCESS fan-out is the right axis."""
+    units = list(deltas)
+    if len(units) <= 1:
+        return [paired_bca(d, n_boot, ci, seed) for d in units]
+    import multiprocessing as mp
+    workers = min(len(units), max_workers or mp.cpu_count())
+    with mp.get_context("fork").Pool(workers) as pool:
+        return pool.starmap(paired_bca, [(np.asarray(d, dtype=np.float64), n_boot, ci, seed)
+                                         for d in units])
+
+
 def bootstrap_ci(per_query_scores: np.ndarray, n_boot: int = N_BOOTSTRAP,
                  ci: float = CI_LEVEL, seed: int = _DEFAULT_SEED) -> dict:
     """Compute bootstrap 95% CI on per-query metric scores."""

@@ -1,0 +1,17 @@
+{
+  "variant": "vjepa_2_1_vitg_peft_lora_encoder",
+  "metric": "maskratio",
+  "n_test": 23106,
+  "mean": 0.057766,
+  "std": 0.014444,
+  "ci": {
+    "mean": 0.057766,
+    "ci_lo": 0.057582,
+    "ci_hi": 0.057954,
+    "ci_half": 0.000186
+  },
+  "lower_is_better": true,
+  "interpretation": "L1-vs-maskratio slope; lower = graceful degrade",
+  "num_frames": 16,
+  "encoder_ckpt": "outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt"
+}

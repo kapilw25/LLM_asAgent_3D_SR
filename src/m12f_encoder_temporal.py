@@ -53,7 +53,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils import et_aot, et_pace, et_tcc, et_tov  # noqa: E402
 
 from utils.action_labels import load_action_labels  # noqa: E402
-from utils.bootstrap import paired_bca  # noqa: E402
+from utils.bootstrap import parallel_bca  # noqa: E402
 from utils.cache_policy import (  # noqa: E402
     add_cache_policy_arg, guarded_delete, resolve_cache_policy_interactive,
 )
@@ -706,7 +706,11 @@ def run_forward_stage(args, wb):
 def run_paired_per_variant_stage(args, wb):
     """Pairwise BCa Δ across discovered vjepa variants, per metric."""
     metrics = _resolve_metrics(args.metric)
+    # iter19 2026-07-09: PASS 1 builds every (metric, pair[, tcc-field]) delta; ONE parallel_bca fans all
+    # the 10K-resample BCa across cores (byte-identical — fixed per-unit seed); PASS 2 assembles. Same
+    # schema/order/values (metric order, i<j pairs, tcc's cycle_back/kendalls_tau split, lower_is_better).
     out = {"metrics": {}}
+    _units, _slots, _meta = [], [], {}
     for m in metrics:
         by_variant = {}
         if m == "tcc":
@@ -724,7 +728,7 @@ def run_paired_per_variant_stage(args, wb):
                     "keys": [str(k) for k in np.load(ids, allow_pickle=True)],
                 }
             avail = sorted(by_variant)
-            deltas = {"cycle_back": {}, "kendalls_tau": {}}
+            _meta["tcc"] = ({v: by_variant[v]["agg"] for v in avail}, True, None)
             for i, a in enumerate(avail):
                 for b in avail[i + 1:]:
                     ka, kb = by_variant[a]["keys"], by_variant[b]["keys"]
@@ -736,18 +740,9 @@ def run_paired_per_variant_stage(args, wb):
                     for fld in ("cycle", "tau"):
                         d = (np.array([by_variant[a][fld][ai[k]] for k in shared])
                              - np.array([by_variant[b][fld][bi[k]] for k in shared]))
-                        bca = paired_bca(d)
                         outfld = "cycle_back" if fld == "cycle" else "kendalls_tau"
-                        deltas[outfld][f"{a}_minus_{b}"] = {
-                            "n": len(shared), "delta_mean": round(float(d.mean()), 6),
-                            "delta_ci_lo": round(float(bca["ci_lo"]), 6),
-                            "delta_ci_hi": round(float(bca["ci_hi"]), 6),
-                            "p_value": float(bca["p_value_vs_zero"]),
-                        }
-            out["metrics"]["tcc"] = {
-                "by_variant": {v: by_variant[v]["agg"] for v in avail},
-                "pairwise_deltas": deltas,
-            }
+                        _units.append(d)
+                        _slots.append(("tcc", outfld, f"{a}_minus_{b}", len(shared), round(float(d.mean()), 6)))
             continue
         # trainable-head metrics
         for v in KNOWN_VARIANTS:
@@ -768,7 +763,7 @@ def run_paired_per_variant_stage(args, wb):
                 "keys": dedup,
             }
         avail = sorted(by_variant)
-        deltas = {}
+        _meta[m] = ({v: by_variant[v]["agg"] for v in avail}, False, METRICS[m][0])
         for i, a in enumerate(avail):
             for b in avail[i + 1:]:
                 ka, kb = by_variant[a]["keys"], by_variant[b]["keys"]
@@ -779,18 +774,27 @@ def run_paired_per_variant_stage(args, wb):
                 bi = {k: j for j, k in enumerate(kb)}
                 d = (np.array([by_variant[a]["vals"][ai[k]] for k in shared])
                      - np.array([by_variant[b]["vals"][bi[k]] for k in shared]))
-                bca = paired_bca(d)
-                deltas[f"{a}_minus_{b}"] = {
-                    "n": len(shared), "delta_mean": round(float(d.mean()), 6),
-                    "delta_ci_lo": round(float(bca["ci_lo"]), 6),
-                    "delta_ci_hi": round(float(bca["ci_hi"]), 6),
-                    "p_value": float(bca["p_value_vs_zero"]),
-                }
-        out["metrics"][m] = {
-            "by_variant": {v: by_variant[v]["agg"] for v in avail},
-            "pairwise_deltas": deltas,
-            "lower_is_better": METRICS[m][0],
+                _units.append(d)
+                _slots.append((m, None, f"{a}_minus_{b}", len(shared), round(float(d.mean()), 6)))
+    _bcas = parallel_bca(_units)   # ONE fan-out; byte-identical to per-unit paired_bca(d)
+    _pd = {}
+    for (m, outfld, pkey, n, dmean), bca in zip(_slots, _bcas):
+        entry = {
+            "n": n, "delta_mean": dmean,
+            "delta_ci_lo": round(float(bca["ci_lo"]), 6),
+            "delta_ci_hi": round(float(bca["ci_hi"]), 6),
+            "p_value": float(bca["p_value_vs_zero"]),
         }
+        if outfld is not None:   # tcc → nested cycle_back / kendalls_tau
+            _pd.setdefault(m, {"cycle_back": {}, "kendalls_tau": {}})[outfld][pkey] = entry
+        else:
+            _pd.setdefault(m, {})[pkey] = entry
+    for m, (by_variant_agg, is_tcc, lib) in _meta.items():
+        node = {"by_variant": by_variant_agg,
+                "pairwise_deltas": _pd.get(m, {"cycle_back": {}, "kendalls_tau": {}} if is_tcc else {})}
+        if not is_tcc:
+            node["lower_is_better"] = lib
+        out["metrics"][m] = node
     save_json_checkpoint(out, args.output_root / "encoder_temporal_per_variant.json")
     log_metrics(wb, {"n_metrics": len(out["metrics"])})
     print(json.dumps(out, indent=2))

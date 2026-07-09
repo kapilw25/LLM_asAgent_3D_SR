@@ -1,0 +1,32 @@
+{
+  "encoder": "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder",
+  "n_classes": 14,
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__leftward",
+    "medium__rightward",
+    "medium__upward",
+    "slow__downward",
+    "slow__leftward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ],
+  "n_test": 23106,
+  "top1_acc": 0.5673850947805765,
+  "top1_ci": {
+    "mean": 0.567385,
+    "ci_lo": 0.560893,
+    "ci_hi": 0.573661,
+    "ci_half": 0.006384
+  },
+  "best_val_acc": 0.5598260869565217,
+  "probe_lr": 0.0005,
+  "warmup_pct": 0.0,
+  "epochs": 20
+}

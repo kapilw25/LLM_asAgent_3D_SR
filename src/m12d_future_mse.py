@@ -39,7 +39,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.action_labels import load_action_labels
-from utils.bootstrap import bootstrap_ci, paired_bca
+from utils.bootstrap import bootstrap_ci, parallel_bca
 from utils.cache_policy import (
     add_cache_policy_arg,
     guarded_delete,
@@ -416,6 +416,7 @@ def run_paired_per_variant_stage(args, wb) -> None:
     print(f"Variants found: {available}")
     pairwise_deltas = {}
     if len(available) >= _MIN_COMPARABLE:
+        _units, _slots = [], []   # iter19: collect deltas → ONE parallel_bca (byte-identical fixed-seed BCa)
         for a, b in [(available[i], available[j])
                      for i in range(len(available))
                      for j in range(i + 1, len(available))]:
@@ -448,10 +449,12 @@ def run_paired_per_variant_stage(args, wb) -> None:
                 a_arr = by_variant[a]["_per_clip_mse"]
                 b_arr = by_variant[b]["_per_clip_mse"]
             delta = a_arr - b_arr             # >0 means a worse than b on MSE (lower=better)
-            bca = paired_bca(delta)
+            _units.append(delta)
+            _slots.append((a, b, int(len(delta)), round(float(delta.mean()), 6)))
+        for (a, b, n, dmean), bca in zip(_slots, parallel_bca(_units)):
             pairwise_deltas[f"{a}_minus_{b}"] = {
-                "n": int(len(delta)),
-                "delta_mean": round(float(delta.mean()), 6),
+                "n": n,
+                "delta_mean": dmean,
                 "delta_ci_lo": round(float(bca["ci_lo"]), 6),
                 "delta_ci_hi": round(float(bca["ci_hi"]), 6),
                 "delta_ci_half": round(float(bca["ci_half"]), 6),

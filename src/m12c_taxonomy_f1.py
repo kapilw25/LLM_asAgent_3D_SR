@@ -48,7 +48,7 @@ import torch
 import torch.nn.functional as F
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils.bootstrap import bootstrap_ci, paired_bca
+from utils.bootstrap import bootstrap_ci, parallel_bca
 from utils.cache_policy import (
     add_cache_policy_arg, resolve_cache_policy_interactive,
 )
@@ -435,6 +435,11 @@ def run_paired_delta_stage(args, wb) -> None:
     # Union of dim names across encoders. Any dim missing in any encoder → skipped.
     common_dims = set.intersection(*[set(d.keys()) for d in enc_data.values()])
     out = {"dims": {}}
+    # iter19 2026-07-09: the 10K-resample BCa over 16 dims × 3 pairs ran ~14 min single-core. The units
+    # are independent + fixed-seeded, so PASS 1 builds every (dim, pair) delta (cheap I/O + subtraction),
+    # ONE parallel_bca fans all the BCa across cores (byte-identical CIs — same seed per unit), and PASS 2
+    # assembles. Output schema/order/values UNCHANGED (dim-major, i<j pair order preserved).
+    _units, _slots, _dim_meta = [], [], {}
     for dim_name in sorted(common_dims):
         if any(enc_data[e][dim_name].get("skipped") for e in enc_data):
             continue
@@ -444,11 +449,8 @@ def run_paired_delta_stage(args, wb) -> None:
                           "n_test":    enc_data[e][dim_name]["n_test"]}
                       for e in enc_data}
         # Pairwise paired-Δ requires loading per-clip arrays + key-aligning.
-        pairwise = {}
-        names = sorted(enc_data.keys())
-        per_clip_cache = {}
-        keys_cache = {}
-        for e in names:
+        per_clip_cache, keys_cache = {}, {}
+        for e in sorted(enc_data.keys()):
             ed = args.output_root / e
             pcf = ed / f"per_clip_{dim_name}.npy"
             kcf = ed / f"clip_keys_test_{dim_name}.npy"
@@ -459,6 +461,7 @@ def run_paired_delta_stage(args, wb) -> None:
                 continue
             per_clip_cache[e] = np.load(pcf)
             keys_cache[e] = [str(k) for k in np.load(kcf, allow_pickle=True)]
+        _dim_meta[dim_name] = (sample, by_encoder)
         names = sorted(per_clip_cache)   # only encoders that loaded participate in the pairwise Δ
         for i, a in enumerate(names):
             for b in names[i + 1:]:
@@ -471,22 +474,27 @@ def run_paired_delta_stage(args, wb) -> None:
                 a_arr = np.array([per_clip_cache[a][ai[k]] for k in shared], dtype=np.float64)
                 b_arr = np.array([per_clip_cache[b][bi[k]] for k in shared], dtype=np.float64)
                 delta = a_arr - b_arr
-                bca = paired_bca(delta)
-                pairwise[f"{a}_minus_{b}"] = {
-                    "n_shared":     int(len(shared)),
-                    "delta":        round(float(delta.mean()), 6),
-                    "ci_lo":        round(float(bca["ci_lo"]), 6),
-                    "ci_hi":        round(float(bca["ci_hi"]), 6),
-                    "ci_half":      round(float(bca["ci_half"]), 6),
-                    "p_value":      float(bca["p_value_vs_zero"]),
-                    "gate_pass":    bool(bca["ci_lo"] > 0),
-                }
+                _units.append(delta)
+                _slots.append((dim_name, f"{a}_minus_{b}", int(len(shared)), round(float(delta.mean()), 6)))
+    _bcas = parallel_bca(_units)   # ONE fan-out; byte-identical to per-unit paired_bca(delta)
+    _pw = {}
+    for (dim_name, pkey, n_shared, dmean), bca in zip(_slots, _bcas):
+        _pw.setdefault(dim_name, {})[pkey] = {
+            "n_shared":  n_shared,
+            "delta":     dmean,
+            "ci_lo":     round(float(bca["ci_lo"]), 6),
+            "ci_hi":     round(float(bca["ci_hi"]), 6),
+            "ci_half":   round(float(bca["ci_half"]), 6),
+            "p_value":   float(bca["p_value_vs_zero"]),
+            "gate_pass": bool(bca["ci_lo"] > 0),
+        }
+    for dim_name, (sample, by_encoder) in _dim_meta.items():
         out["dims"][dim_name] = {
-            "type":             sample["type"],
-            "metric":           sample["metric"],
-            "n_classes":        sample["n_classes"],
-            "by_encoder":       by_encoder,
-            "pairwise_deltas":  pairwise,
+            "type":            sample["type"],
+            "metric":          sample["metric"],
+            "n_classes":       sample["n_classes"],
+            "by_encoder":      by_encoder,
+            "pairwise_deltas": _pw.get(dim_name, {}),
         }
 
     out_path = args.output_root / artifact("per_dim_acc")

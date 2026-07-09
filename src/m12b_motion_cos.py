@@ -44,7 +44,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.action_labels import load_action_labels
-from utils.bootstrap import bootstrap_ci, paired_bca
+from utils.bootstrap import bootstrap_ci, parallel_bca
 from utils.cache_policy import (
     add_cache_policy_arg,
     guarded_delete,
@@ -319,7 +319,10 @@ def run_paired_delta_stage(args, wb) -> None:
                       "score_ci":   bootstrap_ci(d["score"])}
                   for e, d in enc_data.items()}
 
+    # iter19 2026-07-09: collect the (pair) deltas then ONE parallel_bca (byte-identical, fixed per-unit
+    # seed) — consistent with the taxonomy/predictor finale stages; same schema/order/values.
     pairwise_deltas = {}
+    _units, _slots = [], []
     for i, a in enumerate(available):
         for b in available[i + 1:]:
             ka, kb = enc_data[a]["keys"], enc_data[b]["keys"]
@@ -339,17 +342,19 @@ def run_paired_delta_stage(args, wb) -> None:
             a_arr = np.array([enc_data[a]["score"][ai[k]] for k in shared], dtype=np.float64)
             b_arr = np.array([enc_data[b]["score"][bi[k]] for k in shared], dtype=np.float64)
             delta = a_arr - b_arr
-            bca = paired_bca(delta)
-            pairwise_deltas[f"{a}_minus_{b}"] = {
-                "n_shared":       int(len(shared)),
-                "delta_mean":     round(float(delta.mean()), 6),
-                "delta_ci_lo":    round(float(bca["ci_lo"]), 6),
-                "delta_ci_hi":    round(float(bca["ci_hi"]), 6),
-                "delta_ci_half":  round(float(bca["ci_half"]), 6),
-                "p_value":        float(bca["p_value_vs_zero"]),
-                "gate_pass":      bool(bca["ci_lo"] > 0),
-                "interpretation": f"{a} - {b} > 0 means {a} has stronger intra-class motion clustering than {b}",
-            }
+            _units.append(delta)
+            _slots.append((a, b, int(len(shared)), round(float(delta.mean()), 6)))
+    for (a, b, n_shared, dmean), bca in zip(_slots, parallel_bca(_units)):
+        pairwise_deltas[f"{a}_minus_{b}"] = {
+            "n_shared":       n_shared,
+            "delta_mean":     dmean,
+            "delta_ci_lo":    round(float(bca["ci_lo"]), 6),
+            "delta_ci_hi":    round(float(bca["ci_hi"]), 6),
+            "delta_ci_half":  round(float(bca["ci_half"]), 6),
+            "p_value":        float(bca["p_value_vs_zero"]),
+            "gate_pass":      bool(bca["ci_lo"] > 0),
+            "interpretation": f"{a} - {b} > 0 means {a} has stronger intra-class motion clustering than {b}",
+        }
 
     out = {"metric": "intra_minus_inter_cosine",
            "by_encoder": by_encoder,

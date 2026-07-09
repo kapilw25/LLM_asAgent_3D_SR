@@ -1,0 +1,23 @@
+{
+  "magnitude_quartiles": [
+    111.11674499511719,
+    164.70736694335938,
+    244.49237060546875
+  ],
+  "class_names": [
+    "fast__downward",
+    "fast__upward",
+    "medium__downward",
+    "medium__leftward",
+    "medium__rightward",
+    "medium__upward",
+    "slow__downward",
+    "slow__leftward",
+    "slow__rightward",
+    "slow__upward",
+    "still__downward",
+    "still__leftward",
+    "still__rightward",
+    "still__upward"
+  ]
+}

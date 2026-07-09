@@ -1,0 +1,104 @@
+{
+  "metric": "top1_accuracy",
+  "by_encoder": {
+    "vjepa_2_1_vitg_frozen": {
+      "acc_pct": 48.8098,
+      "n": 23106,
+      "top1_ci": {
+        "mean": 0.488098,
+        "ci_lo": 0.48139,
+        "ci_hi": 0.49446,
+        "ci_half": 0.006535
+      }
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder": {
+      "acc_pct": 57.2449,
+      "n": 23106,
+      "top1_ci": {
+        "mean": 0.572449,
+        "ci_lo": 0.565957,
+        "ci_hi": 0.578897,
+        "ci_half": 0.00647
+      }
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "acc_pct": 56.7385,
+      "n": 23106,
+      "top1_ci": {
+        "mean": 0.567385,
+        "ci_lo": 0.560893,
+        "ci_hi": 0.573661,
+        "ci_half": 0.006384
+      }
+    }
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_peft_lora_encoder": {
+      "n_shared": 23106,
+      "delta_pp": -8.435,
+      "ci_lo_pp": -9.0106,
+      "ci_hi_pp": -7.8638,
+      "ci_half_pp": 0.5734,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_peft_lora_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_peft_lora_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 23106,
+      "delta_pp": -7.9287,
+      "ci_lo_pp": -8.5129,
+      "ci_hi_pp": -7.3704,
+      "ci_half_pp": 0.5713,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_frozen more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 23106,
+      "delta_pp": 0.5064,
+      "ci_lo_pp": 0.0866,
+      "ci_hi_pp": 0.9262,
+      "ci_half_pp": 0.4198,
+      "p_value": 0.0188,
+      "gate_pass": true,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder more accurate than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    }
+  },
+  "iter14_paper_deltas": {
+    "delta_1_pretrain_vs_frozen": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_pretrain_encoder (present=False), b=vjepa_2_1_frozen (present=False)",
+      "interpretation": "\u03941: pretrain > frozen (continual SSL beats frozen baseline)"
+    },
+    "delta_2_surgical_vs_pretrain": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_pretrain_encoder (present=False)",
+      "interpretation": "\u03942: surgery > pretrain (factor patching adds value)"
+    },
+    "delta_3_surgical_vs_pretrain_2X": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_pretrain_2X_encoder (present=False)",
+      "interpretation": "\u03943: surgery > pretrain_2X (CAUSAL \u2014 gain is factor patching, not extra steps)"
+    },
+    "delta_4_pretrain_vs_pretrain_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_pretrain_encoder (present=False), b=vjepa_2_1_pretrain_head (present=False)",
+      "interpretation": "\u03944: pretrain > pretrain_head (does encoder-update add value beyond a trained head?)"
+    },
+    "delta_5_surgical_vs_surgical_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_encoder (present=False), b=vjepa_2_1_surgical_3stage_DI_head (present=False)",
+      "interpretation": "\u03945: surgery > surgery_head (KEY iter15 paper claim \u2014 if |\u03945|<0.01, head-only WINS)"
+    },
+    "delta_6_surgical_head_vs_pretrain_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_head (present=False), b=vjepa_2_1_pretrain_head (present=False)",
+      "interpretation": "\u03946: surgery_head > pretrain_head (factor data helps even when encoder is frozen)"
+    },
+    "delta_7_DI_head_vs_noDI_head": {
+      "skipped": true,
+      "reason": "missing encoder(s): a=vjepa_2_1_surgical_3stage_DI_head (present=False), b=vjepa_2_1_surgical_noDI_head (present=False)",
+      "interpretation": "\u03947: 3stage_DI_head > noDI_head (D_I tubes carry signal beyond D_L+D_A)"
+    }
+  }
+}

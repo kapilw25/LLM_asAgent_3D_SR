@@ -1,0 +1,72 @@
+{
+  "still__rightward": {
+    "train": 9518,
+    "val": 628,
+    "test": 2537
+  },
+  "slow__upward": {
+    "train": 14352,
+    "val": 934,
+    "test": 3822
+  },
+  "medium__upward": {
+    "train": 16532,
+    "val": 1081,
+    "test": 4376
+  },
+  "medium__downward": {
+    "train": 4541,
+    "val": 303,
+    "test": 1212
+  },
+  "slow__downward": {
+    "train": 3554,
+    "val": 236,
+    "test": 946
+  },
+  "fast__upward": {
+    "train": 16763,
+    "val": 1115,
+    "test": 4473
+  },
+  "slow__rightward": {
+    "train": 2975,
+    "val": 197,
+    "test": 793
+  },
+  "still__upward": {
+    "train": 7470,
+    "val": 498,
+    "test": 1993
+  },
+  "still__downward": {
+    "train": 1909,
+    "val": 127,
+    "test": 509
+  },
+  "fast__downward": {
+    "train": 4881,
+    "val": 327,
+    "test": 1302
+  },
+  "still__leftward": {
+    "train": 2799,
+    "val": 187,
+    "test": 747
+  },
+  "slow__leftward": {
+    "train": 834,
+    "val": 55,
+    "test": 223
+  },
+  "medium__rightward": {
+    "train": 507,
+    "val": 40,
+    "test": 135
+  },
+  "medium__leftward": {
+    "train": 135,
+    "val": 22,
+    "test": 38
+  }
+}

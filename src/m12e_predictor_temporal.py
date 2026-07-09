@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils import pt_causal, pt_maskratio, pt_order, pt_rollout, pt_tdist, pt_teacher_free
 
 from utils.action_labels import load_action_labels
-from utils.bootstrap import paired_bca
+from utils.bootstrap import parallel_bca
 from utils.cache_policy import (
     add_cache_policy_arg, guarded_delete, resolve_cache_policy_interactive,
 )
@@ -234,6 +234,10 @@ def run_paired_per_variant_stage(args, wb) -> None:
     probe_future_mse.run_paired_per_variant_stage."""
     metrics = list(METRICS) if args.metric == "all" else [args.metric]
     out = {"metrics": {}}
+    # iter19 2026-07-09: fan the 6 metrics × 3 pairs of 10K-resample BCa across cores. PASS 1 builds all
+    # (metric, pair) deltas; ONE parallel_bca computes every BCa (byte-identical — fixed per-unit seed);
+    # PASS 2 assembles. Same schema/order/values (metric-major, i<j pair order).
+    _units, _slots, _meta = [], [], {}
     for m in metrics:
         by_variant = {}
         for v in KNOWN_VARIANTS:
@@ -248,7 +252,7 @@ def run_paired_per_variant_stage(args, wb) -> None:
                 "keys": [str(k) for k in np.load(keys, allow_pickle=True)],
             }
         avail = sorted(by_variant)
-        deltas = {}
+        _meta[m] = ({v: by_variant[v]["agg"] for v in avail}, avail)
         for i, a in enumerate(avail):
             for b in avail[i + 1:]:
                 ka, kb = by_variant[a]["keys"], by_variant[b]["keys"]
@@ -259,16 +263,21 @@ def run_paired_per_variant_stage(args, wb) -> None:
                 bi = {k: j for j, k in enumerate(kb)}
                 d = (np.array([by_variant[a]["vals"][ai[k]] for k in shared])
                      - np.array([by_variant[b]["vals"][bi[k]] for k in shared]))
-                bca = paired_bca(d)
-                deltas[f"{a}_minus_{b}"] = {
-                    "n": len(shared), "delta_mean": round(float(d.mean()), 6),
-                    "delta_ci_lo": round(float(bca["ci_lo"]), 6),
-                    "delta_ci_hi": round(float(bca["ci_hi"]), 6),
-                    "p_value": float(bca["p_value_vs_zero"]),
-                }
+                _units.append(d)
+                _slots.append((m, f"{a}_minus_{b}", len(shared), round(float(d.mean()), 6)))
+    _bcas = parallel_bca(_units)   # byte-identical to per-unit paired_bca(d)
+    _dmap = {}
+    for (m, pkey, n, dmean), bca in zip(_slots, _bcas):
+        _dmap.setdefault(m, {})[pkey] = {
+            "n": n, "delta_mean": dmean,
+            "delta_ci_lo": round(float(bca["ci_lo"]), 6),
+            "delta_ci_hi": round(float(bca["ci_hi"]), 6),
+            "p_value": float(bca["p_value_vs_zero"]),
+        }
+    for m, (by_variant_agg, avail) in _meta.items():
         out["metrics"][m] = {
-            "by_variant": {v: by_variant[v]["agg"] for v in avail},
-            "pairwise_deltas": deltas,
+            "by_variant": by_variant_agg,
+            "pairwise_deltas": _dmap.get(m, {}),
             "lower_is_better": METRICS[m][1],
         }
     save_json_checkpoint(out, args.output_root / artifact("predictor_temporal_per_variant"))

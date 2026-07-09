@@ -1,0 +1,14 @@
+{
+  "encoder": "vjepa_2_1_vitg_peft_lora_encoder",
+  "n_test": 23106,
+  "pos_mean": 0.877324,
+  "neg_mean": 0.799651,
+  "score_mean": 0.077673,
+  "score_ci": {
+    "mean": 0.077673,
+    "ci_lo": 0.07707,
+    "ci_hi": 0.078279,
+    "ci_half": 0.000604
+  },
+  "elapsed_sec": 2.96
+}
