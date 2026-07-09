@@ -49,25 +49,40 @@ def forward_per_frame(encoder, batch, num_frames, tubelet_size):
     FAIL LOUD if the token count doesn't factor into (T_eff × n_spatial) — that indicates an
     encoder/tubelet config mismatch.
     """
+    return pool_per_frame(forward_tokens(encoder, batch), num_frames, tubelet_size)
+
+
+def forward_tokens(encoder, batch):
+    """The shared encoder forward: (B,T,C,H,W) → (B, N_tok, D) fp32 on the encoder's device (CUDA).
+    iter19 2026-07-09: factored OUT of forward_per_frame so ONE forward can feed BOTH the per-tubelet
+    pool (below) AND the opt-in probe_action per-frame cache emit — so tcc's per-frame features equal
+    that cache BYTE-FOR-BYTE (same tokens, same device: the pool must stay on CUDA — a CPU reduction of
+    the same tokens differs in the last ULP). Byte-identical to the old inline forward (pure split)."""
     if batch.ndim != _VIDEO_RANK:
-        raise RuntimeError(f"forward_per_frame expects (B,T,C,H,W); got {tuple(batch.shape)}")
-    if num_frames % tubelet_size != 0:
-        raise RuntimeError(
-            f"num_frames={num_frames} not divisible by tubelet_size={tubelet_size}")
+        raise RuntimeError(f"forward_tokens expects (B,T,C,H,W); got {tuple(batch.shape)}")
     pixel = to_pixel(batch)                 # (B,C,T,H,W) bf16 on CUDA
     out = encoder(pixel).float()
     if not torch.is_tensor(out) or out.ndim != _FEATS_RANK:
         raise RuntimeError(
             f"encoder forward must return 3-D (B,N_tok,D); got {type(out).__name__} "
             f"shape={getattr(out, 'shape', None)}")
-    B, N, D = out.shape
+    return out
+
+
+def pool_per_frame(tokens, num_frames, tubelet_size):
+    """(B, N_tok, D) encoder tokens → (B, T_eff, D) per-tubelet spatial-mean, ON THE TOKENS' DEVICE.
+    T_eff = num_frames // tubelet_size. FAIL LOUD if N doesn't factor into (T_eff × n_spatial)."""
+    if num_frames % tubelet_size != 0:
+        raise RuntimeError(
+            f"num_frames={num_frames} not divisible by tubelet_size={tubelet_size}")
+    B, N, D = tokens.shape
     t_eff = num_frames // tubelet_size
     if N % t_eff != 0:
         raise RuntimeError(
             f"token count {N} not divisible by T_eff={t_eff} (num_frames={num_frames}, "
             f"tubelet_size={tubelet_size}) — check encoder patch/tubelet alignment")
     n_spatial = N // t_eff
-    return out.view(B, t_eff, n_spatial, D).mean(dim=2).contiguous()
+    return tokens.view(B, t_eff, n_spatial, D).mean(dim=2).contiguous()
 
 
 def reverse_frames(batch):
@@ -108,4 +123,5 @@ def stride_indices(num_frames, stride, source_frames):
     return idx.long()
 
 
-__all__ = ["forward_per_frame", "reverse_frames", "permute_frames", "stride_indices"]
+__all__ = ["forward_per_frame", "forward_tokens", "pool_per_frame",
+           "reverse_frames", "permute_frames", "stride_indices"]
