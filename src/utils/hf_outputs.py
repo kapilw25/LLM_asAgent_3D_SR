@@ -1516,6 +1516,24 @@ def upload_additive(subfolder: str):
     return True
 
 
+def squash_history():
+    """Collapse the HF dataset repo's ENTIRE commit history into ONE commit (super_squash_history). HF warns
+    once a repo passes a few hundred commits that push/list operations slow down (this repo hit 848). The op is
+    IRREVERSIBLE — it rewrites remote history, so old commit SHAs are gone — BUT it keeps the CURRENT file tree
+    byte-for-byte, so no DATA is lost, only the history. Only run it when the tree is ALREADY fully uploaded
+    (e.g. right before teardown, after upload-additive reports committed N/N). Returns True on success, False if
+    the token is missing."""
+    token = _get_token()
+    if not token:
+        print("FATAL squash: HF_TOKEN not found (env or repo-root .env)")
+        return False
+    print(f"super_squash_history: collapsing ALL commits of {HF_OUTPUTS_REPO} into one "
+          f"(IRREVERSIBLE — old SHAs gone, current file tree preserved byte-for-byte)")
+    HfApi(token=token).super_squash_history(repo_id=HF_OUTPUTS_REPO, repo_type="dataset")
+    print(f"squash complete: {HF_OUTPUTS_REPO} history collapsed to a single commit (file tree unchanged)")
+    return True
+
+
 if __name__ == "__main__":
     if len(sys.argv) < _MIN_CLI_ARGS - 1:
         print("Usage:")
@@ -1527,6 +1545,7 @@ if __name__ == "__main__":
         print("  python -u src/utils/hf_outputs.py upload-data [data_dir]      # default 'data'")
         print("  python -u src/utils/hf_outputs.py download-data [data_dir]    # default 'data'")
         print("  python -u src/utils/hf_outputs.py verify <output_dir>         # LOOSE files: disk vs HF (path+size)")
+        print("  python -u src/utils/hf_outputs.py squash                       # collapse HF repo history to 1 commit (IRREVERSIBLE; run ONLY after a complete upload)")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -1545,6 +1564,8 @@ if __name__ == "__main__":
         rc = upload_outputs_full(sys.argv[2])
     elif cmd == "download-full" and len(sys.argv) >= _MIN_CLI_ARGS:
         rc = download_outputs(sys.argv[2])   # same prefix — download_outputs auto-unpacks _full shards
+    elif cmd == "squash":
+        rc = squash_history()                # collapse HF dataset commit history to 1 commit (IRREVERSIBLE, tree preserved)
     elif cmd == "verify" and len(sys.argv) >= _MIN_CLI_ARGS:
         verify_outputs(sys.argv[2])          # LOOSE files disk-vs-HF; exits 1 itself on any gap
     elif cmd == "verify-full" and len(sys.argv) >= _MIN_CLI_ARGS:
