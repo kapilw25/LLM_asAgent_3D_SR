@@ -2623,7 +2623,8 @@ def _xb_best(data, keep, key, hi):
     return (max if hi else min)(vals, key=lambda t: t[1]) if vals else None
 
 
-def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci"):
+def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
+                suptitle=None, sort_rows=True, vertical=False):
     """Per metric: surgery(best-OURs) advantage over a BASELINE. Two axes (both count surgery_raw with OURs
     via _xb_is_ours):
       vs='best'   → baseline = the best COMPETITOR arm (toughest bar — includes full-FT).
@@ -2635,8 +2636,17 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci")
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
     n = len(backbones)
-    fig, axes = plt.subplots(1, n, figsize=(9.6 * n, 6.8), squeeze=False)   # wider: full-name y-labels (from json)
-    for ax, (label, data) in zip(axes[0], backbones):
+    if vertical:   # scale-forest: stack panels top→bottom → narrow portrait figure that fits a paper column
+        fig, axes = plt.subplots(n, 1, figsize=(10.0, 5.6 * n), squeeze=False)
+    else:
+        fig, axes = plt.subplots(1, n, figsize=(9.6 * n, 6.8), squeeze=False)   # wider: full-name y-labels (from json)
+    for ax, (label, data) in zip(axes.flatten(), backbones):
+        if not data:   # None/empty → N/A panel (a backbone with no eval at this scale yet, e.g. 2B FULL)
+            ax.text(0.5, 0.5, "N/A\n\nno eval at\nthis scale yet", ha="center", va="center",
+                    transform=ax.transAxes, fontsize=14, color="#9E9E9E", fontweight="bold")
+            ax.set_title(label, fontsize=13, fontweight="bold", loc="left")
+            ax.set_xticks([]); ax.set_yticks([])
+            continue
         rows = []
         for key, dr, lbl in _XB_METRICS:
             hi = dr == "hi"
@@ -2654,7 +2664,8 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci")
                 rows.append((lbl, adv / ci))
             else:
                 rows.append((lbl, 100.0 * adv / abs(bc[1]) if bc[1] else 0.0))
-        rows.sort(key=lambda t: t[1])                                # y=0 (bottom) = worst → best at TOP
+        if sort_rows:                                                # per-panel best→worst (default); False → fixed _XB_METRICS order
+            rows.sort(key=lambda t: t[1])                            # y=0 (bottom) = worst → best at TOP
         fmt = (lambda v: f"{v:.1f}×") if mode == "ci" else (lambda v: f"{v:+.1f}%")
         for y, (lbl, v) in enumerate(rows):
             won = (v >= 1.0) if mode == "ci" else (v > 0.0)
@@ -2699,8 +2710,11 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci")
     _sup = (f"Forest plot — does surgery statistically separate from {_base}?   (green past dashed line = yes · surgery_raw ∈ OURs)"
             if mode == "ci" else
             f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · surgery_raw ∈ OURs)")
-    fig.suptitle(_sup, fontsize=15, fontweight="bold")
-    fig.subplots_adjust(top=0.90, wspace=0.62, left=0.18, right=0.97, bottom=0.10)   # room for full-name y-labels
+    fig.suptitle(suptitle if suptitle else _sup, fontsize=(12.5 if vertical else 15), fontweight="bold")
+    if vertical:   # portrait stack: narrow cols, more top room for the wrapped suptitle + per-panel titles
+        fig.subplots_adjust(top=0.885, hspace=0.30, left=0.27, right=0.965, bottom=0.06)
+    else:
+        fig.subplots_adjust(top=0.90, wspace=0.62, left=0.18, right=0.97, bottom=0.10)   # room for full-name y-labels
     save_fig(fig, str(Path(out_dir) / stem))
     plt.close(fig)
 
@@ -2762,6 +2776,71 @@ def plot_scale_replication(backbones, out_dir):
     plt.close(fig)
 
 
+def _xb_n_test(json_path):
+    """First non-empty n_test in an eval_metrics.json (every encoder shares the test set → one value)."""
+    for r in json.loads(Path(json_path).read_text()):
+        nt = r.get("n_test")
+        if nt not in (None, "—", "", 0):
+            try:
+                return int(nt)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def scale_forest_report(out_dir):
+    """POC(10k)-vs-FULL(116k) scale-comparison forest, one figure per backbone. Two panels — POC | FULL —
+    share the SAME forest recipe (surgery-best advantage over frozen, the paper claim) AND the SAME metric
+    order (sort_rows=False) so a metric lines up across scales. The roster is the UNION of encoders present
+    in ANY backbone's FULL eval — so training+evaling a NEW arm at FULL auto-adds it to BOTH panels (auto-
+    reflect); POC is filtered to that roster so it is apples-to-apples. A backbone with no FULL eval yet
+    (e.g. 2B) renders an N/A FULL panel. n_test (test-clip count) is shown per scale in each panel label."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    known = {pre.rstrip("_") for pre, *_ in _BB_TAG}
+    order = {pre.rstrip("_"): i for i, (pre, *_) in enumerate(_BB_TAG)}
+    disc = {}   # bb -> {"poc": eval_metrics.json, "full": eval_metrics.json}
+    for mtag in ("poc", "full"):
+        for mj in Path("outputs").glob(f"{mtag}/*/eval/*/probe_plot/metrics_watch/*/eval_metrics.json"):
+            bb, tree = mj.parent.name, mj.relative_to("outputs").parts[1]
+            if bb in known and tree.startswith(bb):        # canonical: <bb> is a real backbone in ITS OWN tree
+                disc.setdefault(bb, {})[mtag] = mj
+    if not disc:
+        print("  [scale-forest] no per-backbone eval_metrics.json found — nothing to do")
+        return None
+    full_roster = set()                                    # union of FULL encoders across backbones (auto-reflects)
+    for e in disc.values():
+        if "full" in e:
+            full_roster |= set(_xb_load_metrics(e["full"]))
+    full_roster -= _skip_encoders_from_env(sorted(full_roster))   # honour ITER18_SKIP_ARMS
+    if not full_roster:
+        print("  [scale-forest] no FULL-scale eval_metrics.json yet — nothing to compare, skipping")
+        return None
+    stems = []
+    for bb in sorted(disc, key=lambda b: order.get(b, 99)):
+        e = disc[bb]
+        tag = next((t for pre, t, _ in _BB_TAG if pre.rstrip("_") == bb), bb)
+        poc_mj, full_mj = e.get("poc"), e.get("full")
+        poc_data = {s: v for s, v in _xb_load_metrics(poc_mj).items() if s in full_roster} if poc_mj else {}
+        full_data = ({s: v for s, v in _xb_load_metrics(full_mj).items() if s in full_roster}
+                     if full_mj else None)                 # None → N/A panel (no FULL-scale eval yet, e.g. 2B)
+        poc_n = _xb_n_test(poc_mj) if poc_mj else None
+        full_n = _xb_n_test(full_mj) if full_mj else None
+        poc_lbl = f"{tag} · POC 10k" + (f"  (n_test = {poc_n:,})" if poc_n else "  (n_test = n/a)")
+        full_lbl = (f"{tag} · FULL 116k  (n_test = {full_n:,})" if (full_data and full_n)
+                    else f"{tag} · FULL 116k  (n_test = N/A — no full-scale eval yet)")
+        panels = [(poc_lbl, poc_data), (full_lbl, full_data)]
+        stem = f"scale_poc_vs_full_{bb}"
+        plot_forest(panels, out_dir, mode="ci", vs="frozen", sort_rows=True, vertical=True, stem=stem,
+                    suptitle=(f"Scale POC 10k → FULL 116k · {tag} — does surgery's separation from frozen "
+                              f"survive the 12x data jump?\n(same encoders both sides · each panel sorted "
+                              f"best→worst · green past dashed = separated win · surgery_raw ∈ OURs)"))
+        stems.append(stem)
+    print(f"  [scale-forest] → {out_dir}/ · {', '.join(s + '.{png,pdf}' for s in stems)} "
+          f"(FULL roster {sorted(full_roster)}, auto-reflects new FULL arms)")
+    return out_dir
+
+
 def cross_backbone_report(mtag, out_dir):
     """Discover EVERY canonical per-backbone metrics_watch (eval_metrics.json + eval_scorecard.pdf) under
     outputs/<mtag>/<bb>_<size>/eval/*/probe_plot/metrics_watch/<bb>/ (champion-first), then emit the
@@ -2805,10 +2884,12 @@ def cross_backbone_report(mtag, out_dir):
         plot_scale_replication(backbones, out_dir)
     else:
         print("  [cross-plots] scale_replication skipped — need >=2 backbones")
+    scale_forest_report(out_dir)   # POC(10k) vs FULL(116k) per-backbone forest (reads BOTH scales, mtag-agnostic)
     combine_scorecards_pdf([mj.parent / "eval_scorecard.pdf" for _, _, _, mj in found],
                            out_dir / "eval_scorecard_combined.pdf")
     print(f"  [cross-plots] → {out_dir}/ · forest_plot_{{best,frozen}}_{{ci,mean}}.{{png,pdf}} · "
-          f"scale_replication.{{png,pdf}} · eval_scorecard_combined.{{pdf,png}}")
+          f"scale_replication.{{png,pdf}} · scale_poc_vs_full_<backbone>.{{png,pdf}} · "
+          f"eval_scorecard_combined.{{pdf,png}}")
     return out_dir
 
 

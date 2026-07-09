@@ -681,7 +681,9 @@ def _metrics_watch_cmd(mtag, mode):
     """m13 --metrics-watch-only argv → regenerates BOTH (a) the per-backbone metrics_watch/<bb>/
     (eval_scorecard.pdf/png + kept/paper/tcc/validity + eval_metrics.csv/json) AND (b) the TOP-LEVEL
     cross-backbone figures at outputs/<mtag>/probe_plot/metrics_watch/ (forest_plot_{best,frozen} +
-    scale_replication + eval_scorecard_combined.{pdf,png}) — m13 folds cross_backbone_report into the
+    scale_replication + scale_poc_vs_full_<backbone> + eval_scorecard_combined.{pdf,png}) — the
+    scale_poc_vs_full_* forests compare POC 10k vs FULL 116k per backbone (2B FULL panel = N/A until
+    trained) — m13 folds cross_backbone_report into the
     --metrics-watch-out path (iter19 2026-07-09), so this ONE call is the single source for both the
     --plots path and the auto-preview. From the eval JSONs finished so far (CPU re-render, no GPU)."""
     cmd = [_VENV_PY, "-u", "src/m13_eval_plot.py", f"--{mode}",
@@ -745,7 +747,7 @@ def maybe_plot(mtag, mode):
         if scard.exists() or hero.exists():
             return (f"  🖼  preview REBUILT (metrics_watch rc={mw_rc} · hero rc={rc}) → "
                     f"metrics_watch/{BACKBONE}/{{eval_scorecard,eval_metrics.csv}} + probe_plot/metrics_watch/"
-                    f"{{forest_plot_*,scale_replication,eval_scorecard_combined}} · next in ~{PLOT_EVERY_MIN}m")
+                    f"{{forest_plot_*,scale_replication,scale_poc_vs_full_*,eval_scorecard_combined}} · next in ~{PLOT_EVERY_MIN}m")
         return f"  🖼  preview rc={rc}/{mw_rc} — partial/blocked, see {plog.name} · next in ~{PLOT_EVERY_MIN}m"
     finally:
         lock.unlink(missing_ok=True)
@@ -762,7 +764,7 @@ def maybe_metrics_plots(mtag, mode):
     rc = subprocess.run(cmd, cwd=str(REPO), env=os.environ.copy()).returncode
     if rc == 0:
         print(f"  📊 metrics_watch refreshed (rc=0) → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch/{BACKBONE}/ "
-              f"+ outputs/{mtag}/probe_plot/metrics_watch/{{forest_plot_*,scale_replication,eval_scorecard_combined}}")
+              f"+ outputs/{mtag}/probe_plot/metrics_watch/{{forest_plot_*,scale_replication,scale_poc_vs_full_*,eval_scorecard_combined}}")
     else:
         print(f"  📊 metrics_watch refresh rc={rc} — partial/blocked (partial json under a live run is normal)")
 
