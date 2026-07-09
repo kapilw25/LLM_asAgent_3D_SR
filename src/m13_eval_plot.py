@@ -2644,7 +2644,7 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         if not data:   # None/empty → N/A panel (a backbone with no eval at this scale yet, e.g. 2B FULL)
             ax.text(0.5, 0.5, "N/A\n\nno eval at\nthis scale yet", ha="center", va="center",
                     transform=ax.transAxes, fontsize=14, color="#9E9E9E", fontweight="bold")
-            ax.set_title(label, fontsize=13, fontweight="bold", loc="left")
+            ax.set_title(label, fontsize=15, fontweight="bold", loc="left")
             ax.set_xticks([]); ax.set_yticks([])
             continue
         rows = []
@@ -2677,7 +2677,7 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             # label with a FIXED screen-space gap (offset points) — a data-space offset can't stay legible on
             # the symlog axis (task2 2026-07-01: the same data step is huge near 0 and tiny far out).
             ax.annotate(fmt(v), (v, y), xytext=(7, 0), textcoords="offset points",
-                        va="center", ha="left", fontsize=9, color=col, fontweight="bold")
+                        va="center", ha="left", fontsize=11, color=col, fontweight="bold")
         # symlog x-axis (task2): ABSOLUTE signed values but NON-uniform spacing, so a 0.1 tie and a 47 blow-out
         # are BOTH visible; linthresh keeps the small tie zone linear, beyond it compresses like log.
         _lt = 1.0 if mode == "ci" else 0.5
@@ -2695,22 +2695,26 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(
             lambda v, _p: "0" if v == 0 else ("-" if v < 0 else "") + f"{abs(v):g}"))
         ax.set_yticks(range(len(rows)))
-        ax.set_yticklabels([r[0] for r in rows], fontsize=9)   # 9pt: fits the full metric names (from json)
+        ax.set_yticklabels([r[0] for r in rows], fontsize=11, fontweight="bold")   # 11pt bold: full metric names (from json)
         ax.axvline(0, color="#607D8B", lw=1.2, zorder=1)             # null: surgery == baseline
         if mode == "ci":
             ax.axvline(1, color=_XB_OURS_GREEN, ls="--", lw=1.4, zorder=1)
-            ax.text(1, len(rows) - 0.4, " 1×CI · separated →", color=_XB_OURS_GREEN, fontsize=8, ha="left", va="top")
+            ax.text(1, len(rows) - 0.4, " 1×CI · separated →", color=_XB_OURS_GREEN, fontsize=10, fontweight="bold", ha="left", va="top")
         ax.set_ylim(-0.7, len(rows) - 0.3)
-        ax.set_title(label, fontsize=13, fontweight="bold", loc="left")
+        ax.set_title(label, fontsize=15, fontweight="bold", loc="left")
         _base = "frozen" if vs == "frozen" else "best competitor"
         ax.set_xlabel(f"surgery advantage over {_base}   "
-                      + ("(× CI of difference)" if mode == "ci" else f"(% of {_base} mean)"), fontsize=10)
+                      + ("(× CI of difference)" if mode == "ci" else f"(% of {_base} mean)"),
+                      fontsize=12, fontweight="bold")
         ax.grid(axis="x", alpha=0.2)
+        ax.tick_params(axis="x", labelsize=11)              # bigger + bold decade ticks (task 2026-07-09)
+        for _t in ax.get_xticklabels():
+            _t.set_fontweight("bold")
     _base = "frozen" if vs == "frozen" else "the best competitor"
     _sup = (f"Forest plot — does surgery statistically separate from {_base}?   (green past dashed line = yes · surgery_raw ∈ OURs)"
             if mode == "ci" else
             f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · surgery_raw ∈ OURs)")
-    fig.suptitle(suptitle if suptitle else _sup, fontsize=(12.5 if vertical else 15), fontweight="bold")
+    fig.suptitle(suptitle if suptitle else _sup, fontsize=(14 if vertical else 16), fontweight="bold")
     if vertical:   # portrait stack: narrow cols, more top room for the wrapped suptitle + per-panel titles
         fig.subplots_adjust(top=0.885, hspace=0.30, left=0.27, right=0.965, bottom=0.06)
     else:
@@ -2831,10 +2835,11 @@ def scale_forest_report(out_dir):
                     else f"{tag} · FULL 116k  (n_test = N/A — no full-scale eval yet)")
         panels = [(poc_lbl, poc_data), (full_lbl, full_data)]
         stem = f"scale_poc_vs_full_{bb}"
-        plot_forest(panels, out_dir, mode="ci", vs="frozen", sort_rows=True, vertical=True, stem=stem,
-                    suptitle=(f"Scale POC 10k → FULL 116k · {tag} — does surgery's separation from frozen "
-                              f"survive the 12x data jump?\n(same encoders both sides · each panel sorted "
-                              f"best→worst · green past dashed = separated win · surgery_raw ∈ OURs)"))
+        plot_forest(panels, out_dir, mode="ci", vs="best", sort_rows=True, vertical=True, stem=stem,
+                    suptitle=(f"Scale POC 10k → FULL 116k · {tag} — does surgery's separation from the best "
+                              f"competitor survive the 12x data jump?\n(same encoders both sides · each panel "
+                              f"sorted best→worst · green past dashed = separated win · surgery_raw ∈ OURs · "
+                              f"FULL panel matches forest_plot_best_ci)"))
         stems.append(stem)
     print(f"  [scale-forest] → {out_dir}/ · {', '.join(s + '.{png,pdf}' for s in stems)} "
           f"(FULL roster {sorted(full_roster)}, auto-reflects new FULL arms)")
