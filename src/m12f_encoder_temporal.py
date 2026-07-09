@@ -62,6 +62,7 @@ from utils.checkpoint import save_array_checkpoint, save_json_checkpoint  # noqa
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config  # noqa: E402
 from utils.data_download import ensure_local_data, iter_clips_parallel  # noqa: E402
 from utils.decode_feeder import BatchFeeder, DecodeFeeder  # noqa: E402
+from utils.gpu_gather import device_gather  # noqa: E402
 from utils.frozen_features import ENCODERS, decode_to_tensor  # noqa: E402
 from utils.gpu_batch import cleanup_temp, cuda_cleanup  # noqa: E402
 from utils.predictor_eval import CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_only  # noqa: E402
@@ -464,16 +465,28 @@ def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
     feats = (test_feats_per_frame if torch.is_tensor(test_feats_per_frame)
              else torch.from_numpy(test_feats_per_frame)).float()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    pa, pb = np.asarray(pairs_a), np.asarray(pairs_b)
+    # iter19 2026-07-09 STUCK-FIX (/gpu-bottleneck): the loop gathered feats[pa[s:e]] ON CPU then .to(dev)
+    # — at chunk=70547 a ~15GB single-thread host advanced-index gather PER SIDE (30GB/chunk) + a 30GB
+    # host→device copy → GPU0 hung at 0% / 1-core-100% / 25GB RSS, NO progress for >1h over 494 chunks.
+    # Fix = utils.gpu_gather.device_gather: upload feats ONCE (~5GB) + gather each chunk ON-DEVICE
+    # (index_select). Byte-identical; feats on-GPU BEFORE the chunk-size heuristic so free_b accounts for
+    # it; + a progress bar so it can never be a silent stall again.
+    feats = feats.to(dev)
+    pa = torch.as_tensor(np.asarray(pairs_a), dtype=torch.long, device=dev)
+    pb = torch.as_tensor(np.asarray(pairs_b), dtype=torch.long, device=dev)
     cyc_all = np.empty(n_pairs, dtype=np.float64)
     tau_all = np.empty(n_pairs, dtype=np.float64)
     chunk = _resolve_tcc_pair_chunk(args.tcc_pair_chunk, feats.shape[1], feats.shape[2], n_pairs)
+    pbar = make_pbar(total=n_pairs, desc="m12f[tcc-pairs/test]", unit="pair")
     for s in range(0, n_pairs, chunk):
         e = min(s + chunk, n_pairs)
-        c, t = et_tcc.compute_pairs_batched(feats[pa[s:e]].to(dev), feats[pb[s:e]].to(dev),
+        c, t = et_tcc.compute_pairs_batched(device_gather(feats, pa[s:e]),
+                                            device_gather(feats, pb[s:e]),
                                             temperature=args.tcc_temperature)
         cyc_all[s:e] = c.cpu().numpy()
         tau_all[s:e] = t.cpu().numpy()
+        pbar.update(e - s)
+    pbar.close()
     n_degenerate = int(np.isnan(tau_all).sum())
     # Kendall's τ is NaN for a degenerate pair (collinear per-frame features — expected for static
     # clips, esp. frozen encoders). The τ mean excludes those pairs so one bad pair does not abort

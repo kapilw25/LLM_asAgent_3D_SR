@@ -684,11 +684,19 @@ def _metrics_watch_cmd(mtag, mode):
     scale_replication + eval_scorecard_combined.{pdf,png}) — m13 folds cross_backbone_report into the
     --metrics-watch-out path (iter19 2026-07-09), so this ONE call is the single source for both the
     --plots path and the auto-preview. From the eval JSONs finished so far (CPU re-render, no GPU)."""
-    return [_VENV_PY, "-u", "src/m13_eval_plot.py", f"--{mode}",
-            "--output-dir", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}",
-            "--outputs-root", _eval_root(mtag, BACKBONE, EVAL_CORPUS),
-            "--metrics-watch-out", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch",
-            "--metrics-watch-only"]
+    cmd = [_VENV_PY, "-u", "src/m13_eval_plot.py", f"--{mode}",
+           "--output-dir", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}",
+           "--outputs-root", _eval_root(mtag, BACKBONE, EVAL_CORPUS),
+           "--metrics-watch-out", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch",
+           "--metrics-watch-only"]
+    # iter19 2026-07-09 (user order): forward the run's dropped arms EXPLICITLY (not just via the inherited
+    # ITER18_SKIP_ARMS env) so EVERY watch figure — per-backbone scorecard, the combined scorecard, AND the
+    # cross-backbone forest/scale — hides the same SKIP arms. Source = the env the pane set from the run's
+    # "[--skip-arms] dropped […]" log line (see the skip-forward block in main).
+    _skip = os.environ.get("ITER18_SKIP_ARMS", "").strip()
+    if _skip:
+        cmd += ["--skip-arms", _skip]
+    return cmd
 
 
 def maybe_plot(mtag, mode):

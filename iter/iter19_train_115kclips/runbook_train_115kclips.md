@@ -148,7 +148,9 @@ nohup env ITER18_BACKBONE=vjepa_2_1_vitg python -u scripts/ngpu_run_status.py --
 
 ```bash
 # Cross-backbone forest + scale-replication plots from the 'full' tree.
-python -u src/m13_eval_plot.py --cross-plots --cross-mode full \
+# --skip-arms "$SKIP" hides the 21 non-roster arms from the forest + combined scorecard (same as the live
+# pane); WITHOUT it the finale would overwrite the pane's skip-filtered figures with all-24-arm versions.
+python -u src/m13_eval_plot.py --cross-plots --cross-mode full --skip-arms "$SKIP" \
   2>&1 | tee logs/iter19_cross_plots_$(date +%F_%H%M%S).log
 
 # Persist the full outputs tree (additive, no-delete).

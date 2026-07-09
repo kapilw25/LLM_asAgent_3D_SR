@@ -2784,6 +2784,14 @@ def cross_backbone_report(mtag, out_dir):
         tag = next((t for pre, t, _ in _BB_TAG if pre.rstrip("_") == bb), bb)
         size = tree[len(bb) + 1:] if tree.startswith(bb) else ""
         backbones.append((f"{tag} · {size}".strip(" ·"), _xb_load_metrics(mj)))
+    # iter19 2026-07-09 (user order): the forest + scale read eval_metrics.json which _mw_dump keeps at
+    # FULL (every arm), so hide ITER18_SKIP_ARMS here too (surgery↔surgical aware) — the combined scorecard
+    # already hides them via the per-backbone eval_scorecard.pdf regen skip-filtered, so now ALL cross
+    # figures show the SAME non-skipped roster instead of forest showing 24 arms next to a 3-arm scorecard.
+    _hide = _skip_encoders_from_env([s for _lbl, m in backbones for s in m])
+    if _hide:
+        backbones = [(lbl, {s: v for s, v in m.items() if s not in _hide}) for lbl, m in backbones]
+        print(f"  [cross-plots] ⏷ {sorted(_hide)} hidden from forest/scale (ITER18_SKIP_ARMS)")
     print(f"  [cross-plots] backbones (champion-first): {[b[0] for b in backbones]}")
     init_style()
     plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_best_ci")      # vs BEST competitor · stat
@@ -2894,6 +2902,14 @@ def main():
                         "into the single-source ITER18_SKIP_ARMS env.")
     add_wandb_args(p)
     args = p.parse_args()
+    # iter19 2026-07-09 (user order): fold --skip-arms into the single-source ITER18_SKIP_ARMS env FIRST —
+    # BEFORE the --cross-plots / --combine early-returns — so EVERY figure path (cross-backbone forest +
+    # scale + combined scorecard AND the per-corpus plots) hides the SAME arms. surgery↔surgical handled
+    # downstream by _skip_encoders_from_env / the _mw registry translation.
+    if args.skip_arms:                          # CLI --skip-arms ∪ existing ITER18_SKIP_ARMS env (single source)
+        _toks = [t for t in re.split(r"[,\s]+", args.skip_arms) if t]
+        os.environ["ITER18_SKIP_ARMS"] = " ".join(
+            dict.fromkeys(os.environ.get("ITER18_SKIP_ARMS", "").split() + _toks))
     # Standalone: stack per-backbone eval_scorecard PDFs into ONE combined comparison PDF, then exit
     # (no mode flag / --output-dir needed — it reads finished PDFs and renders nothing).
     if args.combine_scorecards:
@@ -2909,10 +2925,6 @@ def main():
     if args.output_dir is None:
         sys.exit("ERROR: --output-dir is required (except for --combine-scorecards)")
     mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
-    if args.skip_arms:                          # CLI --skip-arms ∪ existing ITER18_SKIP_ARMS env (single source)
-        _toks = [t for t in re.split(r"[,\s]+", args.skip_arms) if t]
-        os.environ["ITER18_SKIP_ARMS"] = " ".join(
-            dict.fromkeys(os.environ.get("ITER18_SKIP_ARMS", "").split() + _toks))
 
     # ── metrics_watch regeneration (self-contained; see the _mw_* section above) ──
     if args.metrics_watch_out is not None:
