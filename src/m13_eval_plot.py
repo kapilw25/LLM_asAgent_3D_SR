@@ -2920,6 +2920,17 @@ def main():
             sys.exit("ERROR: --metrics-watch-out requires --outputs-root (e.g. outputs/poc)")
         init_style()
         regen_metrics_watch(args.outputs_root, args.metrics_watch_out, mode.lower())
+        # iter19 2026-07-09 (user order): ONE "refresh metrics_watch" now ALSO rebuilds the TOP-LEVEL
+        # cross-backbone figures — forest_plot_{best,frozen}_{ci,mean} + scale_replication +
+        # eval_scorecard_combined.{pdf,png} — into outputs/<mode>/probe_plot/metrics_watch/, so the live
+        # status-pane preview and the §3 finale share ONE recipe and every watch figure tracks the evals
+        # finished so far. Partial-tolerant (scale skips <2 backbones; forest uses whatever metrics exist —
+        # verified on 1B-only live data). GUARDED: a cross-plot hiccup on a partial state must NOT fail the
+        # per-backbone watch that already saved above (same defensive contract as the tcc_chart skip).
+        try:
+            cross_backbone_report(mode.lower(), Path(f"outputs/{mode.lower()}/probe_plot/metrics_watch"))
+        except Exception as _exc:
+            print(f"  [cross-plots] skipped on partial data: {type(_exc).__name__}: {_exc}")
         if args.metrics_watch_only:
             return
     elif args.metrics_watch_only:

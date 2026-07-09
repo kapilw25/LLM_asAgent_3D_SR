@@ -84,3 +84,52 @@ class DecodeFeeder:
             if item is None:
                 return
             yield item
+
+
+class BatchFeeder:
+    """Second pipeline stage (iter19 2026-07-09, zero-idle rung 2): a builder thread pops decoded
+    clips from a DecodeFeeder, torch.stack's them into forward-ready (keys, batch) pairs and
+    optionally pins the batch, publishing into a bounded batch_q. depth=2 = classic double
+    buffering: batch k+1 is ASSEMBLED (the 1-2s single-thread stack of GBs that used to run on
+    the GPU loop between forwards) while batch k forwards, and a pinned batch makes the
+    downstream .to("cuda") a straight DMA copy. Values are IDENTICAL — same torch.stack, same
+    clip order, no arithmetic. The tail partial batch is published as-is; iteration ends when
+    the upstream feeder ends.
+
+    USAGE:
+        batches = BatchFeeder(feeder, batch_size=args.batch_size, depth=2, pin_memory=True)
+        for keys, batch_t in batches:          # batch_t: (B, T, 3, H, W) fp32, pinned
+            ...GPU forward...                  # assembly of the NEXT batch overlaps this
+    """
+
+    def __init__(self, feeder, batch_size, depth, pin_memory):
+        if batch_size < 1 or depth < 1:
+            raise ValueError(f"BatchFeeder: batch_size={batch_size} depth={depth} must be ≥1")
+        self._q: "queue.Queue" = queue.Queue(maxsize=depth)
+
+        def _pack(keys, tens):
+            batch = torch.stack(tens)
+            if pin_memory:
+                batch = batch.pin_memory()
+            return keys, batch
+
+        def _builder():
+            keys, tens = [], []
+            for ck, t in feeder:
+                keys.append(ck)
+                tens.append(t)
+                if len(tens) >= batch_size:
+                    self._q.put(_pack(keys, tens))
+                    keys, tens = [], []
+            if tens:
+                self._q.put(_pack(keys, tens))
+            self._q.put(None)
+
+        threading.Thread(target=_builder, daemon=True).start()
+
+    def __iter__(self):
+        while True:
+            item = self._q.get()
+            if item is None:
+                return
+            yield item

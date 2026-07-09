@@ -35,6 +35,7 @@ import torch.nn.functional as F
 from utils.checkpoint import save_array_checkpoint
 from utils.config import get_pipeline_config, get_model_config
 from utils.data_download import iter_clips_parallel
+from utils.decode_feeder import BatchFeeder
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.progress import make_pbar
 from utils.video_io import decode_video_bytes
@@ -367,7 +368,7 @@ def _pool_tokens(feats: torch.Tensor, n_out: int) -> torch.Tensor:
     return pooled.transpose(1, 2).contiguous()
 
 
-def _flush_batch(pending_tensors, pending_keys, model, encoder_kind, num_frames,
+def _flush_batch(batch, pending_keys, model, encoder_kind, num_frames,
                  sizer, feats_acc, keys_acc, pbar, pool_tokens=None):
     """Sub-batch and run encoder. AdaptiveBatchSizer halves on OOM and retries.
 
@@ -375,8 +376,12 @@ def _flush_batch(pending_tensors, pending_keys, model, encoder_kind, num_frames,
     avg-pool BEFORE the .numpy() materialisation so feats_acc accumulates the
     pooled (N, pool_tokens, D) shape. Disk-saving is HUGE for ViT-G FULL evals:
     4608 → 16 tokens = 288× per-clip reduction (~21 MB → ~73 KB at fp16).
+
+    iter19 2026-07-09 rungs 2+3: `batch` arrives pre-STACKED + pinned from BatchFeeder and is
+    uploaded ONCE here — the sizer's sub-batches become cuda views and forward_*'s .to("cuda")
+    a no-op move. Values byte-identical (stack + slice = pure data movement).
     """
-    batch = torch.stack(pending_tensors)
+    batch = batch.to("cuda", non_blocking=True)
     n_total = batch.shape[0]
     i = 0
     while i < n_total:
@@ -574,39 +579,38 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
     print(f"  decode pool: {DECODE_WORKERS_EMBED} workers (T1 parallel decode), "
           f"decoded_q maxsize={decoded_q.maxsize}")
 
-    pending_tensors, pending_keys = [], []
-    n_since_ckpt = 0
-    t0 = time.time()
-    try:
+    # iter19 2026-07-09 rung 2: adapt decoded_q into an iterator so BatchFeeder's builder
+    # thread stacks+pins the next batch while the current one forwards (double-buffer, same
+    # util as m12d/m12f); the old pending-list accumulation + post-loop tail flush both fold
+    # into it (tail batch published as-is). Same decoded tensors, same order semantics.
+    def _decoded_iter():
         while True:
             try:
                 item = decoded_q.get(timeout=300)
             except queue.Empty:
-                print("  WARN: decoded queue timeout (5 min) — flushing pending and exiting loop")
-                break
+                print("  WARN: decoded queue timeout (5 min) — draining out")
+                return
             if item is None:
-                break
-            clip_key, t = item
-            if t is None:
-                print(f"  SKIP (decode fail): {clip_key}")
+                return
+            ck, dt = item
+            if dt is None:
+                print(f"  SKIP (decode fail): {ck}")
                 continue
-            pending_tensors.append(t)
-            pending_keys.append(clip_key)
-            if len(pending_tensors) >= _PENDING_FLUSH_N:
-                _flush_batch(pending_tensors, pending_keys,
-                             model, encoder_kind, args.num_frames,
-                             sizer, feats_acc, keys_acc, pbar,
-                             pool_tokens=pool_tokens)
-                n_since_ckpt += len(pending_keys)
-                pending_tensors, pending_keys = [], []
-                if n_since_ckpt >= CHECKPOINT_EVERY:
-                    _save_features_ckpt(ckpt_file, feats_acc, keys_acc)
-                    n_since_ckpt = 0
-        if pending_tensors:
-            _flush_batch(pending_tensors, pending_keys,
+            yield ck, dt
+
+    batches = BatchFeeder(_decoded_iter(), batch_size=_PENDING_FLUSH_N, depth=2, pin_memory=True)
+    n_since_ckpt = 0
+    t0 = time.time()
+    try:
+        for pending_keys, batch_t in batches:
+            _flush_batch(batch_t, pending_keys,
                          model, encoder_kind, args.num_frames,
                          sizer, feats_acc, keys_acc, pbar,
                          pool_tokens=pool_tokens)
+            n_since_ckpt += len(pending_keys)
+            if n_since_ckpt >= CHECKPOINT_EVERY:
+                _save_features_ckpt(ckpt_file, feats_acc, keys_acc)
+                n_since_ckpt = 0
     finally:
         decode_stop.set()
         tar_stop.set()

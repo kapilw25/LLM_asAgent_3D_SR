@@ -675,38 +675,20 @@ def maybe_backup(fully_done, mtag):
 # metrics_watch 4.5h stale under `python …status.py` (ModuleNotFoundError: matplotlib). Single source below.
 _VENV_PY = REPO / "venv_walkindia" / "bin" / "python"
 _VENV_PY = str(_VENV_PY) if _VENV_PY.exists() else sys.executable
-# champion-first backbone order for the combined 1B-vs-2B scorecard (mirrors src/m13_eval_plot.py _BB_TAG).
-_COMBINE_BB_ORDER = ("vjepa_2_1_vitG", "vjepa_2_1_vitg", "vjepa_2_0_vitg")
 
 
 def _metrics_watch_cmd(mtag, mode):
-    """m13 --metrics-watch-only argv → regenerates metrics_watch/<bb>/ (eval_scorecard.pdf/png + the
-    kept/paper/tcc/validity figures + eval_metrics.csv/json) from the eval JSONs finished so far (CPU
-    re-read + re-render, no GPU). Single source for both the --plots path and the auto-preview."""
+    """m13 --metrics-watch-only argv → regenerates BOTH (a) the per-backbone metrics_watch/<bb>/
+    (eval_scorecard.pdf/png + kept/paper/tcc/validity + eval_metrics.csv/json) AND (b) the TOP-LEVEL
+    cross-backbone figures at outputs/<mtag>/probe_plot/metrics_watch/ (forest_plot_{best,frozen} +
+    scale_replication + eval_scorecard_combined.{pdf,png}) — m13 folds cross_backbone_report into the
+    --metrics-watch-out path (iter19 2026-07-09), so this ONE call is the single source for both the
+    --plots path and the auto-preview. From the eval JSONs finished so far (CPU re-render, no GPU)."""
     return [_VENV_PY, "-u", "src/m13_eval_plot.py", f"--{mode}",
             "--output-dir", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}",
             "--outputs-root", _eval_root(mtag, BACKBONE, EVAL_CORPUS),
             "--metrics-watch-out", f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch",
             "--metrics-watch-only"]
-
-
-def _rebuild_combined_scorecard(mtag):
-    """Re-stack every canonical per-backbone eval_scorecard.pdf (champion-first) into ONE combined PDF at
-    outputs/<mtag>/probe_plot/metrics_watch/eval_scorecard_combined.pdf via m13 --combine-scorecards (venv
-    python → pymupdf, so the system-python watch still works). DISCOVERS whichever backbones rendered a
-    scorecard under the backbone-first tree — keeping only metrics_watch/<bb>/ where <bb> is a real backbone
-    in ITS OWN <bb>_<size> tree (drops stray/backup dirs). Needs >=2; returns a status line, or None if <2."""
-    known = set(_COMBINE_BB_ORDER)
-    src = sorted(
-        (p for p in REPO.glob(f"outputs/{mtag}/*/eval/*/probe_plot/metrics_watch/*/eval_scorecard.pdf")
-         if p.parent.name in known and p.relative_to(REPO).parts[2].startswith(p.parent.name)),
-        key=lambda p: _COMBINE_BB_ORDER.index(p.parent.name))
-    if len(src) < 2:
-        return None
-    out = REPO / f"outputs/{mtag}/probe_plot/metrics_watch/eval_scorecard_combined.pdf"
-    rc = subprocess.run([_VENV_PY, "-u", "src/m13_eval_plot.py", "--combine-scorecards", *map(str, src),
-                         "--combine-out", str(out)], cwd=str(REPO), capture_output=True, text=True).returncode
-    return f"combined {len(src)} backbones → {out.relative_to(REPO)} (rc={rc})"
 
 
 def maybe_plot(mtag, mode):
@@ -744,19 +726,18 @@ def maybe_plot(mtag, mode):
             fh.write(b"=== metrics_watch refresh (eval_scorecard + eval_metrics.csv) ===\n"); fh.flush()
             mw_rc = subprocess.run(_metrics_watch_cmd(mtag, mode), cwd=str(REPO), env=os.environ.copy(),
                                    stdout=fh, stderr=subprocess.STDOUT).returncode
-            # 2026-06-24: after THIS backbone's scorecard refreshes, re-stack the per-backbone scorecards into
-            # the combined 1B-vs-2B PDF (champion-first) so the combined view tracks the live data too.
-            fh.write(b"\n=== combined cross-backbone scorecard ===\n"); fh.flush()
-            _comb = _rebuild_combined_scorecard(mtag)
-            fh.write(((_comb or "skip — need >=2 per-backbone scorecards") + "\n").encode()); fh.flush()
+            # iter19 2026-07-09: the TOP-LEVEL cross-backbone figures (forest_plot_{best,frozen} +
+            # scale_replication + eval_scorecard_combined.{pdf,png}) are now emitted INSIDE the
+            # metrics_watch refresh above (m13 --metrics-watch-out folds cross_backbone_report), so the
+            # separate combined-PDF re-stack step is gone — one recipe, every watch figure tracks live evals.
             fh.write(b"\n=== S3 hero-table preview ===\n"); fh.flush()
             rc = subprocess.run(chain, shell=True, executable="/bin/bash", cwd=str(REPO),
                                 stdout=fh, stderr=subprocess.STDOUT).returncode
         scard = REPO / f"{_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch/{BACKBONE}/eval_scorecard.png"
         if scard.exists() or hero.exists():
             return (f"  🖼  preview REBUILT (metrics_watch rc={mw_rc} · hero rc={rc}) → "
-                    f"metrics_watch/{BACKBONE}/{{eval_scorecard, eval_metrics.csv}}"
-                    f"{' + combined.pdf' if _comb else ''} · next in ~{PLOT_EVERY_MIN}m")
+                    f"metrics_watch/{BACKBONE}/{{eval_scorecard,eval_metrics.csv}} + probe_plot/metrics_watch/"
+                    f"{{forest_plot_*,scale_replication,eval_scorecard_combined}} · next in ~{PLOT_EVERY_MIN}m")
         return f"  🖼  preview rc={rc}/{mw_rc} — partial/blocked, see {plog.name} · next in ~{PLOT_EVERY_MIN}m"
     finally:
         lock.unlink(missing_ok=True)
@@ -772,12 +753,10 @@ def maybe_metrics_plots(mtag, mode):
     print(f"\n  📊 --plots: refreshing metrics_watch figures+data → {out}/probe_plot/metrics_watch/{BACKBONE}/")
     rc = subprocess.run(cmd, cwd=str(REPO), env=os.environ.copy()).returncode
     if rc == 0:
-        print(f"  📊 metrics_watch refreshed (rc=0) → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch/{BACKBONE}/")
+        print(f"  📊 metrics_watch refreshed (rc=0) → {_eval_dir(mtag, BACKBONE, EVAL_CORPUS, 'probe_plot')}/metrics_watch/{BACKBONE}/ "
+              f"+ outputs/{mtag}/probe_plot/metrics_watch/{{forest_plot_*,scale_replication,eval_scorecard_combined}}")
     else:
         print(f"  📊 metrics_watch refresh rc={rc} — partial/blocked (partial json under a live run is normal)")
-    _comb = _rebuild_combined_scorecard(mtag)   # re-stack per-backbone scorecards → combined 1B-vs-2B PDF
-    if _comb:
-        print(f"  📊 {_comb}")
 
 
 _BURN_RE = re.compile(r"^ngpu_run_(?P<mode>[a-z]+)_(?P<rest>.+)_(?P<ts>\d{8}_\d{6})\.log$")

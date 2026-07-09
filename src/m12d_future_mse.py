@@ -48,7 +48,7 @@ from utils.cache_policy import (
 from utils.checkpoint import save_array_checkpoint, save_json_checkpoint
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config
 from utils.data_download import ensure_local_data, iter_clips_parallel
-from utils.decode_feeder import DecodeFeeder
+from utils.decode_feeder import BatchFeeder, DecodeFeeder
 from utils.frozen_features import (
     ENCODERS,
     decode_to_tensor,
@@ -158,7 +158,7 @@ def _save_mse_ckpt(ckpt_file: Path, mse_acc, keys_acc, ma_acc=None) -> None:
     os.replace(tmp, ckpt_file)
 
 
-def _flush_batch_forward(pending_tensors, pending_keys, encoder, predictor, mask_gen,
+def _flush_batch_forward(batch, pending_keys, encoder, predictor, mask_gen,
                          sizer, mse_acc, keys_acc, pbar,
                          ma_head=None, ma_acc=None, embed_dim=None):
     """Sub-batch with OOM-retry. Mirrors frozen_features._flush_batch.
@@ -166,8 +166,13 @@ def _flush_batch_forward(pending_tensors, pending_keys, encoder, predictor, mask
     D2 (2026-05-16): when `ma_head` is provided, also accumulates per-clip L1
     in motion_aux-augmented feature space (mean-pool over tokens → ma_head →
     L1 between pooled-augmented pred + target). Appends to `ma_acc`.
+
+    iter19 2026-07-09 rungs 2+3: `batch` arrives pre-STACKED + pinned from BatchFeeder (the
+    0.1-0.2s main-thread torch.stack moved to the builder thread) and is uploaded ONCE here —
+    the sizer's sub-batches become cuda views and to_pixel's .to("cuda") a no-op move.
+    Values byte-identical: stack + slice are pure data movement.
     """
-    batch = torch.stack(pending_tensors)
+    batch = batch.to("cuda", non_blocking=True)
     n_total = batch.shape[0]
     i = 0
     while i < n_total:
@@ -308,7 +313,6 @@ def run_forward_stage(args, wb) -> None:
         clip_q, tar_stop, _reader = iter_clips_parallel(
             local_data=args.local_data, subset_keys=target_keys, processed_keys=processed)
 
-        pending_tensors, pending_keys = [], []
         n_since_ckpt = 0
         # iter19 2026-07-09: zero-idle DecodeFeeder (utils/decode_feeder — SHARED by m12d/e/f).
         # m12d was the last SERIAL decoder: one decode_to_tensor per clip in the main thread
@@ -318,26 +322,19 @@ def run_forward_stage(args, wb) -> None:
             clip_q,
             decode_one=lambda ck, mp4: decode_to_tensor(mp4, tmp_dir, ck, args.num_frames, CROP),
             n_workers=max(1, args.decode_workers), ready_depth=_PENDING_FLUSH_N * 3, timeout_s=300)
+        # rung 2 (07-09): builder thread stacks+pins batch k+1 while k forwards; tail batch
+        # published as-is, so the old pending-list accumulation + post-loop flush both go away.
+        batches = BatchFeeder(feeder, batch_size=_PENDING_FLUSH_N, depth=2, pin_memory=True)
         try:
-            for clip_key, t in feeder:
-                pending_tensors.append(t)
-                pending_keys.append(clip_key)
-
-                if len(pending_tensors) >= _PENDING_FLUSH_N:
-                    _flush_batch_forward(pending_tensors, pending_keys,
-                                         encoder, predictor, mask_gen,
-                                         sizer, mse_acc, keys_acc, pbar,
-                                         ma_head=ma_head, ma_acc=ma_acc, embed_dim=embed_dim)
-                    n_since_ckpt += len(pending_keys)
-                    pending_tensors, pending_keys = [], []
-                    if n_since_ckpt >= CHECKPOINT_EVERY:
-                        _save_mse_ckpt(ckpt_file, mse_acc, keys_acc, ma_acc=ma_acc)
-                        n_since_ckpt = 0
-            if pending_tensors:
-                _flush_batch_forward(pending_tensors, pending_keys,
+            for pending_keys, batch_t in batches:
+                _flush_batch_forward(batch_t, pending_keys,
                                      encoder, predictor, mask_gen,
                                      sizer, mse_acc, keys_acc, pbar,
                                      ma_head=ma_head, ma_acc=ma_acc, embed_dim=embed_dim)
+                n_since_ckpt += len(pending_keys)
+                if n_since_ckpt >= CHECKPOINT_EVERY:
+                    _save_mse_ckpt(ckpt_file, mse_acc, keys_acc, ma_acc=ma_acc)
+                    n_since_ckpt = 0
         finally:
             tar_stop.set()
             pbar.close()

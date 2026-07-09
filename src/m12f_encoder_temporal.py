@@ -61,7 +61,7 @@ from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog  # noqa
 from utils.checkpoint import save_array_checkpoint, save_json_checkpoint  # noqa: E402
 from utils.config import add_local_data_arg, check_gpu, get_pipeline_config  # noqa: E402
 from utils.data_download import ensure_local_data, iter_clips_parallel  # noqa: E402
-from utils.decode_feeder import DecodeFeeder  # noqa: E402
+from utils.decode_feeder import BatchFeeder, DecodeFeeder  # noqa: E402
 from utils.frozen_features import ENCODERS, decode_to_tensor  # noqa: E402
 from utils.gpu_batch import cleanup_temp, cuda_cleanup  # noqa: E402
 from utils.predictor_eval import CROP, NUM_FRAMES_DEFAULT, bootstrap_ci, load_encoder_only  # noqa: E402
@@ -128,6 +128,13 @@ def _run_metric_forward(metric, encoder, batch, keys, num_frames, args, share_ma
     share_map (iter18 #6, m12b pattern): clip_key → (D,) fp32 IDENTITY-forward features from
     probe_action's cache; when present, aot computes only the REVERSE forward and tov skips
     the identity permutation."""
+    # iter19 2026-07-09 rung 3 (zero-idle): upload the pinned batch ONCE — every variant gather
+    # below (aot flip · tov permute · pace stride index_select · tcc pass-through) then runs ON
+    # GPU instead of single-thread CPU index-shuffling between forwards (measured post-rung-2:
+    # tov idled 41% of wall, burning exactly 1 CPU core during each 0% window = the CPU gather).
+    # Pure indexing/data-movement — values byte-identical; to_pixel's .to("cuda") becomes a no-op
+    # move + bf16 cast. non_blocking: the BatchFeeder batch is pinned → async DMA.
+    batch = batch.to("cuda", non_blocking=True)
     if metric == "aot":
         B = batch.shape[0]
         if share_map is not None:
@@ -193,10 +200,12 @@ def _resolve_tcc_pair_chunk(arg_val, t_eff, d, n_pairs):
     return chunk
 
 
-def _forward_with_oom_backoff(metric, encoder, tensors, keys, num_frames, args, share_map):
-    """Run the metric forward on a clip list, HALVING on CUDA OOM down to 1 clip (iter18 #4 —
-    mirrors utils.predictor_eval.safe_metric's intent; replaces the legacy FATAL exit). The
-    clip-major layout makes the halves' (feats, labels) concatenate correctly.
+def _forward_with_oom_backoff(metric, encoder, batch_t, keys, num_frames, args, share_map):
+    """Run the metric forward on a pre-STACKED clip batch (B,T,3,H,W), HALVING on CUDA OOM down
+    to 1 clip (iter18 #4 — mirrors utils.predictor_eval.safe_metric's intent; replaces the legacy
+    FATAL exit). iter19 07-09: takes the already-stacked (pinned) tensor from BatchFeeder — the
+    stack moved OFF the GPU loop onto the builder thread, and the halves are leading-dim SLICES
+    (contiguous views, still pinned) so the retry re-stacks nothing; values byte-identical.
     The retry runs OUTSIDE the except block: an exception's __traceback__ pins the FAILED
     forward's activations, so recursing inside `except` accumulates every failed attempt's
     VRAM — observed 2026-06-12 smoke: aot's 40-sample forward fit, then tov OOM'd even at a
@@ -204,10 +213,10 @@ def _forward_with_oom_backoff(metric, encoder, tensors, keys, num_frames, args, 
     releases the pinned tensors before each retry."""
     oom = False
     try:
-        return _run_metric_forward(metric, encoder, torch.stack(tensors), keys,
+        return _run_metric_forward(metric, encoder, batch_t, keys,
                                    num_frames, args, share_map)
     except torch.cuda.OutOfMemoryError:
-        if len(tensors) == 1:
+        if batch_t.shape[0] == 1:
             raise SystemExit(
                 f"FATAL: OOM at a SINGLE-clip batch for metric={metric} — the stacked variant "
                 f"forward does not fit this GPU even at B=1; lower --num-frames/--batch-size "
@@ -216,12 +225,12 @@ def _forward_with_oom_backoff(metric, encoder, tensors, keys, num_frames, args, 
     # ── out of the except scope: traceback freed → the failed attempt's VRAM is reclaimable ──
     assert oom
     cuda_cleanup()
-    mid = len(tensors) // 2
-    print(f"  [oom-backoff] {metric}: batch {len(tensors)} → {mid}+{len(tensors) - mid}",
+    mid = batch_t.shape[0] // 2
+    print(f"  [oom-backoff] {metric}: batch {batch_t.shape[0]} → {mid}+{batch_t.shape[0] - mid}",
           flush=True)
-    f1, l1 = _forward_with_oom_backoff(metric, encoder, tensors[:mid], keys[:mid],
+    f1, l1 = _forward_with_oom_backoff(metric, encoder, batch_t[:mid], keys[:mid],
                                        num_frames, args, share_map)
-    f2, l2 = _forward_with_oom_backoff(metric, encoder, tensors[mid:], keys[mid:],
+    f2, l2 = _forward_with_oom_backoff(metric, encoder, batch_t[mid:], keys[mid:],
                                        num_frames, args, share_map)
     return torch.cat([f1, f2], dim=0), torch.cat([l1, l2], dim=0)
 
@@ -276,20 +285,32 @@ def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir
     labels_all = {m: [] for m in metrics}
     clip_ids_all = []
     # ── iter18 #5: resume from the intra-run checkpoint (same metric GROUP only) ──
-    ckpt = out_dir / f".m12f_ckpt_{split_name}.npz"
-    if ckpt.exists():
-        z = np.load(ckpt, allow_pickle=True)
+    # iter19 2026-07-09 COLLISION FIX (caught live by /gpu-bottleneck): the ckpt name was split-only
+    # (.m12f_ckpt_test.npz) but FOUR per-metric F: jobs share out_dir — the last writer won and every
+    # sibling hit "holds metrics=['pace'] ≠ ['tov'] — discarding" on restart (tov re-extracted ~9.6k
+    # test clips ≈ 1.6h GPU, twice). Now metric-qualified: .m12f_ckpt_<metrics>_<split>.npz — tov/tcc
+    # can both run the test split concurrently without clobbering. LEGACY fallback: a pre-fix job
+    # still writing the split-only name resumes IFF its stored metrics match (never discards a
+    # sibling's work — mismatch on the legacy name just means "not ours", not "corrupt").
+    ckpt = out_dir / f".m12f_ckpt_{'-'.join(metrics)}_{split_name}.npz"
+    _legacy_ckpt = out_dir / f".m12f_ckpt_{split_name}.npz"
+    _resume_src = ckpt if ckpt.exists() else (_legacy_ckpt if _legacy_ckpt.exists() else None)
+    if _resume_src is not None:
+        z = np.load(_resume_src, allow_pickle=True)
         stored = [str(m) for m in z["metrics"]]
         if stored == list(metrics):
             clip_ids_all = [str(k) for k in z["clip_ids"]]
             for m in metrics:
                 feats_all[m] = [torch.from_numpy(z[f"feats_{m}"])]
                 labels_all[m] = [torch.from_numpy(z[f"labels_{m}"])]
-            print(f"  [resume] {ckpt.name}: {len(clip_ids_all)} clips already extracted "
+            print(f"  [resume] {_resume_src.name}: {len(clip_ids_all)} clips already extracted "
                   f"({split_name}, metrics={stored})")
-        else:
+        elif _resume_src is ckpt:
             print(f"  [resume] {ckpt.name} holds metrics={stored} ≠ current {list(metrics)} "
                   f"— discarding (full re-extract)")
+        else:
+            print(f"  [resume] legacy {_resume_src.name} holds metrics={stored} (another metric's "
+                  f"work) — leaving it alone, fresh extract for {list(metrics)}")
     processed = set(clip_ids_all)
 
     # iter19 2026-07-09: ckpt save OFF the hot path — the inline torch.cat + np.savez of the whole
@@ -312,7 +333,9 @@ def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir
             for m in metrics:
                 arrays[f"feats_{m}"] = torch.cat(snap_f[m], dim=0).numpy()
                 arrays[f"labels_{m}"] = torch.cat(snap_l[m], dim=0).numpy()
-            tmp = out_dir / f".m12f_ckpt_{split_name}.tmp.npz"   # .npz suffix → np.savez keeps it
+            # tmp name metric-qualified too (07-09): concurrent sibling jobs on the SAME split
+            # (tov/test ∥ tcc/test) would interleave writes into one shared tmp → corrupt savez.
+            tmp = out_dir / f".m12f_ckpt_{'-'.join(metrics)}_{split_name}.tmp.npz"
             np.savez(tmp, **arrays)
             os.replace(tmp, ckpt)
 
@@ -321,48 +344,38 @@ def _extract_split_multi(args, encoder, metrics, split_keys, split_name, out_dir
 
     clip_q, tar_stop, _r = iter_clips_parallel(
         local_data=args.local_data, subset_keys=set(split_keys), processed_keys=processed)
-    pend_t, pend_k = [], []
     since_ckpt = 0
     pbar = make_pbar(total=len(split_keys), desc=f"m12f[{'-'.join(metrics)}/{split_name}]",
                      unit="clip")
     pbar.update(len(processed))
 
-    def _flush():
-        nonlocal pend_t, pend_k, since_ckpt
-        if not pend_t:
-            return
-        for m in metrics:
-            feats, labels = _forward_with_oom_backoff(m, encoder, pend_t, pend_k,
-                                                      args.num_frames, args, share_map
-                                                      if m in ("aot", "tov") else None)
-            feats_all[m].append(feats)
-            labels_all[m].append(labels)
-        clip_ids_all.extend(pend_k)
-        since_ckpt += len(pend_k)
-        pbar.update(len(pend_k))
-        pend_t, pend_k = [], []
-        if since_ckpt >= CHECKPOINT_EVERY:
-            _save_ckpt()
-            since_ckpt = 0
-
-    # iter19 2026-07-09: zero-idle DecodeFeeder (utils/decode_feeder — SHARED by m12d/e/f). The
-    # 07-08 submit-refill pool still square-waved the GPU (measured post-restart: pace duty-cycled
-    # ~75%): its refill only ran on the MAIN thread between future-pops, so during each 32-clip
-    # forward the workers drained and idled. Feeder workers own clip_q→decode→ready_q and never
-    # pause; 3 batches always sit decoded-and-ready when a forward ends. Pixels BYTE-IDENTICAL
-    # (same decode_to_tensor, same args). CPU smoke: 24/24 clips exactly once, consumer wait 7ms
-    # mean vs ~2000ms serial.
+    # iter19 2026-07-09: zero-idle, two rungs (utils/decode_feeder — SHARED util).
+    # Rung 1 DecodeFeeder: N workers own clip_q→decode→ready_q, decode never pauses (the 07-08
+    #   submit-refill pool refilled only between future-pops → workers idled during every forward;
+    #   measured: pace 1.3-1.4 → 0.5-0.6 s/clip).
+    # Rung 2 BatchFeeder: a builder thread torch.stack's + PINS the next batch while the current
+    #   one forwards (double-buffer, depth 2) — the ~1-2s single-thread stack of a 3.4G pace batch
+    #   used to run on the GPU loop between flushes = the residual 0% troughs at the ~20s batch
+    #   cadence. Pixels/values BYTE-IDENTICAL: same decode, same stack, same order.
     feeder = DecodeFeeder(
         clip_q,
         decode_one=lambda ck, mp4: decode_to_tensor(mp4, tmp_dir, ck, decode_T, CROP),
         n_workers=max(1, args.decode_workers), ready_depth=args.batch_size * 3, timeout_s=300)
+    batches = BatchFeeder(feeder, batch_size=args.batch_size, depth=2, pin_memory=True)
     try:
-        for clip_key, t in feeder:
-            pend_t.append(t)
-            pend_k.append(clip_key)
-            if len(pend_t) >= args.batch_size:
-                _flush()
-        _flush()
+        for pend_k, batch_t in batches:
+            for m in metrics:
+                feats, labels = _forward_with_oom_backoff(m, encoder, batch_t, pend_k,
+                                                          args.num_frames, args, share_map
+                                                          if m in ("aot", "tov") else None)
+                feats_all[m].append(feats)
+                labels_all[m].append(labels)
+            clip_ids_all.extend(pend_k)
+            since_ckpt += len(pend_k)
+            pbar.update(len(pend_k))
+            if since_ckpt >= CHECKPOINT_EVERY:
+                _save_ckpt()
+                since_ckpt = 0
     finally:
         if _ckpt_thread[0] is not None:
             _ckpt_thread[0].join()          # let the last background ckpt writer land (atomic publish)
@@ -518,11 +531,12 @@ def run_forward_stage(args, wb):
         print("  all requested metrics cached — nothing to do")
         return
     # iter18 #5: a full recompute must not RESUME from a prior run's intra-run checkpoint —
-    # clear the split-level ckpts under policy 2 (policy 1 keeps them = crash-resume).
+    # clear the ckpts under policy 2 (policy 1 keeps them = crash-resume). 07-09: covers both the
+    # metric-qualified names (glob) and the legacy split-only name.
     if args.cache_policy == "2":
         for sp in ("test", "train"):
-            guarded_delete(out_dir / f".m12f_ckpt_{sp}.npz", args.cache_policy,
-                           f".m12f_ckpt_{sp}.npz")
+            for p in out_dir.glob(f".m12f_ckpt_*{sp}.npz"):
+                guarded_delete(p, args.cache_policy, p.name)
 
     labels_map = load_action_labels(args.action_probe_root / "action_labels.json")
     train_keys = sorted(k for k, info in labels_map.items() if info["split"] == "train")
