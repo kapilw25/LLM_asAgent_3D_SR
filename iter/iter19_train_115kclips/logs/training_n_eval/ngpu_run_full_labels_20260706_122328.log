@@ -1,0 +1,7 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/full_local/m12_frame_cache (max 200 GB, LRU-evict)
+
+═══ 12:23:32 · PRE-FLIGHT ═══
+ls: cannot access 'checkpoints/vjepa2_1_vitG_384.pt': No such file or directory
+✗ run setup_env_uv.sh first
+FATAL: required path missing: checkpoints/vjepa2_1_vitG_384.pt

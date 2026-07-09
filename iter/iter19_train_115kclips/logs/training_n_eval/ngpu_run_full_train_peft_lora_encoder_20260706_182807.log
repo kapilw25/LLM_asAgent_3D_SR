@@ -1,0 +1,199 @@
+[M9] LOCAL_DATA=data/full_local · MASTER_MANIFEST=data/full_local/full_local.json
+═══ 18:28:08 · Generating train/val/test split JSONs ═══
+Generated data/full_local/train_split.json: 86770 clips (split=train)
+Generated data/full_local/val_split.json: 5750 clips (split=val)
+Generated data/full_local/test_split.json: 23106 clips (split=test)
+  [val-repartition] val 5750 → 909 (stratified · 14 motion classes × ~72/class) · test 23106 → 27947 (+4841 moved) · val∪test INVARIANT held → train pool unchanged.
+═══ 18:28:11 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [FULL]) ═══
+  [clip_splits] universe=broad_manifest: 115687 − val(909) − test(27947) = 86831 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 86831 train-pool keys → data/full_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/taxonomy_labels.json
+═══ 18:28:12 · m09b_peft_lora train [variant=encoder] (FULL) ═══
+  config:    configs/train/peft_lora_encoder.yaml
+  subset:    data/full_local/train_pool.json  (leakage-safe: universe − val − test)
+  factor:    data/full_local/m11_factor_datasets
+  output:    outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder
+  init:      outputs/full/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)
+  recipe (MANDATORY, resolved from configs/train/peft_lora_encoder.yaml + optional env overrides): --teacher-mode FROZEN --lp-ft-stage0 off --warmup-mode single --subset-mode recipe_v3 --saliency off --spd off --replay on
+[live-debug] installed — pid=1733011. Force a stack dump anytime via:
+[live-debug]   kill -USR1 1733011   # signal-safe native dump
+[live-debug]   kill -USR2 1733011   # Python dump with banner
+  [train-frame-cache] ON → data/full_local/m12_frame_cache (max_cache=200G, LRU-evict) — deterministic decode memoized; shared across epochs/stages/arms/evals
+  [stream-autotune m09b_peft_encoder] cores=96 (pinned cpuset) · concurrency=2 (src=env) · cgroup_ram=684G → num_workers=24
+  [recipe-v3 receipts] saliency_weighting=False · spd.enabled=False · raw_pretrain_pct=1.0 · factor_streaming.enabled=True
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+  [probe_labels] cached: /workspace/factorjepa/outputs/full/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/full/probe_taxonomy/taxonomy_labels.json
+  [cache-policy=1/keep] preserved output_dir (m09b_peft_lora_encoder): outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder — rerun with --cache-policy 2 to delete (whole folder wipe)
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  [iter15] Local init from: /workspace/factorjepa/outputs/full/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Loading init from prior-run ckpt: /workspace/factorjepa/outputs/full/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Schema: student (492 keys) + predictor (300 keys)
+Student loaded: 1,012,185,216 params (492/492 keys = 100%)
+Teacher created (deepcopy of student) — mode=FROZEN (SALT) → EMA updates will be SKIPPED; teacher == init checkpoint forever
+Predictor loaded from checkpoint (300/300 keys = 100%)
+Predictor: 55,397,632 params
+  PEFT: LoRA r=16 alpha=32 targets=['qkv', 'proj', 'fc1', 'fc2'] → 15,120,384 trainable adapter params (base FROZEN)
+  [motion_aux] enabled: 14 classes, 23-D vec, 115,626 clips with targets, 370,725 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+[POC] Loaded subset: 86,831 clip keys from train_pool.json
+  train/val split: 86831 train / 909 val (--subset pool ∩ factor_manifest (leakage-safe, test excluded upstream))
+  Factor index: 72 clips (D_L=71, D_A=56, D_I=54)
+  build_streaming_indices: 115687 clips ready (115687 mp4, 115687 masks, 116 TARs scanned)
+[loss] Pure JEPA L1 (α=1, β=γ=0) — default scaffold path, no multi-task active
+  [pre-flight] mode_mixture vs manifest availability OK: {'D_L': 115291, 'D_A': 104149, 'D_I': 95454}
+
+============================================================
+SURGERY TRAINING — 1 stages on 86831 factor clips
+Model: vit_giant_xformers_2_1 (40 blocks, 1408-dim)
+Epochs: 1 | Steps: 2713 | BS: 32
+Dense loss: predict_all=True | Deep supervision: 4 levels
+============================================================
+AdaptiveBatchSizer (surgery, grad-accum): start=30, max=32 (= effective BS), target VRAM=85%
+Resumed from step 2713 — stage 0 (m09c_ckpt_stage0.pt) complete; skipping stages <= 0
+
+============================================================
+[probe] N=909 held-out val clips, cadence=saves_per_epoch, saves_per_epoch=9 (probe_every=301 steps, ~9 total probes), val_loss=True
+============================================================
+  [probe] frame-cache ON → data/full_local/m12_frame_cache (shared across arms + evals)
+  Parallel TAR reader: 8 threads, 116 TARs, queue=256
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=36, dropped=0 (missing_part=0, empty_mp4=0), filtered=964 (subset=964, resume=0)
+  [tar reader] subset-00002.tar: emitted=85, dropped=0 (missing_part=0, empty_mp4=0), filtered=915 (subset=915, resume=0)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00000.tar: emitted=272, dropped=0 (missing_part=0, empty_mp4=0), filtered=728 (subset=728, resume=0)
+  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00003.tar: emitted=114, dropped=0 (missing_part=0, empty_mp4=0), filtered=886 (subset=886, resume=0)
+  [tar reader] subset-00006.tar: emitted=156, dropped=0 (missing_part=0, empty_mp4=0), filtered=844 (subset=844, resume=0)
+  [tar reader] subset-00008.tar: emitted=19, dropped=0 (missing_part=0, empty_mp4=0), filtered=981 (subset=981, resume=0)
+  [tar reader] subset-00010.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00009.tar: emitted=7, dropped=0 (missing_part=0, empty_mp4=0), filtered=993 (subset=993, resume=0)
+  [tar reader] subset-00012.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00013.tar: emitted=19, dropped=0 (missing_part=0, empty_mp4=0), filtered=981 (subset=981, resume=0)
+  [tar reader] subset-00011.tar: emitted=21, dropped=0 (missing_part=0, empty_mp4=0), filtered=979 (subset=979, resume=0)
+  [tar reader] subset-00014.tar: emitted=6, dropped=0 (missing_part=0, empty_mp4=0), filtered=994 (subset=994, resume=0)
+  [tar reader] subset-00015.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  [tar reader] subset-00016.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00018.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  [tar reader] subset-00017.tar: emitted=32, dropped=0 (missing_part=0, empty_mp4=0), filtered=968 (subset=968, resume=0)
+  [tar reader] subset-00021.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  [tar reader] subset-00019.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00022.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00020.tar: emitted=34, dropped=0 (missing_part=0, empty_mp4=0), filtered=966 (subset=966, resume=0)
+  [tar reader] subset-00023.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00025.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00024.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00026.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00027.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00029.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00028.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00030.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00031.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00032.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00034.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00035.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00037.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00033.tar: emitted=18, dropped=0 (missing_part=0, empty_mp4=0), filtered=982 (subset=982, resume=0)
+  [tar reader] subset-00036.tar: emitted=11, dropped=0 (missing_part=0, empty_mp4=0), filtered=989 (subset=989, resume=0)
+  [tar reader] subset-00038.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00039.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00040.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00041.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00042.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00044.tar: emitted=29, dropped=0 (missing_part=0, empty_mp4=0), filtered=971 (subset=971, resume=0)
+  [tar reader] subset-00046.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00043.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00045.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00047.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00048.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00049.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00051.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00050.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00053.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00054.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00052.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00055.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00056.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00058.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00057.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00062.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00060.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00059.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00061.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00063.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00064.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00066.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00065.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00067.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00068.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00069.tar: emitted=15, dropped=0 (missing_part=0, empty_mp4=0), filtered=985 (subset=985, resume=0)
+  [tar reader] subset-00070.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  [tar reader] subset-00071.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00073.tar: emitted=6, dropped=0 (missing_part=0, empty_mp4=0), filtered=994 (subset=994, resume=0)
+  [tar reader] subset-00072.tar: emitted=1, dropped=0 (missing_part=0, empty_mp4=0), filtered=999 (subset=999, resume=0)
+  [tar reader] subset-00074.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00076.tar: emitted=1, dropped=0 (missing_part=0, empty_mp4=0), filtered=999 (subset=999, resume=0)
+  [tar reader] subset-00077.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00078.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00075.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00079.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00080.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00081.tar: emitted=4, dropped=0 (missing_part=0, empty_mp4=0), filtered=996 (subset=996, resume=0)
+  [tar reader] subset-00082.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00086.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00083.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00085.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00084.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00087.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00088.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00089.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00090.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00092.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00094.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00093.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00091.tar: emitted=1, dropped=0 (missing_part=0, empty_mp4=0), filtered=999 (subset=999, resume=0)
+  [tar reader] subset-00095.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00096.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00097.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00098.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00100.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00099.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00101.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00102.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00103.tar: emitted=3, dropped=0 (missing_part=0, empty_mp4=0), filtered=997 (subset=997, resume=0)
+  [tar reader] subset-00105.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00104.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00107.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00108.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00106.tar: emitted=2, dropped=0 (missing_part=0, empty_mp4=0), filtered=998 (subset=998, resume=0)
+  [tar reader] subset-00109.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00110.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00115.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=687 (subset=687, resume=0)
+  [tar reader] subset-00112.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00113.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00111.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00114.tar: emitted=1, dropped=0 (missing_part=0, empty_mp4=0), filtered=999 (subset=999, resume=0)
+  [probe] decoding 909 clips with 8 CPU workers (was serial → ~8x speedup expected)
+probe_decode:   0%|          | 0/909 [00:00<?, ?clip/s]probe_decode:   0%|          | 1/909 [04:15<64:24:15, 255.35s/clip]probe_decode:   2%|▏         | 17/909 [04:15<3:43:27, 15.03s/clip, recent=0.0s/clip ETA0.0h]probe_decode:   4%|▎         | 33/909 [04:16<1:53:19,  7.76s/clip, recent=0.0s/clip ETA0.0h]probe_decode:   5%|▌         | 49/909 [04:16<1:14:58,  5.23s/clip, recent=0.0s/clip ETA0.0h]probe_decode:   7%|▋         | 65/909 [04:16<55:34,  3.95s/clip, recent=0.0s/clip ETA0.0h]  probe_decode:   9%|▉         | 81/909 [04:17<43:48,  3.17s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  11%|█         | 101/909 [04:17<34:18,  2.55s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  13%|█▎        | 121/909 [04:17<27:59,  2.13s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  16%|█▌        | 141/909 [04:18<23:27,  1.83s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  18%|█▊        | 161/909 [04:18<20:01,  1.61s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  20%|█▉        | 181/909 [04:18<17:21,  1.43s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  22%|██▏       | 201/909 [04:19<15:13,  1.29s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  24%|██▍       | 221/909 [04:19<13:28,  1.17s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  27%|██▋       | 241/909 [04:20<12:01,  1.08s/clip, recent=0.0s/clip ETA0.0h]probe_decode:  30%|███       | 273/909 [04:20<10:06,  1.05clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  34%|███▎      | 305/909 [04:21<08:36,  1.17clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  37%|███▋      | 337/909 [04:21<07:23,  1.29clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  41%|████      | 369/909 [04:21<06:23,  1.41clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  44%|████▍     | 401/909 [04:22<05:32,  1.53clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  48%|████▊     | 433/909 [04:22<04:48,  1.65clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  51%|█████     | 465/909 [04:23<04:11,  1.77clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  55%|█████▍    | 497/909 [04:23<03:38,  1.88clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  58%|█████▊    | 529/909 [04:24<03:09,  2.00clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  62%|██████▏   | 561/909 [04:24<02:44,  2.12clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  65%|██████▌   | 593/909 [04:25<02:21,  2.24clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  69%|██████▉   | 625/909 [04:25<02:00,  2.35clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  72%|███████▏  | 657/909 [04:26<01:42,  2.47clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  76%|███████▌  | 689/909 [04:26<01:25,  2.58clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  79%|███████▉  | 721/909 [04:27<01:09,  2.70clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  83%|████████▎ | 753/909 [04:27<00:55,  2.81clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  86%|████████▋ | 785/909 [04:28<00:42,  2.92clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  90%|████████▉ | 817/909 [04:28<00:30,  3.04clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  93%|█████████▎| 849/909 [04:29<00:19,  3.15clip/s, recent=0.0s/clip ETA0.0h]probe_decode:  97%|█████████▋| 881/909 [04:30<00:08,  3.26clip/s, recent=0.0s/clip ETA0.0h]probe_decode: 100%|██████████| 909/909 [04:30<00:00,  3.36clip/s, recent=0.0s/clip ETA0.0h]
+  [probe] decoded 909 clips (0 skipped — no tag match)
+  [resume] preloaded 8 prior probe rows — probe_history.jsonl APPENDS (no truncation)
+  [resume] best_state re-seeded: future_l1=0.5626 @ step 1507 (post-resume probes must beat it)
+  [resume] skipping stage 0 (peft_single) — completed in the prior run (weights already loaded)
+  Merging LoRA/DoRA weights into base model for export (non-destructive deepcopy)...
+Exported student encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt
+  ✓ encoder training-effect verified: ||Δ||/||init|| = 3.373e-02
+Exported motion_aux head: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
+
+FATAL (unhandled m09c exception): UnboundLocalError: cannot access local variable 'optimizer' where it is not associated with a value
+Traceback (most recent call last):
+  File "/workspace/factorjepa/src/m09b_peft_encoder.py", line 2064, in <module>
+    main()
+  File "/workspace/factorjepa/src/m09b_peft_encoder.py", line 2058, in main
+    train(cfg, args)
+  File "/workspace/factorjepa/src/m09b_peft_encoder.py", line 1854, in train
+    student, teacher, predictor, optimizer, scheduler, scaler,
+                                 ^^^^^^^^^
+UnboundLocalError: cannot access local variable 'optimizer' where it is not associated with a value
+
+❌ FATAL: run_train.sh aborted at line 478 (exit=1)

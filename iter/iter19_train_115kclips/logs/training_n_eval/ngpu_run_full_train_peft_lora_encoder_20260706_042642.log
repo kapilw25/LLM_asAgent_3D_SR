@@ -1,0 +1,41 @@
+[M9] LOCAL_DATA=data/full_local · MASTER_MANIFEST=data/full_local/full_local.json
+═══ 04:26:43 · Generating train/val/test split JSONs ═══
+Generated data/full_local/train_split.json: 86770 clips (split=train)
+Generated data/full_local/val_split.json: 5750 clips (split=val)
+Generated data/full_local/test_split.json: 23106 clips (split=test)
+  [val-repartition] val 5750 → 909 (stratified · 14 motion classes × ~72/class) · test 23106 → 27947 (+4841 moved) · val∪test INVARIANT held → train pool unchanged.
+═══ 04:26:46 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [FULL]) ═══
+  [clip_splits] universe=broad_manifest: 115687 − val(909) − test(27947) = 86831 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 86831 train-pool keys → data/full_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/taxonomy_labels.json
+═══ 04:26:47 · m09b_peft_lora train [variant=encoder] (FULL) ═══
+  config:    configs/train/peft_lora_encoder.yaml
+  subset:    data/full_local/train_pool.json  (leakage-safe: universe − val − test)
+  factor:    data/full_local/m11_factor_datasets
+  output:    outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder
+  init:      outputs/full/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt (iter15 — accepts hf:// URI or local path; the trainer dispatches by prefix)
+  recipe (MANDATORY, resolved from configs/train/peft_lora_encoder.yaml + optional env overrides): --teacher-mode FROZEN --lp-ft-stage0 off --warmup-mode single --subset-mode recipe_v3 --saliency off --spd off --replay on
+[live-debug] installed — pid=156031. Force a stack dump anytime via:
+[live-debug]   kill -USR1 156031   # signal-safe native dump
+[live-debug]   kill -USR2 156031   # Python dump with banner
+  [train-frame-cache] ON → data/full_local/m12_frame_cache (min_free=200G) — deterministic decode memoized; shared across epochs/stages/arms/evals
+  [stream-autotune m09b_peft_encoder] cores=96 (pinned cpuset) · concurrency=2 (src=env) · cgroup_ram=684G → num_workers=24
+  [recipe-v3 receipts] saliency_weighting=False · spd.enabled=False · raw_pretrain_pct=1.0 · factor_streaming.enabled=True
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+  [probe_labels] cached: /workspace/factorjepa/outputs/full/probe_action/action_labels.json
+  [probe_labels] cached: /workspace/factorjepa/outputs/full/probe_taxonomy/taxonomy_labels.json
+  [cache-policy=1/keep] preserved output_dir (m09b_peft_lora_encoder): outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder — rerun with --cache-policy 2 to delete (whole folder wipe)
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  [iter15] Local init from: /workspace/factorjepa/outputs/full/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Loading init from prior-run ckpt: /workspace/factorjepa/outputs/full/vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt
+  [iter14] Schema: student (492 keys) + predictor (300 keys)
+Student loaded: 1,012,185,216 params (492/492 keys = 100%)
+Teacher created (deepcopy of student) — mode=FROZEN (SALT) → EMA updates will be SKIPPED; teacher == init checkpoint forever
+Predictor loaded from checkpoint (300/300 keys = 100%)
+Predictor: 55,397,632 params
+  PEFT: LoRA r=16 alpha=32 targets=['qkv', 'proj', 'fc1', 'fc2'] → 15,120,384 trainable adapter params (base FROZEN)
+  [motion_aux] enabled: 14 classes, 23-D vec, 115,626 clips with targets, 370,725 head params, weight_motion=0.1, weight_ce=1.0, weight_mse=1.0
+[POC] Loaded subset: 86,831 clip keys from train_pool.json
+  train/val split: 86831 train / 909 val (--subset pool ∩ factor_manifest (leakage-safe, test excluded upstream))

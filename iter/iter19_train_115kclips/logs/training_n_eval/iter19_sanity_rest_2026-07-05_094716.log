@@ -1,0 +1,40 @@
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'full_ft_encoder', 'lpft_encoder', 'peft_dora_encoder', 'surgery_3stage_DI_encoder', 'surgery_3stage_DI_head', 'surgery_3stage_DI_intervene_encoder', 'surgery_3stage_DI_replay25_encoder', 'surgery_3stage_DI_tccaux_encoder', 'surgery_noDI_encoder', 'surgery_noDI_head', 'surgery_raw_encoder', 'surgical_3stage_DI_wiseft_encoder', 'surgical_autorgn_encoder', 'surgical_intervene_wiseft_f30_encoder', 'surgical_intervene_wiseft_f50_encoder', 'surgical_intervene_wiseft_f70_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] free=773G · required≈30G
+  [cpu-preflight] 192 cores ≥ ~12 (gpus×6) — OK
+  [ram-preflight] cgroup_cap=684G · val-preload≈7G (1% of cap; max_val_clips=1000 × 7.1MB/clip @ 16f×384²) · anon-now≈1G
+  [cpuset] GPU slots pinned: GPU0→0..143(96t) · GPU1→48..191(96t)
+═══ N-GPU scheduler · mode=SANITY · backbone=vjepa_2_1_vitg · corpus=full · gpus=2 · cache=2 · 72 jobs (5 train + 67 eval) ═══
+[09:47:17] GPU0 ◀ T:vjepa_2_1_vitg:pretrain_encoder  → logs/ngpu_run_sanity_train_pretrain_encoder_20260705_094717.log
+[09:47:17] GPU1 ◀ L:labels  → logs/ngpu_run_sanity_labels_20260705_094717.log
+[09:47:37] GPU1 ✓ L:labels  (1/72 done)
+[09:47:47] GPU1 ◀ E:vjepa_2_1_vitg_frozen  → logs/ngpu_run_sanity_eval_vjepa_2_1_vitg_frozen_20260705_094747.log
+[09:58:17] GPU1 ✓ E:vjepa_2_1_vitg_frozen  (2/72 done)
+[09:58:27] GPU1 ◀ P:vjepa_2_1_vitg_frozen:rollout  → logs/ngpu_run_sanity_pt_vjepa_2_1_vitg_frozen_rollout_20260705_095827.log
+[10:00:27] GPU1 ✓ P:vjepa_2_1_vitg_frozen:rollout  (3/72 done)
+[10:00:37] GPU1 ◀ P:vjepa_2_1_vitg_frozen:causal  → logs/ngpu_run_sanity_pt_vjepa_2_1_vitg_frozen_causal_20260705_100037.log
+[10:02:17] GPU1 ✓ P:vjepa_2_1_vitg_frozen:causal  (4/72 done)
+[10:02:27] GPU1 ◀ P:vjepa_2_1_vitg_frozen:tdist  → logs/ngpu_run_sanity_pt_vjepa_2_1_vitg_frozen_tdist_20260705_100227.log
+[10:04:57] GPU1 ✓ P:vjepa_2_1_vitg_frozen:tdist  (5/72 done)
+[10:05:07] GPU1 ◀ P:vjepa_2_1_vitg_frozen:teacher_free  → logs/ngpu_run_sanity_pt_vjepa_2_1_vitg_frozen_teacher_free_20260705_100507.log
+[10:08:57] GPU1 ✓ P:vjepa_2_1_vitg_frozen:teacher_free  (6/72 done)
+[10:09:07] GPU1 ◀ P:vjepa_2_1_vitg_frozen:maskratio  → logs/ngpu_run_sanity_pt_vjepa_2_1_vitg_frozen_maskratio_20260705_100907.log
+[10:11:47] GPU0 ✓ T:vjepa_2_1_vitg:pretrain_encoder  (7/72 done)
+[10:11:57] GPU0 ◀ T:vjepa_2_1_vitg:peft_lora_encoder  → logs/ngpu_run_sanity_train_peft_lora_encoder_20260705_101157.log
+[10:12:17] GPU1 ✓ P:vjepa_2_1_vitg_frozen:maskratio  (8/72 done)
+[10:12:27] GPU1 ◀ T:vjepa_2_1_vitg:surgery_3stage_DI_diheavy_encoder  → logs/ngpu_run_sanity_train_surgery_3stage_DI_diheavy_encoder_20260705_101227.log
+[10:39:57] GPU0 ✓ T:vjepa_2_1_vitg:peft_lora_encoder  (9/72 done)
+[10:40:07] GPU0 ◀ P:vjepa_2_1_vitg_frozen:order  → logs/ngpu_run_sanity_pt_vjepa_2_1_vitg_frozen_order_20260705_104007.log
+[10:42:37] GPU0 ✓ P:vjepa_2_1_vitg_frozen:order  (10/72 done)
+[10:42:47] GPU0 ◀ F:vjepa_2_1_vitg_frozen:aot  → logs/ngpu_run_sanity_et_vjepa_2_1_vitg_frozen_aot_20260705_104247.log
+[10:47:47] GPU0 ✓ F:vjepa_2_1_vitg_frozen:aot  (11/72 done)
+[10:47:57] GPU0 ◀ F:vjepa_2_1_vitg_frozen:tov  → logs/ngpu_run_sanity_et_vjepa_2_1_vitg_frozen_tov_20260705_104757.log
+[10:57:07] GPU0 ✓ F:vjepa_2_1_vitg_frozen:tov  (12/72 done)
+[10:57:17] GPU0 ◀ F:vjepa_2_1_vitg_frozen:pace  → logs/ngpu_run_sanity_et_vjepa_2_1_vitg_frozen_pace_20260705_105717.log
+[10:58:47] GPU1 ✓ T:vjepa_2_1_vitg:surgery_3stage_DI_diheavy_encoder  (13/72 done)
+[10:58:57] GPU1 ◀ T:vjepa_2_1_vitg:surgical_diheavy_wiseft_f50_encoder  → logs/ngpu_run_sanity_merge_surgical_diheavy_wiseft_f50_encoder_20260705_105857.log
+[10:59:27] GPU1 ✓ T:vjepa_2_1_vitg:surgical_diheavy_wiseft_f50_encoder  (14/72 done)
+[10:59:37] GPU1 ◀ T:vjepa_2_1_vitg:surgical_diheavy_wiseft_f70_encoder  → logs/ngpu_run_sanity_merge_surgical_diheavy_wiseft_f70_encoder_20260705_105937.log
+[11:00:07] GPU1 ✓ T:vjepa_2_1_vitg:surgical_diheavy_wiseft_f70_encoder  (15/72 done)
+[11:00:17] GPU1 ◀ F:vjepa_2_1_vitg_frozen:tcc  → logs/ngpu_run_sanity_et_vjepa_2_1_vitg_frozen_tcc_20260705_110017.log
+[11:01:47] GPU1 ✓ F:vjepa_2_1_vitg_frozen:tcc  (16/72 done)
+[11:01:57] GPU1 ◀ E:vjepa_2_1_vitg_pretrain_encoder  → logs/ngpu_run_sanity_eval_vjepa_2_1_vitg_pretrain_encoder_20260705_110157.log

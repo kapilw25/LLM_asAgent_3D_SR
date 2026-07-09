@@ -1,0 +1,156 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/full_local/m12_frame_cache (max 600 GB, LRU-evict)
+
+═══ 00:35:06 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 16G Jul  5 08:30 checkpoints/vjepa2_1_vitg_384.pt
+✓ ckpt present
+  ✓ mode:                 FULL
+  ✓ eval_subset:          data/full_local/full_local.json
+  ✓ local_data:           data/full_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitg_384.pt  (16G)
+  ✓ motion_features:      data/full_local/m04d_motion_features/motion_features.npy  (11M)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_peft_lora_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/full/vjepa_2_1_vitg_1B/eval/full  (corpus=full · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/full/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_peft_lora_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 00:35:07 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_peft_lora_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
+
+═══ 00:35:11 ·   STAGE 8c · encoder_temporal (metric=tcc) for vjepa_2_1_vitg_peft_lora_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 605.1 GB / 684.0 GB (88%)
+[m12f_encoder_temporal]   pids:   1456 / 23552 (6%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [head-train-cap] train 86770 → 2000 (head-fit only; test/CI unaffected)
+  splits: train=2000  test=23106  metrics=['tcc']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=5632; encoder-only — no predictor build)
+  [share-features] test: off — n/a (no aot/tov in group)
+  [resume] .m12f_ckpt_tcc_test.npz: 7680 clips already extracted (test, metrics=['tcc'])
+  Parallel TAR reader: 8 threads, 116 TARs, queue=256
+m12f[tcc/test]:   0%|          | 0/23106 [00:00<?, ?clip/s]  [tar reader] subset-00000.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=944, resume=56)
+  [tar reader] subset-00002.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=407, resume=593)
+  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=797, resume=203)  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=845, resume=155)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=711, resume=289)
+  [tar reader] subset-00005.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=309, resume=691)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=882, resume=118)
+  [tar reader] subset-00008.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=440, resume=560)
+  [tar reader] subset-00012.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=913, resume=87)
+  [tar reader] subset-00013.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00015.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=777, resume=223)
+  [tar reader] subset-00014.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00011.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=943, resume=57)
+  [tar reader] subset-00010.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=860, resume=140)
+  [tar reader] subset-00016.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=847, resume=153)
+  [tar reader] subset-00020.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=823, resume=177)
+  [tar reader] subset-00019.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=792, resume=208)
+  [tar reader] subset-00017.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00021.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=739, resume=261)
+  [tar reader] subset-00018.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=484, resume=516)
+  [tar reader] subset-00022.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=431, resume=569)
+  [tar reader] subset-00023.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=522, resume=478)
+  [tar reader] subset-00024.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=870, resume=130)
+  [tar reader] subset-00027.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=643, resume=357)
+  [tar reader] subset-00026.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00029.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00028.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=883, resume=117)
+  [tar reader] subset-00030.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=858, resume=142)
+  [tar reader] subset-00032.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=875, resume=125)
+  [tar reader] subset-00034.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=837, resume=163)
+  [tar reader] subset-00033.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=972, resume=28)
+  [tar reader] subset-00037.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00035.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=984, resume=16)
+  [tar reader] subset-00040.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00038.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00039.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=899, resume=101)
+  [tar reader] subset-00045.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00046.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  33%|███▎      | 7712/23106 [00:38<01:16, 201.16clip/s]  [tar reader] subset-00044.tar: emitted=13, dropped=0 (missing_part=0, empty_mp4=0), filtered=987 (subset=956, resume=31)
+  [tar reader] subset-00048.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00049.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00050.tar: emitted=2, dropped=0 (missing_part=0, empty_mp4=0), filtered=998 (subset=998, resume=0)
+  [tar reader] subset-00051.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  34%|███▎      | 7776/23106 [00:45<01:29, 171.82clip/s, recent=0.4s/clip ETA1.5h]m12f[tcc/test]:  34%|███▍      | 7840/23106 [00:52<01:41, 150.77clip/s, recent=0.2s/clip ETA1.0h]m12f[tcc/test]:  34%|███▍      | 7904/23106 [00:58<01:52, 134.55clip/s, recent=0.2s/clip ETA0.8h]m12f[tcc/test]:  34%|███▍      | 7968/23106 [01:05<02:04, 121.75clip/s, recent=0.2s/clip ETA0.7h]m12f[tcc/test]:  35%|███▍      | 8032/23106 [01:12<02:15, 111.08clip/s, recent=0.2s/clip ETA0.7h]  [tar reader] subset-00025.tar: emitted=257, dropped=0 (missing_part=0, empty_mp4=0), filtered=743 (subset=334, resume=409)
+  [tar reader] subset-00053.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  35%|███▌      | 8096/23106 [01:19<02:26, 102.30clip/s, recent=0.1s/clip ETA0.6h]  [tar reader] subset-00036.tar: emitted=84, dropped=0 (missing_part=0, empty_mp4=0), filtered=916 (subset=773, resume=143)
+  [tar reader] subset-00055.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  35%|███▌      | 8160/23106 [01:26<02:37, 94.85clip/s, recent=0.1s/clip ETA0.4h] m12f[tcc/test]:  36%|███▌      | 8224/23106 [01:33<02:48, 88.40clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  36%|███▌      | 8288/23106 [01:40<02:59, 82.64clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  36%|███▌      | 8352/23106 [01:47<03:09, 77.87clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00041.tar: emitted=101, dropped=0 (missing_part=0, empty_mp4=0), filtered=899 (subset=858, resume=41)
+m12f[tcc/test]:  36%|███▋      | 8416/23106 [01:54<03:19, 73.77clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  37%|███▋      | 8480/23106 [02:01<03:28, 70.04clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00042.tar: emitted=99, dropped=0 (missing_part=0, empty_mp4=0), filtered=901 (subset=856, resume=45)
+m12f[tcc/test]:  37%|███▋      | 8544/23106 [02:08<03:38, 66.56clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  37%|███▋      | 8608/23106 [02:15<03:48, 63.56clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  38%|███▊      | 8672/23106 [02:22<03:57, 60.81clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  38%|███▊      | 8736/23106 [02:29<04:06, 58.30clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  38%|███▊      | 8800/23106 [02:36<04:14, 56.11clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  38%|███▊      | 8864/23106 [02:43<04:23, 54.11clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  39%|███▊      | 8928/23106 [02:50<04:31, 52.28clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  39%|███▉      | 8992/23106 [02:57<04:39, 50.56clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  39%|███▉      | 9056/23106 [03:04<04:46, 48.99clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  39%|███▉      | 9120/23106 [03:11<04:54, 47.57clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  40%|███▉      | 9184/23106 [03:18<05:01, 46.24clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00031.tar: emitted=370, dropped=0 (missing_part=0, empty_mp4=0), filtered=630 (subset=384, resume=246)
+m12f[tcc/test]:  40%|████      | 9248/23106 [03:25<05:07, 45.01clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  40%|████      | 9312/23106 [03:32<05:14, 43.84clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  41%|████      | 9376/23106 [03:39<05:21, 42.75clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  41%|████      | 9440/23106 [03:46<05:27, 41.72clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00058.tar: emitted=131, dropped=0 (missing_part=0, empty_mp4=0), filtered=869 (subset=869, resume=0)
+m12f[tcc/test]:  41%|████      | 9504/23106 [03:53<05:33, 40.76clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  41%|████▏     | 9568/23106 [04:00<05:39, 39.85clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  42%|████▏     | 9632/23106 [04:07<05:45, 38.99clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  42%|████▏     | 9696/23106 [04:13<05:51, 38.19clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  42%|████▏     | 9760/23106 [04:20<05:56, 37.42clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  43%|████▎     | 9824/23106 [04:27<06:01, 36.69clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  43%|████▎     | 9888/23106 [04:34<06:07, 36.00clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  43%|████▎     | 9952/23106 [04:41<06:12, 35.34clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  43%|████▎     | 10016/23106 [04:48<06:16, 34.72clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  44%|████▎     | 10080/23106 [04:55<06:21, 34.13clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  44%|████▍     | 10144/23106 [05:02<06:26, 33.55clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  44%|████▍     | 10208/23106 [05:09<06:30, 33.00clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  44%|████▍     | 10272/23106 [05:16<06:35, 32.48clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  45%|████▍     | 10336/23106 [05:23<06:39, 31.99clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00047.tar: emitted=318, dropped=0 (missing_part=0, empty_mp4=0), filtered=682 (subset=660, resume=22)
+m12f[tcc/test]:  45%|████▌     | 10400/23106 [05:30<06:43, 31.51clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  45%|████▌     | 10464/23106 [05:36<06:47, 31.06clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  46%|████▌     | 10528/23106 [05:43<06:50, 30.62clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  46%|████▌     | 10592/23106 [05:50<06:54, 30.20clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  46%|████▌     | 10656/23106 [05:57<06:57, 29.80clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  46%|████▋     | 10720/23106 [06:04<07:01, 29.41clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  47%|████▋     | 10784/23106 [06:11<07:04, 29.04clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00043.tar: emitted=419, dropped=0 (missing_part=0, empty_mp4=0), filtered=581 (subset=551, resume=30)
+m12f[tcc/test]:  47%|████▋     | 10848/23106 [06:18<07:07, 28.67clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00057.tar: emitted=301, dropped=0 (missing_part=0, empty_mp4=0), filtered=699 (subset=699, resume=0)
+  [tar reader] subset-00063.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00064.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  47%|████▋     | 10912/23106 [06:25<07:10, 28.31clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00054.tar: emitted=364, dropped=0 (missing_part=0, empty_mp4=0), filtered=636 (subset=636, resume=0)
+  [tar reader] subset-00066.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  48%|████▊     | 10976/23106 [06:32<07:13, 27.97clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  48%|████▊     | 11040/23106 [06:39<07:16, 27.65clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  48%|████▊     | 11104/23106 [06:46<07:19, 27.33clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  48%|████▊     | 11168/23106 [06:53<07:21, 27.03clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  49%|████▊     | 11232/23106 [07:00<07:24, 26.74clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00059.tar: emitted=259, dropped=0 (missing_part=0, empty_mp4=0), filtered=741 (subset=741, resume=0)
+m12f[tcc/test]:  49%|████▉     | 11296/23106 [07:06<07:26, 26.46clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00052.tar: emitted=454, dropped=0 (missing_part=0, empty_mp4=0), filtered=546 (subset=546, resume=0)
+m12f[tcc/test]:  49%|████▉     | 11360/23106 [07:13<07:28, 26.18clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  49%|████▉     | 11424/23106 [07:20<07:30, 25.91clip/s, recent=0.1s/clip ETA0.4h]  [tar reader] subset-00060.tar: emitted=240, dropped=0 (missing_part=0, empty_mp4=0), filtered=760 (subset=760, resume=0)
+m12f[tcc/test]:  50%|████▉     | 11488/23106 [07:27<07:32, 25.66clip/s, recent=0.1s/clip ETA0.4h]m12f[tcc/test]:  50%|████▉     | 11552/23106 [07:34<07:34, 25.41clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  50%|█████     | 11616/23106 [07:41<07:36, 25.17clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  51%|█████     | 11680/23106 [07:48<07:38, 24.93clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  51%|█████     | 11744/23106 [07:55<07:39, 24.70clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  51%|█████     | 11808/23106 [08:02<07:41, 24.48clip/s, recent=0.1s/clip ETA0.3h]  [tar reader] subset-00062.tar: emitted=130, dropped=0 (missing_part=0, empty_mp4=0), filtered=870 (subset=870, resume=0)
+m12f[tcc/test]:  51%|█████▏    | 11872/23106 [08:09<07:43, 24.26clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  52%|█████▏    | 11936/23106 [08:16<07:44, 24.04clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  52%|█████▏    | 12000/23106 [08:23<07:45, 23.84clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  52%|█████▏    | 12064/23106 [08:30<07:47, 23.64clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  52%|█████▏    | 12128/23106 [08:37<07:48, 23.45clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  53%|█████▎    | 12192/23106 [08:44<07:49, 23.26clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  53%|█████▎    | 12256/23106 [08:51<07:50, 23.08clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  53%|█████▎    | 12320/23106 [08:57<07:50, 22.90clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  54%|█████▎    | 12384/23106 [09:04<07:51, 22.72clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  54%|█████▍    | 12448/23106 [09:11<07:52, 22.56clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  54%|█████▍    | 12512/23106 [09:18<07:53, 22.39clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  54%|█████▍    | 12576/23106 [09:25<07:53, 22.23clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  55%|█████▍    | 12640/23106 [09:32<07:54, 22.07clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  55%|█████▍    | 12704/23106 [09:39<07:54, 21.92clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  55%|█████▌    | 12768/23106 [09:46<07:54, 21.77clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  56%|█████▌    | 12832/23106 [09:53<07:55, 21.62clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  56%|█████▌    | 12896/23106 [10:00<07:55, 21.48clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  56%|█████▌    | 12960/23106 [10:07<07:55, 21.34clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  56%|█████▋    | 13024/23106 [10:14<07:55, 21.21clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  57%|█████▋    | 13088/23106 [10:21<07:55, 21.07clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  57%|█████▋    | 13152/23106 [10:28<07:55, 20.94clip/s, recent=0.1s/clip ETA0.3h]  [tar reader] subset-00069.tar: emitted=221, dropped=0 (missing_part=0, empty_mp4=0), filtered=779 (subset=779, resume=0)
+m12f[tcc/test]:  57%|█████▋    | 13216/23106 [10:34<07:55, 20.82clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  57%|█████▋    | 13280/23106 [10:41<07:54, 20.69clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  58%|█████▊    | 13344/23106 [10:48<07:54, 20.57clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  58%|█████▊    | 13408/23106 [10:55<07:54, 20.45clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  58%|█████▊    | 13472/23106 [11:02<07:53, 20.33clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  59%|█████▊    | 13536/23106 [11:09<07:53, 20.21clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  59%|█████▉    | 13600/23106 [11:16<07:52, 20.10clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  59%|█████▉    | 13664/23106 [11:23<07:52, 19.99clip/s, recent=0.1s/clip ETA0.3h]  [tar reader] subset-00065.tar: emitted=361, dropped=0 (missing_part=0, empty_mp4=0), filtered=639 (subset=639, resume=0)
+m12f[tcc/test]:  59%|█████▉    | 13728/23106 [11:30<07:51, 19.88clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  60%|█████▉    | 13792/23106 [11:37<07:50, 19.78clip/s, recent=0.1s/clip ETA0.3h]  [tar reader] subset-00071.tar: emitted=256, dropped=0 (missing_part=0, empty_mp4=0), filtered=744 (subset=744, resume=0)
+  [tar reader] subset-00068.tar: emitted=335, dropped=0 (missing_part=0, empty_mp4=0), filtered=665 (subset=665, resume=0)
+  [tar reader] subset-00075.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  60%|█████▉    | 13856/23106 [11:44<07:50, 19.67clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  60%|██████    | 13920/23106 [11:51<07:49, 19.57clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  61%|██████    | 13984/23106 [11:58<07:48, 19.47clip/s, recent=0.1s/clip ETA0.3h]  [tar reader] subset-00072.tar: emitted=96, dropped=0 (missing_part=0, empty_mp4=0), filtered=904 (subset=904, resume=0)
+m12f[tcc/test]:  61%|██████    | 14048/23106 [12:05<07:47, 19.37clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  61%|██████    | 14112/23106 [12:12<07:46, 19.28clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  61%|██████▏   | 14176/23106 [12:18<07:45, 19.18clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  62%|██████▏   | 14240/23106 [12:25<07:44, 19.09clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  62%|██████▏   | 14304/23106 [12:32<07:43, 19.00clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  62%|██████▏   | 14368/23106 [12:39<07:42, 18.91clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  62%|██████▏   | 14432/23106 [12:46<07:40, 18.82clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  63%|██████▎   | 14496/23106 [12:53<07:39, 18.74clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  63%|██████▎   | 14560/23106 [13:00<07:38, 18.65clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  63%|██████▎   | 14624/23106 [13:07<07:36, 18.57clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  64%|██████▎   | 14688/23106 [13:14<07:35, 18.49clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  64%|██████▍   | 14752/23106 [13:21<07:33, 18.41clip/s, recent=0.1s/clip ETA0.3h]m12f[tcc/test]:  64%|██████▍   | 14816/23106 [13:28<07:32, 18.33clip/s, recent=0.1s/clip ETA0.3h]  [tar reader] subset-00067.tar: emitted=484, dropped=0 (missing_part=0, empty_mp4=0), filtered=516 (subset=516, resume=0)
+  [tar reader] subset-00078.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tcc/test]:  64%|██████▍   | 14880/23106 [13:35<07:30, 18.25clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00077.tar: emitted=101, dropped=0 (missing_part=0, empty_mp4=0), filtered=899 (subset=899, resume=0)
+m12f[tcc/test]:  65%|██████▍   | 14944/23106 [13:42<07:29, 18.18clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00076.tar: emitted=159, dropped=0 (missing_part=0, empty_mp4=0), filtered=841 (subset=841, resume=0)
+m12f[tcc/test]:  65%|██████▍   | 15008/23106 [13:49<07:27, 18.10clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00073.tar: emitted=165, dropped=0 (missing_part=0, empty_mp4=0), filtered=835 (subset=835, resume=0)
+m12f[tcc/test]:  65%|██████▌   | 15072/23106 [13:56<07:25, 18.03clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00081.tar: emitted=17, dropped=0 (missing_part=0, empty_mp4=0), filtered=983 (subset=983, resume=0)
+m12f[tcc/test]:  66%|██████▌   | 15136/23106 [14:02<07:23, 17.96clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00070.tar: emitted=460, dropped=0 (missing_part=0, empty_mp4=0), filtered=540 (subset=540, resume=0)
+m12f[tcc/test]:  66%|██████▌   | 15200/23106 [14:09<07:22, 17.89clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  66%|██████▌   | 15264/23106 [14:16<07:20, 17.82clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  66%|██████▋   | 15328/23106 [14:23<07:18, 17.75clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  67%|██████▋   | 15392/23106 [14:30<07:16, 17.68clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00056.tar: emitted=896, dropped=0 (missing_part=0, empty_mp4=0), filtered=104 (subset=104, resume=0)
+m12f[tcc/test]:  67%|██████▋   | 15456/23106 [14:37<07:14, 17.61clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  67%|██████▋   | 15520/23106 [14:44<07:12, 17.55clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  67%|██████▋   | 15584/23106 [14:51<07:10, 17.48clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00083.tar: emitted=63, dropped=0 (missing_part=0, empty_mp4=0), filtered=937 (subset=937, resume=0)
+m12f[tcc/test]:  68%|██████▊   | 15648/23106 [14:58<07:08, 17.42clip/s, recent=0.1s/clip ETA0.2h]  [tar reader] subset-00086.tar: emitted=9, dropped=0 (missing_part=0, empty_mp4=0), filtered=991 (subset=991, resume=0)
+m12f[tcc/test]:  68%|██████▊   | 15712/23106 [15:05<07:05, 17.36clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  68%|██████▊   | 15776/23106 [15:12<07:03, 17.30clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  69%|██████▊   | 15840/23106 [15:19<07:01, 17.23clip/s, recent=0.1s/clip ETA0.2h]m12f[tcc/test]:  69%|██████▉   | 15904/23106 [15:26<06:59, 17.17clip/s, recent=0.1s/clip ETA0.2h]./scripts/run_eval.sh: line 825: 730138 Killed                  python -u src/m12f_encoder_temporal.py "--$MODE" --stage forward --metric "$ET_METRIC" --variant "$ENC" $EXTRA_CKPT --model-config "$ENC_MCFG" --action-probe-root "$OUTPUT_ACTION" --local-data "$LOCAL_DATA" --output-root "$OUTPUT_ENCTEMP" --num-frames "$NUM_FRAMES" --tubelet-size "$ET_TUBELET" --batch-size "$ET_BATCH" --tov-n-permutations "$ET_TOV_NPERM" --pace-strides "$ET_PACE_STRIDES" --pace-source-frames "$ET_PACE_SRC" --tcc-temperature "$ET_TCC_TEMP" --tcc-pair-chunk "$ET_TCC_CHUNK" --share-features "$ET_SHARE" --head-lr "$ET_HEAD_LR" --head-epochs "$ET_HEAD_EPOCHS" --head-weight-decay "$ET_HEAD_WD" --head-batch-size "$ET_HEAD_BS" --head-train-cap "$ET_HEAD_CAP" $HEAD_REUSE_ET_FLAG $KEEP_ET_HEADS_FLAG --cache-policy "$P_MSE" --no-wandb 2>&1
+     730139 Done                    | tee "logs/m12f_encoder_temporal_forward_${ENC}_${ET_METRIC}.log"
+
+❌ FATAL: run_eval.sh aborted at line 1133 (exit=137) — sequential dependency failed; downstream stages skipped

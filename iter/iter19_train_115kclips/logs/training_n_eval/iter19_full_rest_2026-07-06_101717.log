@@ -1,0 +1,3 @@
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'full_ft_encoder', 'lpft_encoder', 'peft_dora_encoder', 'surgery_3stage_DI_encoder', 'surgery_3stage_DI_head', 'surgery_3stage_DI_intervene_encoder', 'surgery_3stage_DI_replay25_encoder', 'surgery_3stage_DI_tccaux_encoder', 'surgery_noDI_encoder', 'surgery_noDI_head', 'surgery_raw_encoder', 'surgical_3stage_DI_wiseft_encoder', 'surgical_autorgn_encoder', 'surgical_intervene_wiseft_f30_encoder', 'surgical_intervene_wiseft_f50_encoder', 'surgical_intervene_wiseft_f70_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] free=122G · required≈350G
+FATAL: insufficient disk — 122G free < 350G for FULL.

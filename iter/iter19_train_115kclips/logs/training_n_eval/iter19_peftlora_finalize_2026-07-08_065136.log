@@ -1,0 +1,10 @@
+  [--only] restricted to ['peft_lora_encoder'] — eval jobs + §3 finale SKIPPED
+  [disk-preflight] free=121G · required≈90G
+  [cpu-preflight] 192 cores ≥ ~6 (gpus×6) — OK
+  [ram-preflight] cgroup_cap=684G · val-preload≈7G (1% of cap; max_val_clips=1000 × 7.1MB/clip @ 16f×384²) · anon-now≈3G
+  ⚠️  [resume] peft_lora_encoder: NOT a clean finalize — ['*ckpt_best*.pt (predictor-bearing best ckpt)', 'UNCLEANED-anchor:m09c_ckpt_stage0.pt']. Its train job RE-RUNS to finalize (its predictor metrics had been SILENTLY skipped).
+  [cpuset] GPU slots pinned: GPU0→0..191(192t)
+═══ N-GPU scheduler · mode=FULL · backbone=vjepa_2_1_vitg · corpus=full · gpus=1 · cache=1 · 1 jobs (1 train + 0 eval) ═══
+[06:51:36] GPU0 ◀ T:vjepa_2_1_vitg:peft_lora_encoder  → logs/ngpu_run_full_train_peft_lora_encoder_20260708_065136.log
+[06:57:36] GPU0 ✗ T:vjepa_2_1_vitg:peft_lora_encoder rc=1 — RETRY 1/1 (transient?), re-queueing (deps intact; --cache 1 resumes any partial work)
+[06:57:46] GPU0 ◀ T:vjepa_2_1_vitg:peft_lora_encoder  → logs/ngpu_run_full_train_peft_lora_encoder_20260708_065746.log

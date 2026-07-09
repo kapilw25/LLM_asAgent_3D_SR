@@ -1,0 +1,68 @@
+Encoders found: ['vjepa_2_1_vitg_frozen', 'vjepa_2_1_vitg_peft_lora_encoder', 'vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder']
+{
+  "metric": "intra_minus_inter_cosine",
+  "by_encoder": {
+    "vjepa_2_1_vitg_frozen": {
+      "score_mean": 0.006344,
+      "n": 23106,
+      "score_ci": {
+        "mean": 0.006344,
+        "ci_lo": 0.006171,
+        "ci_hi": 0.006511,
+        "ci_half": 0.00017
+      }
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder": {
+      "score_mean": 0.077673,
+      "n": 23106,
+      "score_ci": {
+        "mean": 0.077673,
+        "ci_lo": 0.07707,
+        "ci_hi": 0.078279,
+        "ci_half": 0.000604
+      }
+    },
+    "vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "score_mean": 0.09724,
+      "n": 23106,
+      "score_ci": {
+        "mean": 0.09724,
+        "ci_lo": 0.096456,
+        "ci_hi": 0.097996,
+        "ci_half": 0.00077
+      }
+    }
+  },
+  "pairwise_deltas": {
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_peft_lora_encoder": {
+      "n_shared": 23106,
+      "delta_mean": -0.071329,
+      "delta_ci_lo": -0.07189,
+      "delta_ci_hi": -0.070755,
+      "delta_ci_half": 0.000567,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_peft_lora_encoder > 0 means vjepa_2_1_vitg_frozen has stronger intra-class motion clustering than vjepa_2_1_vitg_peft_lora_encoder"
+    },
+    "vjepa_2_1_vitg_frozen_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 23106,
+      "delta_mean": -0.090896,
+      "delta_ci_lo": -0.091615,
+      "delta_ci_hi": -0.090162,
+      "delta_ci_half": 0.000726,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_frozen - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_frozen has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    },
+    "vjepa_2_1_vitg_peft_lora_encoder_minus_vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder": {
+      "n_shared": 23106,
+      "delta_mean": -0.019567,
+      "delta_ci_lo": -0.019837,
+      "delta_ci_hi": -0.0193,
+      "delta_ci_half": 0.000269,
+      "p_value": 0.0,
+      "gate_pass": false,
+      "interpretation": "vjepa_2_1_vitg_peft_lora_encoder - vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder > 0 means vjepa_2_1_vitg_peft_lora_encoder has stronger intra-class motion clustering than vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder"
+    }
+  }
+}

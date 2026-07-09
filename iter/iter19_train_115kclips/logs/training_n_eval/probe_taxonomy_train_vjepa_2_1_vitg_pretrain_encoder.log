@@ -1,0 +1,10 @@
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+  [lazy-extract] missing splits on disk: ['train', 'val'] — loading vjepa_2_1_vitg_pretrain_encoder encoder for in-memory extraction
+Loading V-JEPA frozen vjepa_2_1_vitg_pretrain_encoder (vit_giant_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 482/484 params  (missing=2, unexpected=10)
+  Resume: 693 clips already cached
+  Resume: 232 clips already cached
+m12c_taxonomy_f1[vjepa_2_1_vitg_pretrain_encoder]:   0%|          | 0/15 [00:00<?, ?dim/s]

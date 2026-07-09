@@ -1,0 +1,2 @@
+Encoders found: ['vjepa_2_1_vitg_frozen', 'vjepa_2_1_vitg_peft_lora_encoder', 'vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder']
+Wrote: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/per_dim_acc.json  (15 dims compared)

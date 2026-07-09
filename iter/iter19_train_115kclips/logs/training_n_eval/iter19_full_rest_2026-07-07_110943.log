@@ -1,0 +1,24 @@
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'full_ft_encoder', 'lpft_encoder', 'peft_dora_encoder', 'surgery_3stage_DI_encoder', 'surgery_3stage_DI_head', 'surgery_3stage_DI_intervene_encoder', 'surgery_3stage_DI_replay25_encoder', 'surgery_3stage_DI_tccaux_encoder', 'surgery_noDI_encoder', 'surgery_noDI_head', 'surgery_raw_encoder', 'surgical_3stage_DI_wiseft_encoder', 'surgical_autorgn_encoder', 'surgical_intervene_wiseft_f30_encoder', 'surgical_intervene_wiseft_f50_encoder', 'surgical_intervene_wiseft_f70_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] eval-frame-cache cap=600G · on-disk=428G → must hold 172G more (full re-read set → per-clip parity)
+  [disk-preflight] free=413G · required≈212G
+  [cpu-preflight] 192 cores ≥ ~12 (gpus×6) — OK
+  [ram-preflight] cgroup_cap=684G · val-preload≈7G (1% of cap; max_val_clips=1000 × 7.1MB/clip @ 16f×384²) · anon-now≈3G
+  [resume --cache 1] skipping 5 already-trained arms: ['peft_lora_encoder', 'pretrain_encoder', 'surgery_3stage_DI_diheavy_encoder', 'surgical_diheavy_wiseft_f50_encoder', 'surgical_diheavy_wiseft_f70_encoder']
+  [cpuset] GPU slots pinned: GPU0→0..143(96t) · GPU1→48..191(96t)
+═══ N-GPU scheduler · mode=FULL · backbone=vjepa_2_1_vitg · corpus=full · gpus=2 · cache=1 · 42 jobs (5 train + 37 eval) ═══
+[11:09:43] GPU0 ◀ L:labels  → logs/ngpu_run_full_labels_20260707_110943.log
+[11:09:43] GPU1 ◀ E:vjepa_2_1_vitg_frozen  → logs/ngpu_run_full_eval_vjepa_2_1_vitg_frozen_20260707_110943.log
+[11:09:53] GPU0 ✓ L:labels  (6/42 done)
+[11:10:03] GPU0 ◀ P:vjepa_2_1_vitg_frozen:all  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_frozen_all_20260707_111003.log
+[12:23:23] GPU1 ✓ E:vjepa_2_1_vitg_frozen  (7/42 done)
+[12:23:33] GPU1 ◀ F:vjepa_2_1_vitg_frozen:aot  → logs/ngpu_run_full_et_vjepa_2_1_vitg_frozen_aot_20260707_122333.log
+[14:37:24] GPU1 ✓ F:vjepa_2_1_vitg_frozen:aot  (8/42 done)
+[14:37:34] GPU1 ◀ F:vjepa_2_1_vitg_frozen:tov  → logs/ngpu_run_full_et_vjepa_2_1_vitg_frozen_tov_20260707_143734.log
+[15:11:24] GPU0 ✓ P:vjepa_2_1_vitg_frozen:all  (9/42 done)
+[15:11:34] GPU0 ◀ F:vjepa_2_1_vitg_frozen:pace  → logs/ngpu_run_full_et_vjepa_2_1_vitg_frozen_pace_20260707_151134.log
+[19:18:34] GPU1 ✓ F:vjepa_2_1_vitg_frozen:tov  (10/42 done)
+[19:18:44] GPU1 ◀ F:vjepa_2_1_vitg_frozen:tcc  → logs/ngpu_run_full_et_vjepa_2_1_vitg_frozen_tcc_20260707_191844.log
+[23:48:05] GPU1 ✓ F:vjepa_2_1_vitg_frozen:tcc  (11/42 done)
+[23:48:15] GPU1 ◀ E:vjepa_2_1_vitg_pretrain_encoder  → logs/ngpu_run_full_eval_vjepa_2_1_vitg_pretrain_encoder_20260707_234815.log
+[00:37:45] GPU0 ✓ F:vjepa_2_1_vitg_frozen:pace  (12/42 done)
+[00:37:55] GPU0 ◀ P:vjepa_2_1_vitg_pretrain_encoder:all  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_pretrain_encoder_all_20260708_003755.log

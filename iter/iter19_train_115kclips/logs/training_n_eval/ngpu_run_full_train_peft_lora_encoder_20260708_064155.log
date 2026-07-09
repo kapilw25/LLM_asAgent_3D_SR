@@ -1,0 +1,11 @@
+[M9] LOCAL_DATA=data/full_local · MASTER_MANIFEST=data/full_local/full_local.json
+═══ 06:41:56 · Generating train/val/test split JSONs ═══
+Generated data/full_local/train_split.json: 86770 clips (split=train)
+Generated data/full_local/val_split.json: 5750 clips (split=val)
+Generated data/full_local/test_split.json: 23106 clips (split=test)
+  [val-repartition] val 5750 → 909 (stratified · 14 motion classes × ~72/class) · test 23106 → 27947 (+4841 moved) · val∪test INVARIANT held → train pool unchanged.
+═══ 06:41:59 · Building leakage-safe train pool (universe=broad_manifest · ratio=1.0 [FULL]) ═══
+  [clip_splits] universe=broad_manifest: 115687 − val(909) − test(27947) = 86831 train clips (leakage-safe: val∪test excluded)
+  [clip_splits] wrote 86831 train-pool keys → data/full_local/train_pool.json
+  [multi-task] Using taxonomy labels: outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/taxonomy_labels.json
+❌ FATAL: data/full_local/m11_factor_datasets missing — run scripts/run_factor_prep.sh first

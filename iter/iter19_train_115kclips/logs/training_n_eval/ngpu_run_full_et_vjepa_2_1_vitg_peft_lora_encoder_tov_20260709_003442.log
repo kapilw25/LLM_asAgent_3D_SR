@@ -1,0 +1,100 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/full_local/m12_frame_cache (max 600 GB, LRU-evict)
+
+═══ 00:34:46 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 16G Jul  5 08:30 checkpoints/vjepa2_1_vitg_384.pt
+✓ ckpt present
+  ✓ mode:                 FULL
+  ✓ eval_subset:          data/full_local/full_local.json
+  ✓ local_data:           data/full_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitg_384.pt  (16G)
+  ✓ motion_features:      data/full_local/m04d_motion_features/motion_features.npy  (11M)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_peft_lora_encoder
+  ✓ skip_stages:          2,3,11,5,6,8,8b,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/full/vjepa_2_1_vitg_1B/eval/full  (corpus=full · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/full/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/student_encoder.pt
+  → final ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/m09c_ckpt_best.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
+  → head-augmented eval ENCODERS: vjepa_2_1_vitg_peft_lora_encoder
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_peft_lora_encoder
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 00:34:47 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_peft_lora_encoder  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+  [motion_aux] head wired for vjepa_2_1_vitg_peft_lora_encoder: outputs/full/vjepa_2_1_vitg_1B/train/m09b_peft_lora_encoder/motion_aux_head.pt
+
+═══ 00:34:51 ·   STAGE 8c · encoder_temporal (metric=tov) for vjepa_2_1_vitg_peft_lora_encoder ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12f_encoder_temporal] cgroup envelope:
+[m12f_encoder_temporal]   memory: 601.9 GB / 684.0 GB (88%)
+[m12f_encoder_temporal]   pids:   1195 / 23552 (5%)
+[m12f_encoder_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [head-train-cap] train 86770 → 2000 (head-fit only; test/CI unaffected)
+  splits: train=2000  test=23106  metrics=['tov']
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  encoder loaded (concat dim=5632; encoder-only — no predictor build)
+  [share-features] test: off — probe_action cache missing at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/vjepa_2_1_vitg_peft_lora_encoder
+  [resume] .m12f_ckpt_test.npz: 3584 clips already extracted (test, metrics=['tov'])
+  Parallel TAR reader: 8 threads, 116 TARs, queue=256
+m12f[tov/test]:   0%|          | 0/23106 [00:00<?, ?clip/s]  [tar reader] subset-00001.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=797, resume=203)
+  [tar reader] subset-00000.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=944, resume=56)
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00007.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=711, resume=289)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=845, resume=155)
+  [tar reader] subset-00011.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=943, resume=57)
+  [tar reader] subset-00005.tar: emitted=137, dropped=0 (missing_part=0, empty_mp4=0), filtered=863 (subset=309, resume=554)
+  [tar reader] subset-00012.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=913, resume=87)
+  [tar reader] subset-00014.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00016.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=847, resume=153)
+  [tar reader] subset-00010.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=860, resume=140)
+  [tar reader] subset-00009.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=882, resume=118)
+  [tar reader] subset-00013.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00017.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00015.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=777, resume=223)
+  [tar reader] subset-00019.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=792, resume=208)
+  [tar reader] subset-00002.tar: emitted=192, dropped=0 (missing_part=0, empty_mp4=0), filtered=808 (subset=407, resume=401)
+m12f[tov/test]:  16%|█▌        | 3616/23106 [00:47<04:15, 76.24clip/s]m12f[tov/test]:  16%|█▌        | 3616/23106 [00:58<05:15, 61.76clip/s, recent=0.9s/clip ETA4.9h]m12f[tov/test]:  16%|█▌        | 3648/23106 [01:06<05:54, 54.92clip/s, recent=0.9s/clip ETA4.9h]m12f[tov/test]:  16%|█▌        | 3680/23106 [01:25<07:31, 43.07clip/s, recent=0.7s/clip ETA4.1h]m12f[tov/test]:  16%|█▌        | 3712/23106 [01:44<09:05, 35.52clip/s, recent=0.6s/clip ETA3.2h]  [tar reader] subset-00020.tar: emitted=31, dropped=0 (missing_part=0, empty_mp4=0), filtered=969 (subset=823, resume=146)
+  [tar reader] subset-00026.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tov/test]:  16%|█▌        | 3744/23106 [02:03<10:39, 30.29clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  16%|█▋        | 3776/23106 [02:22<12:11, 26.43clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  16%|█▋        | 3808/23106 [02:42<13:41, 23.49clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  17%|█▋        | 3840/23106 [03:01<15:12, 21.11clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  17%|█▋        | 3872/23106 [03:21<16:39, 19.25clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  17%|█▋        | 3904/23106 [03:41<18:09, 17.63clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  17%|█▋        | 3936/23106 [04:00<19:31, 16.36clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  17%|█▋        | 3968/23106 [04:21<20:59, 15.19clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  17%|█▋        | 4000/23106 [04:40<22:19, 14.27clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  17%|█▋        | 4032/23106 [05:00<23:42, 13.41clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  18%|█▊        | 4064/23106 [05:20<24:59, 12.70clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  18%|█▊        | 4096/23106 [05:39<26:16, 12.06clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  18%|█▊        | 4128/23106 [05:58<27:29, 11.50clip/s, recent=0.6s/clip ETA3.3h]m12f[tov/test]:  18%|█▊        | 4160/23106 [06:18<28:42, 11.00clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  18%|█▊        | 4192/23106 [06:37<29:54, 10.54clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  18%|█▊        | 4224/23106 [06:57<31:04, 10.13clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  18%|█▊        | 4256/23106 [07:16<32:13,  9.75clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  19%|█▊        | 4288/23106 [07:36<33:24,  9.39clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  19%|█▊        | 4320/23106 [07:56<34:30,  9.07clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  19%|█▉        | 4352/23106 [08:15<35:35,  8.78clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  19%|█▉        | 4384/23106 [08:34<36:38,  8.52clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  19%|█▉        | 4416/23106 [08:54<37:41,  8.26clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  19%|█▉        | 4448/23106 [09:13<38:42,  8.03clip/s, recent=0.6s/clip ETA3.2h]m12f[tov/test]:  19%|█▉        | 4480/23106 [09:33<39:42,  7.82clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  20%|█▉        | 4512/23106 [09:52<40:41,  7.61clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  20%|█▉        | 4544/23106 [10:11<41:39,  7.43clip/s, recent=0.6s/clip ETA3.1h]  [tar reader] subset-00024.tar: emitted=130, dropped=0 (missing_part=0, empty_mp4=0), filtered=870 (subset=870, resume=0)
+m12f[tov/test]:  20%|█▉        | 4576/23106 [10:31<42:36,  7.25clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  20%|█▉        | 4608/23106 [10:50<43:32,  7.08clip/s, recent=0.6s/clip ETA3.1h]  [tar reader] subset-00008.tar: emitted=149, dropped=0 (missing_part=0, empty_mp4=0), filtered=851 (subset=440, resume=411)
+  [tar reader] subset-00029.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+m12f[tov/test]:  20%|██        | 4640/23106 [11:10<44:26,  6.92clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  20%|██        | 4672/23106 [11:29<45:20,  6.78clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  20%|██        | 4704/23106 [11:48<46:12,  6.64clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  20%|██        | 4736/23106 [12:08<47:04,  6.50clip/s, recent=0.6s/clip ETA3.1h]  [tar reader] subset-00021.tar: emitted=154, dropped=0 (missing_part=0, empty_mp4=0), filtered=846 (subset=739, resume=107)
+m12f[tov/test]:  21%|██        | 4768/23106 [12:27<47:55,  6.38clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  21%|██        | 4800/23106 [12:46<48:44,  6.26clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  21%|██        | 4832/23106 [13:06<49:33,  6.15clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  21%|██        | 4864/23106 [13:25<50:21,  6.04clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  21%|██        | 4896/23106 [13:45<51:11,  5.93clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  21%|██▏       | 4928/23106 [14:05<51:58,  5.83clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  21%|██▏       | 4960/23106 [14:25<52:47,  5.73clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  22%|██▏       | 4992/23106 [14:44<53:31,  5.64clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  22%|██▏       | 5024/23106 [15:04<54:15,  5.55clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  22%|██▏       | 5056/23106 [15:23<54:58,  5.47clip/s, recent=0.6s/clip ETA3.1h]m12f[tov/test]:  22%|██▏       | 5088/23106 [15:44<55:44,  5.39clip/s, recent=0.6s/clip ETA3.0h]./scripts/run_eval.sh: line 825: 729547 Killed                  python -u src/m12f_encoder_temporal.py "--$MODE" --stage forward --metric "$ET_METRIC" --variant "$ENC" $EXTRA_CKPT --model-config "$ENC_MCFG" --action-probe-root "$OUTPUT_ACTION" --local-data "$LOCAL_DATA" --output-root "$OUTPUT_ENCTEMP" --num-frames "$NUM_FRAMES" --tubelet-size "$ET_TUBELET" --batch-size "$ET_BATCH" --tov-n-permutations "$ET_TOV_NPERM" --pace-strides "$ET_PACE_STRIDES" --pace-source-frames "$ET_PACE_SRC" --tcc-temperature "$ET_TCC_TEMP" --tcc-pair-chunk "$ET_TCC_CHUNK" --share-features "$ET_SHARE" --head-lr "$ET_HEAD_LR" --head-epochs "$ET_HEAD_EPOCHS" --head-weight-decay "$ET_HEAD_WD" --head-batch-size "$ET_HEAD_BS" --head-train-cap "$ET_HEAD_CAP" $HEAD_REUSE_ET_FLAG $KEEP_ET_HEADS_FLAG --cache-policy "$P_MSE" --no-wandb 2>&1
+     729548 Done                    | tee "logs/m12f_encoder_temporal_forward_${ENC}_${ET_METRIC}.log"
+
+❌ FATAL: run_eval.sh aborted at line 1133 (exit=137) — sequential dependency failed; downstream stages skipped

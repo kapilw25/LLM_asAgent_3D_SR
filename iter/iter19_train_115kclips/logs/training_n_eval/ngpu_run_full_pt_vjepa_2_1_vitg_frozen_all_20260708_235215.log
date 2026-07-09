@@ -1,0 +1,82 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/full_local/m12_frame_cache (max 600 GB, LRU-evict)
+
+═══ 23:52:19 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 16G Jul  5 08:30 checkpoints/vjepa2_1_vitg_384.pt
+✓ ckpt present
+  ✓ mode:                 FULL
+  ✓ eval_subset:          data/full_local/full_local.json
+  ✓ local_data:           data/full_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitg_384.pt  (16G)
+  ✓ motion_features:      data/full_local/m04d_motion_features/motion_features.npy  (11M)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_frozen
+  ✓ skip_stages:          2,3,11,5,6,8,8c,1,4,12,13,7,9,9b,9c,10
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/full/vjepa_2_1_vitg_1B/eval/full  (corpus=full · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/full/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  probe_cos: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_motion_cos/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  probe_mse: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_future_mse/vjepa_2_1_vitg_frozen → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external/HF frozen (no trainer needed)
+  → final ENCODERS: vjepa_2_1_vitg_frozen
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: checkpoints/vjepa2_1_vitg_384.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_frozen
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external frozen (no head — encoder-only path)
+  → head-augmented eval ENCODERS: <none>
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_frozen
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 23:52:20 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_frozen  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+
+═══ 23:52:24 ·   STAGE 8b · predictor_temporal (metric=all) for vjepa_2_1_vitg_frozen ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12e_predictor_temporal] cgroup envelope:
+[m12e_predictor_temporal]   memory: 589.4 GB / 684.0 GB (86%)
+[m12e_predictor_temporal]   pids:   1191 / 23552 (5%)
+[m12e_predictor_temporal]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+  [keep] rollout: aggregate_rollout.json present — skipping (--cache-policy 2 to redo)
+  [keep] causal: aggregate_causal.json present — skipping (--cache-policy 2 to redo)
+  [keep] tdist: aggregate_tdist.json present — skipping (--cache-policy 2 to redo)
+  [keep] teacher_free: aggregate_teacher_free.json present — skipping (--cache-policy 2 to redo)
+  [keep] maskratio: aggregate_maskratio.json present — skipping (--cache-policy 2 to redo)
+  [keep] order: aggregate_order.json present — skipping (--cache-policy 2 to redo)
+  all requested metrics cached — nothing to do
+forward stage: 0s
+
+═══ 23:52:28 · DONE · total wall = 0 min ═══
+Artifacts:
+  🔥 P1 GATE     outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/probe_paired_delta.json
+  motion_cos     outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_motion_cos/probe_motion_cos_paired.json
+  future_mse     outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_future_mse/probe_future_mse_per_variant.json
+  enc_temporal   outputs/full/vjepa_2_1_vitg_1B/eval/full/encoder_temporal/encoder_temporal_per_variant.json (aot/tov/pace/tcc)
+  taxonomy lbls  outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/taxonomy_labels.json (consumed by run_train.sh multi-task path)
+  plots          outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_plot/eval/{probe_action_loss,probe_action_acc,probe_action_acc_compare,probe_motion_cos_compare,probe_future_mse_compare}.{png,pdf}
+Per-encoder probe ckpts:
+  outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/vjepa_2_1_vitg_frozen/probe.pt

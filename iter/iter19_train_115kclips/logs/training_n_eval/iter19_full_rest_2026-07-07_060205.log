@@ -1,0 +1,17 @@
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'full_ft_encoder', 'lpft_encoder', 'peft_dora_encoder', 'surgery_3stage_DI_encoder', 'surgery_3stage_DI_head', 'surgery_3stage_DI_intervene_encoder', 'surgery_3stage_DI_replay25_encoder', 'surgery_3stage_DI_tccaux_encoder', 'surgery_noDI_encoder', 'surgery_noDI_head', 'surgery_raw_encoder', 'surgical_3stage_DI_wiseft_encoder', 'surgical_autorgn_encoder', 'surgical_intervene_wiseft_f30_encoder', 'surgical_intervene_wiseft_f50_encoder', 'surgical_intervene_wiseft_f70_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] eval-frame-cache cap=600G · on-disk=191G → must hold 409G more (full re-read set → per-clip parity)
+  [disk-preflight] free=650G · required≈449G
+  [cpu-preflight] 192 cores ≥ ~12 (gpus×6) — OK
+  [ram-preflight] cgroup_cap=684G · val-preload≈7G (1% of cap; max_val_clips=1000 × 7.1MB/clip @ 16f×384²) · anon-now≈3G
+  [resume --cache 1] skipping 5 already-trained arms: ['peft_lora_encoder', 'pretrain_encoder', 'surgery_3stage_DI_diheavy_encoder', 'surgical_diheavy_wiseft_f50_encoder', 'surgical_diheavy_wiseft_f70_encoder']
+  [resume --cache 1] skipping 3 already-done Stage-8b metric jobs
+  [cpuset] GPU slots pinned: GPU0→0..143(96t) · GPU1→48..191(96t)
+═══ N-GPU scheduler · mode=FULL · backbone=vjepa_2_1_vitg · corpus=full · gpus=2 · cache=1 · 72 jobs (5 train + 67 eval) ═══
+[06:02:06] GPU0 ◀ L:labels  → logs/ngpu_run_full_labels_20260707_060206.log
+[06:02:06] GPU1 ◀ E:vjepa_2_1_vitg_frozen  → logs/ngpu_run_full_eval_vjepa_2_1_vitg_frozen_20260707_060206.log
+[06:02:16] GPU0 ✓ L:labels  (9/72 done)
+[06:02:26] GPU0 ◀ P:vjepa_2_1_vitg_frozen:teacher_free  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_frozen_teacher_free_20260707_060226.log
+[08:42:06] GPU1 ✓ E:vjepa_2_1_vitg_frozen  (10/72 done)
+[08:42:16] GPU1 ◀ P:vjepa_2_1_vitg_frozen:maskratio  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_frozen_maskratio_20260707_084216.log
+[09:09:16] GPU0 ✓ P:vjepa_2_1_vitg_frozen:teacher_free  (11/72 done)
+[09:09:26] GPU0 ◀ P:vjepa_2_1_vitg_frozen:order  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_frozen_order_20260707_090926.log

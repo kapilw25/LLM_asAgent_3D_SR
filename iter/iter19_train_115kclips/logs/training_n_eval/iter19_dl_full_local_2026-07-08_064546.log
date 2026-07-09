@@ -1,0 +1,112 @@
+Downloading anonymousML123/factorjepa-outputs/data/full_local/ → data/full_local/
+  283 files (213.7 GB) on HF — 8-way parallel HTTP GET
+download_data:   0%|          | 0/283 [00:00<?, ?file/s]download_data:  43%|████▎     | 122/283 [00:06<00:08, 17.93file/s, recent=0.0s/file ETA0.0h]download_data:  43%|████▎     | 123/283 [00:20<00:26,  5.98file/s, recent=0.1s/file ETA0.0h]download_data:  44%|████▍     | 124/283 [00:20<00:26,  6.02file/s, recent=0.1s/file ETA0.0h]download_data:  44%|████▍     | 125/283 [00:20<00:26,  6.01file/s, recent=0.2s/file ETA0.0h]download_data:  45%|████▍     | 126/283 [00:23<00:29,  5.25file/s, recent=0.2s/file ETA0.0h]download_data:  45%|████▍     | 127/283 [00:24<00:29,  5.23file/s, recent=0.2s/file ETA0.0h]download_data:  45%|████▌     | 128/283 [00:24<00:30,  5.14file/s, recent=0.2s/file ETA0.0h]download_data:  46%|████▌     | 129/283 [00:25<00:30,  4.98file/s, recent=0.2s/file ETA0.0h]download_data:  46%|████▌     | 130/283 [00:30<00:36,  4.21file/s, recent=0.2s/file ETA0.0h]download_data:  46%|████▋     | 131/283 [00:37<00:42,  3.54file/s, recent=0.2s/file ETA0.0h]download_data:  47%|████▋     | 132/283 [00:41<00:47,  3.15file/s, recent=0.3s/file ETA0.0h]download_data:  47%|████▋     | 133/283 [00:43<00:48,  3.06file/s, recent=0.3s/file ETA0.0h]download_data:  47%|████▋     | 134/283 [00:44<00:49,  3.00file/s, recent=0.3s/file ETA0.0h]download_data:  48%|████▊     | 135/283 [00:47<00:52,  2.84file/s, recent=0.3s/file ETA0.0h]download_data:  48%|████▊     | 136/283 [00:49<00:53,  2.77file/s, recent=0.4s/file ETA0.0h]download_data:  48%|████▊     | 137/283 [00:50<00:54,  2.70file/s, recent=0.4s/file ETA0.0h]download_data:  49%|████▉     | 138/283 [00:51<00:54,  2.66file/s, recent=0.4s/file ETA0.0h]download_data:  49%|████▉     | 139/283 [00:52<00:54,  2.66file/s, recent=0.4s/file ETA0.0h]download_data:  49%|████▉     | 140/283 [00:53<00:54,  2.63file/s, recent=0.4s/file ETA0.0h]download_data:  50%|████▉     | 141/283 [00:53<00:54,  2.62file/s, recent=0.4s/file ETA0.0h]download_data:  50%|█████     | 142/283 [00:55<00:55,  2.56file/s, recent=0.4s/file ETA0.0h]download_data:  51%|█████     | 143/283 [01:00<00:58,  2.37file/s, recent=0.4s/file ETA0.0h]download_data:  51%|█████     | 144/283 [01:04<01:02,  2.23file/s, recent=0.4s/file ETA0.0h]download_data:  52%|█████▏    | 146/283 [01:06<01:02,  2.20file/s, recent=2.5s/file ETA0.1h]download_data:  52%|█████▏    | 148/283 [01:13<01:07,  2.00file/s, recent=2.4s/file ETA0.1h]download_data:  53%|█████▎    | 150/283 [01:17<01:08,  1.94file/s, recent=2.2s/file ETA0.1h]download_data:  54%|█████▎    | 152/283 [01:25<01:13,  1.78file/s, recent=2.3s/file ETA0.1h]download_data:  54%|█████▍    | 154/283 [01:30<01:16,  1.69file/s, recent=2.5s/file ETA0.1h]download_data:  55%|█████▌    | 156/283 [01:40<01:22,  1.55file/s, recent=2.3s/file ETA0.1h]download_data:  56%|█████▌    | 158/283 [01:43<01:21,  1.53file/s, recent=2.5s/file ETA0.1h]download_data:  57%|█████▋    | 160/283 [01:46<01:21,  1.50file/s, recent=2.4s/file ETA0.1h]download_data:  57%|█████▋    | 162/283 [01:49<01:22,  1.47file/s, recent=2.4s/file ETA0.1h]download_data:  58%|█████▊    | 164/283 [01:52<01:21,  1.46file/s, recent=2.6s/file ETA0.1h]download_data:  59%|█████▊    | 166/283 [01:59<01:24,  1.39file/s, recent=2.5s/file ETA0.1h]download_data:  59%|█████▉    | 168/283 [02:05<01:25,  1.34file/s, recent=2.5s/file ETA0.1h]download_data:  60%|██████    | 170/283 [02:10<01:27,  1.30file/s, recent=2.6s/file ETA0.1h]download_data:  61%|██████    | 172/283 [02:15<01:27,  1.27file/s, recent=2.7s/file ETA0.1h]download_data:  61%|██████▏   | 174/283 [02:24<01:30,  1.20file/s, recent=2.6s/file ETA0.1h]download_data:  62%|██████▏   | 176/283 [02:29<01:31,  1.17file/s, recent=2.7s/file ETA0.1h]download_data:  63%|██████▎   | 178/283 [02:32<01:29,  1.17file/s, recent=2.6s/file ETA0.1h]download_data:  64%|██████▎   | 180/283 [02:37<01:29,  1.15file/s, recent=2.4s/file ETA0.1h]download_data:  64%|██████▍   | 182/283 [02:47<01:33,  1.08file/s, recent=2.7s/file ETA0.1h]download_data:  65%|██████▍   | 183/283 [02:51<01:33,  1.07file/s, recent=2.8s/file ETA0.1h]download_data:  65%|██████▌   | 184/283 [02:52<01:32,  1.07file/s, recent=2.9s/file ETA0.1h]download_data:  65%|██████▌   | 185/283 [02:52<01:31,  1.07file/s, recent=3.0s/file ETA0.1h]download_data:  66%|██████▌   | 186/283 [02:53<01:30,  1.07file/s, recent=2.9s/file ETA0.1h]download_data:  66%|██████▌   | 187/283 [02:57<01:30,  1.06file/s, recent=2.7s/file ETA0.1h]download_data:  66%|██████▋   | 188/283 [02:58<01:30,  1.05file/s, recent=2.7s/file ETA0.1h]download_data:  67%|██████▋   | 189/283 [03:07<01:33,  1.01file/s, recent=2.7s/file ETA0.1h]download_data:  67%|██████▋   | 190/283 [03:10<01:33,  1.00s/file, recent=3.0s/file ETA0.1h]download_data:  67%|██████▋   | 191/283 [03:11<01:32,  1.00s/file, recent=3.0s/file ETA0.1h]download_data:  68%|██████▊   | 192/283 [03:13<01:31,  1.01s/file, recent=2.8s/file ETA0.1h]download_data:  68%|██████▊   | 193/283 [03:14<01:30,  1.01s/file, recent=2.7s/file ETA0.1h]download_data:  69%|██████▊   | 194/283 [03:14<01:29,  1.00s/file, recent=2.7s/file ETA0.1h]download_data:  69%|██████▉   | 195/283 [03:15<01:28,  1.00s/file, recent=2.6s/file ETA0.1h]download_data:  69%|██████▉   | 196/283 [03:15<01:26,  1.00file/s, recent=2.5s/file ETA0.1h]download_data:  70%|██████▉   | 197/283 [03:16<01:25,  1.00file/s, recent=2.5s/file ETA0.1h]download_data:  70%|██████▉   | 198/283 [03:19<01:25,  1.01s/file, recent=2.5s/file ETA0.1h]download_data:  70%|███████   | 199/283 [03:23<01:25,  1.02s/file, recent=2.3s/file ETA0.1h]download_data:  71%|███████   | 200/283 [03:25<01:25,  1.03s/file, recent=2.3s/file ETA0.1h]download_data:  71%|███████   | 201/283 [03:28<01:25,  1.04s/file, recent=2.4s/file ETA0.1h]download_data:  71%|███████▏  | 202/283 [03:28<01:23,  1.03s/file, recent=2.3s/file ETA0.1h]download_data:  72%|███████▏  | 203/283 [03:30<01:22,  1.03s/file, recent=2.3s/file ETA0.1h]download_data:  72%|███████▏  | 204/283 [03:30<01:21,  1.03s/file, recent=2.3s/file ETA0.1h]download_data:  72%|███████▏  | 205/283 [03:30<01:20,  1.03s/file, recent=2.2s/file ETA0.0h]download_data:  73%|███████▎  | 206/283 [03:30<01:18,  1.02s/file, recent=2.1s/file ETA0.0h]download_data:  73%|███████▎  | 207/283 [03:31<01:17,  1.02s/file, recent=2.1s/file ETA0.0h]download_data:  73%|███████▎  | 208/283 [03:31<01:16,  1.02s/file, recent=2.0s/file ETA0.0h]download_data:  74%|███████▍  | 209/283 [03:31<01:14,  1.01s/file, recent=2.0s/file ETA0.0h]download_data:  74%|███████▍  | 210/283 [03:31<01:13,  1.01s/file, recent=1.9s/file ETA0.0h]download_data:  75%|███████▍  | 211/283 [03:32<01:12,  1.01s/file, recent=1.9s/file ETA0.0h]download_data:  75%|███████▌  | 213/283 [03:32<01:09,  1.00file/s, recent=1.8s/file ETA0.0h]download_data:  76%|███████▌  | 215/283 [03:32<01:07,  1.01file/s, recent=1.7s/file ETA0.0h]download_data:  77%|███████▋  | 217/283 [03:32<01:04,  1.02file/s, recent=1.6s/file ETA0.0h]download_data:  77%|███████▋  | 219/283 [03:33<01:02,  1.03file/s, recent=1.5s/file ETA0.0h]download_data:  78%|███████▊  | 221/283 [03:33<00:59,  1.04file/s, recent=1.4s/file ETA0.0h]download_data:  79%|███████▉  | 223/283 [03:33<00:57,  1.04file/s, recent=1.3s/file ETA0.0h]download_data:  80%|███████▉  | 225/283 [03:33<00:55,  1.05file/s, recent=1.3s/file ETA0.0h]download_data:  80%|████████  | 227/283 [03:34<00:52,  1.06file/s, recent=1.3s/file ETA0.0h]download_data:  81%|████████  | 229/283 [03:34<00:50,  1.07file/s, recent=1.2s/file ETA0.0h]download_data:  82%|████████▏ | 231/283 [03:34<00:48,  1.08file/s, recent=1.2s/file ETA0.0h]download_data:  82%|████████▏ | 233/283 [03:34<00:46,  1.09file/s, recent=1.1s/file ETA0.0h]download_data:  83%|████████▎ | 235/283 [03:35<00:43,  1.09file/s, recent=1.1s/file ETA0.0h]download_data:  84%|████████▍ | 238/283 [03:35<00:40,  1.11file/s, recent=1.0s/file ETA0.0h]download_data:  85%|████████▌ | 241/283 [03:35<00:37,  1.12file/s, recent=1.0s/file ETA0.0h]download_data:  86%|████████▌ | 244/283 [03:36<00:34,  1.13file/s, recent=0.9s/file ETA0.0h]download_data:  87%|████████▋ | 247/283 [03:36<00:31,  1.14file/s, recent=0.9s/file ETA0.0h]download_data:  88%|████████▊ | 250/283 [03:36<00:28,  1.15file/s, recent=0.9s/file ETA0.0h]download_data:  89%|████████▉ | 253/283 [03:37<00:25,  1.17file/s, recent=0.7s/file ETA0.0h]download_data:  90%|█████████ | 256/283 [03:37<00:22,  1.18file/s, recent=0.7s/file ETA0.0h]download_data:  92%|█████████▏| 259/283 [03:37<00:20,  1.19file/s, recent=0.7s/file ETA0.0h]download_data:  93%|█████████▎| 262/283 [03:38<00:17,  1.20file/s, recent=0.6s/file ETA0.0h]download_data:  94%|█████████▎| 265/283 [03:38<00:14,  1.21file/s, recent=0.6s/file ETA0.0h]download_data:  95%|█████████▍| 268/283 [03:38<00:12,  1.23file/s, recent=0.6s/file ETA0.0h]download_data:  96%|█████████▌| 271/283 [03:38<00:09,  1.24file/s, recent=0.6s/file ETA0.0h]download_data:  97%|█████████▋| 274/283 [03:39<00:07,  1.25file/s, recent=0.6s/file ETA0.0h]download_data:  98%|█████████▊| 277/283 [03:39<00:04,  1.26file/s, recent=0.6s/file ETA0.0h]download_data:  99%|█████████▉| 280/283 [03:39<00:02,  1.28file/s, recent=0.5s/file ETA0.0h]download_data: 100%|█████████▉| 282/283 [03:50<00:00,  1.22file/s, recent=0.5s/file ETA0.0h]download_data: 100%|██████████| 283/283 [04:08<00:00,  1.14file/s, recent=0.5s/file ETA0.0h]download_data: 100%|██████████| 283/283 [04:08<00:00,  1.14file/s, recent=0.6s/file ETA0.0h]
+
+  [hf_outputs] post-download unpack: data/full_local/m10_sam_segment/masks-*.tar → data/full_local/m10_sam_segment/masks/
+  unpacked masks-00000.tar: 1430 cum extracted, 0 cum skipped
+  unpacked masks-00001.tar: 2960 cum extracted, 0 cum skipped
+  unpacked masks-00002.tar: 4433 cum extracted, 0 cum skipped
+  unpacked masks-00003.tar: 5757 cum extracted, 0 cum skipped
+  unpacked masks-00004.tar: 7384 cum extracted, 0 cum skipped
+  unpacked masks-00005.tar: 9011 cum extracted, 0 cum skipped
+  unpacked masks-00006.tar: 10431 cum extracted, 0 cum skipped
+  unpacked masks-00007.tar: 11811 cum extracted, 0 cum skipped
+  unpacked masks-00008.tar: 13068 cum extracted, 0 cum skipped
+  unpacked masks-00009.tar: 14570 cum extracted, 0 cum skipped
+  unpacked masks-00010.tar: 15869 cum extracted, 0 cum skipped
+  unpacked masks-00011.tar: 17138 cum extracted, 0 cum skipped
+  unpacked masks-00012.tar: 18361 cum extracted, 0 cum skipped
+  unpacked masks-00013.tar: 19686 cum extracted, 0 cum skipped
+  unpacked masks-00014.tar: 20834 cum extracted, 0 cum skipped
+  unpacked masks-00015.tar: 22447 cum extracted, 0 cum skipped
+  unpacked masks-00016.tar: 24173 cum extracted, 0 cum skipped
+  unpacked masks-00017.tar: 25743 cum extracted, 0 cum skipped
+  unpacked masks-00018.tar: 26914 cum extracted, 0 cum skipped
+  unpacked masks-00019.tar: 28227 cum extracted, 0 cum skipped
+  unpacked masks-00020.tar: 29434 cum extracted, 0 cum skipped
+  unpacked masks-00021.tar: 30590 cum extracted, 0 cum skipped
+  unpacked masks-00022.tar: 31789 cum extracted, 0 cum skipped
+  unpacked masks-00023.tar: 33583 cum extracted, 0 cum skipped
+  unpacked masks-00024.tar: 35627 cum extracted, 0 cum skipped
+  unpacked masks-00025.tar: 37529 cum extracted, 0 cum skipped
+  unpacked masks-00026.tar: 39563 cum extracted, 0 cum skipped
+  unpacked masks-00027.tar: 41203 cum extracted, 0 cum skipped
+  unpacked masks-00028.tar: 42923 cum extracted, 0 cum skipped
+  unpacked masks-00029.tar: 44321 cum extracted, 0 cum skipped
+  unpacked masks-00030.tar: 45469 cum extracted, 0 cum skipped
+  unpacked masks-00031.tar: 46785 cum extracted, 0 cum skipped
+  unpacked masks-00032.tar: 48615 cum extracted, 0 cum skipped
+  unpacked masks-00033.tar: 49980 cum extracted, 0 cum skipped
+  unpacked masks-00034.tar: 51401 cum extracted, 0 cum skipped
+  unpacked masks-00035.tar: 52811 cum extracted, 0 cum skipped
+  unpacked masks-00036.tar: 54134 cum extracted, 0 cum skipped
+  unpacked masks-00037.tar: 55595 cum extracted, 0 cum skipped
+  unpacked masks-00038.tar: 56835 cum extracted, 0 cum skipped
+  unpacked masks-00039.tar: 58754 cum extracted, 0 cum skipped
+  unpacked masks-00040.tar: 60132 cum extracted, 0 cum skipped
+  unpacked masks-00041.tar: 61419 cum extracted, 0 cum skipped
+  unpacked masks-00042.tar: 62680 cum extracted, 0 cum skipped
+  unpacked masks-00043.tar: 63964 cum extracted, 0 cum skipped
+  unpacked masks-00044.tar: 65534 cum extracted, 0 cum skipped
+  unpacked masks-00045.tar: 67097 cum extracted, 0 cum skipped
+  unpacked masks-00046.tar: 68691 cum extracted, 0 cum skipped
+  unpacked masks-00047.tar: 70211 cum extracted, 0 cum skipped
+  unpacked masks-00048.tar: 71647 cum extracted, 0 cum skipped
+  unpacked masks-00049.tar: 72751 cum extracted, 0 cum skipped
+  unpacked masks-00050.tar: 74233 cum extracted, 0 cum skipped
+  unpacked masks-00051.tar: 75960 cum extracted, 0 cum skipped
+  unpacked masks-00052.tar: 77158 cum extracted, 0 cum skipped
+  unpacked masks-00053.tar: 78438 cum extracted, 0 cum skipped
+  unpacked masks-00054.tar: 79622 cum extracted, 0 cum skipped
+  unpacked masks-00055.tar: 80678 cum extracted, 0 cum skipped
+  unpacked masks-00056.tar: 82676 cum extracted, 0 cum skipped
+  unpacked masks-00057.tar: 83984 cum extracted, 0 cum skipped
+  unpacked masks-00058.tar: 85969 cum extracted, 0 cum skipped
+  unpacked masks-00059.tar: 87958 cum extracted, 0 cum skipped
+  unpacked masks-00060.tar: 89758 cum extracted, 0 cum skipped
+  unpacked masks-00061.tar: 91069 cum extracted, 0 cum skipped
+  unpacked masks-00062.tar: 92332 cum extracted, 0 cum skipped
+  unpacked masks-00063.tar: 93774 cum extracted, 0 cum skipped
+  unpacked masks-00064.tar: 95385 cum extracted, 0 cum skipped
+  unpacked masks-00065.tar: 96801 cum extracted, 0 cum skipped
+  unpacked masks-00066.tar: 98576 cum extracted, 0 cum skipped
+  unpacked masks-00067.tar: 100333 cum extracted, 0 cum skipped
+  unpacked masks-00068.tar: 102132 cum extracted, 0 cum skipped
+  unpacked masks-00069.tar: 103699 cum extracted, 0 cum skipped
+  unpacked masks-00070.tar: 105111 cum extracted, 0 cum skipped
+  unpacked masks-00071.tar: 106653 cum extracted, 0 cum skipped
+  unpacked masks-00072.tar: 108203 cum extracted, 0 cum skipped
+  unpacked masks-00073.tar: 109749 cum extracted, 0 cum skipped
+  unpacked masks-00074.tar: 111091 cum extracted, 0 cum skipped
+  unpacked masks-00075.tar: 112665 cum extracted, 0 cum skipped
+  unpacked masks-00076.tar: 113841 cum extracted, 0 cum skipped
+  unpacked masks-00077.tar: 115687 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 115687 files extracted (0 skipped existing) from 78 shards, 77.95 GB in 92s → data/full_local/m10_sam_segment/masks/
+  [hf_outputs] cleaned up 78 masks-*.tar (78.16 GB freed)
+
+  [hf_outputs] post-download unpack: data/full_local/m11_factor_datasets/D_L-*.tar → data/full_local/m11_factor_datasets/D_L/
+  unpacked D_L-00000.tar: 54 cum extracted, 0 cum skipped
+  unpacked D_L-00001.tar: 103 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 103 files extracted (0 skipped existing) from 2 shards, 1.86 GB in 1s → data/full_local/m11_factor_datasets/D_L/
+  [hf_outputs] cleaned up 2 D_L-*.tar (1.86 GB freed)
+
+  [hf_outputs] post-download unpack: data/full_local/m11_factor_datasets/D_A-*.tar → data/full_local/m11_factor_datasets/D_A/
+  unpacked D_A-00000.tar: 55 cum extracted, 0 cum skipped
+  unpacked D_A-00001.tar: 81 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 81 files extracted (0 skipped existing) from 2 shards, 1.44 GB in 1s → data/full_local/m11_factor_datasets/D_A/
+  [hf_outputs] cleaned up 2 D_A-*.tar (1.44 GB freed)
+
+  [hf_outputs] post-download unpack: data/full_local/m11_factor_datasets/D_I-*.tar → data/full_local/m11_factor_datasets/D_I/
+  unpacked D_I-00000.tar: 2777 cum extracted, 0 cum skipped
+  unpacked D_I-00001.tar: 3434 cum extracted, 0 cum skipped
+
+✅ tar_shard unpack done: 3434 files extracted (0 skipped existing) from 2 shards, 1.26 GB in 2s → data/full_local/m11_factor_datasets/D_I/
+  [hf_outputs] cleaned up 2 D_I-*.tar (1.27 GB freed)
+
+Data download complete: 344s
+  skipped (already on disk):   124 / 283
+  newly downloaded         :   159 / 283
+  failed                   :     0 / 283

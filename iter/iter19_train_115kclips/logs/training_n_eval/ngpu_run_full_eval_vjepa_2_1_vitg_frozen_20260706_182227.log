@@ -1,0 +1,112 @@
+  [encoders] source = --encoders CLI flag
+  ✓ eval frame cache:     data/full_local/m12_frame_cache (max 200 GB, LRU-evict)
+
+═══ 18:22:31 · PRE-FLIGHT ═══
+-rw-rw-r-- 1 root root 16G Jul  5 08:30 checkpoints/vjepa2_1_vitg_384.pt
+✓ ckpt present
+  ✓ mode:                 FULL
+  ✓ eval_subset:          data/full_local/full_local.json
+  ✓ local_data:           data/full_local
+  ✓ encoder_ckpt:         checkpoints/vjepa2_1_vitg_384.pt  (16G)
+  ✓ motion_features:      data/full_local/m04d_motion_features/motion_features.npy  (11M)
+  ✓ min_clips_per_class:  100
+  ✓ min_per_split:        5
+  ✓ encoders:             vjepa_2_1_vitg_frozen
+  ✓ skip_stages:          1,4,12,13,7,9,9b,9c,10,8b,8c
+  ✓ cache_policy:         1
+  ✓ eval_prefix:          outputs/full/vjepa_2_1_vitg_1B/eval/full  (corpus=full · backbone=vjepa_2_1_vitg)
+  ✓ train_root:           outputs/full/vjepa_2_1_vitg_1B/train
+
+──────────────────────────────────────────────
+run_probe cache-policy gather (UPFRONT — one prompt per module)
+──────────────────────────────────────────────
+  probe_action: cache at outputs/full/vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json → policy=1 (CACHE_POLICY_ALL)
+  → ACTION=1  COS=1  MSE=1
+
+──────────────────────────────────────────────
+P2/P3 trainer-output pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external/HF frozen (no trainer needed)
+  → final ENCODERS: vjepa_2_1_vitg_frozen
+
+──────────────────────────────────────────────
+Stage 8 predictor-ckpt pre-flight
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: checkpoints/vjepa2_1_vitg_384.pt
+  → Stage 8 ENCODERS: vjepa_2_1_vitg_frozen
+
+──────────────────────────────────────────────
+motion_aux_head pre-flight (head-vs-encoder paired-Δ readiness)
+──────────────────────────────────────────────
+  ✓ vjepa_2_1_vitg_frozen: external frozen (no head — encoder-only path)
+  → head-augmented eval ENCODERS: <none>
+  → final ENCODERS after head preflight: vjepa_2_1_vitg_frozen
+
+──────────────────────────────────────────────
+Pre-eval pretrain_encoder-cleanup (drop _latest.pt resume anchors)
+──────────────────────────────────────────────
+
+═══ 18:22:31 · PER-ENCODER pipeline (Stages 2/3/3.5/5/6/8/8b/8c) — xxxxxxxxxxxxxxxxxxxxx encoders sequentially ═══
+
+════════════════════════════════════════════════════════════════
+ENCODER: vjepa_2_1_vitg_frozen  (Stages 2/3/5/6/8)
+════════════════════════════════════════════════════════════════
+
+═══ 18:22:31 ·   STAGE 2 · features for vjepa_2_1_vitg_frozen (splits=test, dtype=fp16) ═══
+GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+CUDA version: 13.0
+[m12a_action_top1] cgroup envelope:
+[m12a_action_top1]   memory: 407.7 GB / 684.0 GB (60%)
+[m12a_action_top1]   pids:   1156 / 23552 (5%)
+[m12a_action_top1]-oom-watchdog started (warn=80%, crit=90%, imminent=97%, interval=10s)
+Loading V-JEPA frozen vjepa_2_1_vitg_frozen (vit_giant_xformers, crop=384, T=16) ...
+/workspace/factorjepa/venv_walkindia/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+  Loaded 482/484 params  (missing=2, unexpected=12)
+  [features] saving splits ['test']; lazy splits (extracted by Stage 3): ['train', 'val']
+
+=== Stage 2 features: test (23106 clips, encoder=vjepa_2_1_vitg_frozen, pool_tokens=16) ===
+  AdaptiveBatchSizer(features_test): start=20, max=44, target_vram=85%
+probe_features_test:   0%|          | 0/23106 [00:00<?, ?clip/s]  Parallel TAR reader: 8 threads, 116 TARs, queue=256
+  decode pool: 8 workers (T1 parallel decode), decoded_q maxsize=64
+  [tar reader] subset-00006.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00003.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00004.tar: emitted=155, dropped=0 (missing_part=0, empty_mp4=0), filtered=845 (subset=845, resume=0)
+probe_features_test:   0%|          | 1/23106 [00:27<173:55:12, 27.10s/clip]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 20 → 21
+probe_features_test:   0%|          | 21/23106 [00:29<8:52:47,  1.38s/clip, recent=0.0s/clip ETA0.0h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 21 → 22
+probe_features_test:   0%|          | 41/23106 [00:33<5:13:00,  1.23clip/s, recent=0.2s/clip ETA1.0h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 22 → 23
+probe_features_test:   0%|          | 61/23106 [00:34<3:40:18,  1.74clip/s, recent=0.1s/clip ETA0.9h]  AdaptiveBatch: VRAM 7% < 65% → sub-batch 23 → 24
+probe_features_test:   0%|          | 81/23106 [00:39<3:07:44,  2.04clip/s, recent=0.2s/clip ETA1.0h]  AdaptiveBatch: VRAM 8% < 65% → sub-batch 24 → 25
+  AdaptiveBatch: VRAM 8% < 65% → sub-batch 25 → 26
+probe_features_test:   0%|          | 101/23106 [00:45<2:53:33,  2.21clip/s, recent=0.2s/clip ETA1.2h]  AdaptiveBatch: VRAM 8% < 65% → sub-batch 26 → 27
+probe_features_test:   1%|          | 123/23106 [00:46<2:25:05,  2.64clip/s, recent=0.2s/clip ETA1.0h]  AdaptiveBatch: VRAM 8% < 65% → sub-batch 27 → 28
+probe_features_test:   1%|          | 145/23106 [00:51<2:16:42,  2.80clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 28 → 29
+  AdaptiveBatch: VRAM 9% < 65% → sub-batch 29 → 30
+probe_features_test:   1%|          | 167/23106 [00:58<2:12:55,  2.88clip/s, recent=0.2s/clip ETA1.2h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 30 → 31
+probe_features_test:   1%|          | 191/23106 [00:58<1:56:37,  3.27clip/s, recent=0.2s/clip ETA1.0h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 31 → 32
+probe_features_test:   1%|          | 215/23106 [01:04<1:54:00,  3.35clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 32 → 33
+probe_features_test:   1%|          | 239/23106 [01:10<1:51:59,  3.40clip/s, recent=0.2s/clip ETA1.2h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 33 → 34
+probe_features_test:   1%|          | 263/23106 [01:16<1:50:08,  3.46clip/s, recent=0.2s/clip ETA1.2h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 34 → 35
+probe_features_test:   1%|▏         | 289/23106 [01:22<1:48:01,  3.52clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 35 → 36
+probe_features_test:   1%|▏         | 321/23106 [01:28<1:44:11,  3.64clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 36 → 37
+probe_features_test:   2%|▏         | 353/23106 [01:34<1:41:12,  3.75clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 37 → 38
+  [tar reader] subset-00000.tar: emitted=56, dropped=0 (missing_part=0, empty_mp4=0), filtered=944 (subset=944, resume=0)
+probe_features_test:   2%|▏         | 385/23106 [01:40<1:38:36,  3.84clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 38 → 39
+probe_features_test:   2%|▏         | 417/23106 [01:46<1:36:27,  3.92clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 39 → 40
+probe_features_test:   2%|▏         | 449/23106 [01:52<1:34:32,  3.99clip/s, recent=0.2s/clip ETA1.2h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 40 → 41
+probe_features_test:   2%|▏         | 481/23106 [01:58<1:32:52,  4.06clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 41 → 42
+probe_features_test:   2%|▏         | 513/23106 [02:04<1:31:21,  4.12clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 42 → 43
+probe_features_test:   2%|▏         | 545/23106 [02:10<1:30:01,  4.18clip/s, recent=0.2s/clip ETA1.1h]  AdaptiveBatch: VRAM 9% < 65% → sub-batch 43 → 44
+probe_features_test:   2%|▏         | 577/23106 [02:16<1:28:48,  4.23clip/s, recent=0.2s/clip ETA1.1h]probe_features_test:   3%|▎         | 609/23106 [02:22<1:27:34,  4.28clip/s, recent=0.2s/clip ETA1.1h]probe_features_test:   3%|▎         | 641/23106 [02:28<1:26:31,  4.33clip/s, recent=0.2s/clip ETA1.1h]probe_features_test:   3%|▎         | 673/23106 [02:34<1:25:37,  4.37clip/s, recent=0.2s/clip ETA1.1h]probe_features_test:   3%|▎         | 705/23106 [02:40<1:24:46,  4.40clip/s, recent=0.2s/clip ETA1.1h]probe_features_test:   3%|▎         | 737/23106 [02:46<1:24:00,  4.44clip/s, recent=0.2s/clip ETA1.1h]probe_features_test:   3%|▎         | 769/23106 [02:52<1:23:16,  4.47clip/s, recent=0.2s/clip ETA1.1h]  [tar reader] subset-00011.tar: emitted=57, dropped=0 (missing_part=0, empty_mp4=0), filtered=943 (subset=943, resume=0)
+probe_features_test:   3%|▎         | 801/23106 [02:57<1:22:34,  4.50clip/s, recent=0.2s/clip ETA1.1h]  [tar reader] subset-00009.tar: emitted=118, dropped=0 (missing_part=0, empty_mp4=0), filtered=882 (subset=882, resume=0)
+  [tar reader] subset-00013.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00014.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+probe_features_test:   4%|▎         | 833/23106 [03:03<1:21:57,  4.53clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   4%|▎         | 865/23106 [03:09<1:21:22,  4.56clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   4%|▍         | 897/23106 [03:15<1:20:44,  4.58clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   4%|▍         | 929/23106 [03:21<1:20:14,  4.61clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   4%|▍         | 961/23106 [03:27<1:19:45,  4.63clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   4%|▍         | 993/23106 [03:33<1:19:19,  4.65clip/s, recent=0.2s/clip ETA1.0h]  [tar reader] subset-00010.tar: emitted=140, dropped=0 (missing_part=0, empty_mp4=0), filtered=860 (subset=860, resume=0)
+probe_features_test:   4%|▍         | 1025/23106 [03:39<1:18:53,  4.67clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▍         | 1057/23106 [03:45<1:18:29,  4.68clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▍         | 1089/23106 [03:51<1:18:07,  4.70clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▍         | 1121/23106 [03:57<1:17:46,  4.71clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▍         | 1153/23106 [04:04<1:17:26,  4.72clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▌         | 1185/23106 [04:10<1:17:06,  4.74clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▌         | 1217/23106 [04:16<1:16:47,  4.75clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   5%|▌         | 1249/23106 [04:22<1:16:27,  4.76clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   6%|▌         | 1281/23106 [04:28<1:16:08,  4.78clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   6%|▌         | 1313/23106 [04:34<1:15:51,  4.79clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   6%|▌         | 1345/23106 [04:40<1:15:34,  4.80clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   6%|▌         | 1377/23106 [04:46<1:15:18,  4.81clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   6%|▌         | 1409/23106 [04:52<1:15:02,  4.82clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   6%|▌         | 1441/23106 [04:58<1:14:46,  4.83clip/s, recent=0.2s/clip ETA1.0h]  [tar reader] subset-00001.tar: emitted=203, dropped=0 (missing_part=0, empty_mp4=0), filtered=797 (subset=797, resume=0)
+  [tar reader] subset-00017.tar: emitted=0, dropped=0 (missing_part=0, empty_mp4=0), filtered=1000 (subset=1000, resume=0)
+  [tar reader] subset-00012.tar: emitted=87, dropped=0 (missing_part=0, empty_mp4=0), filtered=913 (subset=913, resume=0)
+probe_features_test:   6%|▋         | 1473/23106 [05:04<1:14:31,  4.84clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1505/23106 [05:10<1:14:14,  4.85clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1537/23106 [05:16<1:14:00,  4.86clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1569/23106 [05:22<1:13:46,  4.87clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1601/23106 [05:28<1:13:30,  4.88clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1633/23106 [05:34<1:13:17,  4.88clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1665/23106 [05:40<1:13:03,  4.89clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1697/23106 [05:46<1:12:48,  4.90clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   7%|▋         | 1729/23106 [05:52<1:12:33,  4.91clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1761/23106 [05:58<1:12:19,  4.92clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1793/23106 [06:03<1:12:06,  4.93clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1825/23106 [06:09<1:11:53,  4.93clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1857/23106 [06:15<1:11:41,  4.94clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1889/23106 [06:21<1:11:30,  4.95clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1921/23106 [06:27<1:11:18,  4.95clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   8%|▊         | 1953/23106 [06:34<1:11:07,  4.96clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   9%|▊         | 1985/23106 [06:39<1:10:56,  4.96clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   9%|▊         | 2017/23106 [06:45<1:10:43,  4.97clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   9%|▉         | 2049/23106 [06:51<1:10:32,  4.97clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   9%|▉         | 2081/23106 [06:57<1:10:21,  4.98clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   9%|▉         | 2113/23106 [07:03<1:10:10,  4.99clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:   9%|▉         | 2145/23106 [07:09<1:09:59,  4.99clip/s, recent=0.2s/clip ETA1.0h]  [tar reader] subset-00007.tar: emitted=289, dropped=0 (missing_part=0, empty_mp4=0), filtered=711 (subset=711, resume=0)
+probe_features_test:   9%|▉         | 2177/23106 [07:15<1:09:48,  5.00clip/s, recent=0.2s/clip ETA1.0h]  [tar reader] subset-00016.tar: emitted=153, dropped=0 (missing_part=0, empty_mp4=0), filtered=847 (subset=847, resume=0)
+probe_features_test:  10%|▉         | 2209/23106 [07:21<1:09:37,  5.00clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  10%|▉         | 2241/23106 [07:27<1:09:28,  5.01clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  10%|▉         | 2273/23106 [07:33<1:09:17,  5.01clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  10%|▉         | 2305/23106 [07:39<1:09:07,  5.02clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  10%|█         | 2337/23106 [07:45<1:08:55,  5.02clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  10%|█         | 2369/23106 [07:51<1:08:46,  5.03clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  10%|█         | 2401/23106 [07:57<1:08:37,  5.03clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█         | 2433/23106 [08:03<1:08:28,  5.03clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█         | 2465/23106 [08:09<1:08:18,  5.04clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█         | 2497/23106 [08:15<1:08:09,  5.04clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█         | 2529/23106 [08:21<1:08:00,  5.04clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█         | 2561/23106 [08:27<1:07:51,  5.05clip/s, recent=0.2s/clip ETA1.0h]  [tar reader] subset-00015.tar: emitted=223, dropped=0 (missing_part=0, empty_mp4=0), filtered=777 (subset=777, resume=0)
+probe_features_test:  11%|█         | 2593/23106 [08:33<1:07:41,  5.05clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█▏        | 2625/23106 [08:39<1:07:32,  5.05clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  11%|█▏        | 2657/23106 [08:45<1:07:23,  5.06clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2689/23106 [08:51<1:07:14,  5.06clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2721/23106 [08:57<1:07:05,  5.06clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2753/23106 [09:03<1:06:57,  5.07clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2785/23106 [09:09<1:06:48,  5.07clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2817/23106 [09:15<1:06:40,  5.07clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2849/23106 [09:21<1:06:30,  5.08clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  12%|█▏        | 2881/23106 [09:27<1:06:20,  5.08clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  13%|█▎        | 2913/23106 [09:32<1:06:11,  5.08clip/s, recent=0.2s/clip ETA1.0h]probe_features_test:  13%|█▎        | 2945/23106 [09:38<1:06:03,  5.09clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  13%|█▎        | 2977/23106 [09:44<1:05:54,  5.09clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  13%|█▎        | 3009/23106 [09:50<1:05:46,  5.09clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  13%|█▎        | 3041/23106 [09:56<1:05:39,  5.09clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  13%|█▎        | 3073/23106 [10:02<1:05:30,  5.10clip/s, recent=0.2s/clip ETA0.9h]  [tar reader] subset-00019.tar: emitted=208, dropped=0 (missing_part=0, empty_mp4=0), filtered=792 (subset=792, resume=0)
+probe_features_test:  13%|█▎        | 3105/23106 [10:08<1:05:21,  5.10clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  14%|█▎        | 3137/23106 [10:14<1:05:13,  5.10clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  14%|█▎        | 3169/23106 [10:20<1:05:04,  5.11clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  14%|█▍        | 3201/23106 [10:26<1:04:56,  5.11clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  14%|█▍        | 3233/23106 [10:32<1:04:49,  5.11clip/s, recent=0.2s/clip ETA0.9h]probe_features_test:  14%|█▍        | 3265/23106 [10:38<1:04:41,  5.11clip/s, recent=0.2s/clip ETA0.9h]

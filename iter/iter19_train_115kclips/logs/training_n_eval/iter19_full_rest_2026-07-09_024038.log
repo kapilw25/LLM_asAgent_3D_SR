@@ -1,0 +1,27 @@
+  [--skip-arms] pretrain_encoder eval-skipped — trained seed ckpt present (pure-eval resume); its already-trained dependents no longer need it to init.
+  [--skip-arms] dropped ['cassle_encoder', 'ewc_encoder', 'full_ft_encoder', 'lpft_encoder', 'peft_dora_encoder', 'pretrain_encoder', 'surgery_3stage_DI_encoder', 'surgery_3stage_DI_head', 'surgery_3stage_DI_intervene_encoder', 'surgery_3stage_DI_replay25_encoder', 'surgery_3stage_DI_tccaux_encoder', 'surgery_noDI_encoder', 'surgery_noDI_head', 'surgery_raw_encoder', 'surgical_3stage_DI_wiseft_encoder', 'surgical_autorgn_encoder', 'surgical_diheavy_wiseft_f50_encoder', 'surgical_diheavy_wiseft_f70_encoder', 'surgical_intervene_wiseft_f30_encoder', 'surgical_intervene_wiseft_f50_encoder', 'surgical_intervene_wiseft_f70_encoder'] (train+eval+8b/8c-metrics) — §3 finale will cover the remaining encoders only
+  [disk-preflight] eval-frame-cache cap=600G · on-disk=605G → must hold -5G more (full re-read set → per-clip parity)
+  [disk-preflight] free=201G · required≈90G
+  [cpu-preflight] 192 cores ≥ ~12 (gpus×6) — OK
+  [ram-preflight] cgroup_cap=684G · val-preload≈7G (1% of cap; max_val_clips=1000 × 7.1MB/clip @ 16f×384²) · anon-now≈4G
+  [resume --cache 1] skipping 2 already-trained arms: ['peft_lora_encoder', 'surgery_3stage_DI_diheavy_encoder']
+  [resume --cache 1] skipping 6 already-done Stage-8c metric jobs
+  [resume --cache 1] skipping 2 already-done E: (Stage 2-8 head-metric) job(s)
+  [--eval-first] SSL-head GATE: 1 eval job(s) for ['pretrain_encoder', 'frozen'] run FIRST → 0 pending train job(s) now wait on them (go/no-go before the train spend)
+  [cpuset] GPU slots pinned: GPU0→0..143(96t) · GPU1→48..191(96t)
+═══ N-GPU scheduler · mode=FULL · backbone=vjepa_2_1_vitg · corpus=full · gpus=2 · cache=1 · 21 jobs (2 train + 19 eval) ═══
+[02:40:38] GPU0 ◀ L:labels  → logs/ngpu_run_full_labels_20260709_024038.log
+[02:40:38] GPU1 ◀ P:vjepa_2_1_vitg_frozen:all  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_frozen_all_20260709_024038.log
+[02:40:48] GPU0 ✓ L:labels  (11/21 done)
+[02:40:58] GPU0 ◀ P:vjepa_2_1_vitg_peft_lora_encoder:all  → logs/ngpu_run_full_pt_vjepa_2_1_vitg_peft_lora_encoder_all_20260709_024058.log
+[02:40:58] GPU1 ✓ P:vjepa_2_1_vitg_frozen:all  (12/21 done)
+[02:41:08] GPU1 ◀ F:vjepa_2_1_vitg_peft_lora_encoder:tov  → logs/ngpu_run_full_et_vjepa_2_1_vitg_peft_lora_encoder_tov_20260709_024108.log
+[02:41:18] GPU0 ✓ P:vjepa_2_1_vitg_peft_lora_encoder:all  (13/21 done)
+[02:41:28] GPU0 ◀ F:vjepa_2_1_vitg_peft_lora_encoder:tcc  → logs/ngpu_run_full_et_vjepa_2_1_vitg_peft_lora_encoder_tcc_20260709_024128.log
+[02:43:18] GPU0 ✗ F:vjepa_2_1_vitg_peft_lora_encoder:tcc rc=1 — RETRY 1/1 (transient?), re-queueing (deps intact; --cache 1 resumes any partial work)
+[02:43:28] GPU0 ◀ F:vjepa_2_1_vitg_peft_lora_encoder:tcc  → logs/ngpu_run_full_et_vjepa_2_1_vitg_peft_lora_encoder_tcc_20260709_024328.log
+[02:45:28] GPU0 ✗ F:vjepa_2_1_vitg_peft_lora_encoder:tcc rc=1 (retry also failed) — see its log
+  ⛔ FAIL-FAST: F:vjepa_2_1_vitg_peft_lora_encoder:tcc failed (rc=1) — SIGTERM 1 still-running job(s) + aborting the run
+═══ ⛔ FAIL-FAST ABORT after 0.1h · F:vjepa_2_1_vitg_peft_lora_encoder:tcc failed (rc=1) · 13 job(s) done before the abort · §3 finale NOT run ═══
+  ✗ first failure: F:vjepa_2_1_vitg_peft_lora_encoder:tcc — read its per-job log (named on its GPU ◀ line above).
+  Fix the cause, then re-run with --cache 1 to keep the 13 completed job(s).

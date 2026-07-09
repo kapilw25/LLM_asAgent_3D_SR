@@ -1,0 +1,43 @@
+Downloading anonymousML123/factorjepa-outputs/outputs/full/ → outputs/full
+  25 files (8.5 GB) on HF:
+    probe_action/action_labels.json (15.7 MB)
+    probe_action/class_counts.json (1 KB)
+    probe_taxonomy/taxonomy_labels.json (84.9 MB)
+    vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json (15.7 MB)
+    vjepa_2_1_vitg_1B/eval/full/probe_action/class_counts.json (1 KB)
+    vjepa_2_1_vitg_1B/eval/full/probe_action/class_edges.json (443 B)
+    vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/taxonomy_labels.json (84.9 MB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.csv (154 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.jsonl (1.0 MB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift.pdf (56 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift.png (368 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift_history.json (11 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_ckpt_best.pt (4.3 GB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_loss_decomposition.pdf (87 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_loss_decomposition.png (336 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_probe_trajectory_trio.pdf (31 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_probe_trajectory_trio.png (433 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_train_loss.pdf (74 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_train_loss.png (455 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_val_loss_jepa.pdf (20 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_val_loss_jepa.png (180 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/motion_aux_head.pt (1.5 MB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/probe_history.jsonl (4 KB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/student_encoder.pt (4.0 GB)
+    vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/training_summary.json (363 B)
+Fetching 25 files:   0%|          | 0/25 [00:00<?, ?it/s]Fetching 25 files:   4%|▍         | 1/25 [00:01<00:36,  1.53s/it]Fetching 25 files:  12%|█▏        | 3/25 [00:04<00:29,  1.34s/it]Fetching 25 files:  52%|█████▏    | 13/25 [01:11<01:10,  5.87s/it]Fetching 25 files: 100%|██████████| 25/25 [01:11<00:00,  2.85s/it]
+
+Download complete: 74s
+  Files: 25 new, 0 updated, 0 unchanged
+  Downloaded: 8.5 GB
+  NEW  probe_action/action_labels.json (15.7 MB)
+  NEW  probe_action/class_counts.json (1 KB)
+  NEW  probe_taxonomy/taxonomy_labels.json (84.9 MB)
+  NEW  vjepa_2_1_vitg_1B/eval/full/probe_action/action_labels.json (15.7 MB)
+  NEW  vjepa_2_1_vitg_1B/eval/full/probe_action/class_counts.json (1 KB)
+  NEW  vjepa_2_1_vitg_1B/eval/full/probe_action/class_edges.json (443 B)
+  NEW  vjepa_2_1_vitg_1B/eval/full/probe_taxonomy/taxonomy_labels.json (84.9 MB)
+  NEW  vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.csv (154 KB)
+  NEW  vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/loss_log.jsonl (1.0 MB)
+  NEW  vjepa_2_1_vitg_1B/train/m09a_pretrain_encoder/m09a_block_drift.pdf (56 KB)
+  ... and 15 more new files
