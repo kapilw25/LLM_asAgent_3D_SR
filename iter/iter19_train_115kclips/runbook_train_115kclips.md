@@ -161,6 +161,12 @@ python -u src/m13_eval_plot.py --cross-plots --cross-mode full --skip-arms "$SKI
 
 # Persist the full outputs tree (additive, no-delete).
 python -u src/utils/hf_outputs.py upload-additive outputs/ 2>&1 | tee logs/iter19_upload_outputs_FULL_$(date +%F_%H%M%S).log
+
+# One-time repo hygiene — run ONLY after upload-additive reports `committed N/N` (tree fully on HF). Collapses
+# the HF dataset's whole commit history into ONE commit. IRREVERSIBLE (old SHAs gone) but the file tree is
+# preserved byte-for-byte — HF warns once a repo passes a few hundred commits that pushes/lists slow down
+# (this run hit 848). Run just before teardown; re-uploads stay fast afterward.
+python -u src/utils/hf_outputs.py squash 2>&1 | tee logs/hf_squash_$(date +%F_%H%M%S).log
 ```
 
 ---
