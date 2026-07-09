@@ -197,6 +197,17 @@ ET_PACE_SRC="$(_ET_Y pace_source_frames)"
 ET_TCC_TEMP="$(_ET_Y tcc_temperature)"
 ET_TCC_CHUNK="$(_ET_Y tcc_pair_chunk)"
 ET_SHARE="$(_ET_Y share_features)"
+# iter19 OPT-IN tcc feature-cache: EMIT_PERFRAME=1 makes Stage 2 emit the per-tubelet fp32 cache from its
+# own forward, and the tcc metric reads it (byte-identical, skips tcc's ~23k-clip re-encode). Default 0 =
+# re-encode (unchanged). vjepa only; a resumed Stage-2 extract auto-skips the emit → tcc re-encodes.
+EMIT_PERFRAME="${EMIT_PERFRAME:-0}"
+if [ "$EMIT_PERFRAME" = "1" ]; then
+    PERFRAME_EMIT_FLAG="--emit-perframe-cache --tubelet-size $ET_TUBELET"
+    TCC_CACHE_FLAG="--tcc-perframe-cache-root $OUTPUT_ACTION"
+else
+    PERFRAME_EMIT_FLAG=""
+    TCC_CACHE_FLAG=""
+fi
 ET_HEAD_LR="$(_ET_Y head_lr)"
 ET_HEAD_EPOCHS="$(_ET_Y head_epochs)"
 ET_HEAD_WD="$(_ET_Y head_weight_decay)"
@@ -872,6 +883,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 --num-frames "$NUM_FRAMES" \
                 --features-splits $FEATURES_SPLITS \
                 --pool-tokens "$POOL_TOKENS" \
+                $PERFRAME_EMIT_FLAG \
                 --cache-policy "$P_ACTION" \
                 --no-wandb \
                 2>&1 | tee "logs/probe_action_features_${ENC}.log"
@@ -1123,6 +1135,7 @@ if [ "$PER_ENC_ANY" -eq 1 ]; then
                 --pace-source-frames "$ET_PACE_SRC" \
                 --tcc-temperature "$ET_TCC_TEMP" \
                 --tcc-pair-chunk "$ET_TCC_CHUNK" \
+                $TCC_CACHE_FLAG \
                 --share-features "$ET_SHARE" \
                 --head-lr "$ET_HEAD_LR" --head-epochs "$ET_HEAD_EPOCHS" \
                 --head-weight-decay "$ET_HEAD_WD" --head-batch-size "$ET_HEAD_BS" \

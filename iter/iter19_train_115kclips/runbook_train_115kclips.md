@@ -34,6 +34,7 @@ The two merges have **no train job** — the scheduler builds them from `merge_r
 | ☐ | `max_epochs` / `saves_per_epoch` / `cache_policy` carry `full:` | `base_optimization.yaml`: `full = 1 / 9 / 2` (verified). `batch_size` is a **scalar `32`** (all modes — not mode-keyed). No `full:` key ⇒ status ledger falls back to priors **loudly, no crash** | base_optimization.yaml |
 | ☐ | `SKIP` string | the 18 non-roster arms (see bottom) | `configs/arm_registry.yaml` |
 | ☐ | backbone | `ITER18_BACKBONE=vjepa_2_1_vitg` (1B) on **every** scheduler + status pane | scheduler L53 default is 2B — MUST export |
+| ☐ | `EMIT_PERFRAME` | **`1`** (export) — tcc reads probe_action's fp32 per-tubelet cache, skips ~12 min/arm re-encode. GPU-SANITY byte-identical (atol=0) | `run_eval.sh` L203 · verify script cleared |
 
 ---
 
@@ -42,6 +43,11 @@ The two merges have **no train job** — the scheduler builds them from `merge_r
 ```bash
 export ITER18_BACKBONE=vjepa_2_1_vitg     # 1B (scheduler default is 2B vitG → MUST export)
 export EVAL_CORPUS=full                    # score against the 'full' corpus
+export EMIT_PERFRAME=1                     # tcc feature-cache: Stage 2 emits the per-tubelet fp32 cache
+#                                            from its OWN forward + every arm's tcc reads it (skips tcc's
+#                                            ~23k-clip re-encode, ~12 min/arm). Byte-identical — GPU SANITY
+#                                            on the 1B encoder: emit == fresh forward_per_frame, atol=0,
+#                                            max|Δ|=0.00e+00. Default 0 = re-encode; propagates to run_eval.sh.
 
 # Point the pipeline at the 116k data (single source); corpus derives to 'full'.
 sed -i -e 's|local_data_dir:.*|local_data_dir: "data/full_local"|' -e 's|master_manifest_name:.*|master_manifest_name: "full_local.json"|' configs/pipeline.yaml

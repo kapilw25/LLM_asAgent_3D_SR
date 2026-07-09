@@ -519,6 +519,42 @@ def _tcc_scores(test_feats_per_frame, test_clip_ids, args):
     return cycle_arr[keep], tau_arr[keep], int(n_pairs), [test_clip_ids[i] for i in range(len(keep)) if keep[i]]
 
 
+def _load_tcc_perframe_cache(args, test_keys):
+    """OPT-IN (iter19): load probe_action's per-tubelet fp32 cache (perframe_test_fp32.npy +
+    clip_keys_test.npy) → (feats (N,T_eff,D) fp32 tensor, sentinel labels, ordered clip_ids), so tcc
+    SKIPS its 23k-clip re-encode. Byte-identical to a fresh compute_per_frame (same encoder forward,
+    same CUDA per-tubelet pool, fp32). FAIL LOUD — never silently confound: missing cache, fp16 dtype,
+    wrong rank, or incomplete test coverage all raise (a fresh re-encode is the safe fallback, so drop
+    the flag to get it)."""
+    root = args.tcc_perframe_cache_root / args.variant
+    pf_path, key_path = root / "perframe_test_fp32.npy", root / "clip_keys_test.npy"
+    if not (pf_path.exists() and key_path.exists()):
+        raise SystemExit(f"FATAL: --tcc-perframe-cache-root set but cache missing at {root} (need "
+                         f"perframe_test_fp32.npy + clip_keys_test.npy). Run probe_action Stage 2 with "
+                         f"--emit-perframe-cache first, or drop the flag to re-encode.")
+    feats = np.load(pf_path)
+    if feats.dtype != np.float32:
+        raise SystemExit(f"FATAL: {pf_path.name} dtype={feats.dtype} — tcc perframe cache MUST be fp32 "
+                         f"(fp16 would silently confound the metric). Re-emit with --emit-perframe-cache.")
+    if feats.ndim != 3:
+        raise SystemExit(f"FATAL: {pf_path.name} shape {feats.shape} — expected (N, T_eff, D) per-tubelet.")
+    ckeys = [str(k) for k in np.load(key_path, allow_pickle=True)]
+    if len(ckeys) != feats.shape[0]:
+        raise SystemExit(f"FATAL: perframe key/feature count mismatch ({len(ckeys)} vs {feats.shape[0]}).")
+    want = set(test_keys)
+    missing = want - set(ckeys)
+    if missing:
+        raise SystemExit(f"FATAL: perframe cache missing {len(missing)}/{len(want)} test clips "
+                         f"(e.g. {sorted(missing)[:3]}) — stale cache; re-emit or drop the flag.")
+    keep = [i for i, k in enumerate(ckeys) if k in want]
+    feats_t = torch.from_numpy(feats[keep]).float()
+    ids = [ckeys[i] for i in keep]
+    labels = -torch.ones(feats_t.shape[0], dtype=torch.long)     # tcc labels are unused sentinels
+    print(f"  [tcc-cache] loaded {tuple(feats_t.shape)} fp32 per-tubelet features from {pf_path} — "
+          f"SKIPPING the ~23k-clip re-encode (byte-identical to a fresh forward_per_frame)", flush=True)
+    return feats_t, labels, ids
+
+
 def run_forward_stage(args, wb):
     for need, msg in [(args.variant, "--variant"), (args.encoder_ckpt, "--encoder-ckpt"),
                       (args.local_data, "--local-data"),
@@ -579,13 +615,19 @@ def run_forward_stage(args, wb):
     # slicing a longer decode down would NOT be bit-identical to decoding at num_frames —
     # ACCURACY OVER SPEED). The frame cache (EVAL_FRAME_CACHE_DIR) additionally memoizes the
     # decode across processes/runs per (clip, decode_T). ──
+    # iter19 opt-in tcc-cache: read probe_action's fp32 per-tubelet cache instead of re-encoding tcc.
+    _tcc_cached = None
+    if "tcc" in todo and getattr(args, "tcc_perframe_cache_root", None) is not None:
+        _tcc_cached = _load_tcc_perframe_cache(args, test_keys)
     groups = []
-    std = [m for m in todo if m != "pace"]
+    std = [m for m in todo if m != "pace" and not (m == "tcc" and _tcc_cached is not None)]
     if std:
         groups.append((args.num_frames, std))
     if "pace" in todo:
         groups.append((args.pace_source_frames, ["pace"]))
     by_metric = {}
+    if _tcc_cached is not None:
+        by_metric["tcc"] = {"test": _tcc_cached, "train": None}
     for decode_T, ms in groups:
         share_eligible = any(m in ("aot", "tov") for m in ms)
         smap_test, why_t = (_load_share_map(args, "test", test_keys, embed_concat)
@@ -769,6 +811,11 @@ def build_parser():
     add_local_data_arg(p)
     p.add_argument("--action-probe-root", type=Path, default=None,
                    help="probe_action output dir (action_labels.json train/test splits)")
+    p.add_argument("--tcc-perframe-cache-root", type=Path, default=None,
+                   help="OPT-IN (iter19): probe_action's per-encoder features dir. When set + --metric tcc, "
+                        "tcc reads <root>/<variant>/perframe_test_fp32.npy (emitted by probe_action "
+                        "--emit-perframe-cache) instead of re-encoding — byte-identical, saves ~23k-clip "
+                        "forward. FAIL LOUD if the fp32 cache is missing/wrong. Default None = re-encode.")
     p.add_argument("--output-root", type=Path, required=True)
     p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT)
     p.add_argument("--tubelet-size", type=int, required=True,

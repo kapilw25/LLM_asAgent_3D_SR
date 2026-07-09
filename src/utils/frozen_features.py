@@ -369,7 +369,8 @@ def _pool_tokens(feats: torch.Tensor, n_out: int) -> torch.Tensor:
 
 
 def _flush_batch(batch, pending_keys, model, encoder_kind, num_frames,
-                 sizer, feats_acc, keys_acc, pbar, pool_tokens=None):
+                 sizer, feats_acc, keys_acc, pbar, pool_tokens=None,
+                 perframe_acc=None, pf_tubelet=None):
     """Sub-batch and run encoder. AdaptiveBatchSizer halves on OOM and retries.
 
     iter13 (2026-05-05): if `pool_tokens` is set, apply token-axis adaptive
@@ -380,14 +381,27 @@ def _flush_batch(batch, pending_keys, model, encoder_kind, num_frames,
     iter19 2026-07-09 rungs 2+3: `batch` arrives pre-STACKED + pinned from BatchFeeder and is
     uploaded ONCE here — the sizer's sub-batches become cuda views and forward_*'s .to("cuda")
     a no-op move. Values byte-identical (stack + slice = pure data movement).
-    """
+
+    iter19 2026-07-09 tcc-cache (OPT-IN, vjepa only): when `perframe_acc` is given, the SAME encoder
+    forward (per_frame_features.forward_tokens) feeds BOTH the adaptive-pool probe features
+    (tokens.cpu() == forward_vjepa's tensor output) AND a per-tubelet spatial-mean pooled ON CUDA →
+    fp32 perframe_acc — so a downstream tcc run reads it byte-for-byte instead of re-encoding. The
+    pool MUST stay on CUDA (a CPU reduction of the same tokens differs in the last ULP). Default
+    perframe_acc=None → the probe path below is byte-identical to before (forward_vjepa)."""
     batch = batch.to("cuda", non_blocking=True)
     n_total = batch.shape[0]
+    _emit_pf = perframe_acc is not None and encoder_kind == "vjepa"
     i = 0
     while i < n_total:
         sub = batch[i:i + sizer.size]
+        pf_np = None
         try:
-            if encoder_kind == "vjepa":
+            if _emit_pf:
+                from utils.per_frame_features import forward_tokens, pool_per_frame   # lazy: avoid circular
+                tokens = forward_tokens(model, sub)                       # ONE shared forward (cuda fp32)
+                pf_np = pool_per_frame(tokens, num_frames, pf_tubelet).cpu().numpy()   # CUDA pool → tcc-identical
+                feats = tokens.cpu()                                      # == forward_vjepa's tensor output
+            elif encoder_kind == "vjepa":
                 feats = forward_vjepa(model, sub)
             elif encoder_kind == "ijepa":
                 from utils.ijepa_features import forward_ijepa   # lazy: avoids ijepa↔frozen circular import
@@ -410,6 +424,8 @@ def _flush_batch(batch, pending_keys, model, encoder_kind, num_frames,
         feats_np = feats.numpy()
         for r in range(feats_np.shape[0]):
             feats_acc.append(feats_np[r])
+            if _emit_pf:
+                perframe_acc.append(pf_np[r].astype(np.float32))
             keys_acc.append(pending_keys[i + r])
             pbar.update(1)
         sizer.after_batch_success()
@@ -418,7 +434,8 @@ def _flush_batch(batch, pending_keys, model, encoder_kind, num_frames,
 
 def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_dim: int,
                               keys, output_dir: Path, *, label: str = "feat",
-                              pool_tokens: int = None, cache_frames: bool = True):
+                              pool_tokens: int = None, cache_frames: bool = True,
+                              emit_perframe_path: "Path" = None, pf_tubelet: int = None):
     """Producer-consumer feature extraction over local TARs.
 
     Args:
@@ -492,6 +509,14 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
             print(f"  [resume] delete {ckpt_file} and re-run if you want a fresh extract", flush=True)
             raise
 
+    # iter19 opt-in tcc-cache: emit the per-tubelet fp32 cache ONLY on a CLEAN (non-resumed) extract —
+    # a resumed run's perframe_acc would miss the already-cached clips, so skip and let tcc re-encode
+    # byte-identically rather than trust a partial cache. vjepa only (tcc is vjepa-only).
+    _do_pf = emit_perframe_path is not None and encoder_kind == "vjepa" and not processed
+    perframe_acc = [] if _do_pf else None
+    if emit_perframe_path is not None and not _do_pf:
+        print(f"  [perframe] skip emit ({label}): resumed/non-vjepa (processed={len(processed)}) — "
+              f"tcc re-encodes this arm byte-identically")
     keys = list(keys)
     target = set(keys) - processed
     if not target:
@@ -606,7 +631,8 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
             _flush_batch(batch_t, pending_keys,
                          model, encoder_kind, args.num_frames,
                          sizer, feats_acc, keys_acc, pbar,
-                         pool_tokens=pool_tokens)
+                         pool_tokens=pool_tokens,
+                         perframe_acc=perframe_acc, pf_tubelet=pf_tubelet)
             n_since_ckpt += len(pending_keys)
             if n_since_ckpt >= CHECKPOINT_EVERY:
                 _save_features_ckpt(ckpt_file, feats_acc, keys_acc)
@@ -631,6 +657,18 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
         _save_features_ckpt(ckpt_file, feats_acc, keys_acc)
         print(f"  [D9] final resume ckpt saved: {ckpt_file.name} "
               f"({len(keys_acc)} clips) — Stage 3.5 will resume from this")
+
+    # iter19 opt-in tcc-cache: atomically publish the fp32 per-tubelet cache (only on a clean extract).
+    if _do_pf and perframe_acc and len(perframe_acc) == len(keys_acc):
+        pf_arr = np.stack(perframe_acc).astype(np.float32)
+        _pf_tmp = Path(emit_perframe_path).with_suffix(".tmp.npy")
+        np.save(_pf_tmp, pf_arr)
+        os.replace(_pf_tmp, emit_perframe_path)
+        print(f"  [perframe] saved fp32 per-tubelet cache: {Path(emit_perframe_path).name} "
+              f"{pf_arr.shape} — a tcc run reads this instead of re-encoding")
+    elif _do_pf:
+        print(f"  [perframe] NOT saved ({label}): count mismatch "
+              f"(perframe={len(perframe_acc) if perframe_acc else 0} != feats={len(keys_acc)})")
 
     # iter13: float16 storage. Matches _save_features_ckpt. Downstream consumers
     # (probe head training in probe_action.py:380, motion-cos in

@@ -287,6 +287,8 @@ def run_features_stage(args, wb) -> None:
     # <split>_ckpt.npz resume side-effect doubles as a cross-LR cache. See
     # iter/iter13_motion_probe_eval/plan_code_dev.md and
     # /root/.claude/plans/wiggly-sniffing-muffin.md for design rationale.
+    if args.emit_perframe_cache and args.tubelet_size is None:
+        sys.exit("FATAL: --emit-perframe-cache requires --tubelet-size (T_eff = num_frames // tubelet_size)")
     splits_to_save = list(args.features_splits)
     by_split = {s: [] for s in splits_to_save}
     for k, info in labels.items():
@@ -314,6 +316,11 @@ def run_features_stage(args, wb) -> None:
             keys, enc_dir, label=f"features_{split}",
             pool_tokens=(args.pool_tokens if args.pool_tokens > 0 else None),
             cache_frames=(split == "test"),   # warm the shared cache with the re-read TEST set only
+            # iter19 opt-in tcc-cache: on the TEST split, also emit the per-tubelet fp32 features from
+            # the SAME encoder forward so a tcc run reads them byte-for-byte (skips its 23k-clip re-encode).
+            emit_perframe_path=((enc_dir / f"perframe_{split}_fp32.npy")
+                                if (args.emit_perframe_cache and split == "test") else None),
+            pf_tubelet=args.tubelet_size,
         )
         elapsed = time.time() - t0
         # iter15 Phase 6 audit (2026-05-16): optional motion_aux head augment.
@@ -866,6 +873,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Which splits Stage 2 (--stage features) saves to disk as "
                         "features_<split>.npy. Default: 'test' only — train/val are "
                         "extracted lazily in Stage 3 to save ~80 GB durable disk per FULL eval.")
+    # iter19 opt-in tcc-cache: emit a per-tubelet fp32 identity cache from the SAME Stage-2 forward so
+    # a downstream tcc run reads it byte-for-byte (skips re-encoding). OFF by default → live path unchanged.
+    p.add_argument("--emit-perframe-cache", action="store_true",
+                   help="Stage 2 (test split, vjepa) ALSO writes perframe_test_fp32.npy — the per-tubelet "
+                        "(N,T_eff,D) fp32 features, from the same forward — for m12f --tcc-perframe-cache-root "
+                        "to reuse (byte-identical, saves tcc's 23k-clip re-encode). Fresh-run opt-in.")
+    p.add_argument("--tubelet-size", type=int, default=None,
+                   help="Encoder tubelet size (V-JEPA 2.1 ViT-G = 2). REQUIRED with --emit-perframe-cache "
+                        "(T_eff = num_frames // tubelet_size for the per-tubelet pool). Unused otherwise.")
     p.add_argument("--pool-tokens", type=int, default=_PROBE_CFG["pool_tokens"],
                    help="Adaptive-avg-pool encoder output to N tokens BEFORE storage / probe. "
                         "yaml probe.pool_tokens (was 16 literal — V-JEPA paper §4 attentive-probe "
