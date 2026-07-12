@@ -33,8 +33,30 @@ in memory. When in doubt for an analysis figure, optimise for **"readable across
    (`ρ`, `↑`, `Δ`, `–` are fine.) A missing glyph renders as a tofu box.
 6. Save **both** `.png` and `.pdf` (`save_fig` does both); raster dpi from `pipeline.yaml plots.dpi`.
 
+## Multi-panel comparison figures (forest plots · any paper figure) — LAYOUT CONTRACT (2026-07-12)
+
+Violating ANY of these is a user-visible mistake (all five happened on 2026-07-12 — logged in
+`memory/visual_mistakes.md`). The **visual-audit agent** (`.claude/agents/visual-audit.md`) checks them —
+run it on every figure BEFORE showing the user.
+
+1. **Panels stack VERTICALLY, always.** `subplots(n, 1)` portrait — a side-by-side landscape multi-panel
+   cannot fit one column of a 2-column AAAI paper. No `vertical=` switch; there is ONE orientation.
+2. **Side text columns live in reserved MARGIN space — RHS, never LHS.** The left margin belongs to the
+   y-tick labels; any annotation there strikes through them. Per-row text (winner names, counts) goes in
+   a dedicated right-hand column: `annotate(xy=(1.05, y), xycoords=("axes fraction","data"))` + margin
+   reserved via `subplots_adjust(right=…)` computed in inches.
+3. **Wrap every suptitle** (`textwrap.fill(seg, width≈68)` per `\n`-segment) so the title is NARROWER than
+   the figure; size the top margin from the wrapped line count (`0.26in/line`). A full-width one-line
+   header forces wasted flank space everywhere else.
+4. **Reserve headroom on the side where value labels extend** (e.g. positive symlog xlim ×6, not ×3) so a
+   marker hugging the axis edge doesn't run its label into the margin column.
+5. **Per-row pitch ≥ ~0.4 in** (panel height / n_rows). Compressed rows make ANY per-row annotation collide.
+6. **Eyeball-verify after EVERY regen**: `Read` the PNG at full res and check overlap/clipping/wasted space
+   — a successful save log is NOT visual verification. PNG+PDF must regenerate together (`save_fig`).
+
 ## General
 
 - Tunables (permutation counts, seeds, dpi) live in `configs/pipeline.yaml`, never hardcoded — read via
   `get_pipeline_config()` (CLAUDE.md "No hardcoded values in Python").
 - Reference implementation that follows this: `src/m13_eval_plot.py::plot_metric_validity`.
+- Forest-plot reference for the layout contract above: `src/m13_eval_plot.py::plot_forest`.

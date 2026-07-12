@@ -13,9 +13,9 @@ USAGE:
     # resolves the consistency-check crash (plain-HTTP path, no broken validator)
     python -u src/utils/hf_outputs.py download-data outputs/poc 2>&1 | tee logs/download_outputs_poc_$(date +%Y%m%d_%H%M%S).log
     # LIGHT refresh (ALL light artifacts — json/csv/png/pdf/… — EXCLUDING the heavy .pt/.npy/.npz/.tar;
-python -u src/utils/hf_outputs.py download-data outputs/poc \
+python -u src/utils/hf_outputs.py download-data outputs/ \
 --exclude '*.pt' --exclude '*.npy' --exclude '*.npz' --exclude 'tmp_*' --exclude '*.tar' \
-2>&1 | tee logs/download_outputs_poc_light_$(date +%Y%m%d_%H%M%S).log
+2>&1 | tee logs/download_outputs_light_$(date +%Y%m%d_%H%M%S).log
 
     # Upload/download: from @data/{eval_10k_local/ , full_local/ , subset_10k_local/ , val_1k_local/ }
     python -u src/utils/hf_outputs.py upload-data 2>&1 | tee logs/upload_data_$(date +%Y%m%d_%H%M%S).log

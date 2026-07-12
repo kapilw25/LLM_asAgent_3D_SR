@@ -16,9 +16,14 @@
 - [config_schema.md](config_schema.md) — per-mode YAML flatten convention, opt-in pattern, ckpt-schema dispatch, motion_aux block
 - [legacy/iter13_multi_task.md](legacy/iter13_multi_task.md) — RETIRED iter13 multi_task_probe pivot (replaced by motion_aux in v12; kept for historical context)
 
+## Graph view (derived)
+
+- [memory_graph.md](memory_graph.md) — mermaid map of every memory + contract + enforcer and their relations; machine twin [memory_graph.jsonl](memory_graph.jsonl) (MCP memory-server schema). DERIVED: this MEMORY.md stays the source of truth — update memories first, mirror the graph second.
+
 ## Operating notes (copy-paste safe)
 
 - [bug_log.md](bug_log.md) — known bug classes with their fixes (A/B/R8/OOM-frag/eval-ckpt-schema/Stage-8/plot-NaN — all merged but watch for regressions)
+- [visual_mistakes.md](visual_mistakes.md) — append-only figure/demo layout mistake KB (VM1-VM6); the visual-audit agent (../agents/visual-audit.md) re-reads it on EVERY audit — run that agent on every figure before showing the user
 - [conventions.md](conventions.md) — CLAUDE.md's load-bearing rules condensed (no hardcoded defaults, fail-hard, cache-policy contract, semicolon-not-&&, never-rm)
 
 ## Active feedback memories

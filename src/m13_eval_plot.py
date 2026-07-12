@@ -40,6 +40,7 @@ import os
 import re
 import shutil
 import sys
+import textwrap
 import time
 from pathlib import Path
 
@@ -2624,22 +2625,35 @@ def _xb_best(data, keep, key, hi):
 
 
 def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
-                suptitle=None, sort_rows=True, vertical=False):
-    """Per metric: surgery(best-OURs) advantage over a BASELINE. Two axes (both count surgery_raw with OURs
-    via _xb_is_ours):
+                suptitle=None, sort_rows=True):
+    """Per metric: surgery(best-OURs) advantage over a BASELINE. Both baselines count surgery_raw with
+    OURs via _xb_is_ours. LAYOUT CONTRACT (visual-audit rules, user 2026-07-12 — see .claude/plotting.md):
+      · panels ALWAYS stack VERTICALLY (one per backbone, champion-first) — a portrait figure that fits a
+        single AAAI paper column; a side-by-side landscape layout is BANNED (can't fit a 2-column paper).
+      · each row names its winner arm in a dedicated RIGHT-hand margin column (» name, arm-registry
+        colour) — NEVER the left margin, where it would strike through the metric tick labels.
+      · the suptitle is textwrap'd so its width stays INSIDE the figure (no full-width header → no
+        wasted flank space); the top margin is sized from the wrapped line count.
       vs='best'   → baseline = the best COMPETITOR arm (toughest bar — includes full-FT).
       vs='frozen' → baseline = the FROZEN backbone only (the paper's stated 'beat frozen' claim).
       mode='ci'   → x = advantage / (95% CI of the difference, sqrt(ci_ours^2+ci_base^2)); green = a
                     SEPARATED win (>=1, right of the dashed 1×CI line) — the statistical view.
-      mode='mean' → x = advantage as % of the baseline's mean; green = surgery's MEAN is better (>0).
-    One panel per backbone, champion-first."""
+      mode='mean' → x = advantage as % of the baseline's mean; green = surgery's MEAN is better (>0)."""
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
     n = len(backbones)
-    if vertical:   # scale-forest: stack panels top→bottom → narrow portrait figure that fits a paper column
-        fig, axes = plt.subplots(n, 1, figsize=(10.0, 5.6 * n), squeeze=False)
-    else:
-        fig, axes = plt.subplots(1, n, figsize=(9.6 * n, 6.8), squeeze=False)   # wider: full-name y-labels (from json)
+    # suptitle FIRST — its wrapped line count sizes the figure's top margin.
+    _base = "frozen" if vs == "frozen" else "the best competitor"
+    _sup = suptitle if suptitle else (
+        f"Forest plot — does surgery statistically separate from {_base}?   "
+        f"(green past dashed line = yes · » names each metric's winner arm)"
+        if mode == "ci" else
+        f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · » names each metric's winner arm)")
+    _sup = "\n".join(textwrap.fill(seg, width=68) for seg in _sup.split("\n"))
+    _nl = _sup.count("\n") + 1
+    W, PANEL_H, TITLE_H, BOT_H = 8.6, 6.8, 0.26 * _nl + 0.30, 0.62          # inches
+    H = PANEL_H * n + TITLE_H + BOT_H
+    fig, axes = plt.subplots(n, 1, figsize=(W, H), squeeze=False)
     for ax, (label, data) in zip(axes.flatten(), backbones):
         if not data:   # None/empty → N/A panel (a backbone with no eval at this scale yet, e.g. 2B FULL)
             ax.text(0.5, 0.5, "N/A\n\nno eval at\nthis scale yet", ha="center", va="center",
@@ -2659,15 +2673,17 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             if not bo or not bc:
                 continue
             adv = (bo[1] - bc[1]) if hi else (bc[1] - bo[1])          # +ve = surgery better
+            # keep BOTH arm names (best-OURs bo[0] · best-competitor bc[0]) so each row can declare its
+            # OWN winner by exact variant name — no blanket "surgery_raw ∈ OURs" title hardcode (2026-07-12).
             if mode == "ci":
                 ci = ((bo[2] or 0) ** 2 + (bc[2] or 0) ** 2) ** 0.5 or 1e-9
-                rows.append((lbl, adv / ci))
+                rows.append((lbl, adv / ci, bo[0], bc[0]))
             else:
-                rows.append((lbl, 100.0 * adv / abs(bc[1]) if bc[1] else 0.0))
+                rows.append((lbl, 100.0 * adv / abs(bc[1]) if bc[1] else 0.0, bo[0], bc[0]))
         if sort_rows:                                                # per-panel best→worst (default); False → fixed _XB_METRICS order
             rows.sort(key=lambda t: t[1])                            # y=0 (bottom) = worst → best at TOP
         fmt = (lambda v: f"{v:.1f}×") if mode == "ci" else (lambda v: f"{v:+.1f}%")
-        for y, (lbl, v) in enumerate(rows):
+        for y, (lbl, v, ours_s, comp_s) in enumerate(rows):
             won = (v >= 1.0) if mode == "ci" else (v > 0.0)
             col = _XB_OURS_GREEN if won else "#90A4AE"
             if mode == "ci":
@@ -2678,6 +2694,18 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             # the symlog axis (task2 2026-07-01: the same data step is huge near 0 and tiny far out).
             ax.annotate(fmt(v), (v, y), xytext=(7, 0), textcoords="offset points",
                         va="center", ha="left", fontsize=11, color=col, fontweight="bold")
+            # per-row WINNER declaration (user 2026-07-12): the exact arm that won THIS metric on the mean —
+            # v>0 the best-OURs arm, v<0 the best-competitor arm (0 = exact tie). Rendered in a dedicated
+            # RIGHT-hand margin column in the winner arm's registry colour (_color_for → same hue as the
+            # scorecard bars), so a grey not-separated row still names WHO leads. RHS, never LHS: a left-
+            # margin annotation strikes through the metric tick labels (visual-audit mistake #1).
+            win_s = ours_s if v > 0 else (comp_s if v < 0 else None)
+            wcol = _color_for(f"vjepa_2_1_vitG_{win_s}", 0) if win_s else "#607D8B"
+            ax.annotate("» " + (win_s.replace("_encoder", "") if win_s else "exact tie"),
+                        xy=(1.05, y), xycoords=("axes fraction", "data"), ha="left", va="center",
+                        fontsize=9.5, fontweight="bold", fontstyle="italic", color=wcol)
+        # (no per-panel "winner arm" column header — it collides with long left-loc panel titles; the
+        # suptitle's "» names each metric's winner arm" documents the column instead. visual-audit 2026-07-12)
         # symlog x-axis (task2): ABSOLUTE signed values but NON-uniform spacing, so a 0.1 tie and a 47 blow-out
         # are BOTH visible; linthresh keeps the small tie zone linear, beyond it compresses like log.
         _lt = 1.0 if mode == "ci" else 0.5
@@ -2685,9 +2713,11 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         # asymmetric-aware xlim + decade-only ticks: a symmetric margin on a lopsided symlog range crammed
         # phantom -1000/-10000 ticks at the left (frozen % blows up to +1379 but bottoms at -2). Bracket the
         # ACTUAL data each side, keep only 0 + 10^k majors, drop the minor subticks. task 2026-07-01.
-        _pos = max([v for _, v in rows] + [_lt])
-        _neg = min([v for _, v in rows] + [-_lt])
-        ax.set_xlim(min(_neg * 3, -_lt * 3), max(_pos * 3, _lt * 3))
+        _pos = max([r[1] for r in rows] + [_lt])
+        _neg = min([r[1] for r in rows] + [-_lt])
+        # positive side gets EXTRA headroom (×6): the value label sits right of the marker and must not
+        # run into the RHS winner-arm column when the best row hugs the axis edge (visual-audit 2026-07-12).
+        ax.set_xlim(min(_neg * 3, -_lt * 3), max(_pos * 6, _lt * 3))
         _cand = [0] + [10 ** k for k in range(6)] + [-10 ** k for k in range(6)]   # 0 · ±1 · ±10 … ±1e5
         _lo, _hi = ax.get_xlim()
         ax.set_xticks([t for t in _cand if _lo <= t <= _hi])                       # decades within range only
@@ -2710,15 +2740,10 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         ax.tick_params(axis="x", labelsize=11)              # bigger + bold decade ticks (task 2026-07-09)
         for _t in ax.get_xticklabels():
             _t.set_fontweight("bold")
-    _base = "frozen" if vs == "frozen" else "the best competitor"
-    _sup = (f"Forest plot — does surgery statistically separate from {_base}?   (green past dashed line = yes · surgery_raw ∈ OURs)"
-            if mode == "ci" else
-            f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · surgery_raw ∈ OURs)")
-    fig.suptitle(suptitle if suptitle else _sup, fontsize=(14 if vertical else 16), fontweight="bold")
-    if vertical:   # portrait stack: narrow cols, more top room for the wrapped suptitle + per-panel titles
-        fig.subplots_adjust(top=0.885, hspace=0.30, left=0.27, right=0.965, bottom=0.06)
-    else:
-        fig.subplots_adjust(top=0.90, wspace=0.62, left=0.18, right=0.97, bottom=0.10)   # room for full-name y-labels
+    fig.suptitle(_sup, x=0.5, y=1 - 0.10 / H, va="top", fontsize=12.5, fontweight="bold")
+    # margins in INCHES → fractions: left = the metric tick labels · right = the winner-arm column ·
+    # top = the wrapped suptitle block · bottom = the last panel's xlabel. Vertical stack ONLY.
+    fig.subplots_adjust(top=1 - TITLE_H / H, bottom=BOT_H / H, left=0.30, right=0.775, hspace=0.34)
     save_fig(fig, str(Path(out_dir) / stem))
     plt.close(fig)
 
@@ -2835,11 +2860,11 @@ def scale_forest_report(out_dir):
                     else f"{tag} · FULL 116k  (n_test = N/A — no full-scale eval yet)")
         panels = [(poc_lbl, poc_data), (full_lbl, full_data)]
         stem = f"scale_poc_vs_full_{bb}"
-        plot_forest(panels, out_dir, mode="ci", vs="best", sort_rows=True, vertical=True, stem=stem,
+        plot_forest(panels, out_dir, mode="ci", vs="best", sort_rows=True, stem=stem,
                     suptitle=(f"Scale POC 10k → FULL 116k · {tag} — does surgery's separation from the best "
                               f"competitor survive the 12x data jump?\n(same encoders both sides · each panel "
-                              f"sorted best→worst · green past dashed = separated win · surgery_raw ∈ OURs · "
-                              f"FULL panel matches forest_plot_best_ci)"))
+                              f"sorted best→worst · green past dashed = separated win · » names each metric's "
+                              f"winner arm · FULL panel matches forest_plot_best_ci)"))
         stems.append(stem)
     print(f"  [scale-forest] → {out_dir}/ · {', '.join(s + '.{png,pdf}' for s in stems)} "
           f"(FULL roster {sorted(full_roster)}, auto-reflects new FULL arms)")

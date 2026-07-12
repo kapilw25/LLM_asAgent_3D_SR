@@ -1,0 +1,25 @@
+# Visual metric demo (src/m14_metric_demo.py) — iter19 task2.2 (2026-07-12)
+#
+# Standalone config (NOT a pipeline.yaml block): the demo is a presentation tool, not a pipeline
+# stage. Passed explicitly via `--demo-config configs/demo.yaml` (same pattern as --model-config).
+#
+# num_frames is INTENTIONALLY absent: the demo reads pipeline.yaml probe.num_frames so its
+# forwards are frame-count-identical to the m12d/m12e eval metrics (metric parity). The mask-ratio
+# sweep + seed likewise come from pipeline.yaml eval.predictor_temporal (single source).
+
+demo:
+  # ── video rendering ──
+  fps:            6                  # demo video framerate (slow, narrated pace)
+  dpi:            100                # 12.8x7.2 in figure x 100 dpi = 1280x720 video frames
+  hold_title_s:   3.0                # title/verdict card hold (seconds)
+  hold_step_s:    1.4                # per animation-step hold (seconds)
+  crf:            23                 # libx264 quality for demo.mp4
+
+  # ── scenes ──
+  pca_components: 3                  # PCA->RGB components for the dense-feature scene
+  heat_alpha:     0.65               # error-heatmap overlay alpha on the masked patches
+  n_hero_clips:   2                  # clips animated in scenes B/C/D (1 per tour_type); all clips
+                                     # still enter scene E's cosine matrix + the verdict table
+
+  # ── contact sheet (for the visual-audit agent) ──
+  sheet_tiles:    16                 # frames sampled uniformly from demo.mp4 into a 4x4 grid

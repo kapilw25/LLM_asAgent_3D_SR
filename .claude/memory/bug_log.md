@@ -126,6 +126,16 @@ These predate the iter13 session but inform current architecture:
 - **#79** (m09c BWT plateau buffer reset across stage transitions)
 - **#80** (long-lived `tmp_dir` ENOENT after ~2M write/unlink — covered by B56)
 - **#81** (latest pre-iter13 entry; see `errors_N_fixes.md` for full catalog)
+- **#D1** (2026-07-12, m14 demo) — per-ratio hidden grids are 3-D `(Tp,Hp,Wp)`; a scene renderer passed
+  `D_hidden[j_r]` (3-D) into the per-SLOT 2-D `_masked_frame` → `ValueError: too many values to unpack`.
+  Prevention: any `*_hidden`/`*_err` payload indexed in a scene MUST be sliced down to the slot (`[mid]`/`[t]`)
+  before hitting an image helper; helpers assert 2-D input.
+- **#D2** (2026-07-12, ops) — `python … | tee log` returns TEE's exit code: a mid-render Traceback reported
+  exit 0 and nearly shipped STALE outputs (mtime check caught it). Prevention: `set -o pipefail` on every
+  piped run command + always verify output mtimes are NEWER than the run start before trusting artifacts.
+- **#D3** (2026-07-12, ops) — `pkill -f <token>` from inside a compound command whose OWN cmdline contains
+  the token kills itself (exit 144) AND the sibling launch. Prevention: run pkill in its OWN Bash call,
+  verify with pgrep, then launch separately.
 
 Full catalog: `iter/iter13_motion_probe_eval/errors_N_fixes.md` (~125 KB, 81 entries iter8 → iter12).
 

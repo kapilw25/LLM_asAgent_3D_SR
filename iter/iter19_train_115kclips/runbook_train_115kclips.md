@@ -187,3 +187,33 @@ KEPT (5): `pretrain_encoder` · `surgery_3stage_DI_diheavy_encoder` · `peft_lor
 
 > ⚠️ `--skip-arms` will FATAL on an unknown arm. `pretrain_encoder` can NEVER be skipped (it is every arm's
 > init dependency — the scheduler refuses it). All 18 above are valid `scheduler: true` arm names.
+
+---
+
+## 🎬 VISUAL DEMO — 4 headline metrics, FROZEN vs OURS diheavy (demo box · RTX 3060 12 GB · venv_walkindia)
+
+```bash
+# One-time inputs: 2 walking + 2 driving clips from the walkindia-200k HF dataset land in
+# data/demo_clips/ (extracted from shards 0 + 25); the diheavy 1B best ckpt (4.27 GB, carries the
+# arm's OWN trained predictor — student_encoder.pt has NO predictor) pulls from the HF outputs repo:
+#   hf download anonymousML123/factorjepa-outputs \
+#     outputs/full/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt \
+#     --repo-type dataset --local-dir .
+
+# A/B demo — FROZEN 2.1 (Meta ckpt) vs OURS diheavy, models loaded SEQUENTIALLY (12 GB-safe).
+# Scenes: A dense-feature PCA · B future-frame MSE · C causal future-block L1 · D mask-ratio
+# robustness slope · E motion-cosine separation. Metric cores = the eval suite's own utils.pt_* /
+# predictor_eval code (in-script np.allclose parity guards are FATAL on drift).
+source venv_walkindia/bin/activate
+PYTHONPATH=src python -u src/m14_metric_demo.py \
+  --ckpt "FROZEN 2.1=checkpoints/vjepa2_1_vitg_384.pt" \
+  --ckpt "OURS diheavy=outputs/full/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt" \
+  --model-config configs/model/vjepa2_1_vitg.yaml \
+  --demo-config configs/demo.yaml \
+  --clips-dir data/demo_clips \
+  --output-dir outputs/demo/metric_visual \
+  2>&1 | tee logs/m14_metric_demo_AB_$(date +%Y%m%d_%H%M%S).log
+# outputs: outputs/demo/metric_visual/{demo.mp4, contact_sheet.png, demo_metrics.json}
+# single-model variant: pass --ckpt once. Rendering knobs: configs/demo.yaml (fps/dpi/holds).
+# NO RTX 6000 needed: 1B bf16 encoder+predictor inference at eval frame count (16) fits 12 GB.
+```

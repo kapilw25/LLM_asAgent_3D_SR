@@ -1,0 +1,47 @@
+{"type":"entity","name":"MEMORY.md","entityType":"index","observations":["session-onboarding index — one line per memory, read FIRST on a fresh instance","auto-loaded by Claude Code each session; the graph file is NOT auto-loaded (derived view)","content currently anchored at iter14 in places — project is at iter19 (staleness flagged 2026-07-12)"]}
+{"type":"entity","name":"project_pulse","entityType":"project","observations":["current iter snapshot, v12/0.808 anchor, HF publish state, approval gates"]}
+{"type":"entity","name":"hardware_split","entityType":"project","observations":["what runs on 24 GB vs 96 GB — confirmed empirically 2026-05-03","walkindia demo box (RTX 3060 12GB) uses venv_walkindia, not /venv/main (2026-07-12)"]}
+{"type":"entity","name":"next_actions","entityType":"project","observations":["concrete resume commands for a fresh GPU instance"]}
+{"type":"entity","name":"pipeline_layout","entityType":"architecture","observations":["module map m04→m13 + scripts/ + utils/ — what consumes what"]}
+{"type":"entity","name":"codebase_inventory","entityType":"architecture","observations":["file-level reference: every m*.py / utils / configs / data entry, one line each"]}
+{"type":"entity","name":"iter14_motion_aux_pivot","entityType":"architecture","observations":["motion_aux (CE+MSE) replaced multi_task_probe in v12"]}
+{"type":"entity","name":"config_schema","entityType":"architecture","observations":["per-mode YAML flatten convention, opt-in pattern, ckpt-schema dispatch"]}
+{"type":"entity","name":"legacy/iter13_multi_task","entityType":"legacy","observations":["RETIRED iter13 multi_task_probe pivot — historical context only"]}
+{"type":"entity","name":"bug_log","entityType":"ops-kb","observations":["bug classes A/B/R8/OOM-frag/eval-ckpt-schema/Stage-8/plot-NaN — symptom→cause→fix→prevention format"]}
+{"type":"entity","name":"visual_mistakes","entityType":"ops-kb","observations":["append-only figure/demo layout mistake KB, VM1-VM6 as of 2026-07-12","VM1 side-text-on-LHS strike-through · VM2 unwrapped suptitle · VM3 landscape multi-panel · VM4 edge value-label collision · VM5 compressed row pitch · VM6 hardcoded arm name in title"]}
+{"type":"entity","name":"conventions","entityType":"ops-kb","observations":["CLAUDE.md load-bearing rules condensed: no hardcoded defaults, fail-hard, cache-policy, semicolon-not-&&, never-rm"]}
+{"type":"entity","name":"feedback_no_hardcoded_defaults","entityType":"feedback","observations":["every numeric default lives in YAML, never Python literal or argparse default"]}
+{"type":"entity","name":"visual-audit-agent","entityType":"agent","observations":["defined at .claude/agents/visual-audit.md — MUST run on every rendered figure BEFORE the user sees it","protocol: load plotting.md + visual_mistakes.md first, Read the PNG at full res, verdict table, append new mistakes to the KB"]}
+{"type":"entity","name":"plotting.md","entityType":"contract","observations":["analysis-phase figure styling + the 2026-07-12 multi-panel LAYOUT CONTRACT (vertical stacks, RHS side columns, wrapped suptitles, headroom, row pitch, eyeball-verify)"]}
+{"type":"entity","name":"mermaid.md","entityType":"contract","observations":["mermaid styling: deep purple #5e35b1, white bold 28px; %% comments AFTER the diagram-type declaration"]}
+{"type":"entity","name":"preflight-skill","entityType":"skill","observations":[".claude/skills/preflight — B1-B42 static CPU-side guards citing errors_N_fixes entries"]}
+{"type":"entity","name":"CLAUDE.md","entityType":"contract","observations":["/workspace/CLAUDE.md + src/CLAUDE.md — the overriding project rules (fail-loud, no-hardcode, POC=FULL parity, 3-backup teardown gate)"]}
+{"type":"entity","name":"plot_forest","entityType":"reference-impl","observations":["src/m13_eval_plot.py::plot_forest — reference implementation of the layout contract (always-vertical, RHS winner column, wrapped suptitle)"]}
+{"type":"relation","from":"MEMORY.md","to":"project_pulse","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"hardware_split","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"next_actions","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"pipeline_layout","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"codebase_inventory","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"iter14_motion_aux_pivot","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"config_schema","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"legacy/iter13_multi_task","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"bug_log","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"visual_mistakes","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"conventions","relationType":"indexes"}
+{"type":"relation","from":"MEMORY.md","to":"feedback_no_hardcoded_defaults","relationType":"indexes"}
+{"type":"relation","from":"visual-audit-agent","to":"visual_mistakes","relationType":"re-reads on every audit"}
+{"type":"relation","from":"visual-audit-agent","to":"plotting.md","relationType":"enforces"}
+{"type":"relation","from":"visual-audit-agent","to":"plot_forest","relationType":"audits output of"}
+{"type":"relation","from":"visual-audit-agent","to":"visual_mistakes","relationType":"appends new mistakes to"}
+{"type":"relation","from":"plotting.md","to":"plot_forest","relationType":"cites as reference impl"}
+{"type":"relation","from":"visual_mistakes","to":"plot_forest","relationType":"prevents regressions in"}
+{"type":"relation","from":"bug_log","to":"preflight-skill","relationType":"feeds prevention guards into"}
+{"type":"relation","from":"conventions","to":"CLAUDE.md","relationType":"condenses"}
+{"type":"relation","from":"feedback_no_hardcoded_defaults","to":"CLAUDE.md","relationType":"refines"}
+{"type":"relation","from":"codebase_inventory","to":"pipeline_layout","relationType":"details"}
+{"type":"relation","from":"config_schema","to":"pipeline_layout","relationType":"complements"}
+{"type":"relation","from":"next_actions","to":"hardware_split","relationType":"depends on"}
+{"type":"relation","from":"next_actions","to":"project_pulse","relationType":"depends on"}
+{"type":"relation","from":"iter14_motion_aux_pivot","to":"legacy/iter13_multi_task","relationType":"supersedes"}
+{"type":"relation","from":"project_pulse","to":"iter14_motion_aux_pivot","relationType":"tracks"}
+{"type":"relation","from":"mermaid.md","to":"plotting.md","relationType":"complements"}
