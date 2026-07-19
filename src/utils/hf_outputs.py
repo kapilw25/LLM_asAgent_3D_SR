@@ -1510,9 +1510,50 @@ def upload_additive(subfolder: str):
         # per-file stat() → FileNotFoundError crash (2026-07-09). These are regenerable scratch, never
         # meant for HF, so excluding them both fixes the race AND keeps the upload complete.
         allow_patterns=[f"{sub}/**"],
-        ignore_patterns=["**/.*", "**/tmp_decode_*/**", "**/tmp_decode_*"],
+        # + regenerable DEMO scaffolding — NEVER back these up (they rebuild from the render/model), and
+        # uploading them 429s the HF 1000-req/5min api quota. frames_* = per-frame PNG scaffolding
+        # (utils/demo_frames rebuilds) · m15_* = m15 decoder feature caches (train_tokens.npz 6 GB +
+        # decoder.pt, abandoned track) · m16/clips = source footage (m16 --stage pool re-samples). These
+        # paths exist only under outputs/demo, so poc/full uploads are unaffected. ~16 GB + ~640 LFS objects cut.
+        ignore_patterns=["**/.*", "**/tmp_decode_*/**", "**/tmp_decode_*",
+                         "**/frames_*/**", "**/frames_*",
+                         "**/m15_*/**", "**/m16/clips/**"],
     )
     print(f"upload-additive complete: {sub}/** committed additively (remote-only files preserved)")
+    return True
+
+
+def delete_remote(patterns):
+    """DELETE remote files matching glob PATTERNS from the HF outputs repo in ONE batched commit
+    (api.delete_files → create_commit; a handful of api calls, fits the rate limit). Use to prune files an
+    earlier upload pushed BEFORE they were added to ignore_patterns — e.g. the frames_* PNG scaffolding a
+    stalled upload_large_folder run committed. Previews the match count first (list_repo_files + fnmatch, same
+    matching HF uses) so you see exactly what goes. Token-safe (auth from .env). Returns True on success.
+
+    e.g.  python -u src/utils/hf_outputs.py delete "**/frames_*/**" "**/m15_*/**" "**/m16/clips/**"
+    """
+    import fnmatch
+    token = _get_token()
+    if not token:
+        print("FATAL delete: HF_TOKEN not found (env or repo-root .env)")
+        return False
+    pats = list(patterns)
+    if not pats:
+        print("FATAL delete: no patterns given (e.g. \"**/frames_*/**\")")
+        return False
+    api = HfApi(token=token)
+    files = api.list_repo_files(repo_id=HF_OUTPUTS_REPO, repo_type="dataset")
+    matched = sorted(f for f in files if any(fnmatch.fnmatch(f, p) for p in pats))
+    print(f"delete: {len(matched)}/{len(files)} remote files match {pats}")
+    for f in matched[:6]:
+        print(f"   - {f}")
+    if len(matched) > 6:
+        print(f"   ... +{len(matched) - 6} more")
+    if not matched:
+        print("nothing to delete (no remote files match)")
+        return True
+    api.delete_files(repo_id=HF_OUTPUTS_REPO, repo_type="dataset", delete_patterns=pats)
+    print(f"delete complete: {len(matched)} remote files pruned in one commit")
     return True
 
 
@@ -1539,6 +1580,7 @@ if __name__ == "__main__":
         print("Usage:")
         print("  python -u src/utils/hf_outputs.py upload <output_dir>")
         print("  python -u src/utils/hf_outputs.py upload-additive <output_dir>  # ADDITIVE no-delete + auth from .env (safe for a LIGHT local copy; use instead of bare `hf`)")
+        print("  python -u src/utils/hf_outputs.py delete <glob>...              # prune remote files by glob (e.g. \"**/frames_*/**\"); previews then deletes in ONE commit")
         print("  python -u src/utils/hf_outputs.py download <output_dir>")
         print("  python -u src/utils/hf_outputs.py upload-full <output_dir>    # EVERY file (ckpts/npy too), per-dir _full-*.tar")
         print("  python -u src/utils/hf_outputs.py download-full <output_dir>  # pulls + auto-unpacks _full-*.tar")
@@ -1558,6 +1600,8 @@ if __name__ == "__main__":
         rc = upload_outputs(sys.argv[2])
     elif cmd == "upload-additive" and len(sys.argv) >= _MIN_CLI_ARGS:
         rc = upload_additive(sys.argv[2])   # token-safe, no-delete (the raw-`hf` 401 fix)
+    elif cmd == "delete" and len(sys.argv) >= _MIN_CLI_ARGS:
+        rc = delete_remote(sys.argv[2:])    # prune remote files by glob (e.g. frames_* pushed pre-exclude)
     elif cmd == "download" and len(sys.argv) >= _MIN_CLI_ARGS:
         rc = download_outputs(sys.argv[2])
     elif cmd == "upload-full" and len(sys.argv) >= _MIN_CLI_ARGS:

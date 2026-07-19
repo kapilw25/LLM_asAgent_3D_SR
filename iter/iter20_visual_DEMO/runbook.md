@@ -63,6 +63,27 @@ python src/m17_vqa_demo.py --heroes outputs/demo/vlm/heroes_vlm_full.json \
 
 ---
 
+# ══ 💾 HF OUTPUTS BACKUP — clean regenerables, then upload (dodges the 1000-req/5min 429) ═══════
+# outputs → HF not git; frames/npz/decoders are regenerable — never upload them
+```bash
+cd /workspace/factorjepa && source venv_walkindia/bin/activate ; set -o pipefail
+
+# 1 · strip local frame scaffolding (keeps every .mp4; frees ~3.5 GB / 12k PNGs)
+python src/utils/demo_frames.py clean --root outputs/demo --apply
+
+# 2 · prune regenerables already on HF from a prior run (previews, then ONE commit)
+python -u src/utils/hf_outputs.py delete "**/frames_*/**" "**/m15_*/**" "**/m16/clips/**"
+
+# 3 · upload — auto-excludes frames_*/m15_*/m16 clips (~16 GB + 640 LFS objects skipped)
+python -u src/utils/hf_outputs.py upload-additive outputs \
+  2>&1 | tee logs/upload_large_outputs_pocNfull_$(date +%Y%m%d_%H%M%S).log
+
+# 429 rate-limited? wait 5 min for the api quota, re-run step 3 (resumable)
+# rebuild frames from an mp4 if needed: demo_frames.py regen --mp4 <path>
+```
+
+---
+
 # ══ 🗄️ ARCHIVE — SUPERSEDED · DO NOT RUN (commands commented out; kept for reference) ══════════
 #
 # ── A · m15 pixel-decoder + triptych (m15/m14) ──────────────────────────────────────────────────
