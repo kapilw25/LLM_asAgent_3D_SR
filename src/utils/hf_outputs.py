@@ -1515,9 +1515,12 @@ def upload_additive(subfolder: str):
         # (utils/demo_frames rebuilds) · m15_* = m15 decoder feature caches (train_tokens.npz 6 GB +
         # decoder.pt, abandoned track) · m16/clips = source footage (m16 --stage pool re-samples). These
         # paths exist only under outputs/demo, so poc/full uploads are unaffected. ~16 GB + ~640 LFS objects cut.
+        # pov_ood/ holds THIRD-PARTY YouTube footage used as out-of-domain probe material. It is NOT ours to
+        # redistribute — excluded so a backup never republishes copyrighted video to the public HF repo.
         ignore_patterns=["**/.*", "**/tmp_decode_*/**", "**/tmp_decode_*",
                          "**/frames_*/**", "**/frames_*",
-                         "**/m15_*/**", "**/m16/clips/**"],
+                         "**/m15_*/**", "**/m16/clips/**",
+                         "**/pov_ood/**", "**/youtube_demo/**"],
     )
     print(f"upload-additive complete: {sub}/** committed additively (remote-only files preserved)")
     return True

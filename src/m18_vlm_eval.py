@@ -33,11 +33,18 @@ from utils.demo_video import decode_all_frames
 from utils.config import get_model_config
 
 
-def extract_choice(text):
-    m = re.search(r"\b([A-E])\b", text.strip())
+def extract_answer(text, fmt):
+    """Format-aware answer parsing. MC → first standalone A-E; YES/NO → first standalone yes|no (→ 'Y'/'N',
+    matching gt_letter's first-char convention). '?' when unparseable (scored WRONG, equally for both arms).
+    A letter-only extractor silently zeroed every yes/no row — 60% of the gate set (2026-07-19)."""
+    t = text.strip()
+    if fmt == "yesno":
+        m = re.search(r"\b(yes|no)\b", t.lower())
+        return m.group(1)[0].upper() if m else "?"
+    m = re.search(r"\b([A-E])\b", t)
     if m:
         return m.group(1)
-    c = text.strip()[:1].upper()
+    c = t[:1].upper()
     return c if c in "ABCDE" else "?"
 
 
@@ -45,11 +52,13 @@ def gt_letter(answer):
     return answer.strip()[:1].upper()
 
 
-def _bench_jsonl(cfg):
-    return Path(cfg["data"]["out_dir"]) / "gate_tempcompass.jsonl"
+def _bench_jsonl(v):
+    """v = the INNER cfg["vlm"] dict (not the full yaml) — indexing the wrong level is a runtime KeyError
+    that lint cannot catch (2026-07-19)."""
+    return Path(v["data"]["out_dir"]) / "gate_tempcompass.jsonl"
 
 
-def eval_arm(cfg, arm, early):
+def eval_arm(cfg, arm, early, limit=None):
     v = cfg["vlm"]
     out = Path(v["render"]["out_dir"]); out.mkdir(parents=True, exist_ok=True)
     model = VJepaLlavaVLM(cfg, arm, load_llm=True, lora=True)
@@ -62,12 +71,15 @@ def eval_arm(cfg, arm, early):
     model.llm = PeftModel.from_pretrained(model.llm, ck / "lora").to("cuda")
     model.projector.eval()
 
-    rows = [json.loads(x) for x in open(_bench_jsonl(cfg))]
+    rows = [json.loads(x) for x in open(_bench_jsonl(v))]
     rng = np.random.default_rng(0)
     if early:                                                    # small disjoint subset by video
         vids = sorted({r["video"] for r in rows})
         keep = set(rng.choice(vids, min(v["gate"]["early_subset_videos"], len(vids)), replace=False))
         rows = [r for r in rows if r["video"] in keep]
+    if limit:                                                    # smoke: validate generate() cheaply
+        rows = rows[:limit]
+        print(f"[m18 eval] LIMITED to {len(rows)} rows (--limit)")
     crop = get_model_config(v["encoder"]["model_config"])["model"]["crop_size"]
     nf = v["encoder"]["num_frames"]
     preds = []
@@ -82,10 +94,13 @@ def eval_arm(cfg, arm, early):
         ids = torch.tensor([p_ids], device="cuda")
         attn = torch.ones_like(ids)
         gen = model.generate(pixels, ids, attn, max_new_tokens=8)[0]
-        pred = extract_choice(gen)
+        pred = extract_answer(gen, r["fmt"])
         gt = gt_letter(r["answer"])
-        preds.append({"video": r["video"], "task": r["task"], "question": r["prompt"],
-                      "answer": r["answer"], "gt": gt, "pred": pred, "correct": int(pred == gt)})
+        # `raw` = the VLM's VERBATIM generation, kept so a human can eyeball INPUT prompt vs OUTPUT text
+        # (without it you only see the parsed letter and cannot tell a wrong answer from a parse failure).
+        preds.append({"video": r["video"], "task": r["task"], "fmt": r["fmt"], "question": r["prompt"],
+                      "answer": r["answer"], "gt": gt, "pred": pred, "raw": gen,
+                      "correct": int(pred == gt)})
     tag = "early" if early else "full"
     fp = out / f"preds_{arm}_{tag}.json"
     json.dump(preds, open(fp, "w"))
@@ -135,6 +150,7 @@ def main():
     p.add_argument("--stage", required=True, choices=["eval", "gate"])
     p.add_argument("--arm", choices=["frozen", "ours"])
     p.add_argument("--early", action="store_true", help="small held-out subset (early cheap gate)")
+    p.add_argument("--limit", type=int, default=None, help="cap eval rows (smoke-test generate cheaply)")
     args = p.parse_args()
     if args.stage == "eval" and not torch.cuda.is_available():
         sys.exit("FATAL: CUDA required (96GB box)")
@@ -142,7 +158,7 @@ def main():
     if args.stage == "eval":
         if not args.arm:
             sys.exit("FATAL: --stage eval requires --arm")
-        eval_arm(cfg, args.arm, args.early)
+        eval_arm(cfg, args.arm, args.early, args.limit)
     else:
         gate(cfg, args.early)
 

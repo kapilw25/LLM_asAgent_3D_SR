@@ -72,9 +72,16 @@ def collate(batch, pad_id):
     return pixels, ids, attn, lab
 
 
-def train(cfg, arm, stage, no_wandb, max_samples):
+def train(cfg, arm, stage, no_wandb, max_samples, epochs=None, lr=None):
     v = cfg["vlm"]
-    st = v["stages"][stage]
+    st = dict(v["stages"][stage])                    # copy so CLI overrides don't mutate the loaded cfg
+    # EARLY-GATE overrides: that path skips `align`, so the projector starts RANDOM and the instruct LR
+    # (2e-5, tuned for LoRA fine-tuning AFTER align) is too low to learn it. --lr/--epochs let the gate
+    # train a usable projector cheaply. BOTH arms must use the SAME overrides (fair encoder swap).
+    if epochs:
+        st["epochs"] = epochs
+    if lr:
+        st["lr"] = lr
     out = Path(v["render"]["out_dir"]).parent / "vlm_ckpt" / arm       # outputs/demo/vlm_ckpt/<arm>
     out.mkdir(parents=True, exist_ok=True)
     model = VJepaLlavaVLM(cfg, arm, load_llm=True, lora=(stage == "instruct"))
@@ -150,11 +157,13 @@ def main():
     p.add_argument("--stage", required=True, choices=["align", "instruct"])
     p.add_argument("--no-wandb", action="store_true")
     p.add_argument("--max-samples", type=int, default=None, help="cap training samples (EARLY-gate cheap pass)")
+    p.add_argument("--epochs", type=int, default=None, help="override cfg epochs (EARLY gate)")
+    p.add_argument("--lr", type=float, default=None, help="override cfg lr (EARLY gate: projector is from scratch)")
     args = p.parse_args()
     if not torch.cuda.is_available():
         sys.exit("FATAL: CUDA required (96GB box) — no CPU fallback")
     cfg = yaml.safe_load(args.config.read_text())
-    train(cfg, args.arm, args.stage, args.no_wandb, args.max_samples)
+    train(cfg, args.arm, args.stage, args.no_wandb, args.max_samples, args.epochs, args.lr)
 
 
 if __name__ == "__main__":

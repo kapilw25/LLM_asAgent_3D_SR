@@ -15,14 +15,21 @@
 # DATA = only HF-reachable: lmms-lab/TempCompass (gate, 4033 temporal MC-QA) + lmms-lab/LLaVA-Video-178K
 #   (align captions + instruct motion-QA). SSv2/EK100 are gated/manual → excluded. TempCompass is GENERAL
 #   video → the early gate IS the OOD-transfer test (the crux risk).
+# PREREQ — the light outputs download EXCLUDES *.pt, so the OURS encoder ckpt is MISSING. Fetch it first:
+#   python -c "from huggingface_hub import hf_hub_download as d; d('anonymousML123/factorjepa-outputs',
+#   'outputs/full/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt',
+#   repo_type='dataset', local_dir='.')"     # 4.27 GB · FROZEN ckpt comes from setup_env_uv.sh
 ```bash
-source /venv/main/bin/activate ; set -a; source ${WORKSPACE}/.env; set +a ; set -o pipefail
+cd /workspace/factorjepa && source venv_walkindia/bin/activate ; set -a; source .env; set +a ; set -o pipefail
 
-# 0 · DATA — build JSONL + download the videos (heavy: LLaVA-Video tars + TempCompass zip)
-for S in gate instruct align; do
-  python src/m18_vlm_data.py --config configs/vlm.yaml --stage $S --download-videos --cache-policy 1 \
-    2>&1 | tee logs/m18_data_${S}_$(date +%Y%m%d_%H%M%S).log
-done
+# 0 · DATA for the EARLY GATE — gate + instruct ONLY (align is NOT needed; skips a huge download)
+python -u src/m18_vlm_data.py --config configs/vlm.yaml --stage gate --download-videos --cache-policy 1 \
+  2>&1 | tee logs/m18_data_gate_$(date +%Y%m%d_%H%M%S).log
+# instruct: 1 shard ~5.3 GB (not the subset's 38 GB); keeps only rows whose clip actually downloaded
+python -u src/m18_vlm_data.py --config configs/vlm.yaml --stage instruct --download-videos \
+  --max-tars 1 --max-samples 4000 --cache-policy 1 \
+  2>&1 | tee logs/m18_data_instruct_$(date +%Y%m%d_%H%M%S).log
+# align (captions) is for the FULL run in step 2 only — do NOT run it for the early gate
 
 # 1 · EARLY GATE (cheap de-risk BEFORE the multi-day pretrain): instruct-only, capped, both arms →
 #     eval a 60-video TempCompass subset. NO align needed (projector from scratch is fine to read the gap).
@@ -60,6 +67,30 @@ python src/m17_vqa_demo.py --heroes outputs/demo/vlm/heroes_vlm_full.json \
   2>&1 | tee logs/m17_vlm_$(date +%Y%m%d_%H%M%S).log
 # → outputs/demo/vlm/demo_vqa_vlm.mp4 ; run the visual-audit agent (C10 gate-backed) before showing it
 ```
+
+---
+
+# ══ 🔍 PARALLEL TRACK — derive a VISIBLE in-domain question (contingency if the OOD gate FAILS) ══
+# WalkIndia motion labels are invisible (VM30). A camera TURN may be auto-derivable AND visible on reveal.
+# Runs CPU-only so it can overlap the GPU gate. Order: derive -> EYEBALL -> probe -> only then build.
+```bash
+cd /workspace/factorjepa && source venv_walkindia/bin/activate ; set -o pipefail
+
+# 1 · CPU flow scan over WalkIndia clips -> turn/straight labels + filmstrip contact sheet
+#     (tooling produced by the parallel agent; outputs land in outputs/demo/reveal_probe/)
+
+# 2 · 🚦 HUMAN GATE — open outputs/demo/reveal_probe/contact_sheet.png
+#     do the TURN clips VISIBLY turn? if not, the question is dead — do NOT build on it
+
+# 3 · 🚦 PROBE GATE — only if visible: does OURS beat FROZEN on turn-vs-straight?
+#     reuse the cached-feature probe pattern (scratchpad/pre_check_e0.py), GroupKFold-by-video
+
+# 4 · build the VLM demo on this question ONLY after both gates pass
+```
+
+> **Why this order:** in-domain WalkIndia QA would likely WIN the gate (causal probes: action +8.7pp,
+> magnitude +10.3pp) but stay UNWATCHABLE — the labels aren't eye-verifiable. This track hunts for the rare
+> question that is both. Never skip gate 2: a metric win a viewer can't see is what burned us five times.
 
 ---
 

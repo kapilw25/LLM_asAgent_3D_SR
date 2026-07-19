@@ -1,4 +1,4 @@
-# 🎬 iter20 — VISUAL DEMO · v11 plan (cheap-probe path EXHAUSTED → VLM-head ✅ BUILT, awaiting the 96 GB early gate)
+# 🎬 iter20 — VISUAL DEMO · v12 (🔒 CLOSED: visible OURS>FROZEN demo NOT achievable · edge is IN-DOMAIN ONLY — see §F)
 
 | 🎯 GOAL | 2-3 sample demo videos for the research page, `demo_cosmos`/`demo_vJPEA` format: clip + QUESTION + GROUND TRUTH → 🧊 FROZEN answer ❌ · 🥇 OURS answer ✅ — the answers from **OUR model** (a tiny probe on FROZEN vs OURS V-JEPA features), on the 3060. |
 |---|---|
@@ -6,8 +6,65 @@
 ## ✅ §D — THE DECISION (2026-07-19)
 
 - 🅱️ **API (ChatGPT/Claude): ❌ no** — it's like hiring a *stranger* to take the test; it uses *its own* eyes, never our model's, so it literally **can't** show FROZEN-twin vs OURS-twin (you'd get "GPT vs GPT"). ✅ ok only to *word* the questions nicely.
-- 🅰️ **VLM+LLM on 96 GB: ✅ CHOSEN + BUILT (2026-07-19)** — the "give our model a mouth to speak answers" machine, the **only path to a VISIBLE OURS>FROZEN demo**. Code built + 3060-verified (App A). Runs on the 96 GB box; the **EARLY GATE on TempCompass is the make-or-break OOD-transfer test**.
+- 🅰️ **VLM+LLM on 96 GB: ✅ BUILT + RAN (2026-07-19) → gate INCONCLUSIVE** — both arms landed at chance (projector starvation), so it tested our *training budget*, not the encoder. **Superseded by the encoder-level OOD probe (§F), which answered the question decisively: OURS LOSES out-of-domain.**
 - 🚫 **Cheap probe demo: EXHAUSTED** — §E0 proved OURS wins the motion probe IN-DOMAIN (**+15.7pp**), but every *eye-verifiable* question failed (§2: viewpoint→FROZEN wins · magnitude→VM30 backwards · retrieval→motion invisible on WalkIndia radial flow). No layman-verifiable card exists → escalated to the VLM.
+
+---
+
+## 🔒 §F — CLOSING FINDING (2026-07-19): the visible demo is NOT achievable · OURS's edge is IN-DOMAIN ONLY
+
+Four independent closures. The intersection of **"eye-verifiable"** and **"OURS wins"** is **EMPTY** — now proven at the
+**encoder** level, not merely at the label/probe level.
+
+| # | test | domain | n | result | verdict |
+|---|---|---|---|---|---|
+| 1 | scene / taxonomy questions | in-domain | — | OURS loses **0/15** | ❌ |
+| 2 | magnitude / direction labels | in-domain | 1878 | OURS wins **+8.7…+15.7pp** | ⚠️ wins but **INVISIBLE** (VM30 radial flow) |
+| 3 | WalkIndia straight-vs-turn | in-domain | 440 | no bimodal boundary; only ~1-3/12 read as turns | ❌ neither derivable nor visible |
+| 4 | **ghat POV ego-yaw** | **OOD** | **167** | **OURS LOSES −6.0…−10.8pp** | ❌ **decisive** |
+
+### 🧪 The OOD transfer result (new, decisive)
+
+Encoder-level probe — **no LLM**, so it is immune to the projector-starvation that invalidated the VLM gate.
+Leave-one-of-5-**temporal**-blocks-out (adjacent windows of one continuous drive are autocorrelated; a random
+split would leak and fabricate a win). Source: 18-min ghat-road POV driving, 8 s windows, flow-derived labels.
+
+| head | FROZEN | OURS | Δ(O−F) |
+|---|---|---|---|
+| LINEAR | 0.737 | **0.629** | **−10.8pp** |
+| MLP | 0.731 | **0.671** | **−6.0pp** |
+| majority baseline | 0.503 | — | both arms ≫ baseline → **the test had power** |
+
+Replicates **Diving48 (−1.1pp × 2)**. A cab-POV confirmation (n=55) was **underpowered and mixed**
+(LINEAR +1.8pp, MLP −3.6pp, SE ±5.8pp) → neither confirms nor contradicts; the ghat probe is the load-bearing evidence.
+
+> 🧬 **Mechanism:** surgery **specialises** the encoder to WalkIndia's motion statistics (radial walking flow), and that
+> specialisation **costs** it on a different motion regime (large ego-yaw). This is a **publishable, quantified
+> limitation** across 3 OOD experiments — a characterisation of what the method does, not a failed run.
+
+### ⛔ The VLM early gate did NOT test this — do not cite it as OOD evidence
+
+FROZEN **0.446** [0.405,0.486] vs OURS **0.444** [0.404,0.486] → −0.2pp. **But both arms sat at chance:**
+yes/no 0.503 / 0.474 (coin flip on a balanced set) and MC 0.361 / 0.400 against a 0.374 majority baseline.
+A from-scratch projector on **2 885 samples / 1 epoch cannot align video→language** (LLaVA stage-1 uses 558K, ~200×).
+
+| the run is… | about |
+|---|---|
+| ✅ **conclusive** | the **training budget** — the cheap skip-align shortcut does not work |
+| ❌ **inconclusive** | the **encoder** — the hypothesis was never actually exercised |
+
+> ⚠️ An earlier chain printed **"✅ PASS +29.8pp"**. That was a **metric artefact**, not a result: FROZEN was scored with a
+> letter-only extractor that auto-failed all 340 yes/no rows (60% of the set) while OURS used the fixed parser.
+> Re-scored on the matched metric the gap is **−0.2pp**. Artefacts quarantined as `*.BROKEN_METRIC.json` / `*.INVALID.json`.
+
+### 📦 What remains shippable
+
+| artefact | status |
+|---|---|
+| 🥇 **forest plots** | ✅ rigorous in-domain wins, non-overlapping CIs — the honest headline evidence |
+| 🎬 `outputs/demo/mcq/demo_mcq.mp4` | ✅ real +13.7pp retrieval, overlay-free, honestly captioned as **metric-verified, not eye-verified** |
+| 🧬 **OOD limitation section** | ✅ NEW — 3 quantified experiments; strengthens the paper rather than weakening it |
+| 🎥 visible `demo_cosmos`-style video | ⛔ **not achievable** — stop hunting; 4 independent closures |
 
 ---
 
