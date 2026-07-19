@@ -1,5 +1,6 @@
 # Secrets & Scripts
 .env
+cookies_youtube.txt
 # git_push.sh is tracked ON PURPOSE (token-free — it sources creds from .env). Do NOT ignore it.
 
 # Directories

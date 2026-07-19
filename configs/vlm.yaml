@@ -1,0 +1,106 @@
+# iter20 §E1 — VLM-head config (OURS-VLM vs FROZEN-VLM, demo_cosmos-style motion QA).
+# Single source of every value (CLAUDE.md: no hardcoded values in .py). Consumed by
+# src/m18_vlm_{data,train,eval}.py + src/utils/vlm_model.py via --config. Runs on the 96GB box.
+#
+# Architecture (V-JEPA 2 paper's own MLLM recipe, LLaVA visual-instruction-tuning):
+#   clip(16f@384) → V-JEPA 2.1 ViT-G (FROZEN or OURS, native) → 4608 tok (8×24×24, D=5632 concat)
+#   → spatial avg-pool 24×24→8×8 → 512 video tokens → MLP projector 5632→H→H (GELU), H = LLM hidden (4096)
+#   → prepend to Qwen3-8B input-embeds (LoRA in stage 2, non-thinking) → text answer.
+# Gold refs: V-JEPA2 arxiv 2506.09985 (align via LLaVA, per-patch→MLP→LLM); LLaVA-1.5 (2-layer GELU MLP).
+
+vlm:
+  # ── language model ───────────────────────────────────────────────────────────
+  llm:
+    model_id: "Qwen/Qwen3-8B"              # hidden 4096, 36 layers; auto-downloads to $HF_HOME
+    hidden_size: 4096                      # FALLBACK for load_llm=False shape-tests ONLY; real runs read the
+                                           # LOADED model's config.hidden_size → projector out-dim is dynamic
+                                           # (swapping the LLM is now a 1-line model_id change)
+    enable_thinking: false                 # NON-thinking gate = faithful encoder readout; chain-of-thought
+                                           # would let the LLM guess from text priors → masks the OURS-vs-FROZEN
+                                           # encoder gap (the whole thing we're measuring)
+    max_seq_len: 2048                      # 512 video tokens + chat template + prompt + answer
+
+  # ── vision encoder arms (the ONLY difference between the two VLMs) ─────────────
+  # native V-JEPA ckpts loaded by utils.predictor_eval.load_encoder_only (arm ckpt is native fmt,
+  # NOT HF VJEPA2Model — same loader for both arms → a fair encoder swap). Paths here mirror
+  # arm_registry.yaml's arm→dir convention (config-held path, loaded via --config; not a .py constant).
+  encoder:
+    model_config: "configs/model/vjepa2_1_vitg.yaml"  # arch vit_giant_xformers_2_1, embed 1408×4=5632
+    num_frames: 16                          # the eval recipe (pipeline.yaml probe.num_frames) — do NOT diverge
+    embed_dim_concat: 5632                  # 1408 × n_output_distillation(4); ASSERTED vs load_encoder_only return
+    arms:
+      frozen: "checkpoints/vjepa2_1_vitg_384.pt"
+      ours:   "outputs/full/vjepa_2_1_vitg_1B/train/m09c_surgery_3stage_DI_diheavy_encoder/m09c_ckpt_best.pt"
+
+  # ── token reduction: spatial avg-pool, temporal kept (perf is temporal-sensitive) ─
+  tokens:
+    grid_t: 8            # 16 frames / tubelet 2
+    grid_hw: 24          # 384 / patch 16
+    pool_hw: 8           # 24×24 → 8×8 spatial avg-pool (k=3) → grid_t × pool_hw² = 8×64 = 512 tokens
+    n_video_tokens: 512  # ASSERTED = grid_t * pool_hw**2
+
+  # ── projector (LLaVA-1.5: 2-layer MLP + GELU), trainable, per-arm ─────────────
+  projector:
+    hidden_dim: 4096     # = llm.hidden_size FALLBACK (load_llm=False); runtime uses the loaded LLM's hidden
+    activation: "gelu"
+    depth: 2             # Linear(5632→H) · GELU · Linear(H→H), H = loaded LLM hidden (4096 for Qwen3-8B)
+
+  # ── LoRA on the LLM (stage 2 only) ────────────────────────────────────────────
+  lora:
+    r: 32
+    alpha: 64
+    dropout: 0.05
+    target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+  # ── 2-stage LLaVA training (IDENTICAL both arms except encoder.arms[arm]) ──────
+  stages:
+    align:      # stage 1: projector ONLY (encoder + LLM frozen), on captions
+      lr: 1.0e-3
+      epochs: 1
+      batch_size: 8
+      grad_accum: 4
+      warmup_frac: 0.03
+      weight_decay: 0.0
+    instruct:   # stage 2: projector + LLM-LoRA, on MOTION/ACTION QA (no scene QA)
+      lr: 2.0e-5
+      epochs: 3
+      batch_size: 4
+      grad_accum: 4
+      warmup_frac: 0.03
+      weight_decay: 0.0
+
+  # ── data (built by m18_vlm_data.py; HF datasets → instruction JSONL) ───────────
+  # NO scene/appearance QA (OURS loses scene 0/15 → dilutes/inverts). Motion/temporal only.
+  # Only HF-REACHABLE sources (verified 2026-07-19): TempCompass + LLaVA-Video-178K.
+  # Something-Something-v2 / EK100 are gated/manual-download → excluded from the MVP.
+  data:
+    out_dir: "data/vlm"
+    fps_sample: 16                     # frames decoded per clip (= encoder.num_frames)
+    align:                             # stage-1 captions (projector alignment)
+      source: "lmms-lab/LLaVA-Video-178K"
+      max_samples: 40000
+    instruct:                          # stage-2 MOTION/temporal QA (DROP scene/attribute QA)
+      source: "lmms-lab/LLaVA-Video-178K"
+      keep_task_keywords: ["motion", "moving", "direction", "speed", "temporal", "action", "before", "after", "then"]
+      drop_task_keywords: ["color", "scene", "where", "how many", "what object", "background"]
+      max_samples: 30000
+
+  # ── gate / eval (honesty check) ───────────────────────────────────────────────
+  # TempCompass = general video (NOT WalkIndia) → the EARLY gate IS the OOD-transfer test (the crux risk).
+  gate:
+    # EARLY gate (cheap): after a SHORT instruct run, eval a SMALL held-out TempCompass subset.
+    #   If OURS-VLM !> FROZEN-VLM by early_min_delta_pp → STOP before the full caption pretrain.
+    early_benchmark: "lmms-lab/TempCompass"
+    early_subset_videos: 60                 # small disjoint subset for the cheap early gate
+    early_min_delta_pp: 2.0                 # OURS must beat FROZEN by ≥ this (pp) to continue
+    # FULL gate (after full 2-stage): non-overlapping 95% CIs on the temporal suite.
+    benchmarks: ["lmms-lab/TempCompass", "diving48"]   # diving48 videos cached (App B) = OOD control
+    diving48_clips: "data/diving48_ood"     # from App B; NO default in .py — path lives here
+    bootstrap_iters: 10000
+    ci: 0.95
+    require_nonoverlap_ci: true             # PASS = OURS > FROZEN with non-overlapping CIs; else forest plots
+
+  # ── render (only if a gate PASSED) — reuse m17_vqa_demo.py ────────────────────
+  render:
+    out_dir: "outputs/demo/vlm"
+    n_cards: 3                              # OURS-right / FROZEN-wrong heroes from the passing benchmark

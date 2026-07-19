@@ -367,8 +367,26 @@ flowchart LR
 |---|---|---|
 | box | RTX 3060 · 12 GB · `venv_walkindia` | frozen demo v1 ran end-to-end ~4 min |
 | model | V-JEPA 2.1 ViT-g 1B bf16, encoder+predictor | `checkpoints/vjepa2_1_vitg_384.pt` (~3 GB on GPU) |
-| ❌ RTX 6000 96 GB | **NOT needed** | 1B inference @ 16 frames fits 12 GB; A/B loads models **sequentially** |
+| ❌ RTX 6000 96 GB | **NOT needed for the current tracker (E/W/S2)** — escalation triggers in **§3b** | 1B inference @ 16 frames fits 12 GB; A/B loads models **sequentially** |
 | A/B ckpt (parked) | `m09c_ckpt_best.pt` 4.27 GB (diheavy, own predictor) | downloaded from HF `factorjepa-outputs` ✔️ |
+
+### 🚀 §3b — WHEN to move to the RTX 6000 96 GB (spin-up triggers · ~$1.5/hr)
+
+> 💰 rule of thumb: spin up when the job would take **> ~6-8 h on the 3060** — the 96 GB box gives ~5-8×
+> throughput via big batches (B=8-16 vs B=1), so break-even beats the ~1 h env-setup + ckpt/data transfer.
+> Below that, the 3060 overnight is cheaper. GPU-util ≥85% rule applies on EITHER box.
+
+| # | trigger | measured basis (3060) | verdict |
+|---|---|---|---|
+| T1 | 🥊 **2B ViT-G 1-clip smoke OOMs** (S3) | 2B bf16 ≈ 4.4 GB weights + 16-frame activations — *expected* to fit B=1; smoke decides | 🔶 move ONLY if the smoke OOMs |
+| T2 | 🎞️ **batch demo rendering ≥100 clips × multi-model** | v1 measured ~20 s GPU/clip/model → 100 clips × 5 models ≈ **~3 h** @ B=1 → still 3060-OK overnight; **≥300 clips or same-day iteration loops → move** (B=16 batching cuts it ~6×) | 🔶 move at ≥300 clips or when iteration cadence < 1 day matters |
+| T3 | 💥 **m15 v2 decoder upgrade** — conv/temporal refiner >100 M params, perceptual/GAN loss, full-frame batches | tiny 5-10 M MLP trains fine in 12 GB; a frame-level decoder with VGG-perceptual loss at batch ≥8 will not | ✅ move when m15 graduates beyond the per-token MLP |
+| T4 | 🚀 **stage 5: SDXL→Cosmos projector + LoRA** (`plan_pixel_generation.md`) | SDXL LoRA fine-tune needs 24-80 GB; Cosmos more | ✅ move — REQUIRED, no 3060 path |
+| T5 | 🏋️ **any encoder training / fine-tune ≥100 clips** (new arms, probe retrains at scale) | repo-standard: training lives on 96 GB boxes (iter18/19 precedent — 24 GB was the floor for heads-only) | ✅ move — 1B backward pass does not fit 12 GB |
+| T6 | 🧊 V-JEPA 1.0 ViT-H loader work (S4) | 0.63 B inference ≈ 1.4 GB — loader is the blocker, not VRAM | ❌ stay on 3060 |
+
+| 🧾 spin-up checklist (when a trigger fires) | 1️⃣ pick RTX 6000 Blackwell (96 GB) per `hardware_split.md` · 2️⃣ `setup_env_uv.sh` (cu130 stack) — NOT venv_walkindia · 3️⃣ `download-data` ckpts + demo clips (complete, no --ext) · 4️⃣ re-run the 1-clip SANITY before the batch job · 5️⃣ tear-down gate = the 3-backup rule (code→GitHub, outputs→HF, sessions→Mac) |
+|---|---|
 
 ---
 
@@ -413,6 +431,33 @@ flowchart LR
 | 🥊 stage 2️⃣: + OURS diheavy (2-way, raw values honest) | 🚪 after sign-off — ckpt local, 1 CLI flag |
 | 🥊 stage 3️⃣: + 2.1 ViT-G 2B + 2.0 1B (4-way, normalized ticker) | 🚪 2 downloads + 2B VRAM smoke (§2b) |
 | 🥊 stage 4️⃣: + V-JEPA 1.0 ViT-H (5-way) | 🚪 needs new loader (~2-3 h) — user go/no-go |
+
+## 📋 §5b — TASK TRACKER (engineering · code dev · testing · gates)
+
+> legend: ✅ completed · 🔄 in progress · ⏳ pending (unblocked) · ⛔ blocked (by task) · 🚧 gate/decision · 🚪 parked until gate
+> critical path: **E1 → E2 → E4 → E5 → E6(user) → S2 → S3** · W1-W3 run in parallel with E2-E5
+
+| ID | task | type | est | status |
+|---|---|---|---|---|
+| D1 | demo clips extracted (2 walk Goa + 2 drive Delhi) | data | — | ✅ completed |
+| D2 | m14 v1 (slide-style, FROZEN + A/B capable, parity guards FATAL) | code dev | — | ✅ completed |
+| D3 | loop infra: 🕵️ visual-audit agent + demo-loop skill + VM1-18 KB + kb-audit cmd + audit-gate hook | infra | — | ✅ completed |
+| D4 | forest panel-title consistency (C9 sweep, 8 fixes, VM14-18) | code dev | — | ✅ completed |
+| **E1** | **v2 renderer core**: 4-panel synced compositor — full-fps decode, animated tile masks, 🟢/🔴 report-card overlay, ticker strip, ffmpeg assemble (`driving1.png` style) | code dev | ~2-3 h | ⏳ **NEXT** |
+| E2 | scenes on the core: 🅰️ PCA-video · 🅱️ cover→reveal cycle · 🅲️ half-black lift · 🅳️ 4-pass jigsaw · 🅴️ alike-lines grid | code dev | ~2 h | ⛔ blocked by E1 |
+| E3 | `configs/demo.yaml` v2 knobs (native fps, cycle length, overlay alphas) | config | 15 min | ⏳ pending |
+| E4 | testing: 3-check gate + 1-clip SANITY render + parity asserts + pipefail + fresh-mtime check | testing | 30 min | ⛔ blocked by E1-E2 |
+| E5 | 👁️ self-eyeball + 🕵️ visual-audit PASS (C1-C9 × VM1-18) | audit | ~30 min | ⛔ blocked by E4 |
+| **E6** | 🧑‍⚖️ **USER visual sign-off on the FROZEN demo** | gate | — | 🚧 **THE GATE** |
+| W1 | m15 feature precompute: frozen 1B encoder over shards 0+25 (~4 k clips) | code+GPU | ~1 h | ⏳ pending |
+| W2 | `src/m15_pixel_decoder.py`: per-token MLP train + eval gate (decode REAL latents first, then PREDICTED) | code+GPU | ~2-3 h | ⛔ blocked by W1 |
+| W3 | 💥 WOW panel hook in scene 🅲️ (imagined vs real future) + non-negotiable "EXTRA decoder" caption | code dev | ~1 h | ⛔ blocked by W2+E2 |
+| S2 | 🥊 + OURS diheavy 2-way (ckpt local, 1 CLI flag) | run | 10 min | 🚪 parked until E6 |
+| S3 | 🥊 + 2.1 ViT-G 2B + 2.0 1B (4-way): 2 downloads + 2B 1-clip VRAM smoke + normalized-ticker code (§2b honesty rules) | code+GPU | ~2 h | 🚪 parked until E6 |
+| S4 | 🥊 + V-JEPA 1.0 ViT-H: new loader for the 2024 jepa arch | code dev | ~2-3 h | 🚧 user go/no-go |
+| H1 | runbook: v2 + m15 operator commands | docs | 10 min | ⏳ pending |
+| H2 | HF upload-additive after v2 artifacts land | ops | ~10 min | ⏳ pending |
+| H3 | stale `frames_*` dirs → `outputs/demo/…/legacy/` (mv, never rm) | ops | 2 min | ⏳ pending |
 
 | 🚀 operator commands | `iter/iter19_train_115kclips/runbook_train_115kclips.md` § *VISUAL DEMO* |
 |---|---|

@@ -2602,6 +2602,14 @@ def _xb_is_ours(suffix):
     return suffix == "surgery_raw_encoder" or _color_for(f"vjepa_2_1_vitG_{suffix}", 0) == _XB_OURS_GREEN
 
 
+def _xb_arm_short(suffix):
+    """The ONE cross-figure arm display name — the EXACT variant name minus the '_encoder' suffix. Used by
+    the forest winner column AND the scale-replication legend (VM14-class 2026-07-13: they had two
+    different strippers, so the same arm read 'surgical_3stage_DI_diheavy' in one figure and
+    '3stage_DI_diheavy' in its sibling)."""
+    return suffix.replace("_encoder", "")
+
+
 def _xb_load_metrics(json_path):
     """eval_metrics.json → {arm_suffix: {metric:(mean, ci_half)}} — strips the backbone prefix so 2B and 1B
     key on the SAME suffix; drops no-data (n_test=—) rows."""
@@ -2683,6 +2691,14 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         if sort_rows:                                                # per-panel best→worst (default); False → fixed _XB_METRICS order
             rows.sort(key=lambda t: t[1])                            # y=0 (bottom) = worst → best at TOP
         fmt = (lambda v: f"{v:.1f}×") if mode == "ci" else (lambda v: f"{v:+.1f}%")
+        # xlim/scale FIRST (they only need `rows`) so the draw loop below can flip edge-hugging labels.
+        _lt = 1.0 if mode == "ci" else 0.5
+        ax.set_xscale("symlog", linthresh=_lt)
+        _pos = max([r[1] for r in rows] + [_lt])
+        _neg = min([r[1] for r in rows] + [-_lt])
+        # positive side gets EXTRA headroom (×6): the value label sits by the marker and must not run
+        # into the RHS winner-arm column when the best row hugs the axis edge (visual-audit 2026-07-12).
+        ax.set_xlim(min(_neg * 3, -_lt * 3), max(_pos * 6, _lt * 3))
         for y, (lbl, v, ours_s, comp_s) in enumerate(rows):
             won = (v >= 1.0) if mode == "ci" else (v > 0.0)
             col = _XB_OURS_GREEN if won else "#90A4AE"
@@ -2691,9 +2707,12 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             else:
                 ax.plot(v, y, "o", ms=8, color=col, zorder=3)
             # label with a FIXED screen-space gap (offset points) — a data-space offset can't stay legible on
-            # the symlog axis (task2 2026-07-01: the same data step is huge near 0 and tiny far out).
-            ax.annotate(fmt(v), (v, y), xytext=(7, 0), textcoords="offset points",
-                        va="center", ha="left", fontsize=11, color=col, fontweight="bold")
+            # the symlog axis (task2 2026-07-01). LIFTED +6pt above the whisker line (VM15: an on-line label
+            # gets struck by the whisker; a struck minus reads as PLUS) and FLIPPED to the marker's left for
+            # the right-edge cluster (VM16: edge labels crossed the spine into the winner column).
+            _edge = v > 0 and v >= 0.5 * _pos
+            ax.annotate(fmt(v), (v, y), xytext=((-6, 6) if _edge else (6, 6)), textcoords="offset points",
+                        va="bottom", ha=("right" if _edge else "left"), fontsize=11, color=col, fontweight="bold")
             # per-row WINNER declaration (user 2026-07-12): the exact arm that won THIS metric on the mean —
             # v>0 the best-OURs arm, v<0 the best-competitor arm (0 = exact tie). Rendered in a dedicated
             # RIGHT-hand margin column in the winner arm's registry colour (_color_for → same hue as the
@@ -2701,23 +2720,14 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             # margin annotation strikes through the metric tick labels (visual-audit mistake #1).
             win_s = ours_s if v > 0 else (comp_s if v < 0 else None)
             wcol = _color_for(f"vjepa_2_1_vitG_{win_s}", 0) if win_s else "#607D8B"
-            ax.annotate("» " + (win_s.replace("_encoder", "") if win_s else "exact tie"),
+            ax.annotate("» " + (_xb_arm_short(win_s) if win_s else "exact tie"),
                         xy=(1.05, y), xycoords=("axes fraction", "data"), ha="left", va="center",
                         fontsize=9.5, fontweight="bold", fontstyle="italic", color=wcol)
         # (no per-panel "winner arm" column header — it collides with long left-loc panel titles; the
         # suptitle's "» names each metric's winner arm" documents the column instead. visual-audit 2026-07-12)
-        # symlog x-axis (task2): ABSOLUTE signed values but NON-uniform spacing, so a 0.1 tie and a 47 blow-out
-        # are BOTH visible; linthresh keeps the small tie zone linear, beyond it compresses like log.
-        _lt = 1.0 if mode == "ci" else 0.5
-        ax.set_xscale("symlog", linthresh=_lt)
-        # asymmetric-aware xlim + decade-only ticks: a symmetric margin on a lopsided symlog range crammed
-        # phantom -1000/-10000 ticks at the left (frozen % blows up to +1379 but bottoms at -2). Bracket the
-        # ACTUAL data each side, keep only 0 + 10^k majors, drop the minor subticks. task 2026-07-01.
-        _pos = max([r[1] for r in rows] + [_lt])
-        _neg = min([r[1] for r in rows] + [-_lt])
-        # positive side gets EXTRA headroom (×6): the value label sits right of the marker and must not
-        # run into the RHS winner-arm column when the best row hugs the axis edge (visual-audit 2026-07-12).
-        ax.set_xlim(min(_neg * 3, -_lt * 3), max(_pos * 6, _lt * 3))
+        # symlog x-axis (task2): ABSOLUTE signed values but NON-uniform spacing — scale+xlim were set ABOVE
+        # the draw loop (VM16). Decade-only ticks: bracket the ACTUAL data each side, keep only 0 + 10^k
+        # majors, drop the minor subticks (a symmetric margin crammed phantom -1000 ticks). task 2026-07-01.
         _cand = [0] + [10 ** k for k in range(6)] + [-10 ** k for k in range(6)]   # 0 · ±1 · ±10 … ±1e5
         _lo, _hi = ax.get_xlim()
         ax.set_xticks([t for t in _cand if _lo <= t <= _hi])                       # decades within range only
@@ -2729,7 +2739,11 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         ax.axvline(0, color="#607D8B", lw=1.2, zorder=1)             # null: surgery == baseline
         if mode == "ci":
             ax.axvline(1, color=_XB_OURS_GREEN, ls="--", lw=1.4, zorder=1)
-            ax.text(1, len(rows) - 0.4, " 1×CI · separated →", color=_XB_OURS_GREEN, fontsize=10, fontweight="bold", ha="left", va="top")
+            # right-ANCHORED, BOTTOM-right inside the axes (VM16 saga: left-anchored at x=1 ran past the
+            # spine; top-right inside hit the top row's value label; above the axes hit the panel title).
+            # Bottom-right is guaranteed empty: rows sort best→worst, so the bottom rows hug the LEFT.
+            ax.text(0.985, 0.02, "1×CI · separated →", transform=ax.transAxes, color=_XB_OURS_GREEN,
+                    fontsize=10, fontweight="bold", ha="right", va="bottom")
         ax.set_ylim(-0.7, len(rows) - 0.3)
         ax.set_title(label, fontsize=15, fontweight="bold", loc="left")
         _base = "frozen" if vs == "frozen" else "best competitor"
@@ -2756,6 +2770,10 @@ def plot_scale_replication(backbones, out_dir):
     from collections import OrderedDict
     from scipy.stats import spearmanr
     (xlbl, xd), (ylbl, yd) = backbones[0], backbones[1]
+    # short '<tag> · <size>' of each compared backbone, derived from the ACTUAL panel labels — the
+    # suptitle/callout used to hardcode "2B→1B" regardless of what was compared (VM14-class 2026-07-13).
+    _bb_of = lambda lbl: " · ".join(lbl.split(" · ")[:2])
+    _duel = f"{_bb_of(xlbl)} → {_bb_of(ylbl)}"
     shared_encs = [s for s in xd if s in yd]
     per = []                              # (rho, dir, label, [encs], xs, ys) — one per metric
     for key, _dir, lbl in _XB_ALL15:
@@ -2768,7 +2786,7 @@ def plot_scale_replication(backbones, out_dir):
     ncol, nrow = 4, 4                     # 16 cells = 15 ρ-sorted panels + 1 legend/callout cell
     fig, axes = plt.subplots(nrow, ncol, figsize=(4.3 * ncol, 3.9 * nrow), squeeze=False)
     axf = axes.flatten()
-    FAIL = 0.2                            # ρ < 0.2 ⇒ ranking does NOT survive 2B→1B (task2.2c)
+    FAIL = 0.2                            # ρ < 0.2 ⇒ ranking does NOT survive the scale change (task2.2c)
     for ax, (rho, _dir, lbl, sh, xs, ys) in zip(axf, per):
         cols = [_color_for(f"vjepa_2_1_vitG_{s}", 0) for s in sh]
         ax.scatter(xs, ys, c=cols, s=55, edgecolors="white", linewidths=0.6, zorder=3)
@@ -2784,21 +2802,22 @@ def plot_scale_replication(backbones, out_dir):
     # 16th cell = colour→encoder legend (task2.2b) + non-replicating callout (task2.2c)
     lg = axf[len(per)]
     lg.axis("off")
-    _short = lambda s: s.replace("_encoder", "").replace("surgical_", "").replace("surgery_", "")
     col2encs = OrderedDict()
     for s in shared_encs:
-        col2encs.setdefault(_color_for(f"vjepa_2_1_vitG_{s}", 0), []).append(_short(s))
+        # arm names via the SHARED _xb_arm_short → identical to the forest winner column (VM14-class).
+        col2encs.setdefault(_color_for(f"vjepa_2_1_vitG_{s}", 0), []).append(_xb_arm_short(s))
     handles = [mpatches.Patch(color=c, label=", ".join(encs)) for c, encs in col2encs.items()]
     lg.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=6.5, frameon=False,
               title="encoder colour → arm(s)", title_fontsize=8, labelspacing=0.3, handlelength=1.1)
     fails = [f"{lbl} (ρ={rho:.2f})" for rho, _d, lbl, *_ in per if (rho != rho) or rho < FAIL]
-    lg.text(0.0, 0.02, "⚠ does NOT replicate 2B→1B (ρ<0.2):\n" +
-            ("\n".join("  · " + f for f in fails) if fails else "  (all 15 replicate)"),
+    lg.text(0.0, 0.02, f"[!] does NOT replicate {_duel} (ρ<{FAIL}):\n" +   # ASCII, not ⚠ (tofu in DejaVu — C5)
+            ("\n".join("  · " + f for f in fails) if fails else f"  (all {len(per)} replicate)"),
             transform=lg.transAxes, fontsize=8, va="bottom", ha="left", color="#C62828", fontweight="bold")
     for ax in axf[len(per) + 1:]:
         ax.set_visible(False)
-    fig.suptitle("Scale replication — does the ranking survive 2B→1B?   "
-                 "(all 15 metrics, panels sorted by ρ desc · green title = replicates · red = fails)",
+    fig.suptitle(f"Scale replication — does the ranking survive {_duel}?   "
+                 f"(all {len(per)} metrics, panels sorted by ρ desc · title colour: green ρ≥0.5 replicates · "
+                 f"grey 0.2–0.5 inconclusive · red ρ<{FAIL} fails · dashed = identity y=x)",
                  fontsize=14, fontweight="bold")
     fig.subplots_adjust(top=0.94, hspace=0.52, wspace=0.30, left=0.05, right=0.98, bottom=0.05)
     save_fig(fig, str(Path(out_dir) / "scale_replication"))
@@ -2817,6 +2836,21 @@ def _xb_n_test(json_path):
     return None
 
 
+_SCALE_TAG = {"poc": "POC 10k", "full": "FULL 116k"}   # corpus display tag — single source for panel titles
+
+
+def _xb_panel_label(tag, size, mtag, n_test, roster_n=None):
+    """The ONE forest panel-title builder — '<ViT tag> · <size> · <SCALE>  (n_test = N)'. Used by BOTH
+    cross_backbone_report and scale_forest_report so the same backbone/corpus is titled IDENTICALLY in
+    every forest (visual-audit VM14 2026-07-13: the two reports had drifted to 'ViT-g · 1B' vs
+    'ViT-g · POC 10k (n_test = 1,825)' for the SAME thing).
+    roster_n (VM17): pass the arm count whenever the panel is RESTRICTED to a shared-arm subset — the
+    roster changes the best-competitor baseline, so two same-titled panels must not differ silently."""
+    head = " · ".join(p for p in (tag, size, _SCALE_TAG[mtag]) if p)
+    lbl = f"{head}  (n_test = {n_test:,})" if n_test else f"{head}  (n_test = n/a)"
+    return f"{lbl} · shared-arm roster ({roster_n})" if roster_n else lbl
+
+
 def scale_forest_report(out_dir):
     """POC(10k)-vs-FULL(116k) scale-comparison forest, one figure per backbone. Two panels — POC | FULL —
     share the SAME forest recipe (surgery-best advantage over frozen, the paper claim) AND the SAME metric
@@ -2829,11 +2863,13 @@ def scale_forest_report(out_dir):
     known = {pre.rstrip("_") for pre, *_ in _BB_TAG}
     order = {pre.rstrip("_"): i for i, (pre, *_) in enumerate(_BB_TAG)}
     disc = {}   # bb -> {"poc": eval_metrics.json, "full": eval_metrics.json}
+    sizes = {}  # bb -> "1B"/"2B" (from the tree name <bb>_<size>) — feeds the shared panel-title builder
     for mtag in ("poc", "full"):
         for mj in Path("outputs").glob(f"{mtag}/*/eval/*/probe_plot/metrics_watch/*/eval_metrics.json"):
             bb, tree = mj.parent.name, mj.relative_to("outputs").parts[1]
             if bb in known and tree.startswith(bb):        # canonical: <bb> is a real backbone in ITS OWN tree
                 disc.setdefault(bb, {})[mtag] = mj
+                sizes[bb] = tree[len(bb) + 1:]
     if not disc:
         print("  [scale-forest] no per-backbone eval_metrics.json found — nothing to do")
         return None
@@ -2855,16 +2891,20 @@ def scale_forest_report(out_dir):
                      if full_mj else None)                 # None → N/A panel (no FULL-scale eval yet, e.g. 2B)
         poc_n = _xb_n_test(poc_mj) if poc_mj else None
         full_n = _xb_n_test(full_mj) if full_mj else None
-        poc_lbl = f"{tag} · POC 10k" + (f"  (n_test = {poc_n:,})" if poc_n else "  (n_test = n/a)")
-        full_lbl = (f"{tag} · FULL 116k  (n_test = {full_n:,})" if (full_data and full_n)
-                    else f"{tag} · FULL 116k  (n_test = N/A — no full-scale eval yet)")
+        _rn = len(full_roster)                             # VM17: both panels are roster-RESTRICTED — say so
+        poc_lbl = _xb_panel_label(tag, sizes.get(bb, ""), "poc", poc_n, roster_n=_rn)
+        full_lbl = (_xb_panel_label(tag, sizes.get(bb, ""), "full", full_n, roster_n=_rn) if full_data
+                    else _xb_panel_label(tag, sizes.get(bb, ""), "full", None)
+                    + "\n— no eval at this scale yet")     # 2-line: a 1-line suffix overflowed the canvas (C4)
         panels = [(poc_lbl, poc_data), (full_lbl, full_data)]
         stem = f"scale_poc_vs_full_{bb}"
+        # VM18: the "matches forest_plot_best_ci" claim is only true when the FULL panel has data — gate it.
+        _match = " · FULL panel matches forest_plot_best_ci" if full_data else ""
         plot_forest(panels, out_dir, mode="ci", vs="best", sort_rows=True, stem=stem,
-                    suptitle=(f"Scale POC 10k → FULL 116k · {tag} — does surgery's separation from the best "
-                              f"competitor survive the 12x data jump?\n(same encoders both sides · each panel "
-                              f"sorted best→worst · green past dashed = separated win · » names each metric's "
-                              f"winner arm · FULL panel matches forest_plot_best_ci)"))
+                    suptitle=(f"Scale {_SCALE_TAG['poc']} → {_SCALE_TAG['full']} · {tag} — does surgery's "
+                              f"separation from the best competitor survive the 12x data jump?\n(same "
+                              f"encoders both sides · each panel sorted best→worst · green past dashed = "
+                              f"separated win · » names each metric's winner arm{_match})"))
         stems.append(stem)
     print(f"  [scale-forest] → {out_dir}/ · {', '.join(s + '.{png,pdf}' for s in stems)} "
           f"(FULL roster {sorted(full_roster)}, auto-reflects new FULL arms)")
@@ -2892,7 +2932,9 @@ def cross_backbone_report(mtag, out_dir):
     for _, bb, tree, mj in found:
         tag = next((t for pre, t, _ in _BB_TAG if pre.rstrip("_") == bb), bb)
         size = tree[len(bb) + 1:] if tree.startswith(bb) else ""
-        backbones.append((f"{tag} · {size}".strip(" ·"), _xb_load_metrics(mj)))
+        # panel title via the SHARED builder → identical to the scale forest's title for the same
+        # backbone/corpus: '<tag> · <size> · <SCALE>  (n_test = N)' (VM14 2026-07-13).
+        backbones.append((_xb_panel_label(tag, size, mtag, _xb_n_test(mj)), _xb_load_metrics(mj)))
     # iter19 2026-07-09 (user order): the forest + scale read eval_metrics.json which _mw_dump keeps at
     # FULL (every arm), so hide ITER18_SKIP_ARMS here too (surgery↔surgical aware) — the combined scorecard
     # already hides them via the per-backbone eval_scorecard.pdf regen skip-filtered, so now ALL cross

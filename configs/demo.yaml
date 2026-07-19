@@ -1,25 +1,125 @@
-# Visual metric demo (src/m14_metric_demo.py) — iter19 task2.2 (2026-07-12)
+# Visual metric demo (src/m14_metric_demo.py) — iter20 v2 (2026-07-13)
 #
 # Standalone config (NOT a pipeline.yaml block): the demo is a presentation tool, not a pipeline
 # stage. Passed explicitly via `--demo-config configs/demo.yaml` (same pattern as --model-config).
 #
-# num_frames is INTENTIONALLY absent: the demo reads pipeline.yaml probe.num_frames so its
+# num_frames is INTENTIONALLY absent: the demo reads pipeline.yaml probe.num_frames so its model
 # forwards are frame-count-identical to the m12d/m12e eval metrics (metric parity). The mask-ratio
 # sweep + seed likewise come from pipeline.yaml eval.predictor_temporal (single source).
 
 demo:
-  # ── video rendering ──
-  fps:            6                  # demo video framerate (slow, narrated pace)
-  dpi:            100                # 12.8x7.2 in figure x 100 dpi = 1280x720 video frames
-  hold_title_s:   3.0                # title/verdict card hold (seconds)
-  hold_step_s:    1.4                # per animation-step hold (seconds)
-  crf:            23                 # libx264 quality for demo.mp4
+  # ── v2 video-editing renderer (driving1.png 4-panel style) ──
+  canvas_w:       1280               # output video canvas (16:9)
+  canvas_h:       720
+  panel_px:       360                # each square video panel is panel_px x panel_px on the canvas
+  display_fps:    24                 # native playback fps of the display panels (model input stays
+                                     # the 16-frame eval recipe — display is full-fps, forwards are not)
+  scene_a_s:      6.0                # scene A (PCA feature video) duration per hero clip (seconds)
+  scene_d_pass_s: 3.0                # scene D: seconds per mask-ratio pass (clip plays sped-up x4 passes)
+  scene_e_s:      8.0                # scene E (alike-lines grid) duration
+  title_card_s:   3.0                # title + verdict card hold (seconds)
+  heat_alpha:     0.60               # report-card overlay alpha on hidden patches
+  mask_dim:       0.85               # how black the hidden tiles are on the model-input panel (0-1)
+  ticker_w:       170                # right-hand score-ticker column width (px)
+  crf:            21                 # libx264 quality for demo.mp4
 
-  # ── scenes ──
-  pca_components: 3                  # PCA->RGB components for the dense-feature scene
-  heat_alpha:     0.65               # error-heatmap overlay alpha on the masked patches
-  n_hero_clips:   2                  # clips animated in scenes B/C/D (1 per tour_type); all clips
-                                     # still enter scene E's cosine matrix + the verdict table
+  # ── scene W layman comparators (MIT Video-Diff edge overlay + ROI zoom inset · 2026-07-14) ──
+  edge_pctl:      97                 # Sobel-magnitude percentile kept as "real future" outline pixels
+                                     # (92 + dilation = snowstorm on crowded scenes — self-eyeball 2026-07-14)
+  edge_alpha:     0.70               # outline opacity on the imagined panels
+  inset_tiles:    7                  # (hero RANKING only since VM25 — crops proved fog-blind)
+  inset_px:       160                # squint-test tile render size (px)
+  squint_blocks:  8                  # VM25 squint test: identical NxN-block downsample of imagined+real
+  w_contrast:     1.35               # identical mild contrast stretch on BOTH imagined streams (VM23 —
+                                     # presentation-only, same op both sides; lifts structure out of fog)
 
   # ── contact sheet (for the visual-audit agent) ──
   sheet_tiles:    16                 # frames sampled uniformly from demo.mp4 into a 4x4 grid
+
+  # ── shared with v1 renderer names ──
+  fps:            6
+  dpi:            100
+  hold_title_s:   3.0
+  hold_step_s:    1.4
+  pca_components: 3
+  n_hero_clips:   2
+
+# ── m15 tubelet-inversion pixel decoder (src/m15_pixel_decoder.py · iter20 W1-W3) ──
+# Trains a small per-token MLP: final-layer encoder token (1408) -> its OWN tubelet's pixels
+# (2x16x16x3). At demo time it is fed the PREDICTOR's latents (last-1408 slice of the concat
+# prediction) to render each model's IMAGINED future — always captioned as an EXTRA decoder.
+# NOTE: m15 must stay the LAST top-level block — inserting it mid-`demo:` once swallowed the
+# trailing demo keys into m15 (KeyError n_hero_clips, 2026-07-14).
+m15:
+  tokens_per_clip: 512               # random token subsample per clip (full 4608 would be ~200 GB)
+  max_clips:       2000              # training clips drawn from the local walkindia shards
+  decode_workers:  2                 # /gpu-bottleneck 2026-07-14: select-16 decode ≈ 0.66 s/clip vs
+                                     # forward ≈ 1.0 s → 2 workers fully hide decode behind the GPU
+  viz_clips:       8                 # clips stored with ALL tokens for the decode-sanity eval gate
+  batch_tokens:    8192              # tokens per optimizer step
+  epochs:          8
+  lr:              1.0e-3
+  weight_decay:    0.01
+  hidden:          2048              # MLP width: 1408 -> hidden -> 1536 (=2*16*16*3)
+  val_frac:        0.05              # held-out token fraction for the val L1 print
+  seed:            0
+
+# ── m16 motion-similarity RETRIEVAL demo (src/m16_retrieval_demo.py · iter20, decoder-free) ──
+# The HONEST layman demo (2026-07-14): motion-cosine separation is OURS' biggest win (115x vs frozen).
+# For a query clip, show its top-K nearest neighbours in OURS' pooled-feature space vs FROZEN's — real
+# video, no decoder, no fog. OURS returns same-MOTION clips; FROZEN returns look-alike-but-move-different.
+# A model-free motion descriptor (coarse global-flow, computed WITHOUT either model) is the ground truth
+# that (a) tags each clip in plain English and (b) selects queries where OURS genuinely wins (not by eye).
+m16:
+  pool_size:     320                 # clips sampled evenly across --tars for the retrieval pool
+  n_queries:     3                   # query clips shown in the final demo
+  top_k:         3                   # neighbours retrieved per model per query
+  decode_workers: 2                  # producer/consumer decode (same as m15)
+  # model-free motion descriptor (coarse global camera-flow + energy; NO model involved)
+  desc_w:        48                  # downsampled gray width for flow search
+  desc_h:        27
+  desc_search:   6                   # +/- px coarse translation search per frame pair
+  # render
+  fps:           24
+  crf:           21
+  seed:          0
+
+# ── m17 VQA card demo (src/m17_vqa_demo.py · iter20) — OURS answers RIGHT, FROZEN WRONG ──
+# Mimics demo_cosmos.png: clip + multiple-choice QUESTION + GROUND TRUTH, then FROZEN answer (red,
+# wrong) vs OURS answer (green, right). "Answer" = linear probe on frozen features (SAME head, only the
+# backbone differs); predictions are precomputed leakage-safe (GroupKFold-by-video OOF) by
+# scratchpad/anticip_precheck.py + hero_extract.py -> heroes.json. GATE (2026-07-14): 'how much motion?'
+# (magnitude) is the clearest honest win — OURS 66.7% vs FROZEN 58.5% (chance 35.7%). KEEP m17 LAST.
+m17:
+  questions:                          # display text/options per gate question (keyed by heroes.json "question")
+    magnitude:
+      text:    "How much motion is in this clip?"
+      short:   "'how much motion?' (flow-label)"
+      options: ["Still", "Slow", "Medium", "Fast"]
+    visible_motion:
+      text:    "How much MOTION do you SEE in this clip?"
+      short:   "'how much visible motion?'"
+      options: ["Still", "Slow", "Medium", "Fast"]   # order = frame-difference quartiles (still<...<fast)
+  n_clips:         6                 # hero clips shown in the demo
+  max_per_video:   1                 # diversify across the 31 source videos
+  seconds_per_clip: 3.5
+  reveal_delay_frac: 0.4             # show Q + GROUND TRUTH first, reveal model answers after this fraction
+  title_seconds:   2.5               # intro + closing aggregate cards
+  n_probe_clips:   1878              # N behind the aggregate caption (honest denominator)
+  display_fps:     24
+  crf:             20
+  sheet_tiles:     [3, 4]
+  card:
+    width_frac:    0.60
+    margin_px:     28
+    pad_px:        20
+    bg_alpha:      190
+    font_title:    30
+    font_opt:      26
+    font_ans:      27
+    font_foot:     17
+    colors:
+      text:        [236, 239, 241]
+      gt:          [255, 214, 0]
+      wrong:       [229, 57, 53]
+      correct:     [76, 175, 80]

@@ -23,9 +23,15 @@
 ## Operating notes (copy-paste safe)
 
 - [bug_log.md](bug_log.md) — known bug classes with their fixes (A/B/R8/OOM-frag/eval-ckpt-schema/Stage-8/plot-NaN — all merged but watch for regressions)
-- [visual_mistakes.md](visual_mistakes.md) — append-only figure/demo layout mistake KB (VM1-VM6); the visual-audit agent (../agents/visual-audit.md) re-reads it on EVERY audit — run that agent on every figure before showing the user
+- [visual_mistakes.md](visual_mistakes.md) — append-only figure/demo layout mistake KB (VM1-VM29); the visual-audit agent (../agents/visual-audit.md) re-reads it on EVERY audit — run that agent on every figure/demo before showing the user
+- [iter20_demo_layman_win.md](iter20_demo_layman_win.md) — ⚠️ SUPERSEDED: the scene-W "layman win" was a FALSE APPROVE (VM27) the real user could not see; VM29 proved OURS>FROZEN is sub-perceptual on video. Kept as a cautionary record, NOT a shippable design
+- [project_iter20_vlm_built.md](project_iter20_vlm_built.md) — iter20 VLM-head (App A) BUILT + 3060-verified (751 LoC: vlm.yaml + vlm_model + m18_vlm_{data,train,eval}); OURS-VLM vs FROZEN-VLM demo_cosmos; EARLY GATE on TempCompass = the OOD-transfer make-or-break; runs on 96GB box (runbook §E1)
+- [project_iter20_demo_cosmos_impossible.md](project_iter20_demo_cosmos_impossible.md) — why the cheap layman-verifiable demo can't exist (motion invisible on WalkIndia radial flow); the exhaustive probe search; led to choosing the VLM
 - [conventions.md](conventions.md) — CLAUDE.md's load-bearing rules condensed (no hardcoded defaults, fail-hard, cache-policy contract, semicolon-not-&&, never-rm)
 
 ## Active feedback memories
 
 - [feedback_no_hardcoded_defaults.md](feedback_no_hardcoded_defaults.md) — every numeric default lives in YAML, not as Python literal or argparse default
+- [feedback_tee_logs_on_terminal.md](feedback_tee_logs_on_terminal.md) — every operator command ends `2>&1 | tee logs/<process>_$(date +%Y%m%d_%H%M%S).log` (+ `set -o pipefail`) so logs stream on the terminal AND land in a timestamped file
+- [feedback_no_hallucinated_victory.md](feedback_no_hallucinated_victory.md) — never fabricate an OURS>FROZEN demo win; gate every "OURS wins" claim behind a passing fail-loud measurement; a truthful negative is a valid stop, not giving up
+- [project_iter20_demo_cosmos_impossible.md](project_iter20_demo_cosmos_impossible.md) — DEFINITIVE: OURS loses 0/15 taxonomy SCENE questions (demo_cosmos's exact format); no layman-verifiable question has OURS winning; present the forest plots, not a VQA
