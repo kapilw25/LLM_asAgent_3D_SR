@@ -1190,6 +1190,16 @@ def upload_data(data_root: Path = None):
                     artifact("train_split"), f"**/{artifact('train_split')}",
                     artifact("val_split"), f"**/{artifact('val_split')}",
                     artifact("test_split"), f"**/{artifact('test_split')}",
+                    # iter20 (2026-07-19): three data/ subtrees that must NEVER be re-uploaded — each is
+                    # either regenerable in minutes or ALREADY published elsewhere, and uploading them
+                    # burns the HF 1000-req/5min api quota (10x HTTP 429 on lfs/objects/verify).
+                    #   vlm/          TempCompass + LLaVA-Video clips — m18_vlm_data re-downloads them
+                    #                 from HF on demand; they are third-party datasets, not our outputs.
+                    #   youtube_demo/ third-party YouTube footage — not ours to republish publicly.
+                    #   demo_src/     WalkIndia shards — already published as anonymousML123/walkindia-200k.
+                    "vlm/**", "**/vlm/**",
+                    "youtube_demo/**", "**/youtube_demo/**",
+                    "demo_src/**", "**/demo_src/**",
                 ],
             )
         pbar.update(1)
