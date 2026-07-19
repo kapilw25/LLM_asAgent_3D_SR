@@ -38,6 +38,16 @@ level. An early chain printed "✅ PASS +29.8pp" that was PURE metric artefact; 
 Artefacts quarantined as `*.BROKEN_METRIC.json` / `*.INVALID.json` in outputs/demo/vlm/.
 
 ## Still shippable
-forest plots (in-domain, non-overlapping CIs) · `outputs/demo/mcq/demo_mcq.mp4` (+13.7pp retrieval, overlay-free,
-captioned **metric-verified not eye-verified**) · the NEW OOD limitation section. See [[project_iter20_vlm_built]],
-[[project_iter20_demo_cosmos_impossible]], [[feedback_no_hallucinated_victory]].
+**forest plots** (in-domain, non-overlapping CIs) + the **NEW OOD limitation section**. That is the whole list.
+
+## ⛔ demo_mcq.mp4 must NOT ship — it reads BACKWARDS
+User caught this on the rendered card (`logs/non_log/ss1.png`, 2026-07-19). QUERY = tree-lined shaded path;
+candidate **D marked WRONG (red) is ALSO a tree-lined shaded path** — the closest visual match on screen — while
+**B marked RIGHT (green) is a narrow walled corridor** resembling nothing. A fresh viewer concludes "arbitrary" or
+"cherry-picked". The caption "FROZEN is fooled by LOOKS" makes it worse: it asks the reader to discard visible
+evidence for an invisible property = faith, not demonstration. **The green/red borders do 100% of the persuading.**
+A demo that makes a reviewer doubt your integrity is WORSE THAN NO DEMO. I had rated it "shippable, honestly
+captioned" — too generous; the rendered artifact disproved my own caption. **Lesson: for any OURS-vs-FROZEN card,
+check whether the WRONG-marked option looks MORE like the query than the RIGHT-marked one; if so the card is
+self-refuting regardless of the metric.** See [[project_iter20_vlm_built]], [[project_iter20_demo_cosmos_impossible]],
+[[feedback_no_hallucinated_victory]], [[feedback_metric_artifact_fake_win]].

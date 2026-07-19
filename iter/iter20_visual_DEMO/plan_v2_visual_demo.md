@@ -61,10 +61,19 @@ A from-scratch projector on **2 885 samples / 1 epoch cannot align video→langu
 
 | artefact | status |
 |---|---|
-| 🥇 **forest plots** | ✅ rigorous in-domain wins, non-overlapping CIs — the honest headline evidence |
-| 🎬 `outputs/demo/mcq/demo_mcq.mp4` | ✅ real +13.7pp retrieval, overlay-free, honestly captioned as **metric-verified, not eye-verified** |
+| 🥇 **forest plots** | ✅ rigorous in-domain wins, non-overlapping CIs — **the artifact.** Ship these |
 | 🧬 **OOD limitation section** | ✅ NEW — 3 quantified experiments; strengthens the paper rather than weakening it |
+| 🎬 `outputs/demo/mcq/demo_mcq.mp4` | ⛔ **DO NOT SHIP** — see below |
 | 🎥 visible `demo_cosmos`-style video | ⛔ **not achievable** — stop hunting; 4 independent closures |
+
+> ⛔ **Why demo_mcq must NOT go on the research page (user caught this 2026-07-19, `logs/non_log/ss1.png`).**
+> It does not merely fail to convince — **it reads BACKWARDS.** In card 1 the QUERY is a tree-lined shaded path;
+> candidate **D, marked WRONG in red, is also a tree-lined shaded path** (the closest visual match on screen),
+> while **B, marked RIGHT in green, is a narrow walled corridor** resembling nothing. A fresh viewer concludes
+> *"arbitrary"* or *"cherry-picked."* The caption "FROZEN is fooled by LOOKS" compounds it by asking the reader to
+> discard the visible evidence in favour of an invisible property — faith, not demonstration. The green/red
+> borders are doing 100% of the persuasive work. **A demo that makes a reviewer doubt your integrity is worse
+> than no demo.** Earlier status "shippable, honestly captioned" was too generous — corrected.
 
 ---
 
