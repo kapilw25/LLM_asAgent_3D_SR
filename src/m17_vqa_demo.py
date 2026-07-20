@@ -2,7 +2,8 @@
 
 Renders a video of multiple-choice cards over WalkIndia clips. For each hero clip the card shows the
 QUESTION + options A-D + GROUND TRUTH, then reveals the two model answers: FROZEN (red, wrong) vs OURS
-(green, right). "Answer" = a linear probe on FROZEN vs OURS V-JEPA features (SAME probe head, only the
+(green, right). "Answer" = an ATTENTIVE probe head (V-JEPA 2's own eval protocol — AttentiveClassifier,
+NOT a linear layer) on FROZEN vs OURS V-JEPA features (SAME probe architecture, only the
 backbone differs) — computed leakage-safe (GroupKFold-by-video OOF) in scratchpad/anticip_precheck.py +
 hero_extract.py; this module ONLY renders the precomputed predictions (no GPU, no model here).
 
@@ -39,15 +40,29 @@ _MAG_ORDER = ["still", "slow", "medium", "fast"]  # optical-flow magnitude quart
 _LETTERS = ["A", "B", "C", "D"]
 
 
+def _class_order(qcfg):
+    """Class-id order for THIS question, so m17 is not welded to the magnitude task.
+
+    The module hardcoded _MAG_ORDER, which silently mislabels any question whose classes
+    aren't still/slow/medium/fast (a 2-way L/R turn card would index the wrong letters).
+    Questions may declare `classes:`; magnitude keeps its historical order as the default.
+    """
+    return list(qcfg.get("classes", _MAG_ORDER))
+
+
 def _font(sz, bold=True):
     return ImageFont.truetype(_FONT_BOLD if bold else _FONT_REG, sz)
 
 
-def _rank_and_select(heroes, n_clips, max_per_video):
+def _rank_and_select(heroes, n_clips, max_per_video, order):
     """Rank by FROZEN's error magnitude (bins off) desc — the most layman-convincing misses first —
-    then diversify: at most `max_per_video` per video, take n_clips."""
+    then diversify: at most `max_per_video` per video, take n_clips.
+
+    `order` is the question's own class order; using the module-level magnitude list here
+    raised ValueError on any other label set (e.g. a 2-way L/R turn question).
+    """
     def bins_off(h):
-        return abs(_MAG_ORDER.index(h["frozen"]) - _MAG_ORDER.index(h["true"]))
+        return abs(order.index(h["frozen"]) - order.index(h["true"]))
     ranked = sorted(heroes, key=lambda h: (-bins_off(h), h["key"]))
     seen, out = {}, []
     for h in ranked:
@@ -72,7 +87,7 @@ def _resample(frames, n_out):
     return frames[idx]
 
 
-def _draw_card(rgb, card, hero, reveal, agg, opts, question):
+def _draw_card(rgb, card, hero, reveal, agg, opts, question, order):
     """Draw the MCQ card onto one RGB frame (uint8 HxWx3). reveal=False → question+GT only;
     reveal=True → also the two model answers. Returns a new uint8 frame."""
     im = Image.fromarray(rgb).convert("RGBA")
@@ -87,27 +102,46 @@ def _draw_card(rgb, card, hero, reveal, agg, opts, question):
     line_o = f_o.getbbox("Ag")[3] + 8
     line_a = f_a.getbbox("Ag")[3] + 10
     n_ans = 3 if reveal else 1  # GROUND TRUTH always; +FROZEN +OURS on reveal
-    box_h = pad * 2 + line_q + len(opts) * line_o + 8 + n_ans * line_a
+    # WRAP the question. It was drawn as one d.text() line, so any question longer than
+    # box_w ran off the card and was clipped mid-word ("...(ignoring cam") — the card looked
+    # broken, which is fatal for a research page. Wrap to the box and grow the box to match.
+    q_lines, cur = [], ""
+    for word in question.split():
+        trial = f"{cur} {word}".strip()
+        if d.textlength(trial, font=f_q) <= box_w - 2 * pad or not cur:
+            cur = trial
+        else:
+            q_lines.append(cur); cur = word
+    if cur:
+        q_lines.append(cur)
+    box_h = pad * 2 + len(q_lines) * line_q + len(opts) * line_o + 8 + n_ans * line_a
     x0, y0 = margin, margin
     d.rounded_rectangle([x0, y0, x0 + box_w, y0 + box_h], radius=14,
                         fill=(12, 14, 18, card["bg_alpha"]))
     x, y = x0 + pad, y0 + pad
-    d.text((x, y), question, font=f_q, fill=tuple(col["text"])); y += line_q
+    for ql in q_lines:
+        d.text((x, y), ql, font=f_q, fill=tuple(col["text"])); y += line_q
     for i, opt in enumerate(opts):
-        is_gt = (_MAG_ORDER[i] == hero["true"])
+        is_gt = (order[i] == hero["true"])
         c = tuple(col["gt"]) if is_gt else tuple(col["text"])
         d.text((x, y), f"{_LETTERS[i]}) {opt}", font=f_o, fill=c); y += line_o
     y += 8
-    gt_letter = _LETTERS[_MAG_ORDER.index(hero["true"])]
+    gt_letter = _LETTERS[order.index(hero["true"])]
     d.text((x, y), f"GROUND TRUTH: {gt_letter}  ({hero['true']})", font=f_a, fill=tuple(col["gt"])); y += line_a
     if reveal:
-        fz = _LETTERS[_MAG_ORDER.index(hero["frozen"])]
-        ou = _LETTERS[_MAG_ORDER.index(hero["ours"])]
+        fz = _LETTERS[order.index(hero["frozen"])]
+        ou = _LETTERS[order.index(hero["ours"])]
         d.text((x, y), f"FROZEN ANSWER:  {fz}   ✗", font=f_a, fill=tuple(col["wrong"])); y += line_a
         d.text((x, y), f"OURS   ANSWER:  {ou}   ✓", font=f_a, fill=tuple(col["correct"]))
-    # honest footer band (bottom): aggregate + probe disclosure, on EVERY frame — auto-fit to width
+    # Footer band (bottom): aggregate + probe disclosure, on EVERY frame — auto-fit to width.
+    # OPTIONAL: a heroes doc with no "aggregate" renders no footer, so the card asserts only
+    # what is true of THIS clip (its GT and the two real model answers) and makes no population
+    # claim at all. Printing a favourable aggregate for a hand-picked clip would be the
+    # dishonest option; printing none claims nothing.
+    if agg is None:
+        return np.asarray(Image.alpha_composite(im, ov).convert("RGB"))
     foot = (f"OURS {agg['ours']*100:.1f}% vs FROZEN {agg['frozen']*100:.1f}% over {agg['n']} clips"
-            f"   ·   selected example   ·   answer = linear probe on frozen features")
+            f"   ·   selected example   ·   answer = attentive probe head (identical for both arms)")
     fsz = card["font_foot"]; f_foot = _font(fsz)
     while d.textlength(foot, font=f_foot) > W - 20 and fsz > 9:
         fsz -= 1; f_foot = _font(fsz)
@@ -124,6 +158,12 @@ def _title_frame(wh, text_lines, card, dur_frames):
     fonts = [_font(card["font_title"] + 8), _font(card["font_opt"]), _font(card["font_foot"] + 4)]
     y = H // 2 - 60
     for line, fnt in zip(text_lines, fonts + [fonts[-1]] * 8):
+        # Shrink-to-fit: these lines are centred, so an over-wide one is clipped at BOTH
+        # ends (the closing card read "...cene motion?' ... over 1825 Wa"). Mirror the
+        # footer's auto-fit instead of assuming the caller keeps captions short.
+        sz = fnt.size
+        while d.textlength(line, font=fnt) > W - 40 and sz > 10:
+            sz -= 1; fnt = _font(sz)
         w = d.textbbox((0, 0), line, font=fnt)[2]
         d.text(((W - w) // 2, y), line, font=fnt, fill=(236, 239, 241))
         y += fnt.getbbox("Ag")[3] + 18
@@ -152,20 +192,29 @@ def main():
     ap.add_argument("--config", required=True, help="configs/demo.yaml (m17 block)")
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--sanity", action="store_true", help="render only 2 clips for a fast smoke")
+    ap.add_argument("--n-clips", type=int, default=None,
+                    help="override m17.n_clips (e.g. 1 for a single research-page card)")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())["m17"]
     hero_doc = json.loads(Path(args.heroes).read_text())
     heroes = hero_doc["heroes"]
-    ag = hero_doc["aggregate"]
-    agg = {"ours": ag["ours"], "frozen": ag["frozen"], "n": cfg["n_probe_clips"], "chance": ag["chance"]}
+    ag = hero_doc.get("aggregate")
+    # The denominator MUST come from the same document as the accuracies it describes. Taking
+    # `n` from the yaml while ours/frozen/chance come from heroes.json lets the footer advertise
+    # a stale N for a freshly-regenerated aggregate (silently wrong, and it is the one number a
+    # reader uses to judge the claim). heroes.json wins; yaml is only the legacy fallback.
+    # A doc with NO aggregate renders a clean card with no footer and no closing card.
+    agg = None if ag is None else {"ours": ag["ours"], "frozen": ag["frozen"], "chance": ag["chance"],
+                                   "n": ag.get("n", cfg["n_probe_clips"])}
     q = hero_doc.get("question")
     if q not in cfg["questions"]:
         sys.exit(f"FATAL: no display config for question {q!r}; add m17.questions.{q} to the demo config")
     qcfg = cfg["questions"][q]
+    order = _class_order(qcfg)
 
-    n_clips = 2 if args.sanity else cfg["n_clips"]
-    sel = _rank_and_select(heroes, n_clips, cfg["max_per_video"])
+    n_clips = 2 if args.sanity else (args.n_clips if args.n_clips is not None else cfg["n_clips"])
+    sel = _rank_and_select(heroes, n_clips, cfg["max_per_video"], order)
     if len(sel) < n_clips:
         sys.exit(f"FATAL: only {len(sel)} hero clips available, need {n_clips}")
 
@@ -187,23 +236,25 @@ def main():
         frames = _resample(frames, n_disp)
         if wh is None:
             wh = (frames.shape[2], frames.shape[1])
-            for tfr in _title_frame(wh, ["Which model reads the scene right?",
-                                         "same question -> FROZEN vs OURS (surgery)",
-                                         "answer = linear probe on frozen features"],
-                                    card, int(fps * cfg["title_seconds"])):
-                Image.fromarray(tfr).save(frames_dir / f"{fi:06d}.png"); fi += 1
+            if agg is not None:   # no aggregate → clip-only card, skip the intro title
+                for tfr in _title_frame(wh, ["Which model reads the scene right?",
+                                             "same question -> FROZEN vs OURS (surgery)",
+                                             "answer = attentive probe head (identical for both arms)"],
+                                        card, int(fps * cfg["title_seconds"])):
+                    Image.fromarray(tfr).save(frames_dir / f"{fi:06d}.png"); fi += 1
         for j, rgb in enumerate(frames):
-            drawn = _draw_card(rgb, card, h, j >= reveal_at, agg, opts, question)
+            drawn = _draw_card(rgb, card, h, j >= reveal_at, agg, opts, question, order)
             Image.fromarray(drawn).save(frames_dir / f"{fi:06d}.png"); fi += 1
         print(f"[m17] clip {hi+1}/{len(sel)} {Path(h['path']).name}  GT={h['true']} "
               f"FROZEN={h['frozen']} OURS={h['ours']}  ({fi} frames, {(time.time()-t0):.0f}s)")
 
-    # closing aggregate card
-    for tfr in _title_frame(wh, [f"OURS {agg['ours']*100:.1f}%   vs   FROZEN {agg['frozen']*100:.1f}%",
-                                 f"{qcfg['short']} over {agg['n']} WalkIndia clips",
-                                 f"chance {agg['chance']*100:.1f}%  ·  leakage-safe (video-held-out) probe"],
-                            card, int(fps * cfg["title_seconds"])):
-        Image.fromarray(tfr).save(frames_dir / f"{fi:06d}.png"); fi += 1
+    # closing aggregate card — skipped when the doc carries no aggregate
+    if agg is not None:
+        for tfr in _title_frame(wh, [f"OURS {agg['ours']*100:.1f}%   vs   FROZEN {agg['frozen']*100:.1f}%",
+                                     f"{qcfg['short']} over {agg['n']} WalkIndia clips",
+                                     f"chance {agg['chance']*100:.1f}%  ·  leakage-safe (video-held-out) probe"],
+                                card, int(fps * cfg["title_seconds"])):
+            Image.fromarray(tfr).save(frames_dir / f"{fi:06d}.png"); fi += 1
 
     mp4 = out / (f"demo_vqa_{q}_sanity.mp4" if args.sanity else f"demo_vqa_{q}.mp4")
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-framerate", str(fps),

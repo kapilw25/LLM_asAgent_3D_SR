@@ -1,6 +1,10 @@
 # Secrets & Scripts
 .env
-cookies_youtube.txt
+# Browser cookie exports hold LIVE Google/YouTube session tokens. Glob, not a single
+# filename: cookies_yt2.txt was created 2026-07-20 and was NOT covered by the old
+# literal, so `git add .` would have committed live tokens to a public repo.
+cookies*.txt
+*cookies*.txt
 # git_push.sh is tracked ON PURPOSE (token-free — it sources creds from .env). Do NOT ignore it.
 
 # Directories

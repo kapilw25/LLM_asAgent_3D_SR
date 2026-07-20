@@ -93,9 +93,26 @@ m16:
 m17:
   questions:                          # display text/options per gate question (keyed by heroes.json "question")
     magnitude:
-      text:    "How much motion is in this clip?"
-      short:   "'how much motion?' (flow-label)"
+      # MEASURED 2026-07-20, do not "improve" this wording again. The label is fg_mean_mag
+      # (m04d vec[13]), advertised as "camera-subtracted agent motion" — but the subtraction only
+      # removes the MEDIAN flow, i.e. pure pan. A camera moving FORWARD produces radial flow whose
+      # median is ~0, so nothing is removed: median fg = 164.7 vs median total = 197.1 (83.6%
+      # survives) and corr(fg, total) = +0.915. So the label is OVERALL motion speed, NOT agent
+      # motion. An earlier version asked "...(ignoring camera movement)?" — that claim is FALSE and
+      # the card read as wrong to viewers, because a fast-moving camera plainly looks fast.
+      # Ask what is actually measured: overall speed. Pair with clips whose GT bin equals their
+      # total-motion quartile (see outputs/demo/action_card/eye_aligned.json) so eye and label agree.
+      text:    "How fast is the motion in this clip?"
+      short:   "'how fast is the motion?' (optical-flow magnitude quartile)"
       options: ["Still", "Slow", "Medium", "Fast"]
+    turn_direction:
+      # 2-way L/R card over hand-spotted WalkIndia drive turns (outputs/demo/drive_turns.jsonl).
+      # `classes` gives the class-id -> option order; without it m17 falls back to the magnitude
+      # list and would index the wrong letters for a non-magnitude label set.
+      text:    "Which way does the vehicle turn?"
+      short:   "'which way does it turn?' (hand-labelled drive turns)"
+      options: ["Left", "Right"]
+      classes: ["L", "R"]
     visible_motion:
       text:    "How much MOTION do you SEE in this clip?"
       short:   "'how much visible motion?'"

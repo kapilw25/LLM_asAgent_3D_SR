@@ -273,6 +273,39 @@
       .paper-title { font-size: 1.6rem; }
     }
 
+    /* Demo cards (§4.5): two 854x480 MCQ clips side by side, stacking on narrow screens.
+       The cards carry their own burned-in text, so they must never be scaled below a
+       readable width — hence the 1fr/1fr grid rather than the 180px .video-cell rule. */
+    .demo-card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.75rem;
+      align-items: start;
+    }
+    .demo-card { margin: 0; }
+    .demo-card video {
+      width: 100%;
+      aspect-ratio: 854 / 480;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    }
+    .demo-card figcaption {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+    .demo-card-q {
+      display: block;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 0.2rem;
+    }
+    @media (max-width: 768px) {
+      .demo-card-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+    }
+
     .video-cell video {
       width: 100%;
       border-radius: 6px;
@@ -1256,6 +1289,43 @@
     </p>
     <div class="plot-container">
       <img src="static/images/m09c_block_drift.png" alt="Per-block weight drift across 48 ViT-G blocks over training steps — frozen blocks pinned at 0, top blocks adapt within drift budget">
+    </div>
+  </div>
+</section>
+
+<!-- ==================== §4.5 DEMO CARDS — OURS vs FROZEN, same question ==================== -->
+<section class="section">
+  <div class="container" style="max-width: 1100px;">
+    <h2 class="title is-3 has-text-centered">Same Question, Two Encoders</h2>
+    <p class="has-text-centered" style="margin-bottom: 1.75rem; color: var(--text-secondary);">
+      Each clip is posed as a multiple-choice question with a ground-truth answer, then answered twice:
+      once from the <strong>frozen</strong> V-JEPA 2.1 encoder and once from <strong>ours</strong> (factor surgery).
+      The probe head is identical in both cases &mdash; <em>only the backbone differs</em>.
+      Qualitative examples.
+    </p>
+
+    <div class="demo-card-grid">
+      <figure class="demo-card">
+        <video autoplay muted loop playsinline preload="metadata">
+          <source src="static/videos/demo_cards/card_motion_speed.mp4" type="video/mp4">
+        </video>
+        <figcaption>
+          <span class="demo-card-q">&ldquo;How fast is the motion in this clip?&rdquo;</span>
+          Optical-flow magnitude quartile over 1,825 held-out WalkIndia clips:
+          <strong>ours 69.8%</strong> vs frozen 60.9% (chance 25.6%).
+        </figcaption>
+      </figure>
+
+      <figure class="demo-card">
+        <video autoplay muted loop playsinline preload="metadata">
+          <source src="static/videos/demo_cards/card_turn_direction.mp4" type="video/mp4">
+        </video>
+        <figcaption>
+          <span class="demo-card-q">&ldquo;Which way does the vehicle turn?&rdquo;</span>
+          Hand-labelled left/right turns from WalkIndia drive footage, scored with a
+          leave-one-video-out split.
+        </figcaption>
+      </figure>
     </div>
   </div>
 </section>
