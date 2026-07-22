@@ -1,0 +1,40 @@
+
+
+
+
+\section{Adversarial Vulnerability Index}
+
+\begin{figure*}[h!]
+    \centering
+        \includegraphics[width=1.2\linewidth]{figures/ASR_Heatmap_AllLLMs_DPO_GRACE.pdf} % 1.2 times the linewidth
+    \caption{ASR Heatmap}
+    \label{ASR_heat_map}
+\end{figure*}
+\subsection{AVI\textsubscript{degrade\_performance}}
+
+
+
+% Excel doc for ASR scores: https://docs.google.com/spreadsheets/d/1SrLsPllNFOrSNSTxTqLYraseJjZwdZqkai-YSHzfSOc/edit?gid=0#gid=0
+In this work, we introduce a novel metric termed the \textbf{\textit{Adversarial Vulnerability Index}} (AVI), which serves as a comparative measure for evaluating the vulnerability of language models to adversarial attacks. The AVI is specifically designed to assess the susceptibility of language models across three critical dimensions of adversarial attacks. This metric is particularly useful for evaluating the risk posed by black-box attacks, which are easier to execute and often expose the most significant vulnerabilities in language models.
+\\
+The AVI is computed both at a category level and as an aggregate score. The category-wise AVI scores provide insights into the specific vulnerabilities of a model in the face of different types of adversarial attacks. Additionally, we compute a global AVI score, which is a linear weighted combination of the individual category-wise AVI scores. This global score offers a comprehensive measure of the model's overall adversarial robustness. Formally, the global AVI score is defined as follows:
+\begin{equation}
+\text{AVI}_{\text{global}}^{\text{LLM}} = \sum_{i \in \{\text{JB, CG, DP}\}} w_i \cdot \text{AVI}_i^{\text{LLM}}
+\end{equation}
+where \( w_i \) represents the weight assigned to the AVI score of each category \( i \). The sum of the weights is normalized such that:
+\[
+\sum_{i} w_i = 1 \quad \text{and} \quad w_{i-1} > w_i
+\]
+The condition \( w_{i-1} > w_i \) reflects the relative severity of each type of attack, enabling a nuanced allocation of weights to various attack vectors. For our analysis, the weights are assigned as follows: \( w_{\text{JB}} = 0.5 \) for jailbreak, \( w_{\text{CG}} = 0.2 \) for control generation, and \( w_{\text{DP}} = 0.3 \) for performance degradation. These weights are adjustable based on strategic priorities and risk assessment outcomes. The category-wise \( \text{AVI}_i \) is calculated in terms of the \textit{Attack Success Rate} (ASR). We define the category wise AVI as:
+\[
+\text{AVI} = \frac{\sum_{i=1}^{n(\mathcal{D})} \left( \text{LLM}(\mathcal{D}_i) = \text{attack\_successful} \right)}{n(\mathcal{D})}
+\]
+
+where \( \mathcal{D} \) represents the dataset of prompts used to attack the LLM, \( \mathcal{D}_i \) refers to the \( i \)-th prompt in the set, and \( n(\mathcal{D}) \) denotes the the cardinal number of \( \mathcal{D} \). The exact calculation of ASRs have been described in the respective sections.
+\section{Computation of AVI(s)}
+\subsection{AVI\textsubscript{jail\_break}}
+\subsection{AVI\textsubscript{control\_generation}}
+As discussed in Section 3.2, control generation in large language models (LLMs) encompasses two critical aspects: prompt leakage and goal hijacking. For our experiments, we utilized the dataset provided by \textit{Perez et al.} (2023) \cite{ignore_previous_prompt} as the benchmark for evaluating LLM performance and assigning AVI scores for control generation. To assess the effectiveness of prompt extraction, we employed a combination of 35 base prompts from OpenAI, supplemented with specific attack instructions. The evaluation was conducted by performing a substring match to determine the extent to which the prompt was successfully extracted.
+In the case of goal hijacking, the evaluation process involves the use of a predefined rogue string that must be finalized before determining the Attack Success Rate (ASR). Originally, \textit{Perez et al.} (2023) utilized the string \textit{"I HATE HUMANS"} as the rogue string. However, since LLMs are typically trained to avoid generating harmful or offensive text, using this string might not accurately reflect the model's susceptibility to goal hijacking. To mitigate this issue and avoid breaching the model's safety protocols, we conducted further experiments by substituting the rogue string with \textit{"I LOVE HUMANS"}. This approach ensures that our focus remains solely on evaluating the model's vulnerability to goal hijacking, rather than inadvertently testing the robustness of its ethical safeguards. We identify successful goal hijacking attacks through exact string matching. The AVI(s) for control generation are illustrated in figure \ref{AVI_control_generation}. More details can be found in the Appendix.
+
+\subsection{AVI\textsubscript{degrade\_performance}}
