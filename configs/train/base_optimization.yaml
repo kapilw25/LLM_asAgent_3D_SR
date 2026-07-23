@@ -12,7 +12,7 @@
 
 # -- Data sampling --
 data:
-  hf_dataset: anonymousML123/walkindia-200k
+  hf_dataset: anonymousML123/denseworld-115k
   num_frames: 16                  # Train at 16f (Meta trains 95% at 16f, eval at 64f)
   seed: 42                        # Reproducibility (random, numpy, torch)
   # SANITY-mode clip caps (m09a/m09b/m09c read these). Small enough for quick

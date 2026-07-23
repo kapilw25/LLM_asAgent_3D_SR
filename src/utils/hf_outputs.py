@@ -1196,7 +1196,7 @@ def upload_data(data_root: Path = None):
                     #   vlm/          TempCompass + LLaVA-Video clips — m18_vlm_data re-downloads them
                     #                 from HF on demand; they are third-party datasets, not our outputs.
                     #   youtube_demo/ third-party YouTube footage — not ours to republish publicly.
-                    #   demo_src/     WalkIndia shards — already published as anonymousML123/walkindia-200k.
+                    #   demo_src/     WalkIndia shards — already published as anonymousML123/denseworld-115k.
                     "vlm/**", "**/vlm/**",
                     "youtube_demo/**", "**/youtube_demo/**",
                     "demo_src/**", "**/demo_src/**",

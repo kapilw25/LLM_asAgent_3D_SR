@@ -1,0 +1,113 @@
+\begin{thebibliography}{14}
+\providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Asaithambi et~al.(2012)Asaithambi, Kanagaraj, Srinivasan, and
+  Sivanandan}]{asaithambi2012mixedtraffic}
+Asaithambi, G.; Kanagaraj, V.; Srinivasan, K.~K.; and Sivanandan, R. 2012.
+\newblock Characteristics of Mixed Traffic on Urban Arterials with Significant
+  Volumes of Motorized Two-Wheelers: Role of Composition, Intraclass
+  Variability, and Lack of Lane Discipline.
+\newblock \emph{Transportation Research Record: Journal of the Transportation
+  Research Board}, 2317(1): 51--59.
+
+\bibitem[{Caesar et~al.(2020)Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan,
+  Pan, Baldan, and Beijbom}]{caesar2020nuscenes}
+Caesar, H.; Bankiti, V.; Lang, A.~H.; Vora, S.; Liong, V.~E.; Xu, Q.; Krishnan,
+  A.; Pan, Y.; Baldan, G.; and Beijbom, O. 2020.
+\newblock nuScenes: A Multimodal Dataset for Autonomous Driving.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}, 11621--11631.
+
+\bibitem[{Dokania et~al.(2023)Dokania, Hafez, Subramanian, Chandraker, and
+  Jawahar}]{dokania2023idd3d}
+Dokania, S.; Hafez, A. H.~A.; Subramanian, A.; Chandraker, M.; and Jawahar,
+  C.~V. 2023.
+\newblock {IDD-3D}: Indian Driving Dataset for 3D Unstructured Road Scenes.
+\newblock In \emph{Proceedings of the IEEE/CVF Winter Conference on
+  Applications of Computer Vision (WACV)}, 4482--4491.
+
+\bibitem[{Ellis and Roberts(2016)}]{ellis2016leveraging}
+Ellis, P.; and Roberts, M. 2016.
+\newblock \emph{Leveraging Urbanization in South Asia: Managing Spatial
+  Transformation for Prosperity and Livability}.
+\newblock South Asia Development Matters. Washington, DC: World Bank.
+\newblock ISBN 978-1-4648-0662-9.
+
+\bibitem[{Hu et~al.(2022)Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and
+  Chen}]{hu2022lora}
+Hu, E.~J.; Shen, Y.; Wallis, P.; Allen-Zhu, Z.; Li, Y.; Wang, S.; Wang, L.; and
+  Chen, W. 2022.
+\newblock {LoRA}: Low-Rank Adaptation of Large Language Models.
+\newblock In \emph{International Conference on Learning Representations}.
+
+\bibitem[{Khan and Maini(1999)}]{khan1999heterogeneous}
+Khan, S.~I.; and Maini, P. 1999.
+\newblock Modeling Heterogeneous Traffic Flow.
+\newblock \emph{Transportation Research Record: Journal of the Transportation
+  Research Board}, 1678(1): 234--241.
+
+\bibitem[{Lee et~al.(2023)Lee, Chen, Tajwar, Kumar, Yao, Liang, and
+  Finn}]{lee2023surgical}
+Lee, Y.; Chen, A.~S.; Tajwar, F.; Kumar, A.; Yao, H.; Liang, P.; and Finn, C.
+  2023.
+\newblock Surgical Fine-Tuning Improves Adaptation to Distribution Shifts.
+\newblock In \emph{International Conference on Learning Representations}.
+
+\bibitem[{Liu et~al.(2024)Liu, Wang, Yin, Molchanov, Wang, Cheng, and
+  Chen}]{liu2024dora}
+Liu, S.-Y.; Wang, C.-Y.; Yin, H.; Molchanov, P.; Wang, Y.-C.~F.; Cheng, K.-T.;
+  and Chen, M.-H. 2024.
+\newblock {DoRA}: Weight-Decomposed Low-Rank Adaptation.
+\newblock In \emph{Proceedings of the 41st International Conference on Machine
+  Learning}, volume 235 of \emph{Proceedings of Machine Learning Research},
+  32100--32121. PMLR.
+
+\bibitem[{Mahendra et~al.(2021)Mahendra, King, Du, Dasgupta, Beard, Kallergis,
+  and Schalch}]{mahendra2021seven}
+Mahendra, A.; King, R.; Du, J.; Dasgupta, A.; Beard, V.~A.; Kallergis, A.; and
+  Schalch, K. 2021.
+\newblock Seven Transformations for More Equitable and Sustainable Cities.
+\newblock Technical report, World Resources Institute, Washington, DC.
+
+\bibitem[{{NVIDIA}(2025)}]{nvidia2025cosmos}
+{NVIDIA}. 2025.
+\newblock Cosmos World Foundation Model Platform for Physical AI.
+\newblock \emph{arXiv preprint arXiv:2501.03575}.
+
+\bibitem[{Oquab et~al.(2024)Oquab, Darcet, Moutakanni, Vo, Szafraniec,
+  Khalidov, Fernandez, Haziza, Massa, El-Nouby, Assran, Ballas, Galuba, Howes,
+  Huang, Li, Misra, Rabbat, Sharma, Synnaeve, Xu, J{\'e}gou, Mairal, Labatut,
+  Joulin, and Bojanowski}]{oquab2024dinov2}
+Oquab, M.; Darcet, T.; Moutakanni, T.; Vo, H.~V.; Szafraniec, M.; Khalidov, V.;
+  Fernandez, P.; Haziza, D.; Massa, F.; El-Nouby, A.; Assran, M.; Ballas, N.;
+  Galuba, W.; Howes, R.; Huang, P.-Y.; Li, S.-W.; Misra, I.; Rabbat, M.;
+  Sharma, V.; Synnaeve, G.; Xu, H.; J{\'e}gou, H.; Mairal, J.; Labatut, P.;
+  Joulin, A.; and Bojanowski, P. 2024.
+\newblock {DINOv2}: Learning Robust Visual Features without Supervision.
+\newblock \emph{Transactions on Machine Learning Research}.
+
+\bibitem[{Papathanasopoulou and Antoniou(2018)}]{papathanasopoulou2018weaklane}
+Papathanasopoulou, V.; and Antoniou, C. 2018.
+\newblock Flexible Car-Following Models for Mixed Traffic and Weak
+  Lane-Discipline Conditions.
+\newblock \emph{European Transport Research Review}, 10(2): 62.
+
+\bibitem[{Varma et~al.(2019)Varma, Subramanian, Namboodiri, Chandraker, and
+  Jawahar}]{varma2019idd}
+Varma, G.; Subramanian, A.; Namboodiri, A.; Chandraker, M.; and Jawahar, C.~V.
+  2019.
+\newblock {IDD}: A Dataset for Exploring Problems of Autonomous Navigation in
+  Unconstrained Environments.
+\newblock In \emph{Proceedings of the IEEE Winter Conference on Applications of
+  Computer Vision (WACV)}, 1743--1751.
+
+\bibitem[{Yu et~al.(2020)Yu, Chen, Wang, Xian, Chen, Liu, Madhavan, and
+  Darrell}]{yu2020bdd100k}
+Yu, F.; Chen, H.; Wang, X.; Xian, W.; Chen, Y.; Liu, F.; Madhavan, V.; and
+  Darrell, T. 2020.
+\newblock {BDD100K}: A Diverse Driving Dataset for Heterogeneous Multitask
+  Learning.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}, 2636--2645.
+
+\end{thebibliography}

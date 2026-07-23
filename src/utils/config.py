@@ -44,7 +44,7 @@ for d in [VIDEOS_DIR, CLIPS_DIR, SHARDS_DIR, OUTPUTS_DIR, OUTPUTS_DATA_PREP_DIR,
 
 # iter16 (2026-05-20): HF dataset/outputs repo IDs moved to configs/pipeline.yaml
 # > hf_repos: per CLAUDE.md "No hardcoded values in Python". The earlier private
-# part1/part2 split repos are RETIRED — single public repo `walkindia-200k` only.
+# part1/part2 split repos are RETIRED — single public repo `denseworld-115k` only.
 # Yaml-resolved values bound AFTER get_pipeline_config() is defined (~line 130
 # below) — search "data_prep yaml-resolved binding" anchor.
 
@@ -55,7 +55,7 @@ def ensure_clips_exist() -> bool:
     repo (`hf_repos.dataset` in pipeline.yaml). Returns True if available.
 
     iter16 (2026-05-20): private part1/part2 split repos retired — single public
-    `walkindia-200k` repo is the only source.
+    `denseworld-115k` repo is the only source.
     """
     # Check if clips already exist (recursive search for hierarchical structure)
     clip_count = len(list(CLIPS_DIR.rglob("*.mp4"))) if CLIPS_DIR.exists() else 0
@@ -247,7 +247,7 @@ REENCODE_CRF          = _dp_cfg["reencode_crf"]              # was 28 literal
 
 # HuggingFace repo IDs — single public repo (private part1/part2 split retired).
 _hf_cfg = get_pipeline_config()["hf_repos"]
-HF_DATASET_REPO = _hf_cfg["dataset"]                          # was "anonymousML123/walkindia-200k" literal
+HF_DATASET_REPO = _hf_cfg["dataset"]                          # was "anonymousML123/denseworld-115k" literal
 # (HF_DATASET_REPO_PART1/PART2/HF_DATASET_REPOS removed in iter16 — single public repo only.)
 
 

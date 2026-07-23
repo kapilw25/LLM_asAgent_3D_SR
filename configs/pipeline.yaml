@@ -830,10 +830,10 @@ data_prep:
 # -- HuggingFace repository identities (was hardcoded in src/utils/config.py + hf_outputs.py).
 # iter16 (2026-05-20): centralized per CLAUDE.md "No hardcoded values in Python".
 # Single public repo — the older private part1/part2 split approach is RETIRED
-# (replaced by the public `walkindia-200k` repo). To fork this project for a new
+# (replaced by the public `denseworld-115k` repo). To fork this project for a new
 # org, change THESE strings here (one place), not src/utils/config.py module-level.
 hf_repos:
-  dataset: anonymousML123/walkindia-200k         # single public repo (was 3-repo split: part1+part2+single)
+  dataset: anonymousML123/denseworld-115k         # single public repo (was 3-repo split: part1+part2+single)
   outputs: anonymousML123/factorjepa-outputs     # m04-m11 + m09 training outputs
   remote_data_prefix: "data"                     # iter18 H1: m03 path_in_repo dir on the HF dataset side
 

@@ -97,7 +97,7 @@ fi
 if [[ "$MODE" == "FULL" ]]; then
     if [[ ! -d "data/full_local" || ! -f "data/full_local/manifest.json" ]]; then
         echo "FATAL: data/full_local/ (115K clips, 130GB) not found. Fix with:"
-        echo "  python -u src/m00d_download_subset.py --FULL --no-wandb   # full 115K from walkindia-200k (~24 min)"
+        echo "  python -u src/m00d_download_subset.py --FULL --no-wandb   # full 115K from denseworld-115k (~24 min)"
         exit 1
     fi
 elif [[ "$MODE" == "POC" ]]; then
@@ -105,7 +105,7 @@ elif [[ "$MODE" == "POC" ]]; then
         echo "FATAL: data/subset_10k_local/ (10K clips, 10.5GB) not found. Fix with ONE of:"
         echo "  python -u src/utils/hf_outputs.py download-data                                       # poc 10K + val 1K from factorjepa-outputs (~3 min, measured)"
         echo "  rsync -avhP data/ <gpu-host>:/workspace/factorjepa/data/                              # poc 10K + val 1K from Mac (~17 min)"
-        echo "  python -u src/m00d_download_subset.py --FULL --subset data/subset_10k.json --no-wandb  # poc 10K from walkindia-200k (~50 min, downloads all 116 TARs)"
+        echo "  python -u src/m00d_download_subset.py --FULL --subset data/subset_10k.json --no-wandb  # poc 10K from denseworld-115k (~50 min, downloads all 116 TARs)"
         exit 1
     fi
 fi

@@ -35,7 +35,7 @@ def init_wandb(module_name: str, mode: str, config: dict = None,
     try:
         import wandb
         run = wandb.init(
-            project="walkindia-200k",
+            project="denseworld-115k",
             name=f"{module_name}_{mode}",
             config=config or {},
             reinit=True,

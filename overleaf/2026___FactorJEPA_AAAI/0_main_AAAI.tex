@@ -88,7 +88,10 @@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{hyperref}
+% hyperref is on the AAAI DISALLOWED list above (l.51) — removed. It was needed by a
+% single \href in the abstract, now a \url from the allowed `url` package (l.6). The
+% appendix's 6 \url calls never needed hyperref.
+%\usepackage{hyperref}
 \usepackage{amsmath}
 \usepackage{amssymb}
 
@@ -243,7 +246,7 @@
 % nouns, adverbs, adjectives should be capitalized, including both words in hyphenated terms, while
 % articles, conjunctions, and prepositions are lower case unless they
 % directly follow a colon or long dash
-\title{FactorJEPA: An Explicit Factorized World Model with Layout–Agent–Interaction Subspaces and Latent-to-RGB Future Decoding}
+\title{FactorJEPA: Factorized Predictor Surgery for World Models in Dense, Heterogeneous Urban Scenes}
 
 \author{
     %Authors
@@ -317,11 +320,11 @@
 
 %\textbf{World models} have recently attracted significant attention as a framework for learning \textbf{latent representations} that preserve the \textbf{structure and dynamics of the physical world}. Among recent approaches, \textbf{Joint Embedding Predictive Architectures (JEPA)} are especially compelling because they predict \textbf{masked or future content directly in embedding space}, avoiding costly pixel-level generation while promoting semantic abstraction.
 
-\textbf{World models} have attracted significant attention for their ability to capture and predict the \textbf{structure and dynamics of the physical world}. In this emerging landscape, \textbf{Joint Embedding Predictive Architectures (JEPA)} offer a particularly compelling direction. In this paper, we study a largely unexplored regime: \textbf{populous, crowded, and chaotic Global South urban environments}, which we call \textbf{DENSEWORLD}. Unlike the lower-density, lane-structured settings that dominate existing evaluations, these scenes exhibit \textbf{soft spatial boundaries}, \textbf{extreme agent heterogeneity}, \textbf{persistent occlusion}, and rapid \textbf{social negotiation} under mixed traffic. We introduce the first large-scale dataset for this regime, comprising \textbf{1,000 hours of drive-through, walk-through, and aerial video collected across 22 cities}. The dataset covers a wide variety of \textbf{scene types, times of day, weather conditions, crowd and traffic densities, traffic mixes, pedestrian--vehicle separation patterns, road layouts and surfaces, infrastructure quality, encroachment levels, locally distinctive objects, vegetation, lighting conditions, and video quality}. Our evaluation reveals that existing JEPA formulations struggle to preserve dense interaction dynamics under heterogeneity and partial observability.
+\textbf{World models} aim to capture and predict the \textbf{structure and dynamics of the physical world}, and \textbf{Joint Embedding Predictive Architectures (JEPA)} are a compelling direction. We study a largely unexplored regime: \textbf{populous, crowded, and chaotic Global South urban environments}, which we call \textbf{DENSEWORLD}, where \textbf{soft spatial boundaries}, \textbf{extreme agent heterogeneity}, \textbf{persistent occlusion}, and rapid \textbf{social negotiation} replace the lane-structured assumptions behind existing evaluations. We release \textbf{DENSEWORLD 1.0}: \textbf{115,687 videos} (\textbf{276 hours}) of drive-through, walk-through, and aerial footage, each 4 to 10 seconds, spanning \textbf{22 Indian cities} and \textbf{714} long-form sources, of which \textbf{86,831} carry automatically derived \emph{layout}, \emph{agent}, and \emph{interaction} targets. \textbf{Ten off-the-shelf frozen encoders} (DINOv2, I-JEPA, LeJEPA, and V-JEPA~1/2.0/2.1) all collapse into a narrow \textbf{37.5\% to 44.4\%} band on an 11-way motion-class probe with a 19.5\% majority baseline, whereas DENSEWORLD-adapted encoders reach \textbf{50.3\% to 53.2\%}.
 
-\textbf{\emph{We introduce FactorJEPA}}, which makes \textbf{\emph{world structure a first-class predictive primitive}}. Rather than encoding the future in a monolithic latent, it composes \textbf{\emph{layout}}, \textbf{\emph{entities}}, and \textbf{\emph{interactions}}, using a visibility gate and separated subspaces to preserve partially observed agents and discourage cross-factor shortcuts. FactorJEPA improves \textbf{\emph{(i) future-latent accuracy}} (Future-frame L1), \textbf{\emph{(ii) intervention-sensitive prediction}} (Causal L1), and \textbf{\emph{(iii) robustness to reduced visual evidence}} (Mask-ratio slope), while exposing \textbf{\emph{(iv) a reproducible motion-information trade-off}} (Motion cosine). Method rankings replicate across 2B and 1B V-JEPA~2.1 backbones, with $\rho=0.895$--$0.978$ across these four diagnostics.
+\textbf{\emph{We introduce FactorJEPA}}, which makes \textbf{\emph{world structure a first-class predictive primitive}}. Rather than adapting a JEPA predictor on undifferentiated video, it performs \textbf{\emph{predictor surgery}}: a three-stage curriculum over automatically separated \textbf{\emph{layout}}, \textbf{\emph{agent}}, and \textbf{\emph{interaction}} views, updating at most $8/48$ (2B) and $6/40$ (1B) encoder blocks with the predictor. Trained on \textbf{86,831} factor-annotated videos and evaluated on \textbf{23,106} held-out samples (1B V-JEPA~2.1), it cuts \textbf{\emph{future-latent L1}} by \textbf{10.6\%}, \textbf{\emph{causal future-block L1}} by \textbf{8.9\%} and \textbf{\emph{mask-ratio slope}} by \textbf{27.4\%} against the frozen backbone, and raises \textbf{\emph{motion-cosine separation}} to \textbf{15.3$\times$} the frozen value, each gain exceeding \textbf{70$\times$} the paired 95\% confidence interval. On both prediction diagnostics it separates in its favour against \textbf{all six} adaptation techniques we evaluate, namely full fine-tuning, linear probing then fine-tuning (LP-FT), low-rank adaptation (LoRA), weight-decomposed low-rank adaptation (DoRA), automatic relative-gradient-norm block selection (Auto-RGN), and vanilla continual self-supervised learning (continual-SSL), at \textbf{both} backbone scales, giving \textbf{24 of 24} paired wins, and beats the strongest full-scale baseline, LoRA, by \textbf{+2.8\%}, \textbf{+1.6\%}, \textbf{+25.2\%} and \textbf{+17.8\%}.
 
-As \textbf{world models} emerge as foundations for agents, robotics, and physical AI, JEPA-based models remain largely \textbf{\emph{silent simulators}}: they forecast futures without revealing what those futures look like. We introduce a \textbf{Cosmos-initialized latent-to-RGB decoder} that renders FactorJEPA's predicted future as a visually inspectable RGB frame. To foster future research, we make the code and evaluation artifacts \href{https://anonymous.4open.science/r/NEPHOS-72D4/README.md}{\textbf{publicly available}}.
+\textbf{20-arm} (2B) and \textbf{14-arm} (1B) studies show rankings \textbf{replicate across backbone scale} at $\rho=0.895$ to $0.978$, establishing the 1B model as a \textbf{half-cost proxy} for 2B selection. On a 10k screening subset, factorization concedes maximally linear motion readout to full fine-tuning ($-44.9\%$ at 2B, $-33.4\%$ at 1B), a trade-off that disappears at full scale, where FactorJEPA leads motion by $+25.2\%$ and gains more than LoRA on \textbf{all four} diagnostics. We release the dataset, checkpoints and the complete 15-diagnostic evaluation harness.
 
 
 
@@ -342,14 +345,13 @@ As \textbf{world models} emerge as foundations for agents, robotics, and physica
 \clearpage
 \newpage
 
-% Uncomment the following to link to your code, datasets, an extended version or similar.
-% You must keep this block between (not within) the abstract and the main body of the paper.
-% Make sure that you do not de-anonymize yourself with these links.
-% \begin{links}
-%     \link{Code}{https://aaai.org/example/code}
-%     \link{Datasets}{https://aaai.org/example/datasets}
-%     \link{Extended version}{https://aaai.org/example/extended-version}
-% \end{links}
+% Code + evaluation artifacts. AAAI puts these HERE (between, not within, the abstract and the
+% main body) rather than in the abstract itself. Verified 2026-07-22: the target is an anonymized
+% proxy of a PRIVATE repo, scanned to 0 identity hits, with the figures and demo GIFs resolving
+% through the proxy. The dataset link is deliberately omitted pending the redistribution question.
+% AAAI 2027 FORBIDS linking to sources/data in an external repo, "including anonymized
+% repositories like AnonymousGitHub and similar". Code ships as the OpenReview
+% "Code and Data Supplement" archive (<=50 MB) instead — do NOT re-add a links block.
 
 
 

@@ -17,6 +17,8 @@ Bash (run_train.sh / run_eval.sh):
     python src/utils/arm_registry.py eval-tokens         # space-separated, all arms
     python src/utils/arm_registry.py train-names         # space-separated, kind!=merge
     python src/utils/arm_registry.py kind-for surgery_3stage_DI_replay25_encoder
+    python src/utils/arm_registry.py label-for  peft_dora_encoder        # -> peft_dora
+    python src/utils/arm_registry.py label-table                         # every arm's plot label
 """
 import os
 import sys
@@ -30,13 +32,81 @@ _REPO = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = Path(os.environ.get("ARM_REGISTRY_PATH", _REPO / "configs" / "arm_registry.yaml"))
 
 
-def _load() -> dict:
+def _doc() -> dict:
     if not REGISTRY_PATH.exists():
         sys.exit(f"FATAL: arm registry missing: {REGISTRY_PATH}")
-    arms = (yaml.safe_load(REGISTRY_PATH.read_text()) or {}).get("arms")
+    return yaml.safe_load(REGISTRY_PATH.read_text()) or {}
+
+
+def _load() -> dict:
+    arms = _doc().get("arms")
     if not arms:
         sys.exit(f"FATAL: arm registry {REGISTRY_PATH} has no 'arms:' block")
     return arms
+
+
+# ── plot labels ──────────────────────────────────────────────────────────────────────────
+# THE single label rule for every figure (m13 axes, legends, forest winner column, hero WINNER
+# row, scale-replication legend). Full arm name, redundant suffix stripped — NOT an abbreviation.
+# Derived, so it cannot drift from the roster and a new arm needs no edit anywhere.
+_LABEL_STRIP = ("_encoder",)
+
+
+def reference_encoders() -> dict:
+    """{token: {label, group}} for the non-arm encoders plots must still name (frozen, dinov2)."""
+    return _doc().get("reference_encoders") or {}
+
+
+def label_for(token: str) -> str:
+    """Display label for an arm, accepting EITHER namespace: the run_train train-name
+    ('surgery_3stage_DI_encoder') or the eval encoder-token ('surgical_3stage_DI_encoder').
+
+    Both resolve through the registry to the SAME encoder-token, so the two namespaces can never
+    print two different labels for one arm (they did until 2026-07-22).
+
+    Resolution order:
+      1. `reference_encoders:`  — the non-arm encoders (frozen, dinov2)
+      2. the arm's optional `label:` field — an EXPLICIT override for arms whose token reads badly
+         on a figure (e.g. pretrain_encoder → "VANILLA CONT-SSL", so the plots match the paper's
+         prose instead of printing the bare directory token)
+      3. derived — the full arm name minus '_encoder'
+    Because the override is optional, a new arm still gets a correct label with no edit."""
+    arms = _load()
+    rec = arms.get(token) or next((r for r in arms.values() if r["encoder"] == token), None)
+    enc = rec["encoder"] if rec else token                            # train-name → encoder-token
+    ref = reference_encoders()
+    if enc in ref:
+        return ref[enc]["label"]
+    if rec and rec.get("label"):
+        return rec["label"]
+    for suffix in _LABEL_STRIP:
+        if enc.endswith(suffix) and enc != suffix:
+            return enc[: -len(suffix)]
+    return enc
+
+
+def label_table() -> list:
+    """(encoder_token, label) for ALL arms — eyeball the full label set in one call."""
+    return [(r["encoder"], label_for(r["encoder"])) for r in _load().values()]
+
+
+def paper_scorecard_group(token: str) -> str:
+    """Style group for the paper-scorecard panels, for an arm token OR a reference encoder.
+
+    Replaces m13's hand-written _PS_ARMS. FAILS LOUD (KeyError) on a registry group that
+    configs/arm_registry.yaml `paper_scorecard_group:` does not list, so a newly-introduced group
+    can never be silently rendered as a fine-tuning baseline."""
+    ref = reference_encoders()
+    if token in ref:
+        return ref[token]["group"]
+    arms = _load()
+    rec = arms.get(token) or next((r for r in arms.values() if r["encoder"] == token), None)
+    if rec is None:
+        sys.exit(f"paper_scorecard_group: {token!r} is neither an arm nor a reference encoder")
+    alias = _doc().get("paper_scorecard_group")
+    if not alias:
+        sys.exit(f"FATAL: {REGISTRY_PATH} has no 'paper_scorecard_group:' block")
+    return alias[rec["group"]]
 
 
 def arm2enc() -> dict:
@@ -137,6 +207,11 @@ def _cli(argv):
     elif cmd == "token-table":
         for tok, d, n in token_table():
             print(f"{tok}\t{d}\t{n}")
+    elif cmd == "label-for":
+        print(label_for(rest[0]))
+    elif cmd == "label-table":
+        for tok, lbl in label_table():
+            print(f"{tok}\t{lbl}")
     else:
         sys.exit(f"FATAL: unknown arm_registry command '{cmd}'")
 

@@ -3,7 +3,7 @@
 **Benchmarking Video Foundation Models on DenseWorld-200K**
 
 [![Project Page](https://img.shields.io/badge/Project-Page-8B3A2A)](https://kapilw25.github.io/factorjepa/)
-[![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-ffd21e?logo=huggingface)](https://huggingface.co/datasets/anonymousML123/walkindia-200k)
+[![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-ffd21e?logo=huggingface)](https://huggingface.co/datasets/anonymousML123/denseworld-115k)
 [![Status](https://img.shields.io/badge/Status-Preprint-yellow)]()
 
 > **115,687 clips** | 714 videos | 22 cities | 276 hours | 121 GB

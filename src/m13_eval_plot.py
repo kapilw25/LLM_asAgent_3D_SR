@@ -66,7 +66,7 @@ from utils.validity import (criterion_rho, family_summary,  # iter19 §2b constr
                             orient_higher_better, pairwise_spearman)
 from utils.config import get_pipeline_config  # iter19 §2b: plots.validity n_perm/seed (single source)
 from utils.arm_registry import (arm2dir, arm2enc, display_arms, merge_arms,  # iter18: SINGLE-SOURCE arm roster (no hardcoded names)
-                                merge_recipe)
+                                merge_recipe, label_for, paper_scorecard_group)
 
 # iter18 W7 (PLR2004): semantic named constants.
 _AXIS_DECIMAL_MIN = 0.01   # tick-format band edges (display only)
@@ -91,22 +91,12 @@ def _canon(enc: str) -> str:
 
 # (backbone prefix → long tag, short tag) for the 3 trained backbones; everything else (frozen-9) falls through.
 _BB_TAG = (("vjepa_2_1_vitG_", "ViT-G", "G"), ("vjepa_2_1_vitg_", "ViT-g", "g"), ("vjepa_2_0_vitg_", "ViT-g·2.0", "g0"))
-_ARM_LONG = {
-    "frozen": "frozen", "pretrain_encoder": "vanilla continual-SSL", "pretrain_2X_encoder": "vanilla continual-SSL 2x",
-    "pretrain_head": "vanilla continual-SSL (head)", "surgical_3stage_DI_encoder": "surgery 3stage_DI encoder",
-    "surgical_noDI_encoder": "surgery noDI encoder", "surgical_3stage_DI_head": "surgery 3stage_DI head",
-    "surgical_noDI_head": "surgery noDI head",
-}
-_ARM_SHORT = {
-    "frozen": "frozen", "pretrain_encoder": "vCSSL-enc", "pretrain_2X_encoder": "vCSSL-2X", "pretrain_head": "vCSSL-hd",
-    "surgical_3stage_DI_encoder": "s3DI-enc", "surgical_noDI_encoder": "sNoDI-enc",
-    "surgical_3stage_DI_head": "s3DI-hd", "surgical_noDI_head": "sNoDI-hd",
-    # iter18 FT baselines (encoder-only; no head twin → no -enc suffix needed) — clean distinct WINNER tags
-    "surgery_raw_encoder": "raw", "surgical_autorgn_encoder": "argn",
-    "full_ft_encoder": "fullFT", "lpft_encoder": "LPFT",
-    "peft_lora_encoder": "LoRA", "peft_dora_encoder": "DoRA",
-    "cassle_encoder": "CaSSLe", "ewc_encoder": "EWC",
-}
+# 2026-07-22: _ARM_LONG + _ARM_SHORT DELETED. They were two of FOUR competing label maps in this
+# file (with _MW_TRAIN_STYLE[0] and _xb_arm_short), so one arm printed up to four different names
+# across figures pages apart, and each map silently fell through for 9-17 of the 25 arms. Every
+# label now comes from utils.arm_registry.label_for() → configs/arm_registry.yaml (full arm name,
+# '_encoder' stripped). Derived, so it cannot drift and a new arm needs no edit here.
+
 # Per-backbone header label (name + model size) for the stacked §G overview. Architecture facts are
 # pinned in configs/model/*.yaml (embed_dim/depth VERIFIED there); mirrored here as the plot caption.
 _BB_LABEL = {
@@ -118,13 +108,12 @@ _BB_LABEL = {
 
 def _display_label(enc: str) -> str:
     """Human-readable encoder name for plot legends. All 3 trained backbones → '<ViT-tag> <arm>';
-    frozen-9 baselines fall through verbatim."""
+    frozen-9 baselines fall through verbatim. Arm name via the SINGLE source (arm_registry)."""
     enc = _canon(enc)
     for pre, long_tag, _ in _BB_TAG:
         if enc.startswith(pre):
-            arm = enc[len(pre):]
-            return f"{long_tag} {_ARM_LONG.get(arm, arm.replace('_', ' '))}"
-    return {"dinov2": "DINOv2 frozen"}.get(enc, enc.replace("_", " "))
+            return f"{long_tag} {label_for(enc[len(pre):])}"
+    return label_for(enc)
 
 
 _FALLBACK_COLOR_CYCLE = ("blue", "green", "orange", "purple", "red", "cyan", "gold")
@@ -215,6 +204,25 @@ def _opt_json(path: Path):
 
 # ── Bar-with-CI primitive (N-bar generic) ───────────────────────────
 
+def _axis_labels(encoders: list) -> list:
+    """x-tick names for a bar panel, with the backbone tag dropped when EVERY bar shares it.
+
+    The tag already appears in the figure's own banner (_BB_LABEL: "V-JEPA 2.1 · ViT-g · ~1B …"),
+    so repeating "ViT-g " on all 24 ticks is pure redundancy: it steals label width and forces the
+    45°-rotated names to overlap into an unreadable smear (2026-07-22). A panel mixing backbones —
+    or the frozen-9 chart, where names like "DINOv2 frozen" share no tag — keeps the full name, so
+    the disambiguation is never lost where it actually matters."""
+    names = [_display_label(e) for e in encoders]
+    if not names:
+        return names
+    known = {t for _pre, t, _short in _BB_TAG}
+    heads = {n.split(" ", 1)[0] for n in names}
+    if len(heads) == 1 and heads <= known and all(" " in n for n in names):
+        cut = len(next(iter(heads))) + 1
+        return [n[cut:] for n in names]
+    return names
+
+
 def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
                  ylabel: str, title: str, na_set: set = None, direction: str = ""):
     """Render N bars with 95% CI error caps + value labels. `direction`: higher/lower → badge;
@@ -264,7 +272,7 @@ def _bar_with_ci(ax, encoders: list, vals: list, errs: list,
             ax.text(xi, v + er_safe + (y_hi - y_lo) * 0.01, fmt_mantissa(v),
                     ha="center", va="bottom", fontsize=9, color="#222", rotation=_val_rot)
     ax.set_xticks(x)
-    ax.set_xticklabels([_display_label(e) for e in encoders], fontsize=9, rotation=_LABEL_ROT, ha="right")
+    ax.set_xticklabels(_axis_labels(encoders), fontsize=9, rotation=_LABEL_ROT, ha="right")
     # analysis-phase aid (user 2026-06-15): tint each x-label with ITS bar's colour so a name maps to its bar at
     # a glance (NOT paper-acceptable — paper keeps black; fine for these analysis-phase scorecards).
     for _tick, _c in zip(ax.get_xticklabels(), colors):
@@ -384,12 +392,14 @@ _DIR_TAG = {"higher": "↑ better", "lower": "↓ better", "signed": "± signed"
 
 
 def _short_label(enc: str) -> str:
-    """Compact encoder tag for the hero WINNER row (cells are narrow). '<g-tag>-<arm>' for the 3 backbones."""
+    """Backbone-tagged encoder tag for the hero WINNER row. '<g-tag>-<arm>' for the 3 backbones.
+    Same arm name as every other figure (arm_registry) — only the backbone tag is abbreviated, so a
+    cell can never disagree with the axis label beside it."""
     enc = _canon(enc)
     for pre, _, short_tag in _BB_TAG:
         if enc.startswith(pre):
-            return f"{short_tag}-{_ARM_SHORT.get(enc[len(pre):], enc[len(pre):][:8])}"
-    return {"dinov2": "dinov2"}.get(enc, enc.replace("vjepa_", "")[:10])
+            return f"{short_tag}-{label_for(enc[len(pre):])}"
+    return label_for(enc)
 
 
 def _fmt_compact(x: float) -> str:
@@ -759,7 +769,9 @@ def plot_wiseft_sweep_table(metrics_json: Path, out_dir: Path, stem: str = "wise
                    rowLabels=[d for _, d in present],
                    colLabels=[h for _k, h, _d in _WISEFT_SWEEP_COLS], loc="center", cellLoc="center")
     tbl.auto_set_font_size(False); tbl.set_fontsize(9); tbl.scale(1.0, 2.7)
-    ax.set_title("WiSE-FT v2 sweep — intervene × frozen, predictor merged   ·   value ± BCa 95% CI\n"
+    # base arm named via the SINGLE source, so this title cannot drift from the row labels beneath it
+    ax.set_title(f"WiSE-FT v2 sweep — {label_for('surgery_3stage_DI_intervene_encoder')} × frozen, "
+                 "predictor merged   ·   value ± BCa 95% CI\n"
                  "prediction pair (←)  vs  coherence pair (→):  more frozen recovers coherence, gives back "
                  "prediction · colour = per-column best (green)", fontsize=11, fontweight="bold")
     fig.tight_layout()
@@ -775,36 +787,31 @@ def plot_wiseft_sweep_table(metrics_json: Path, out_dir: Path, stem: str = "wise
 # (direct fig.savefig png@150 + pdf, NOT save_fig — that would change dpi/facecolor).
 # arm taxonomy (display short-name, group) — group drives colour/role. groups:
 #   ours_flagship · surgery_ablation · ft_baseline · frozen · improvement
-_PS_ARMS = {
-    "vjepa_2_1_frozen":                     ("frozen",   "frozen"),
-    "vjepa_2_1_pretrain_encoder":           ("continual-SSL", "ft_baseline"),
-    "vjepa_2_1_surgical_3stage_DI_encoder": ("Surgery 3-stage-DI  (ours)", "ours_flagship"),
-    "vjepa_2_1_surgical_noDI_encoder":      ("Surgery no-DI  (ours)",      "ours_flagship"),
-    "vjepa_2_1_surgery_raw_encoder":        ("Surgery raw  (ablation)",    "surgery_ablation"),
-    "vjepa_2_1_surgical_autorgn_encoder":   ("Surgery auto-RGN  (ablation)", "surgery_ablation"),
-    "vjepa_2_1_full_ft_encoder":            ("Full fine-tune", "ft_baseline"),
-    "vjepa_2_1_lpft_encoder":               ("LP-FT",          "ft_baseline"),
-    "vjepa_2_1_peft_lora_encoder":          ("LoRA",           "ft_baseline"),
-    "vjepa_2_1_peft_dora_encoder":          ("DoRA",           "ft_baseline"),
-}
+# 2026-07-22: the hand-written {encoder: (label, group)} dict that used to live here is GONE. It was
+# the 5th of six competing label sources ("continual-SSL", "Surgery 3-stage-DI  (ours)", …) AND it
+# restated a group already recorded in configs/arm_registry.yaml — verified identical for all 9 arms.
+# Both halves now come from the single source: the name from label_for(), the style group from
+# paper_scorecard_group() (its alias table lives in the yaml, not here).
+_PS_ARMS = {f"vjepa_2_1_{_enc}": paper_scorecard_group(_enc)
+            for _a, _enc, _grp, _kind in display_arms(include_heads=False)}
+_PS_ARMS["vjepa_2_1_frozen"] = paper_scorecard_group("frozen")
 # head-only arms duplicate the pretrain ENCODER on encoder-side metrics → excluded
 # (they would draw 3 identical bars and confuse the family story); cassle/ewc are null.
+# 2026-07-22: legends name the FAMILY only. They used to restate member arms inline
+# ("(3-stage-DI, no-DI)", "(raw, auto-RGN)", "continual-SSL") in wording that no longer matched the
+# bar labels those same arms carry — the same stale-duplication that let one arm print six different
+# names. The bars are individually labelled from arm_registry, so a family legend must not re-name
+# them. Also dropped the em-dashes and the "iter18" internal jargon from a paper-facing figure.
 _PS_GROUP_STYLE = {
-    "ours_flagship":    dict(color="#1B5E20", edge="black", lw=1.8, label="Surgery — ours (3-stage-DI, no-DI)"),
-    "surgery_ablation": dict(color="#66BB6A", edge="#2E7D32", lw=0.8, label="Surgery — ablations (raw, auto-RGN)"),
-    "ft_baseline":      dict(color="#90A4AE", edge="#546E7A", lw=0.8, label="Fine-tune / PEFT / continual-SSL baselines"),
-    "frozen":           dict(color="#E53935", edge="#B71C1C", lw=1.2, label="Frozen V-JEPA (the baseline to beat)"),
-    "improvement":      dict(color="#00897B", edge="#00695C", lw=1.4, label="Surgery — iter18 improvement arms"),
+    "ours_flagship":    dict(color="#1B5E20", edge="black", lw=1.8, label="Surgery (ours): flagship arms"),
+    "surgery_ablation": dict(color="#66BB6A", edge="#2E7D32", lw=0.8, label="Surgery (ours): ablation arms"),
+    "ft_baseline":      dict(color="#90A4AE", edge="#546E7A", lw=0.8, label="Prior adaptation baselines"),
+    "frozen":           dict(color="#E53935", edge="#B71C1C", lw=1.2, label="Frozen V-JEPA (baseline to beat)"),
+    "improvement":      dict(color="#00897B", edge="#00695C", lw=1.4, label="Surgery (ours): improvement arms"),
 }
-# iter18 (2026-06-14): complete _PS_ARMS from the single source (configs/arm_registry.yaml) — any scheduler
-# encoder not explicitly styled above is added with its registry group, so a NEW arm auto-appears (heads
-# excluded as before; they duplicate the pretrain encoder on encoder-side metrics).
-_PS_GRP2PS = {"ours_flagship": "ours_flagship", "improvement": "improvement", "surgery_ablation": "surgery_ablation",
-              "ft_baseline": "ft_baseline", "anchor": "ft_baseline"}
-for _a, _enc, _grp, _kind in display_arms(include_heads=False):
-    _full = f"vjepa_2_1_{_enc}"
-    if _full not in _PS_ARMS:
-        _PS_ARMS[_full] = (_enc.replace("_encoder", "").replace("_", " "), _PS_GRP2PS.get(_grp, "ft_baseline"))
+# (the old _PS_GRP2PS alias dict + the "fill in any arm missing from the literal" loop that stood here
+#  are both gone — _PS_ARMS above is now built from the registry for EVERY scheduler arm in one pass,
+#  heads excluded as before since they duplicate the pretrain encoder on encoder-side metrics.)
 # (json-key, pretty title, direction)  — higher='hi', lower='lo'
 _PS_HERO = [
     ("causal", "HERO  ·  Causal L1   (sensitivity to causal perturbation)", "lo"),
@@ -842,13 +849,14 @@ def _ps_load(metrics_json: Path):
 def _ps_panel(ax, rows, key, title, direction, annotate_family=False):
     hi = direction == "hi"
     items = []
-    for enc, (short, grp) in _PS_ARMS.items():
+    for enc, grp in _PS_ARMS.items():
         if enc not in rows:
             continue
         cell = rows[enc][key]
         if cell["mean"] is None:
             continue
-        items.append((short, grp, cell["mean"], cell["ci_half"] or 0.0))
+        # name from the SINGLE source, so this panel agrees with the forest / scale / train figures
+        items.append((label_for(enc[len("vjepa_2_1_"):]), grp, cell["mean"], cell["ci_half"] or 0.0))
     items.sort(key=lambda t: -t[2] if hi else t[2])     # best first (top of chart)
     if not items:                       # partial LIVE run: no encoder has this metric scored yet → blank panel
         ax.text(0.5, 0.5, "awaiting data", transform=ax.transAxes, ha="center", va="center",
@@ -973,17 +981,21 @@ def plot_paper_scorecard(metrics_json: Path, out_dir: Path, stem: str = "eval_sc
 # (no ×10ⁿ rescale) so they verify by eye against eval_metrics.csv. _tcc_*-prefixed to avoid name collisions;
 # figure kept byte-equivalent (direct fig.savefig png@150 + pdf).
 # display name + colour + bold? — keyed by encoder. The 4 named players pop; rest grey.
+# 2026-07-22: PALETTE-ONLY now — (colour, highlight). The per-arm label this used to carry ("Pretrain
+# (start pt)", "OURS  (3-stage DI)", …) was the 6th competing label source; names come from label_for()
+# in plot_tcc_chart. Colours stay local by the registry's own contract (per-figure palettes are not
+# roster metadata); only the 4 highlighted players get a bold hue, everything else is grey.
 _TCC_ARMS = {
-    "vjepa_2_1_frozen":                     ("Frozen  (reference)",   "#E53935", True),
-    "vjepa_2_1_pretrain_encoder":           ("Pretrain  (start pt)",  "#1565C0", True),
-    "vjepa_2_1_surgical_3stage_DI_encoder": ("OURS  (3-stage DI)",    "#1B5E20", True),
-    "vjepa_2_1_surgery_raw_encoder":        ("raw  (surgery control)", "#C0CA33", True),
-    "vjepa_2_1_surgical_noDI_encoder":      ("Surgery no-DI",         "#9E9E9E", False),
-    "vjepa_2_1_surgical_autorgn_encoder":   ("Surgery auto-RGN",      "#9E9E9E", False),
-    "vjepa_2_1_full_ft_encoder":            ("Full fine-tune",        "#9E9E9E", False),
-    "vjepa_2_1_lpft_encoder":               ("LP-FT",                 "#9E9E9E", False),
-    "vjepa_2_1_peft_lora_encoder":          ("LoRA",                  "#9E9E9E", False),
-    "vjepa_2_1_peft_dora_encoder":          ("DoRA",                  "#9E9E9E", False),
+    "vjepa_2_1_frozen":                     ("#E53935", True),
+    "vjepa_2_1_pretrain_encoder":           ("#1565C0", True),
+    "vjepa_2_1_surgical_3stage_DI_encoder": ("#1B5E20", True),
+    "vjepa_2_1_surgery_raw_encoder":        ("#C0CA33", True),
+    "vjepa_2_1_surgical_noDI_encoder":      ("#9E9E9E", False),
+    "vjepa_2_1_surgical_autorgn_encoder":   ("#9E9E9E", False),
+    "vjepa_2_1_full_ft_encoder":            ("#9E9E9E", False),
+    "vjepa_2_1_lpft_encoder":               ("#9E9E9E", False),
+    "vjepa_2_1_peft_lora_encoder":          ("#9E9E9E", False),
+    "vjepa_2_1_peft_dora_encoder":          ("#9E9E9E", False),
 }
 # iter18 (2026-06-14): any scheduler encoder NOT explicitly styled above → grey default (same treatment as
 # the other fine-tuners), so a NEW arm auto-appears in this chart with no edit here. Roster from the single
@@ -991,7 +1003,7 @@ _TCC_ARMS = {
 for _a, _enc, _grp, _kind in display_arms():
     _full = f"vjepa_2_1_{_enc}"
     if _full not in _TCC_ARMS:
-        _TCC_ARMS[_full] = (_enc.replace("_encoder", "").replace("_", " "), "#9E9E9E", False)
+        _TCC_ARMS[_full] = ("#9E9E9E", False)
 _TCC_PANELS = [
     ("tcc_tau",   "TCC Kendall τ   (↑ higher = better)", "higher",
      "frame-order rank correlation"),
@@ -1002,7 +1014,9 @@ _TCC_PANELS = [
 
 def _tcc_panel(ax, rows, key, title, direction, subtitle, frozen_val):
     hi = direction == "higher"
-    items = [(_TCC_ARMS[e][0], _TCC_ARMS[e][1], _TCC_ARMS[e][2], d[key]["mean"], d[key]["ci_half"] or 0.0)
+    # name from the SINGLE source (label_for); _TCC_ARMS supplies only the palette + highlight flag
+    items = [(label_for(e[len("vjepa_2_1_"):]), _TCC_ARMS[e][0], _TCC_ARMS[e][1],
+              d[key]["mean"], d[key]["ci_half"] or 0.0)
              for e, d in rows.items() if e in _TCC_ARMS and d[key]["mean"] is not None]
     items.sort(key=lambda t: -t[3] if hi else t[3])          # best at TOP
     ys = np.arange(len(items))[::-1]
@@ -1485,10 +1499,14 @@ def plot_scoreboard(metrics, encoders, frozen, output_dir):
         ax.text(arm_wins.get(a, 0), i, f" {arm_wins.get(a, 0)}", va="center", fontsize=10, fontweight="bold")
     ax.set_yticks(y); ax.set_yticklabels([_wrap_name(a) for a in order], fontsize=8, rotation=20, va="center")
     ax.set_xlabel(f"# metrics won OUTRIGHT  (of {ns + npr + nt}; {nt} ties not awarded)")
-    champ = "SURGERY" if ns > npr else ("VANILLA CONT-SSL" if npr > ns else "TIE")
-    fig.suptitle(f"SCOREBOARD —  SURGERY {ns} · VANILLA CONT-SSL {npr} · TIE {nt}   (champion duel · winner: {champ})",
+    # name the duel's two sides with the SAME arm label the bars carry (arm_registry), so the title
+    # cannot drift from the y-axis: this said "VANILLA CONT-SSL" while the bar read "pretrain".
+    _pre = label_for("pretrain_encoder").upper()
+    champ = "SURGERY" if ns > npr else (_pre if npr > ns else "TIE")
+    fig.suptitle(f"SCOREBOARD —  SURGERY {ns} · {_pre} {npr} · TIE {nt}   (champion duel · winner: {champ})",
                  fontsize=13, fontweight="bold")
-    ax.set_title("green = surgery arm · blue = vanilla continual-SSL arm · bar = outright metric wins by that arm", fontsize=9)
+    ax.set_title(f"green = surgery arm · blue = {label_for('pretrain_encoder')} arm · "
+                 "bar = outright metric wins by that arm", fontsize=9)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     save_fig(fig, str(output_dir / "m13_scoreboard_surgery_vs_pretrain"))
     print(f"  [scoreboard] m13_scoreboard_surgery_vs_pretrain — surgery {ns} pretrain {npr} tie {nt}")
@@ -2106,7 +2124,9 @@ def plot_criterion_validity(metrics_json, criterion_csv, metric_key, out_dir, n_
 # scripts/ — the needed DAG constants are duplicated below (they are FROZEN once iter18 ends;
 # this copy is the durable record). Invoke:
 #   python src/m13_eval_plot.py --POC --output-dir outputs/poc/probe_plot \
-#       --outputs-root outputs/poc --metrics-watch-out outputs/poc/probe_plot/metrics_watch \
+#       --outputs-root outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k \
+#       --train-root   outputs/poc/vjepa_2_1_vitG_2B/train \
+#       --metrics-watch-out outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k/probe_plot/metrics_watch \
 #       --metrics-watch-only
 # Backbone via ITER18_BACKBONE env, hidden arms via ITER18_SKIP_ARMS env (same contract as
 # the watch scripts; the scheduler-log fallback is dropped — env is the durable source).
@@ -2162,7 +2182,7 @@ def _mw_skip_arms():
     return {tok.strip().strip("\"'") for tok in env.split() if tok.strip().strip("\"'")}
 
 
-def _mw_arm_train_val_n(outputs_root: Path, mtag: str, arm: str):
+def _mw_arm_train_val_n(mtag: str, arm: str):   # no root arg: this reads logs/, not the outputs tree
     """(n_train, n_val) parsed from the arm's newest scheduler log when logs/ still exists —
     graceful (None, None) once the iter18 logs are archived; the json then records null."""
     logs = sorted((q for q in Path("logs").glob(f"iter18_ngpu_{mtag}_train_{arm}_*.log")
@@ -2186,18 +2206,27 @@ def _mw_arm_train_val_n(outputs_root: Path, mtag: str, arm: str):
             int(va.group(1).replace(",", "")) if va else None)
 
 
-def _mw_train_blocks(outputs_root: Path, mtag: str):
-    """One block per arm: every probe checkpoint + the selector-replay verdicts (🎯/✋/·)."""
+def _mw_train_blocks(train_root: Path, mtag: str):
+    """One block per arm: every probe checkpoint + the selector-replay verdicts (🎯/✋/·).
+
+    `train_root` is the directory that DIRECTLY contains the per-arm m09 dirs, i.e.
+    outputs/<mode>/<backbone>_<size>/train/. It is a separate CLI arg (--train-root) rather than
+    being derived from --outputs-root: the eval artifacts live under <backbone>/eval/<split>/ and
+    the train artifacts under <backbone>/train/, so ONE root cannot address both. It used to be
+    read as `outputs_root / _MW_BACKBONE / <m09-dir>`, which matched the flat iter18 layout but
+    resolves to nothing today — so every arm silently produced an empty block and each refresh
+    truncated train_metrics.json (21,505 -> 3,615 B on POC-2B, 2026-07-22) and blanked
+    train_trajectories."""
     blocks = []
     for arm in _MW_TRAIN_ORDER:
-        d = outputs_root / _MW_BACKBONE / _MW_ARM2DIR[arm]
+        d = train_root / _MW_ARM2DIR[arm]
         hist = _mw_jsonl(d / "probe_history.jsonl")
         summ = _mw_jload(d / artifact("training_summary"))
         logs = sorted((q for q in Path("logs").glob(f"iter18_ngpu_{mtag}_train_{arm}_*.log")
                        if q.exists()), key=lambda q: q.stat().st_mtime)
         log_fresh = bool(logs) and (time.time() - logs[-1].stat().st_mtime) < _MW_FRESH_LOG_S
         status = "✅" if summ else ("🔄" if (hist or log_fresh) else "⬚")
-        n_tr, n_va = _mw_arm_train_val_n(outputs_root, mtag, arm)
+        n_tr, n_va = _mw_arm_train_val_n(mtag, arm)
         rows, kept_i = [], None
         best = float("inf")
         for i, r in enumerate(hist):
@@ -2266,28 +2295,39 @@ def _mw_eval_rows(outputs_root: Path):
 # wiseft merge arms (also ours_*/improvement group) count too.
 _MW_OURS_GROUPS = {"ours_flagship", "ours_head", "improvement"}
 _MW_FAM_OURS = {a for a, _e, _g, _k in display_arms(include_merge=True) if _g in _MW_OURS_GROUPS}
-_MW_TRAIN_STYLE = {  # arm → (short label, color, linestyle, linewidth); OURS = greens
-    "pretrain_encoder":          ("vCSSL",     "#1565C0", "-",  1.8),
-    "surgery_3stage_DI_encoder": ("s3DI-enc",  "#1B5E20", "-",  2.6),
-    "surgery_noDI_encoder":      ("sNoDI-enc", "#43A047", "-",  2.6),
-    "surgery_3stage_DI_head":    ("s3DI-hd",   "#81C784", ":",  1.8),
-    "surgery_noDI_head":         ("sNoDI-hd",  "#A5D6A7", ":",  1.8),
-    "surgical_autorgn_encoder":  ("autoRGN",   "#E65100", "--", 1.4),
-    "surgery_raw_encoder":       ("s-RAW",     "#827717", "-.", 1.8),
-    "full_ft_encoder":           ("fullFT",    "#F57C00", "--", 1.4),
-    "lpft_encoder":              ("LP-FT",     "#8D6E63", "--", 1.4),
-    "peft_lora_encoder":         ("LoRA",      "#78909C", "--", 1.4),
-    "peft_dora_encoder":         ("DoRA",      "#546E7A", "--", 1.4),
-    "cassle_encoder":            ("CaSSLe",    "#9E9D24", "--", 1.4),
-    "ewc_encoder":               ("EWC",       "#6D4C41", "--", 1.4),
+# 2026-07-22: this map is now STYLE-ONLY — (color, linestyle, linewidth). It used to carry a 4th
+# element, a hand-written short label ("vCSSL", "s3DI-enc", …), which made it the 3rd of four
+# competing label sources in this file. Labels now come from arm_registry.label_for() via
+# _mw_style() below, so the scorecard/train legends print the SAME arm name as every other figure.
+_MW_TRAIN_STYLE = {  # arm → (color, linestyle, linewidth); OURS = greens
+    "pretrain_encoder":          ("#1565C0", "-",  1.8),
+    "surgery_3stage_DI_encoder": ("#1B5E20", "-",  2.6),
+    "surgery_noDI_encoder":      ("#43A047", "-",  2.6),
+    "surgery_3stage_DI_head":    ("#81C784", ":",  1.8),
+    "surgery_noDI_head":         ("#A5D6A7", ":",  1.8),
+    "surgical_autorgn_encoder":  ("#E65100", "--", 1.4),
+    "surgery_raw_encoder":       ("#827717", "-.", 1.8),
+    "full_ft_encoder":           ("#F57C00", "--", 1.4),
+    "lpft_encoder":              ("#8D6E63", "--", 1.4),
+    "peft_lora_encoder":         ("#78909C", "--", 1.4),
+    "peft_dora_encoder":         ("#546E7A", "--", 1.4),
+    "cassle_encoder":            ("#9E9D24", "--", 1.4),
+    "ewc_encoder":               ("#6D4C41", "--", 1.4),
     # iter18 (2026-06-14) improvement arms — GREENS (the recolor below forces them to the family green anyway);
     # any FUTURE/merge arm falls back to _MW_DEF_TRAIN_STYLE.
-    "surgery_3stage_DI_replay25_encoder":  ("replay25", "#2E7D32", "-", 2.2),
-    "surgery_3stage_DI_diheavy_encoder":   ("diheavy",  "#2E7D32", "-", 2.2),
-    "surgery_3stage_DI_tccaux_encoder":    ("tccaux",   "#2E7D32", "-", 2.2),
-    "surgery_3stage_DI_intervene_encoder": ("interv",   "#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_replay25_encoder":  ("#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_diheavy_encoder":   ("#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_tccaux_encoder":    ("#2E7D32", "-", 2.2),
+    "surgery_3stage_DI_intervene_encoder": ("#2E7D32", "-", 2.2),
 }
-_MW_DEF_TRAIN_STYLE = ("?", "#BDBDBD", ":", 1.2)   # unregistered/merge arm → grey (a new arm never KeyErrors the graph)
+_MW_DEF_TRAIN_STYLE = ("#BDBDBD", ":", 1.2)   # unregistered/merge arm → grey (a new arm never KeyErrors the graph)
+
+
+def _mw_style(arm: str) -> tuple:
+    """(label, color, linestyle, linewidth) for a train-graph arm. The label ALWAYS resolves through
+    arm_registry (never the old literal, never the '?' placeholder a merge arm used to get), so a
+    brand-new or merge arm shows its real name in grey rather than an unnamed line."""
+    return (label_for(arm), *_MW_TRAIN_STYLE.get(arm, _MW_DEF_TRAIN_STYLE))
 # user goal (2026-06-14): every variant of OUR SURGERY NOVELTY renders GREEN — never a non-green hue — so the
 # surgery family is one visual cluster vs the distinctly-coloured baselines. "Our surgery" = registry kind ∈
 # {surgery, surgery_head, merge} (the surgery trainers + the wiseft merges built FROM them); this INCLUDES
@@ -2301,8 +2341,8 @@ _MW_OURS_DARK_GREEN = "#2E7D32"
 _MW_SURGERY_GREEN = {a: _MW_OURS_DARK_GREEN for a, _e, _g, k in display_arms(include_merge=True)
                      if k in ("surgery", "surgery_head", "merge")}
 _MW_SURGERY_GREEN["surgery_raw_encoder"] = "#558B2F"   # ablation (still surgery) → distinct olive-green
-_MW_TRAIN_STYLE = {a: ((s[0], _MW_SURGERY_GREEN[a], s[2], s[3]) if a in _MW_SURGERY_GREEN else s)
-                   for a, s in _MW_TRAIN_STYLE.items()}
+_MW_TRAIN_STYLE = {a: ((_MW_SURGERY_GREEN[a], s[1], s[2]) if a in _MW_SURGERY_GREEN else s)
+                   for a, s in _MW_TRAIN_STYLE.items()}   # 3-tuple now: colour is s[0], not s[1]
 _MW_TRAIN_METRICS = [
     ("probe_top1",    "action top-1",  "higher"),
     ("motion_cos",    "motion-cos",    "higher"),
@@ -2335,7 +2375,7 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
     for ax, (key, title, direction) in zip(axes.flat, _MW_TRAIN_METRICS):
         panel_ys = []
         for b in blocks:
-            sty = _MW_TRAIN_STYLE.get(b["arm"], _MW_DEF_TRAIN_STYLE)   # merge/new arm → grey, no KeyError
+            sty = _mw_style(b["arm"])   # (label, colour, ls, lw) — merge/new arm → grey, no KeyError
             pts = sorted((r["step"], r[key]) for r, _ in b["rows"]
                          if r.get(key) is not None and r.get("step") is not None)
             if not pts:
@@ -2357,8 +2397,8 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
         ax.set_title(f"{title}  ({arrow}){exp_axis_tag(exp)}", fontweight="bold", fontsize=13)
         ax.set_xlabel("global step", fontsize=10)
         ax.grid(alpha=0.25)
-    handles = [plt.Line2D([], [], color=_MW_TRAIN_STYLE[a][1], ls=_MW_TRAIN_STYLE[a][2],
-                          lw=_MW_TRAIN_STYLE[a][3], marker="o", ms=4, label=_MW_TRAIN_STYLE[a][0])
+    handles = [plt.Line2D([], [], color=_mw_style(a)[1], ls=_mw_style(a)[2],
+                          lw=_mw_style(a)[3], marker="o", ms=4, label=_mw_style(a)[0])
                for a in _MW_TRAIN_STYLE if a in arms_drawn]
     if handles:
         fig.legend(handles=handles, loc="lower center", ncol=min(len(handles), 7),
@@ -2399,9 +2439,9 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
             verdicts.append((title, None, None, None, None, None))
             continue
         entries.sort(key=lambda t: t[1], reverse=(direction == "higher"))
-        labels = [_MW_TRAIN_STYLE.get(a, _MW_DEF_TRAIN_STYLE)[0] + (" (hd)" if a.endswith("_head") else "")
+        labels = [_mw_style(a)[0] + (" (hd)" if a.endswith("_head") else "")
                   for a, _, _ in entries]
-        colors = [_MW_TRAIN_STYLE.get(a, _MW_DEF_TRAIN_STYLE)[1] for a, _, _ in entries]
+        colors = [_mw_style(a)[1] for a, _, _ in entries]
         vals = [v for _, v, _ in entries]
         errs = [(e or 0.0) for _, _, e in entries]
         scale, exp = common_exponent(vals, errs)     # iter18 (2026-06-13): rescale value axis
@@ -2473,15 +2513,26 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
     for ax in axes14.flat[len(_MW_EVAL_METRICS):]:
         ax.axis("off")
     for ax, (k, title, direction) in zip(axes14.flat, _MW_EVAL_METRICS):
-        encs = [r["_enc_full"] for r in ev]
-        vals = [r["_raw"][k][0] for r in ev]
-        errs = [(r["_raw"][k][1] or 0.0) for r in ev]
-        na = {e for e, v in zip(encs, vals) if v is None}
-        vals = [0.0 if v is None else v for v in vals]
-        s_enc, s_val, s_err = _sort_by_metric(encs, vals, errs, na,
+        # AUTO-DROP scoreless encoders (user order 2026-07-22). At FULL scale only 3 of the 24
+        # registered arms are evaluated, so this used to draw 21 hatched placeholder bars whose
+        # rotated x-labels overlapped into an unreadable smear across every panel. A bar with no
+        # measurement carries no information — omit the encoder entirely rather than render "N/A".
+        # Filtering is PER PANEL, so an arm missing only one metric still appears in the others;
+        # each panel is complete for its own metric.
+        rows_k = [r for r in ev if r["_raw"][k][0] is not None]
+        if not rows_k:
+            ax.text(0.5, 0.5, "awaiting data", transform=ax.transAxes, ha="center", va="center",
+                    fontsize=13, fontweight="bold", color="#999")
+            ax.set_title(title, fontsize=12, fontweight="bold")
+            ax.set_xticks([]); ax.set_yticks([])
+            continue
+        encs = [r["_enc_full"] for r in rows_k]
+        vals = [r["_raw"][k][0] for r in rows_k]
+        errs = [(r["_raw"][k][1] or 0.0) for r in rows_k]
+        s_enc, s_val, s_err = _sort_by_metric(encs, vals, errs, set(),
                                               "desc" if direction == "higher" else "asc")
         _bar_with_ci(ax, s_enc, s_val, s_err, ylabel=title,
-                     title=title, na_set=na, direction=direction)
+                     title=title, na_set=None, direction=direction)
     # Banner heading (model identity) — mirrors the m13_grouped_winner stacked overview so the 1B and 2B
     # scorecards self-identify, especially once stacked into the combined PDF. _BB_LABEL = single-source caption.
     _hdr = _BB_LABEL.get(_MW_BACKBONE, _MW_BACKBONE)
@@ -2603,11 +2654,15 @@ def _xb_is_ours(suffix):
 
 
 def _xb_arm_short(suffix):
-    """The ONE cross-figure arm display name — the EXACT variant name minus the '_encoder' suffix. Used by
+    """The ONE cross-figure arm display name — full variant name minus the '_encoder' suffix. Used by
     the forest winner column AND the scale-replication legend (VM14-class 2026-07-13: they had two
     different strippers, so the same arm read 'surgical_3stage_DI_diheavy' in one figure and
-    '3stage_DI_diheavy' in its sibling)."""
-    return suffix.replace("_encoder", "")
+    '3stage_DI_diheavy' in its sibling).
+
+    2026-07-22: delegates to arm_registry.label_for() instead of stripping inline, so this shares ONE
+    rule with _display_label / _short_label / the train-graph legends. Kept as a named wrapper because
+    the call sites read as 'the short arm tag'; the stripping logic itself now lives in the registry."""
+    return label_for(suffix)
 
 
 def _xb_load_metrics(json_path):
@@ -2965,7 +3020,7 @@ def cross_backbone_report(mtag, out_dir):
     return out_dir
 
 
-def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
+def regen_metrics_watch(outputs_root: Path, train_root: Path, out_base: Path, mtag: str):
     """Regenerate ALL metrics_watch artifacts into out_base/<BACKBONE>/ from the eval + train
     artifacts under outputs_root — no scripts/ dependency. Data files keep EVERY arm;
     graphs hide ITER18_SKIP_ARMS (same contract as the watch script)."""
@@ -2973,7 +3028,7 @@ def regen_metrics_watch(outputs_root: Path, out_base: Path, mtag: str):
     out_dir.mkdir(parents=True, exist_ok=True)
     skip = _mw_skip_arms()
     skip_encs = {_mw_enc_name(_MW_ARM2ENC[a]) for a in skip if a in _MW_ARM2ENC}
-    blocks = _mw_train_blocks(outputs_root, mtag)
+    blocks = _mw_train_blocks(train_root, mtag)
     ev = _mw_eval_rows(outputs_root)
     _mw_dump(blocks, ev, out_dir)            # FULL — every arm, incl. skipped
     vis_blocks = [b for b in blocks if b["arm"] not in skip]
@@ -3044,8 +3099,14 @@ def main():
                         "json/csv) into <this dir>/<ITER18_BACKBONE>/ — self-contained, no "
                         "scripts/iter18_* dependency. Requires --outputs-root.")
     p.add_argument("--outputs-root", type=Path, default=None,
-                   help="Run outputs root (e.g. outputs/poc) — m09 train dirs + eval artifact "
-                        "subdirs live under it. Required by --metrics-watch-out.")
+                   help="EVAL root — the dir holding probe_action/ probe_motion_cos/ probe_future_mse/ "
+                        "predictor_temporal/ encoder_temporal/ (e.g. "
+                        "outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k). Required by --metrics-watch-out.")
+    p.add_argument("--train-root", type=Path, default=None,
+                   help="TRAIN root — the dir holding the per-arm m09 dirs (e.g. "
+                        "outputs/poc/vjepa_2_1_vitG_2B/train). Required by --metrics-watch-out. Kept "
+                        "SEPARATE from --outputs-root because eval lives under <backbone>/eval/<split>/ "
+                        "and train under <backbone>/train/ — one root cannot address both.")
     p.add_argument("--metrics-watch-only", action="store_true",
                    help="Exit after the metrics_watch regeneration (skip the m13 eval/ plots).")
     p.add_argument("--skip-arms", default="",
@@ -3082,9 +3143,15 @@ def main():
     # ── metrics_watch regeneration (self-contained; see the _mw_* section above) ──
     if args.metrics_watch_out is not None:
         if args.outputs_root is None:
-            sys.exit("ERROR: --metrics-watch-out requires --outputs-root (e.g. outputs/poc)")
+            sys.exit("ERROR: --metrics-watch-out requires --outputs-root (the EVAL root, e.g. "
+                     "outputs/poc/vjepa_2_1_vitG_2B/eval/eval_10k)")
+        if args.train_root is None:
+            sys.exit("ERROR: --metrics-watch-out requires --train-root (the dir holding the per-arm "
+                     "m09 dirs, e.g. outputs/poc/vjepa_2_1_vitG_2B/train). Eval artifacts live under "
+                     "<backbone>/eval/<split>/ and train artifacts under <backbone>/train/, so one "
+                     "root cannot address both — pass each explicitly (CLAUDE.md no-derived-paths).")
         init_style()
-        regen_metrics_watch(args.outputs_root, args.metrics_watch_out, mode.lower())
+        regen_metrics_watch(args.outputs_root, args.train_root, args.metrics_watch_out, mode.lower())
         # iter19 2026-07-09 (user order): ONE "refresh metrics_watch" now ALSO rebuilds the TOP-LEVEL
         # cross-backbone figures — forest_plot_{best,frozen}_{ci,mean} + scale_replication +
         # eval_scorecard_combined.{pdf,png} — into outputs/<mode>/probe_plot/metrics_watch/, so the live

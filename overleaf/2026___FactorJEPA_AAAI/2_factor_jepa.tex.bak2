@@ -110,7 +110,7 @@ s_\ell
 =
 \operatorname{TopK}_{\ell}(s_\ell),
 \]
-and updates only $\{\theta_\ell:\ell\in\mathcal{S}_K\}$. Normalization by parameter magnitude prevents larger blocks from being favored solely because of scale. LoRA and DoRA target the same projection families, while Auto-RGN receives a matched trainable-parameter budget. Ranks, scaling coefficients, selected projections, block budgets, trainable parameter counts, and measured GPU-hours are reported in Appendix~\ref{app:baseline_configuration}.
+and updates only $\{\theta_\ell:\ell\in\mathcal{S}_K\}$. Normalization by parameter magnitude prevents larger blocks from being favored solely because of scale. LoRA and DoRA target the same projection families, while Auto-RGN receives a matched trainable-parameter budget. Ranks, scaling coefficients, selected projections, block budgets, trainable parameter counts, and measured GPU-hours are reported in Appendix~\ref{app:adaptation_details}.
 
 
 

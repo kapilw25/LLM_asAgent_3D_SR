@@ -1,0 +1,162 @@
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at POC-2B.} Paired BCa difference (\texttt{surgical\_3stage\_DI\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgical_3stage_DI_encoder_POC_2B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+full\_ft\_encoder & \underline{-3.5616\,pp} & \textbf{+0.0436} & \textbf{+0.0360} & \underline{-0.1257} & \textbf{+0.0090} \\
+lpft\_encoder & +0.1096\,pp & \textbf{+0.0386} & \textbf{+0.0313} & -0.0005 & \textbf{+0.0041} \\
+peft\_dora\_encoder & \underline{-3.4521\,pp} & \textbf{+0.0164} & \textbf{+0.0118} & \underline{-0.0424} & \underline{-0.0003} \\
+peft\_lora\_encoder & -1.7534\,pp & \textbf{+0.0065} & \textbf{+0.0026} & \underline{-0.0509} & \underline{-0.0031} \\
+pretrain\_encoder & \underline{-3.6712\,pp} & \textbf{+0.0354} & \textbf{+0.0281} & \underline{-0.0326} & \textbf{+0.0057} \\
+surgical\_autorgn\_encoder & \underline{-3.1233\,pp} & \textbf{+0.0280} & \textbf{+0.0207} & \underline{-0.0699} & \textbf{+0.0043} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at POC-1B.} Paired BCa difference (\texttt{surgical\_3stage\_DI\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgical_3stage_DI_encoder_POC_1B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+full\_ft\_encoder & \underline{-3.2329\,pp} & \textbf{+0.0362} & \textbf{+0.0331} & \underline{-0.0423} & \textbf{+0.0032} \\
+lpft\_encoder & +1.5890\,pp & \textbf{+0.0320} & \textbf{+0.0283} & \textbf{+0.0098} & \textbf{+0.0022} \\
+peft\_dora\_encoder & +0.1096\,pp & \textbf{+0.0046} & \textbf{+0.0019} & \underline{-0.0205} & \underline{-0.0010} \\
+peft\_lora\_encoder & +0.9863\,pp & \textbf{+0.0044} & \textbf{+0.0017} & \underline{-0.0204} & \textbf{+0.0002} \\
+pretrain\_encoder & -1.6438\,pp & \textbf{+0.0159} & \textbf{+0.0126} & \underline{-0.0071} & \textbf{+0.0046} \\
+surgical\_autorgn\_encoder & \underline{-2.0274\,pp} & \textbf{+0.0199} & \textbf{+0.0178} & \underline{-0.0328} & \textbf{+0.0084} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at POC-2B.} Paired BCa difference (\texttt{surgery\_raw\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgery_raw_encoder_POC_2B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+full\_ft\_encoder & -2.0274\,pp & \textbf{+0.0445} & \textbf{+0.0381} & \underline{-0.1110} & \textbf{+0.0094} \\
+lpft\_encoder & +1.6438\,pp & \textbf{+0.0395} & \textbf{+0.0334} & \textbf{+0.0142} & \textbf{+0.0044} \\
+peft\_dora\_encoder & \underline{-1.9178\,pp} & \textbf{+0.0174} & \textbf{+0.0140} & \underline{-0.0277} & \textbf{+0.0001} \\
+peft\_lora\_encoder & -0.2192\,pp & \textbf{+0.0074} & \textbf{+0.0048} & \underline{-0.0362} & \underline{-0.0028} \\
+pretrain\_encoder & \underline{-2.1370\,pp} & \textbf{+0.0364} & \textbf{+0.0303} & \underline{-0.0179} & \textbf{+0.0061} \\
+surgical\_autorgn\_encoder & -1.5890\,pp & \textbf{+0.0289} & \textbf{+0.0229} & \underline{-0.0552} & \textbf{+0.0047} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at POC-1B.} Paired BCa difference (\texttt{surgery\_raw\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgery_raw_encoder_POC_1B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+full\_ft\_encoder & \underline{-2.9041\,pp} & \textbf{+0.0404} & \textbf{+0.0379} & \underline{-0.0299} & \textbf{+0.0044} \\
+lpft\_encoder & \textbf{+1.9178\,pp} & \textbf{+0.0362} & \textbf{+0.0331} & \textbf{+0.0221} & \textbf{+0.0035} \\
+peft\_dora\_encoder & +0.4384\,pp & \textbf{+0.0088} & \textbf{+0.0067} & \underline{-0.0081} & \textbf{+0.0003} \\
+peft\_lora\_encoder & +1.3151\,pp & \textbf{+0.0086} & \textbf{+0.0066} & \underline{-0.0080} & \textbf{+0.0014} \\
+pretrain\_encoder & -1.3151\,pp & \textbf{+0.0201} & \textbf{+0.0174} & \textbf{+0.0053} & \textbf{+0.0058} \\
+surgical\_autorgn\_encoder & -1.6986\,pp & \textbf{+0.0241} & \textbf{+0.0227} & \underline{-0.0204} & \textbf{+0.0097} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at POC-2B.} Paired BCa difference (\texttt{surgical\_3stage\_DI\_diheavy\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgical_3stage_DI_diheavy_encoder_POC_2B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+full\_ft\_encoder & \underline{-2.6849\,pp} & \textbf{+0.0452} & \textbf{+0.0375} & \underline{-0.1287} & \textbf{+0.0127} \\
+lpft\_encoder & +0.9863\,pp & \textbf{+0.0402} & \textbf{+0.0328} & \underline{-0.0035} & \textbf{+0.0078} \\
+peft\_dora\_encoder & \underline{-2.5753\,pp} & \textbf{+0.0181} & \textbf{+0.0133} & \underline{-0.0455} & \textbf{+0.0035} \\
+peft\_lora\_encoder & -0.8767\,pp & \textbf{+0.0081} & \textbf{+0.0041} & \underline{-0.0539} & \textbf{+0.0006} \\
+pretrain\_encoder & \underline{-2.7945\,pp} & \textbf{+0.0371} & \textbf{+0.0296} & \underline{-0.0356} & \textbf{+0.0094} \\
+surgical\_autorgn\_encoder & \underline{-2.2466\,pp} & \textbf{+0.0296} & \textbf{+0.0222} & \underline{-0.0730} & \textbf{+0.0081} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at POC-1B.} Paired BCa difference (\texttt{surgical\_3stage\_DI\_diheavy\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgical_3stage_DI_diheavy_encoder_POC_1B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+full\_ft\_encoder & \underline{-2.6301\,pp} & \textbf{+0.0378} & \textbf{+0.0346} & \underline{-0.0415} & \textbf{+0.0057} \\
+lpft\_encoder & \textbf{+2.1918\,pp} & \textbf{+0.0336} & \textbf{+0.0299} & \textbf{+0.0106} & \textbf{+0.0047} \\
+peft\_dora\_encoder & +0.7123\,pp & \textbf{+0.0061} & \textbf{+0.0034} & \underline{-0.0197} & \textbf{+0.0015} \\
+peft\_lora\_encoder & +1.5890\,pp & \textbf{+0.0059} & \textbf{+0.0033} & \underline{-0.0196} & \textbf{+0.0027} \\
+pretrain\_encoder & -1.0411\,pp & \textbf{+0.0174} & \textbf{+0.0142} & \underline{-0.0063} & \textbf{+0.0071} \\
+surgical\_autorgn\_encoder & -1.4247\,pp & \textbf{+0.0214} & \textbf{+0.0194} & \underline{-0.0320} & \textbf{+0.0110} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{\textbf{Per-technique head-to-head at FULL-1B.} Paired BCa difference (\texttt{surgical\_3stage\_DI\_diheavy\_encoder} minus each competitor), oriented so positive favours ours. \textbf{Bold} = a 95\% CI excluding zero in our favour; \underline{underline} = a 95\% CI excluding zero against us; plain = CIs overlap.}
+\label{tab:h2h_surgical_3stage_DI_diheavy_encoder_FULL_1B}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Competitor technique} & \textbf{Action top-1 accuracy} & \textbf{future-frame MSE} & \textbf{causal future-block L1} & \textbf{motion-cosine separation} & \textbf{mask-ratio robustness slope} \\
+\midrule
+peft\_lora\_encoder & \underline{-0.5064\,pp} & \textbf{+0.0164} & \textbf{+0.0096} & \textbf{+0.0196} & \textbf{+0.0103} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-0.4em}
+\end{table}

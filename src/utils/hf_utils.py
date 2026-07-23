@@ -131,7 +131,7 @@ data/
 from datasets import load_dataset
 
 # Streaming (recommended — no local download)
-ds = load_dataset("anonymousML123/walkindia-200k", streaming=True)
+ds = load_dataset("anonymousML123/denseworld-115k", streaming=True)
 for sample in ds["train"]:
     video = sample["mp4"]
     metadata = sample["json"]
@@ -171,7 +171,7 @@ Each clip's JSON sidecar contains:
   title={{WalkIndia-200K: Indian Street Video Clips for Video Foundation Model Evaluation}},
   author={{Anonymous}},
   year={{2026}},
-  url={{https://huggingface.co/datasets/anonymousML123/walkindia-200k}}
+  url={{https://huggingface.co/datasets/anonymousML123/denseworld-115k}}
 }}
 ```
 

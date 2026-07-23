@@ -1481,7 +1481,8 @@ conditions; they are not interpreted causally.
 \subsection{Comparative Results, Uncertainty, and Sensitivity}
 \label{app:five_axis_results}
 
-The primary five-axis comparison is reported below. Entries follow the form \(X\,[X,X]\): a fold-aggregated
+Table~\ref{tab:five_axis_comparison} reports the primary five-axis
+comparison. Entries follow the form \(X\,[X,X]\): a fold-aggregated
 mean followed by its hierarchical \(95\%\) confidence interval. The
 bracketed value after \textbf{DENSEWORLD} denotes the number of
 executed folds.
@@ -4131,7 +4132,8 @@ therefore isolates the incremental contribution of
 \(\mathcal L_{\mathrm{factor}}\) and \(\mathcal L_V\), conditional on
 the shared factorized structural package.
 
-The absolute performance and paired contrasts are reported below.
+Table~\ref{tab:executed_attribution_results} reports the absolute
+performance and paired contrasts.
 
 % ViT-G: upper half of the combined PDF
 \begin{figure*}[p]
@@ -4152,7 +4154,8 @@ states whether higher or lower values are preferred. Internal variants
 are mapped to their publication-facing definitions in
 Table~\ref{tab:executed_contract}. Attribution claims use the
 prespecified contrasts in
-the prespecified contrasts, rather than selecting the best method separately for each diagnostic.
+Table~\ref{tab:executed_attribution_results}, rather than selecting the
+best method separately for each diagnostic.
 }
 \label{fig:ablation_scorecard_vitg}
 \end{figure*}
@@ -4294,7 +4297,8 @@ solely through additional trainable capacity.
 \subsection{Consolidated Attribution}
 \label{app:attribution_summary}
 
-The prespecified paired contrasts are consolidated below. Each point reports an absolute,
+Figure~\ref{fig:executed_attribution_forest} consolidates the
+prespecified paired contrasts. Each point reports an absolute,
 direction-normalized effect; horizontal bars report paired
 source-clustered \(95\%\) confidence intervals. Positive values favor
 the named intervention.
@@ -5191,7 +5195,8 @@ Figures~\ref{fig:ablation_scorecard_vitg} and
 \ref{fig:ablation_scorecard_vitg} show all executed diagnostics for
 the ViT-G and ViT-g backbones. Exact primary values and clustered
 intervals are reported in
-the consolidated attribution results. The complete numerical scorecard additionally records, for every method and diagnostic:
+Table~\ref{tab:executed_attribution_results}. The complete numerical
+scorecard additionally records, for every method and diagnostic:
 
 \begin{equation*}
 \resizebox{0.98\columnwidth}{!}{$\displaystyle
