@@ -63,6 +63,8 @@ os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "60")
 
 from huggingface_hub import HfApi, repo_exists, snapshot_download
 from huggingface_hub.errors import BadRequestError   # iter18 06-07: LFS churn-retry
+from huggingface_hub.constants import ENDPOINT       # 2026-07-22: api-quota preflight
+from huggingface_hub.utils import get_session        # 2026-07-22: api-quota preflight
 from utils.progress import make_pbar
 from utils.hf_upload_mode import resolve_upload_mode_interactive, delete_repo_folder_scoped
 
@@ -1496,30 +1498,90 @@ def download_data(data_root: Path = None, exts: tuple = None, exclude: tuple = N
 
 # ── CLI ──────────────────────────────────────────────────────────────
 
+# ── HF api-quota preflight (2026-07-22 incident) ──────────────────────────────────────────
+# The Hub allows 1000 'api' requests per FIXED 300 s window and answers 429 with a header:
+#     RateLimit: "api";r=<remaining>;t=<seconds-until-reset>
+# upload_large_folder's batch loop catches that 429, halves the batch and retries with NO sleep:
+#     "Failed to commit 20 files at once. Will retry with less files in next batch."
+#     "No files have been modified since last commit. Skipping to prevent empty commit."
+# repeating forever, so `remaining` stays pinned at 0 and the run can never recover — an 80-file /
+# 38 MB top-up never landed. This guard probes the bucket ONCE per window and sleeps for the
+# advertised reset; it never busy-loops.
+_API_QUOTA_MIN_REMAINING = 200   # headroom required before starting an upload
+_API_QUOTA_MAX_WAITS = 6         # bounded (~30 min worst case) → FAIL LOUD, never block forever
+
+
+def _api_quota(token: str):
+    """(remaining, reset_seconds) for the 'api' bucket, parsed from the Hub's RateLimit header.
+    (None, None) when the Hub sends no header — reported loudly by the caller, never swallowed."""
+    resp = get_session().get(f"{ENDPOINT}/api/datasets/{HF_OUTPUTS_REPO}",
+                             headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    remaining = reset = None
+    for part in resp.headers.get("RateLimit", "").split(";"):
+        part = part.strip()
+        if part.startswith("r="):
+            remaining = int(part[2:])
+        elif part.startswith("t="):
+            reset = int(part[2:])
+    return remaining, reset
+
+
+def _wait_for_api_quota(token: str):
+    """Block until the 'api' bucket has headroom. Raises after _API_QUOTA_MAX_WAITS windows so a
+    teardown can never hang silently."""
+    for attempt in range(1, _API_QUOTA_MAX_WAITS + 1):
+        remaining, reset = _api_quota(token)
+        if remaining is None:
+            print("  [api-quota] Hub sent no RateLimit header — cannot preflight; proceeding "
+                  "(upload_folder issues ONE commit, so a 429 cannot busy-loop)", flush=True)
+            return
+        if remaining >= _API_QUOTA_MIN_REMAINING:
+            print(f"  [api-quota] {remaining} requests left in the current window — proceeding", flush=True)
+            return
+        wait_s = (reset or 60) + 5
+        print(f"  [api-quota] only {remaining} requests left (need {_API_QUOTA_MIN_REMAINING}); "
+              f"window resets in {reset}s — sleeping {wait_s}s "
+              f"[{attempt}/{_API_QUOTA_MAX_WAITS}]", flush=True)
+        time.sleep(wait_s)
+    raise RuntimeError(
+        f"upload-additive: 'api' quota still below {_API_QUOTA_MIN_REMAINING} after "
+        f"{_API_QUOTA_MAX_WAITS} windows. Something else is consuming the quota — check for a "
+        f"concurrent `hf upload-large-folder` / another upload process before retrying.")
+
+
 def upload_additive(subfolder: str):
     """ADDITIVE upload (NEVER deletes remote) of every local file under <subfolder> — the token-safe, in-repo
-    replacement for the raw `hf upload-large-folder --include <subfolder>/** --exclude "**/.*"`. Fixes two
+    replacement for the raw `hf upload-large-folder --include <subfolder>/** --exclude "**/.*"`. Fixes three
     things permanently:
       • AUTH — reads the token from .env via _get_token() and hands it to HfApi, so it can't hit the raw-CLI
         401 (the bare `hf` CLI does NOT read .env; it needs HF_TOKEN already exported / a prior `hf auth login`).
       • SAFETY — unlike `upload` (which MIRRORS: deletes remote files absent locally → catastrophic with a
         LIGHT local copy that has no .pt), this only uploads/updates local files; remote-only heavy checkpoints
         stay untouched.
-    folder_path="." + allow_patterns=["<subfolder>/**"] preserves the on-repo path prefix (same as the raw
-    `. --include`). Returns True on success, False if the token is missing."""
+      • RATE LIMIT (2026-07-22) — was `upload_large_folder(folder_path=".")`, which (a) walked the whole repo
+        root (70,140 files incl. the 55,367-file venv) to reach <subfolder>, purely because
+        upload_large_folder has NO path_in_repo parameter, and (b) batch-commits, so one 429 put its retry
+        loop into a no-sleep spin that pinned the quota at 0. `upload_folder` takes path_in_repo, so the walk
+        is scoped to <subfolder> and the whole upload is ONE commit — the same call `upload_outputs()` already
+        uses. Paired with the _wait_for_api_quota() preflight above.
+    Returns True on success, False if the token is missing."""
     token = _get_token()
     if not token:
         print("FATAL upload-additive: HF_TOKEN not found (env or repo-root .env)")
         return False
     sub = str(subfolder).rstrip("/")
     print(f"upload-additive (no-delete, auth from .env): {sub}/**  ->  {HF_OUTPUTS_REPO}")
-    HfApi(token=token).upload_large_folder(
-        repo_id=HF_OUTPUTS_REPO, repo_type="dataset", folder_path=".",
+    _wait_for_api_quota(token)
+    HfApi(token=token).upload_folder(
+        repo_id=HF_OUTPUTS_REPO, repo_type="dataset",
+        # scoped walk + on-repo prefix: folder_path is the subfolder itself and path_in_repo restores
+        # the prefix that the old folder_path="." + allow_patterns pair was emulating.
+        folder_path=sub, path_in_repo=sub,
+        commit_message=f"upload-additive: {sub}",
         # ignore dotfile scratch (.m12f_ckpt / .probe_*) AND the transient per-clip decode dirs. A LIVE
         # eval job creates+deletes tmp_decode_*/tmp*/<clip>.mp4 between the upload's path-scan and its
         # per-file stat() → FileNotFoundError crash (2026-07-09). These are regenerable scratch, never
         # meant for HF, so excluding them both fixes the race AND keeps the upload complete.
-        allow_patterns=[f"{sub}/**"],
         # + regenerable DEMO scaffolding — NEVER back these up (they rebuild from the render/model), and
         # uploading them 429s the HF 1000-req/5min api quota. frames_* = per-frame PNG scaffolding
         # (utils/demo_frames rebuilds) · m15_* = m15 decoder feature caches (train_tokens.npz 6 GB +
