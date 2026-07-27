@@ -4,7 +4,7 @@
     "act":          {"name": "Action top-1 accuracy",                  "dir": "higher", "group": "head/probe",       "forest": true,  "plain": "classify the motion class from frozen features"},
     "tax":          {"name": "taxonomy F1",                            "dir": "higher", "group": "head/probe",       "forest": false, "plain": "linear read-off of VLM scene attributes"},
     "mcos":         {"name": "motion-cosine separation",               "dir": "higher", "group": "head/probe",       "forest": true,  "plain": "same-motion clips sit closer than different-motion"},
-    "fut":          {"name": "future-frame MSE",                       "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "JEPA predictor's L1 on the masked next frame"},
+    "fut":          {"name": "future-frame L1",                        "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "JEPA predictor's L1 on the masked next frame"},
     "rollout":      {"name": "rollout drift slope",                    "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "how fast multi-step prediction error snowballs"},
     "causal":       {"name": "causal future-block L1",                 "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "predict the 2nd half of a clip from the 1st"},
     "tdist":        {"name": "L1-vs-Δt decay slope",              "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "accuracy decay as it predicts further ahead"},

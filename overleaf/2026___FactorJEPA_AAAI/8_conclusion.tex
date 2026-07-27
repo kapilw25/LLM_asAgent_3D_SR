@@ -3,20 +3,19 @@
 We studied world modeling in \textbf{populous, crowded, and chaotic Global
 South cities}, where heterogeneity, occlusion, and mixed-traffic negotiation
 challenge conventional JEPA predictors. We introduced \textbf{DENSEWORLD}:
-\textbf{1,000 hours} of drive-through, walk-through, and aerial video collected
+\textbf{276 hours} of drive-through, walk-through, and aerial video collected
 across \textbf{22 cities}. Building on this benchmark, we proposed
-\textbf{\emph{FactorJEPA}}, which organizes future prediction into explicitly
-separated \textbf{\emph{layout}}, \textbf{\emph{agent}}, and
-\textbf{\emph{interaction}} channels under soft visibility. Across 2B and 1B
-backbones, FactorJEPA delivers \textbf{\emph{(i) more accurate future-latent
-prediction}}, \textbf{\emph{(ii) stronger intervention-sensitive structure}},
-and \textbf{\emph{(iii) greater robustness under reduced visual evidence}},
-with method rankings reproducing across scale at $\rho=0.895$--$0.978$. The
-results also expose a consistent trade-off between structured prediction and
-maximally linear motion readout. Finally, a
-\textbf{Cosmos-initialized latent-to-RGB decoder} renders predicted futures,
-while an oracle control separates forecast-induced error from decoder
-limitations. Together, these contributions move JEPA world models from
-\textbf{\emph{monolithic, silent predictors}} toward
-\textbf{\emph{structured and visually inspectable models}} of complex
-real-world dynamics.
+\textbf{\emph{FactorJEPA}}, which makes \textbf{\emph{world structure a
+first-class predictive primitive}} through \textbf{\emph{predictor surgery}}: a
+three-stage curriculum that adapts the predictor over automatically separated
+\textbf{\emph{layout}}, \textbf{\emph{agent}}, and \textbf{\emph{interaction}}
+views. Across 2B and 1B backbones, FactorJEPA delivers \textbf{\emph{(i) more
+accurate future-latent prediction}}, \textbf{\emph{(ii) stronger causal
+future-block structure}}, and \textbf{\emph{(iii) greater robustness under
+reduced visual evidence}}, with method rankings reproducing across scale at
+$\rho=0.895$ to $0.978$. The results also expose a trade-off between structured
+prediction and maximally linear motion readout at the 10k screening scale,
+which reverses at full scale (86,831 factor-annotated videos). Together, these
+contributions move JEPA world
+models from \textbf{\emph{monolithic predictors}} toward
+\textbf{\emph{structured, factor-aware models}} of complex real-world dynamics.

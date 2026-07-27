@@ -1,4 +1,8 @@
 \documentclass[letterpaper]{article} % DO NOT CHANGE THIS
+% Force the [table] option onto xcolor no matter which package pulls it in first. This fixes the
+% "Option clash for package xcolor" and enables colortbl (\rowcolor/\cellcolor/\arrayrulecolor)
+% that the appendix tables use — without it those macros are undefined and cascade ~150 errors.
+\PassOptionsToPackage{table}{xcolor}
 \usepackage[submission]{aaai2027}  % DO NOT CHANGE THIS
 % The serif, sans-serif, and monospaced fonts are loaded automatically by
 % aaai2027.sty (newtxtext, helvet, courier). DO NOT add \usepackage{times},
@@ -324,7 +328,7 @@
 
 \textbf{\emph{We introduce FactorJEPA}}, which makes \textbf{\emph{world structure a first-class predictive primitive}}. Rather than adapting a JEPA predictor on undifferentiated video, it performs \textbf{\emph{predictor surgery}}: a three-stage curriculum over automatically separated \textbf{\emph{layout}}, \textbf{\emph{agent}}, and \textbf{\emph{interaction}} views, updating at most $8/48$ (2B) and $6/40$ (1B) encoder blocks with the predictor. Trained on \textbf{86,831} factor-annotated videos and evaluated on \textbf{23,106} held-out samples (1B V-JEPA~2.1), it cuts \textbf{\emph{future-latent L1}} by \textbf{10.6\%}, \textbf{\emph{causal future-block L1}} by \textbf{8.9\%} and \textbf{\emph{mask-ratio slope}} by \textbf{27.4\%} against the frozen backbone, and raises \textbf{\emph{motion-cosine separation}} to \textbf{15.3$\times$} the frozen value, each gain exceeding \textbf{70$\times$} the paired 95\% confidence interval. On both prediction diagnostics it separates in its favour against \textbf{all six} adaptation techniques we evaluate, namely full fine-tuning, linear probing then fine-tuning (LP-FT), low-rank adaptation (LoRA), weight-decomposed low-rank adaptation (DoRA), automatic relative-gradient-norm block selection (Auto-RGN), and vanilla continual self-supervised learning (continual-SSL), at \textbf{both} backbone scales, giving \textbf{24 of 24} paired wins, and beats the strongest full-scale baseline, LoRA, by \textbf{+2.8\%}, \textbf{+1.6\%}, \textbf{+25.2\%} and \textbf{+17.8\%}.
 
-\textbf{20-arm} (2B) and \textbf{14-arm} (1B) studies show rankings \textbf{replicate across backbone scale} at $\rho=0.895$ to $0.978$, establishing the 1B model as a \textbf{half-cost proxy} for 2B selection. On a 10k screening subset, factorization concedes maximally linear motion readout to full fine-tuning ($-44.9\%$ at 2B, $-33.4\%$ at 1B), a trade-off that disappears at full scale, where FactorJEPA leads motion by $+25.2\%$ and gains more than LoRA on \textbf{all four} diagnostics. We release the dataset, checkpoints and the complete 15-diagnostic evaluation harness.
+\textbf{20-arm} (2B) and \textbf{14-arm} (1B) studies show rankings \textbf{replicate across backbone scale} at $\rho=0.895$ to $0.978$, establishing the 1B model as a \textbf{half-cost proxy} for 2B selection. On a 10k screening subset, factorization concedes maximally linear motion readout to full fine-tuning ($-44.9\%$ at 2B, $-33.4\%$ at 1B), a trade-off that disappears at full scale, where FactorJEPA leads motion by $+25.2\%$ and gains more than LoRA on \textbf{all four} diagnostics. We release the dataset construction pipeline, the adapted checkpoints, and the complete 15-diagnostic evaluation harness.
 
 
 
@@ -342,8 +346,9 @@
 \input{8_conclusion}
 
 
-\clearpage
-\newpage
+% AAAI disallows manual page breaks (see template note above); commented 2026-07-26.
+%\clearpage
+%\newpage
 
 % Code + evaluation artifacts. AAAI puts these HERE (between, not within, the abstract and the
 % main body) rather than in the abstract itself. Verified 2026-07-22: the target is an anonymized
@@ -359,8 +364,9 @@
 
 
 
-\clearpage
-\newpage
+% AAAI disallows manual page breaks (see template note above); commented 2026-07-26.
+%\clearpage
+%\newpage
 
 \input{11_appendix}
 

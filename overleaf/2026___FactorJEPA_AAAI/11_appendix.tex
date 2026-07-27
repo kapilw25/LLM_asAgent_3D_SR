@@ -11,10 +11,7 @@ central methodological claims: which components produce the observed
 gains, whether the evaluation is statistically reliable, and whether
 the learned layout, agent, and interaction channels are functionally
 distinct. Appendix~G evaluates the temporal and downstream consequences
-of the prediction--motion trade-off. Finally, Appendix~H documents the
-latent-to-RGB decoder, separates forecast error from reconstruction
-limitations, and presents quantitative and qualitative future
-predictions.
+of the prediction--motion trade-off.
 
 The appendix distinguishes primary confirmatory evidence from
 diagnostic and robustness analyses. Unless otherwise stated,
@@ -22,8 +19,8 @@ comparisons use identical evaluation clips, paired resampling units,
 and the same independently defined audit signals. Factor separation is
 interpreted operationally at the level of predictive channels rather
 than as coordinate-level identifiability or complete statistical
-independence. Intervention-based evaluation measures consistency with
-controlled edits, while cross-scale replication refers specifically to
+independence. Causal future-block evaluation measures predictive accuracy
+on the future temporal half, while cross-scale replication refers specifically to
 stability between the 1B and 2B V-JEPA~2.1 backbones.
 
 \paragraph{Appendix index.}
@@ -46,11 +43,11 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
     construction; quality filtering; and the retained
     city--session--source--shot--clip provenance hierarchy.
 
-    \item \textbf{A.3 Partitioning and DINOv2 target provenance}
+    \item \textbf{A.3 Partitioning and factor target provenance}
     
-    Source-grouped \(80/10/10\) train--validation--test allocation;
+    Source-grouped train--validation--test allocation (86,831 / 909 / 23,106 clips);
     partition independence; permitted information flow; and
-    DINOv2-derived training, validation, and teacher-relative test
+    automatically derived training, validation, and teacher-relative test
     targets. No manually annotated semantic labels are used.
 
     \item \textbf{A.4 Corpus composition and coverage}
@@ -75,7 +72,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
     \item \textbf{B.1 Shared measurement protocol and automated taxonomy}
     
     Common preprocessing, temporal sampling, valid-image regions,
-    DINOv2-based extraction, dynamic-agent taxonomy, and source-level
+    Grounding DINO + SAM 3 extraction, dynamic-agent taxonomy, and source-level
     aggregation across DENSEWORLD, BDD100K, and nuScenes.
 
     \item \textbf{B.2 Definition of the five regime axes}
@@ -110,7 +107,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
 
     \item \textbf{C.1 Frozen Teacher and Factor-Target Construction}
     
-    DINOv2 checkpoint, preprocessing, feature extraction, region and
+    Grounding DINO + SAM 3 checkpoint, preprocessing, feature extraction, region and
     mask construction, confidence filtering, temporal association, and
     the exact definitions of the layout, agent, visibility, and
     interaction targets \(T_L,T_A,T_V,T_I\). This subsection also
@@ -162,14 +159,13 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
     factorial}
 
     Compares matched monolithic and factorized predictors with and
-    without DINOv2-derived structured supervision, isolating
+    without automatically derived structured supervision, isolating
     architecture, supervision, and their interaction.
 
     \item \textbf{D.3 Factor pathways and objective ablations}
 
-    Tests the layout--agent target loss, visibility pathway,
-    interaction pathway, sparsity regularization, and separation
-    objective through controlled one-factor removals.
+    Tests factor-view ablations across the layout, agent, and
+    interaction views through controlled one-factor removals.
 
     \item \textbf{D.4 Falsification controls and sensitivity}
 
@@ -197,7 +193,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
 
     \item \textbf{E.2 Primary predictive diagnostics}
 
-    Specifies Future-frame MSE, intervention-consistency L1,
+    Specifies Future-frame L1, causal future-block L1,
     Mask-ratio slope, and Motion cosine, including token aggregation,
     normalization, probe training, and horizon or masking support.
 
@@ -215,7 +211,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
 
     \item \textbf{E.5 Metric sensitivity and complete numerical results}
 
-    Reports horizon and masking curves, intervention-normalization
+    Reports horizon and masking curves, normalization
     sensitivity, cross-scale ranking robustness, leave-one-method and
     leave-one-family analyses, and the complete ViT-G and ViT-g
     numerical scorecards.
@@ -224,6 +220,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
 
 
 % ---------------------------------------------------------------------
+\iffalse  % Appendix H (Latent-to-RGB) outline removed 2026-07-26 — that section is commented out below
 \item \textbf{Appendix H: Latent-to-RGB Decoding and Qualitative Results}
 \begin{itemize}
     \item \textbf{H.1 Cosmos checkpoint and decoder components}
@@ -281,6 +278,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
     Examples across cities, scene types, viewpoints, weather,
     illumination, density, and prediction horizons.
 \end{itemize}
+\fi  % end Appendix H outline removal
 
 \end{itemize}
 
@@ -324,21 +322,21 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
 \section{DENSEWORLD Construction, Splits, and Responsible Use}
 \label{app:dataset}
 
-DENSEWORLD comprises approximately \textbf{1,000 hours} of
+DENSEWORLD comprises approximately \textbf{276 hours} of
 drive-through, walk-through, and aerial video acquired across
 \textbf{22 Indian cities}. It targets predictive modeling under high
 agent density, heterogeneous traffic, persistent occlusion, soft spatial
 boundaries, and frequent local interaction. DENSEWORLD contains
 \emph{no manually annotated semantic labels}; all layout, agent,
 visibility, and interaction targets are produced automatically using a
-fixed DINOv2-based pipeline.
+fixed Grounding DINO + SAM 3 pipeline.
 
 % =====================================================================
 \subsection{Acquisition Protocol and Capture Modes}
 \label{app:dataset_acquisition}
 
-DENSEWORLD was acquired through two professional video-collection
-organizations following a \textbf{shared acquisition specification}.
+DENSEWORLD was assembled from \textbf{714 long-form YouTube videos} (480p)
+selected under a \textbf{shared coverage specification}.
 The specification defined coverage targets over geographic sites,
 scene types, times of day, weather, visibility, road structure, and
 infrastructure conditions. It controlled \emph{where and how} videos
@@ -424,11 +422,11 @@ session, and city identifiers preserve higher-level geographic and
 temporal dependence.
 
 % =====================================================================
-\subsection{Partitioning and DINOv2 Target Provenance}
+\subsection{Partitioning and Factor Target Provenance}
 \label{app:dataset_splits}
 
 Source videos are assigned as indivisible groups using an
-\textbf{\(80/10/10\) train/validation/test allocation}, stratified by
+\textbf{source-grouped train/validation/test allocation} (86,831 / 909 / 23,106 clips; 4,841 clips without factor targets excluded), stratified by
 city and capture mode. Split assignment precedes clip extraction, so
 every shot and clip derived from one source video inherits the same
 partition. Let \(\mathcal V_s\) denote the source-video set assigned to
@@ -445,7 +443,7 @@ partition \(s\). The executed grouping satisfies
 
 DENSEWORLD does not use manually annotated factor labels. For each
 partition, automated structural targets are generated by the fixed
-DINOv2 pipeline:
+Grounding DINO + SAM 3 pipeline:
 
 \begin{equation*}
 \begin{aligned}
@@ -454,7 +452,7 @@ DINOv2 pipeline:
 \left\{
 \Psi_{\mathrm{struct}}
 \!\left(
-F_{\mathrm{DINOv2}}(x)
+F_{\mathrm{factor}}(x)
 \right)
 :
 x\in\mathcal D_s
@@ -484,7 +482,7 @@ updates or model selection.
 the DENSEWORLD partitions.}
 Allocation is performed over source-video groups. Durations are
 approximate because grouped recordings vary in length and usable-shot
-yield. DINOv2-based test measurements are reported as teacher-relative;
+yield. Grounding DINO + SAM 3 test measurements are reported as teacher-relative;
 headline prediction, motion, and RGB metrics use fixed evaluators that
 do not provide FactorJEPA's factor-supervision targets.
 }
@@ -533,7 +531,7 @@ No
 &
 No
 &
-JEPA prediction targets and DINOv2-derived layout, agent, and
+JEPA prediction targets and automatically derived layout, agent, and
 interaction targets.
 &
 Source-video disjoint from validation and test; all descendants of a
@@ -552,7 +550,7 @@ Yes
 &
 Yes
 &
-Prespecified validation metrics and DINOv2-derived targets used only
+Prespecified validation metrics and automatically derived targets used only
 for selection and calibration.
 &
 Source-video disjoint from training and test; never used for gradient
@@ -571,7 +569,7 @@ No
 &
 No
 &
-Frozen headline evaluators and DINOv2-derived targets used only for
+Frozen headline evaluators and automatically derived targets used only for
 explicitly teacher-relative diagnostics.
 &
 Source-video disjoint from training and validation; all configurations
@@ -644,7 +642,7 @@ vehicles, and independently moving animals. Figure~\ref{fig:agent_taxonomy}
 illustrates category semantics; it is neither a frequency-proportional
 sample nor manually annotated evidence. Quantitative prevalence and
 heterogeneity statistics derived from the automated pipeline are
-reported as \emph{DINOv2-estimated} quantities.
+reported as \emph{automatically estimated} quantities.
 
 \begin{figure*}[t]
 \centering
@@ -709,7 +707,7 @@ surveillance.
 The complete corpus is maintained within the \textbf{governed research
 environment} used for the reported experiments. Supporting artifacts
 include the FactorJEPA implementation, preprocessing configuration,
-DINOv2 target-construction pipeline, metric definitions, automated
+factor target-construction pipeline, metric definitions, automated
 taxonomy, aggregate corpus statistics, and representative
 privacy-filtered material, subject to applicable rights and privacy
 review.
@@ -783,7 +781,7 @@ regime along five axes: \textbf{agent count density},
 
 The comparison is \textbf{outcome-blind}, \textbf{scene-matched}, and
 \textbf{dependence-aware}. All datasets are processed using the same
-frozen DINOv2-based measurement pipeline; none of the five axes enters
+frozen Grounding DINO + SAM 3 measurement pipeline; none of the five axes enters
 the matching procedure; and uncertainty is clustered above the frame
 and clip levels. The resulting quantities are therefore interpreted as
 \emph{teacher-relative dataset statistics}, not manually annotated
@@ -802,7 +800,7 @@ All three datasets are processed through the common sequence
 \;\longrightarrow\;
 \text{sampled frames}
 \;\longrightarrow\;
-\text{DINOv2 features}
+\text{Grounding DINO + SAM 3 detections}
 \;\longrightarrow\;
 \text{structural pseudo-annotations}
 \;\longrightarrow\;
@@ -811,8 +809,8 @@ $}
 \end{equation*}
 
 For frame \(x_t^{(d)}\) from dataset
-\(d\in\{\mathrm{DW},\mathrm{BDD},\mathrm{NS}\}\), the frozen DINOv2
-encoder~\cite{oquab2024dinov2} and structural postprocessor produce
+\(d\in\{\mathrm{DW},\mathrm{BDD},\mathrm{NS}\}\), the frozen Grounding DINO + SAM 3
+pipeline~\cite{carion2025sam3} and structural postprocessor produce
 
 \begin{equation*}
 \begin{aligned}
@@ -820,7 +818,7 @@ encoder~\cite{oquab2024dinov2} and structural postprocessor produce
 &=
 \Psi_{\mathrm{struct}}
 \left(
-F_{\mathrm{DINOv2}}(x_t^{(d)})
+F_{\mathrm{factor}}(x_t^{(d)})
 \right)
 \\
 &=
@@ -842,7 +840,7 @@ Here, \(\mathcal I_t^{(d)}\) indexes candidate instances;
 and visible instance mask; and \(\hat\ell_{i,t}\) is the temporally
 associated track identifier.
 
-DINOv2 itself is not an instance detector. Accordingly,
+SAM 3 supplies text-prompted instance masks directly, and
 \(\Psi_{\mathrm{struct}}\) denotes the executed frozen sequence of
 proposal extraction, class assignment, mask construction, duplicate
 suppression, and temporal association. Its component architectures,
@@ -1575,18 +1573,17 @@ superiority over existing driving benchmarks.
 This appendix specifies the model-side supervision and executed training
 protocol for FactorJEPA. DENSEWORLD contains no manually annotated
 factor labels: layout, agent, visibility, and interaction targets are
-constructed automatically using a fixed DINOv2-based teacher pipeline.
+constructed automatically using a fixed Grounding DINO + SAM 3 teacher pipeline.
 These targets provide structured supervision during training and
 teacher-relative diagnostics during evaluation; they are distinct from
 the frozen evaluators used for headline future-prediction, motion, and
 RGB metrics.
 
 We first document target construction and reliability weighting, then
-specify the FactorJEPA architecture, optimization procedure, controlled
+specify the factor-target construction, controlled
 baselines, and resource accounting. Table~\ref{tab:factor_targets}
-defines the complete target contract, while
-Algorithm~\ref{alg:factorjepa_training} records the executed training
-path.
+defines the complete target contract; the executed training procedure
+is described in the main text.
 
 
 % =====================================================================
@@ -1594,8 +1591,8 @@ path.
 \label{app:factor_targets}
 
 \paragraph{Region extraction.}
-For each privacy-filtered clip \(\widetilde x_n\), the frozen DINOv2
-encoder~\cite{oquab2024dinov2} produces spatiotemporal visual features.
+For each privacy-filtered clip \(\widetilde x_n\), the frozen Grounding DINO + SAM 3
+pipeline~\cite{carion2025sam3} produces spatiotemporal visual features.
 The executed preprocessing operator converts these features into
 region-level pseudo-annotations:
 
@@ -1605,7 +1602,7 @@ region-level pseudo-annotations:
 &=
 \mathcal D_{\mathrm{pre}}
 \left(
-F_{\mathrm{DINOv2}}(\widetilde x_n)
+F_{\mathrm{factor}}(\widetilde x_n)
 \right)
 \\
 &=
@@ -1623,7 +1620,7 @@ p_{n,t}^{(i)}
 Here, \(m_{n,t}^{(i)}\), \(b_{n,t}^{(i)}\),
 \(u_{n,t}^{(i)}\), and \(p_{n,t}^{(i)}\) denote the visible mask,
 bounding box, visual descriptor, and confidence of region \(i\) at
-time \(t\). The DINOv2 checkpoint, extracted feature layers, inference
+time \(t\). The Grounding DINO + SAM 3 checkpoint, extracted feature layers, inference
 resolution, spatial stride, normalization, region-construction rule,
 and confidence filtering are fixed before model training and shared by
 all splits.
@@ -1682,7 +1679,7 @@ corresponding factor loss.
 \caption{
 \textbf{Frozen teacher-to-training contract for FactorJEPA.}
 DENSEWORLD contains no manually annotated factor labels. All targets
-are generated automatically by the fixed DINOv2-based pipeline before
+are generated automatically by the fixed Grounding DINO + SAM 3 pipeline before
 optimization. The table identifies, for each factor, the teacher
 evidence, deterministic target operator, output support, reliability
 contract, and trainable consumer. Here, \(p_L,p_A,p_I\) are the
@@ -1746,7 +1743,7 @@ tracklets, and \(\mathcal E_n\) is the candidate interaction graph.
 \newline
 \(T_{n,L}\)
 &
-DINOv2 spatial-feature grid, valid-image support, dynamic-region union,
+SAM 3 mask grid, valid-image support, dynamic-region union,
 and temporal feature persistence.
 &
 \(\Psi_L\) suppresses pixels assigned to retained dynamic tracklets,
@@ -1765,10 +1762,9 @@ T_{n,L}
 confidence, and temporal stability. The target is retained only when
 \(r_{n,L}=\mathbf 1[\omega_{n,L}\ge\tau_L]\).
 &
-\(P_L(C_L)\)
+layout view
 \newline
-via
-\(\mathcal L_{\mathrm{factor}}\)
+\(D_L\)
 \\
 
 \addlinespace[1.5pt]
@@ -1800,10 +1796,9 @@ T_{n,A}
 mask support, track continuity, and valid temporal coverage. Missing
 or rejected tracks are not converted into negative agents.
 &
-\(P_A(C_A)\)
+agent view
 \newline
-via
-\(\mathcal L_{\mathrm{factor}}\)
+\(D_A\)
 \\
 
 \addlinespace[1.5pt]
@@ -1818,7 +1813,7 @@ via
 Visible-mask support, valid-image-boundary truncation, region
 confidence, track continuity, and short interior track gaps.
 &
-\(\Psi_V\) produces a soft visibility value for every retained agent.
+SAM 3 tracking produces a soft visibility value for every retained agent.
 Temporary absence or uncertain support attenuates the target rather
 than inducing a hard visible/not-visible label.
 &
@@ -1835,10 +1830,9 @@ Each agent receives
 temporal support, and track consistency. Invalid agents contribute zero
 weight, not a negative visibility target.
 &
-\(g_V\)
+SAM 3
 \newline
-via weighted
-\(\mathcal L_V\)
+visibility
 \\
 
 \addlinespace[1.5pt]
@@ -1873,11 +1867,8 @@ Pair reliability
 joint temporal support, and pair validity. These weights induce the
 clip-level reliability \(\omega_{n,I}\).
 &
-\(P_I(C_I)\)
-via
-\(\mathcal L_{\mathrm{factor}}\);
-\(g_I,g_W\) use
-\(\mathcal E_n\)
+interaction view
+\(D_I\)
 \\
 
 \midrule
@@ -1905,10 +1896,10 @@ zero weight and is never converted into a negative semantic target.
 >{\raggedright\arraybackslash}p{0.955\textwidth}
 }{
 \textbf{Gradient and provenance contract.}
-The DINOv2 encoder, structural operators
-\(\Psi_L,\Psi_A,\Psi_V,\Psi_I\), tracklets, candidate graph, targets,
+The Grounding DINO + SAM 3 pipeline, structural operators
+\(\Psi_L,\Psi_A,\Psi_I\), tracklets, candidate graph, targets,
 and reliability weights remain frozen. Gradients propagate only through
-the FactorJEPA branches, factor heads, synthesis dictionaries, and the
+the predictor and the
 selected online-encoder blocks. Test-derived targets never influence
 optimization, threshold selection, or checkpoint selection.
 }
@@ -1920,6 +1911,7 @@ optimization, threshold selection, or checkpoint selection.
 \arrayrulecolor{black}
 
 \vspace{3pt}
+\iffalse  % fabricated interaction-loss clarification (P_I/C_I/L_factor/L_sparse), commented 2026-07-26
 \begin{minipage}{0.97\textwidth}
 \footnotesize
 \textit{Interaction-loss clarification.}
@@ -1930,7 +1922,9 @@ The interaction target \(T_{n,I}\) supervises \(P_I(C_I)\) through
 weights \(w_n^{(ij)}\); it does not directly consume
 \(T_{n,I}\).
 \end{minipage}
+\fi  % end fabricated interaction-loss clarification
 \end{table*}
+\iffalse  % factor-head / L_factor / L_V supervision — fabricated (no factor heads or synthesis losses in code); commented 2026-07-26
 \paragraph{Reliability-normalized supervision.}
 For \(k\in\{L,A,I\}\), the factor heads are trained using
 
@@ -1950,6 +1944,7 @@ q_{n,k}\,
 The denominator makes the scale of each factor loss insensitive to its
 retained target coverage. Visibility is optimized separately through
 \(\mathcal L_V\), using per-agent targets and reliability weights.
+\fi  % end fabricated factor-head supervision
 
 \paragraph{Target coverage and sensitivity.}
 For every factor and partition, we report the fraction of clips with a
@@ -1967,7 +1962,7 @@ model and evaluation protocol fixed.
 \caption{
 \textbf{Conceptual end-to-end construction of FactorJEPA targets.}
 The upper band shows the frozen teacher-side pipeline:
-a privacy-filtered clip is processed by DINOv2 to obtain region
+a privacy-filtered clip is processed by Grounding DINO + SAM 3 to obtain region
 evidence---masks, boxes, descriptors, and confidence---which is linked
 into tracklets by temporal association. The deterministic structural
 map then produces layout, agent, visibility, and interaction targets
@@ -1976,13 +1971,14 @@ map then produces layout, agent, visibility, and interaction targets
 under moderate density and high occlusion. Track color denotes identity,
 overlay opacity represents visibility confidence, and interaction-edge
 width represents predicted strength. The scenes are synthetic and
-illustrate the target semantics; they are not empirical DINOv2 outputs.
+illustrate the target semantics; they are not empirical segmentation outputs.
 }
 \label{fig:factor_target_examples}
 \end{figure*}
 
 
 % =====================================================================
+\iffalse  % Fabricated architecture + Algorithm 1 commented out 2026-07-26: C.A^T synthesis / soft visibility gates / g_L,g_A,g_I synthesis dictionaries are absent from the code; the real predictor-surgery method is in the main body.
 \subsection{FactorJEPA Architecture and Prediction Protocol}
 \label{app:factor_architecture}
 
@@ -2254,7 +2250,7 @@ updated only through the executed exponential-moving-average rule.
 \textbf{Inputs.}
 Source-grouped training clips
 \(\mathcal D_{\mathrm{train}}\);
-cached DINOv2 target store
+cached factor target store
 \(\mathcal Z_{\mathrm{DINO}}\);
 mask sampler \(\mathcal M\);
 online encoder \(f_\theta\);
@@ -2308,7 +2304,7 @@ Copy the online-encoder parameters to the momentum encoder:
 \]
 
 \item
-Freeze the DINOv2 target-construction pipeline, the momentum encoder,
+Freeze the factor target-construction pipeline, the momentum encoder,
 and all online-encoder blocks below the selected top-\(K\) set.
 
 \item
@@ -2732,7 +2728,7 @@ Backpropagate
 \nabla_{\Theta_{\mathrm{train}}}\mathcal L.
 \]
 
-No gradient enters the cached targets, DINOv2, or the momentum encoder.
+No gradient enters the cached targets, the Grounding DINO + SAM 3 pipeline, or the momentum encoder.
 
 \item
 Clip the trainable gradient norm at \(\gamma\).
@@ -2807,6 +2803,7 @@ gradient clipping, and momentum schedule are fixed before final test
 evaluation. Checkpoints are selected using the prespecified validation
 criterion; test metrics never influence the number of steps,
 hyperparameters, thresholds, or checkpoint selection.
+\fi  % end fabricated architecture + Algorithm 1 (commented out 2026-07-26)
 
 
 % =====================================================================
@@ -2992,7 +2989,7 @@ parameters because the momentum encoder receives no gradient.
 \textbf{Encoder architecture}
 &
 Embedding dimension \(d=1664\); \(48\) transformer blocks;
-\(16\) attention heads; MLP ratio \(4\).
+\(26\) attention heads; MLP ratio \(4.92\).
 &
 Embedding dimension \(d=1408\); \(40\) transformer blocks;
 \(16\) attention heads; MLP ratio \(4\).
@@ -3058,7 +3055,7 @@ Normalization is applied after privacy filtering and spatial
 resampling.
 \\
 
-\textbf{DINOv2 checkpoint}
+\textbf{Grounding DINO + SAM 3 checkpoint}
 &
 \multicolumn{2}{
 >{\RaggedRight\arraybackslash}p{0.50\textwidth}
@@ -3089,11 +3086,11 @@ Teacher preprocessing is deterministic and partition independent.
 \multicolumn{2}{
 >{\RaggedRight\arraybackslash}p{0.50\textwidth}
 }{
-DINOv2 descriptors and factor targets stored in FP16; reliabilities
+Factor descriptors and targets stored in FP16; reliabilities
 stored in FP32.
 }
 &
-Targets are computed once before training. No gradient enters DINOv2,
+Targets are computed once before training. No gradient enters the Grounding DINO + SAM 3 pipeline,
 the structural operators, cached targets, or reliability weights.
 \\
 
@@ -3261,10 +3258,10 @@ parameter budget of the corresponding adaptation controls.
 
 \textbf{Frozen components}
 &
-Bottom \(46\) online blocks; complete momentum encoder; DINOv2
+Bottom \(46\) online blocks; complete momentum encoder; Grounding DINO + SAM 3
 teacher; structural operators; cached targets.
 &
-Bottom \(39\) online blocks; complete momentum encoder; DINOv2
+Bottom \(39\) online blocks; complete momentum encoder; Grounding DINO + SAM 3
 teacher; structural operators; cached targets.
 &
 The momentum encoder is updated only by EMA.
@@ -3403,18 +3400,18 @@ trainable methods.
 \\
 
 \rowcolor{CfgGray}
-\textbf{Factor coefficient}
+\textbf{Factor views}
 &
-\(\lambda_{\mathrm{sup}}=1.00\).
+enabled.
 &
 Same.
 &
 Set to zero for FactorJEPA-RAW and all generic adaptation baselines.
 \\
 
-\textbf{Visibility coefficient}
+\textbf{Visibility target}
 &
-\(\lambda_V=0.25\).
+enabled.
 &
 Same.
 &
@@ -3423,9 +3420,9 @@ support.
 \\
 
 \rowcolor{CfgGray}
-\textbf{Separation coefficient}
+\textbf{Drift anchor}
 &
-\(\lambda_{\mathrm{sep}}=0.05\).
+enabled.
 &
 Same.
 &
@@ -3433,9 +3430,9 @@ Penalizes cross-factor predictability after minibatch centering and
 factor-wise normalization.
 \\
 
-\textbf{Sparsity coefficient}
+\textbf{Interaction candidates}
 &
-\(\lambda_{\mathrm{sparse}}=0.01\).
+top-scored.
 &
 Same.
 &
@@ -3568,10 +3565,8 @@ approximately \(115\)M trainable parameters.
 Factorized predictor and top one encoder block;
 approximately \(73\)M trainable parameters.
 &
-Uses only \(\mathcal L_{\mathrm{JEPA}}\),
-\(\mathcal L_{\mathrm{sep}}\), and
-\(\mathcal L_{\mathrm{sparse}}\);
-no DINOv2-derived factor targets are consumed.
+Uses only the JEPA objective on raw clips;
+no automatically derived factor targets are consumed.
 \\
 
 \rowcolor{CfgGreen}
@@ -3583,12 +3578,8 @@ approximately \(115\)M trainable parameters.
 Factorized predictor and top one encoder block;
 approximately \(73\)M trainable parameters.
 &
-Uses the complete objective:
-\(\mathcal L_{\mathrm{JEPA}}+
-\lambda_{\mathrm{sup}}\mathcal L_{\mathrm{factor}}+
-\lambda_V\mathcal L_V+
-\lambda_{\mathrm{sep}}\mathcal L_{\mathrm{sep}}+
-\lambda_{\mathrm{sparse}}\mathcal L_{\mathrm{sparse}}\).
+Uses the complete predictor-surgery objective (main text):
+JEPA prediction with factor-view supervision.
 \\
 
 \textbf{Budget tolerance}
@@ -3712,7 +3703,7 @@ peak allocation at most \(62\) GiB/GPU.
 At most \(64\) GPU-hours;
 peak allocation at most \(50\) GiB/GPU.
 &
-No offline DINOv2 target-cache cost is attributed to this control.
+No offline factor target-cache cost is attributed to this control.
 \\
 
 \rowcolor{CfgGreen}
@@ -3873,14 +3864,13 @@ The main results evaluate FactorJEPA as a complete predictive system.
 This appendix uses the executed comparison family to distinguish three
 sources of performance: \textbf{matched monolithic adaptation}, the
 \textbf{factorized structural package}, and
-\textbf{DINOv2-derived structured supervision}. We then evaluate the
+\textbf{automatically derived structured supervision}. We then evaluate the
 executed interaction-objective and encoder-adaptation variants.
 
 The available experiments do not form a complete
 architecture--supervision factorial. We therefore restrict the
 attribution language to contrasts directly supported by the executed
-runs. In particular, when FactorJEPA-RAW includes separation and
-interaction-sparsity regularization, its comparison with a monolithic
+runs. In particular, the comparison of FactorJEPA-RAW with a monolithic
 predictor measures the contribution of the
 \emph{factorized structural package}, not predictor architecture in
 isolation.
@@ -3908,10 +3898,9 @@ only as a non-matched capacity ceiling.
 \centering
 \caption{
 \textbf{Executed attribution contract.}
-FactorJEPA-RAW and FactorJEPA share the factorized predictor,
-separation objective, interaction-sparsity objective, trainable encoder
+FactorJEPA-RAW and FactorJEPA share the factorized predictor, trainable encoder
 scope, and parameter budget. They differ in access to the
-DINOv2-derived factor and visibility targets. Auto-RGN is the primary
+automatically derived factor and visibility targets. Auto-RGN is the primary
 parameter-matched monolithic reference; full fine-tuning is a
 non-matched capacity ceiling.
 }
@@ -4017,9 +4006,7 @@ Factorized
 &
 None
 &
-\(\mathcal L_{\mathrm{JEPA}}
-+\lambda_{\mathrm{sep}}\mathcal L_{\mathrm{sep}}
-+\lambda_{\mathrm{sparse}}\mathcal L_{\mathrm{sparse}}\)
+\(\mathcal L_{\mathrm{JEPA}}\) on raw clips
 &
 Factorized predictor and selected top-\(K\) blocks
 &
@@ -4033,11 +4020,7 @@ Factorized
 &
 \(T_L,T_A,T_V,T_I\)
 &
-\(\mathcal L_{\mathrm{JEPA}}
-+\lambda_{\mathrm{sup}}\mathcal L_{\mathrm{factor}}
-+\lambda_V\mathcal L_V
-+\lambda_{\mathrm{sep}}\mathcal L_{\mathrm{sep}}
-+\lambda_{\mathrm{sparse}}\mathcal L_{\mathrm{sparse}}\)
+\(\mathcal L_{\mathrm{JEPA}}\) with factor-view supervision
 &
 Factorized predictor and selected top-\(K\) blocks
 &
@@ -4061,7 +4044,7 @@ therefore not used for component attribution.
 All structured targets are produced automatically by the frozen
 teacher pipeline. No manually annotated factor labels enter any
 training condition. The headline evaluators remain frozen and do not
-reuse DINOv2-derived targets as evaluation labels.
+reuse automatically derived targets as evaluation labels.
 
 
 % =====================================================================
@@ -4125,11 +4108,10 @@ pathways, and their intrinsic regularizers. It is therefore a
 \textbf{package effect}, not a pure architecture effect.
 
 The second contrast is more specific. FactorJEPA and FactorJEPA-RAW
-share the predictor, synthesis dictionaries, separation and sparsity
-terms, encoder scope, and optimization protocol. Their difference
-therefore isolates the incremental contribution of
-\(\mathcal L_{\mathrm{factor}}\) and \(\mathcal L_V\), conditional on
-the shared factorized structural package.
+share the predictor, encoder scope, and optimization protocol. Their
+difference therefore isolates the incremental contribution of
+factor-view supervision, conditional on
+the shared factorized package.
 
 The absolute performance and paired contrasts are reported below.
 
@@ -4169,11 +4151,11 @@ This pairing removes variation shared by the compared methods and
 preserves the geographic and temporal dependence of the evaluation
 set.
 
-Causal L1 is treated as an operational measure of consistency under
-the frozen evaluator-side intervention protocol, not as evidence of
-causal identification. Its intervention generator is fixed before
-model comparison, consumes neither DINOv2 factor targets nor manual
-factor annotations, and is applied identically to every method.
+Causal future-block L1 is a strictly causal prediction measure: the
+predictor forecasts the future temporal half of each clip from its past
+half, and the error is taken against the frozen target encoder. It
+consumes neither factor targets nor manual annotations, and is applied
+identically to every method.
 
 
 % =====================================================================
@@ -4223,7 +4205,7 @@ Relative to FactorJEPA-3S, define
 \end{equation*}
 
 We evaluate these effects jointly across future prediction,
-intervention consistency, masking robustness, and motion accessibility.
+causal future-block prediction, masking robustness, and motion accessibility.
 A favorable result on one diagnostic is not treated as a universal
 improvement when accompanied by degradation on another. This is
 particularly important for the observed prediction--motion trade-off.
@@ -4306,11 +4288,11 @@ The evidence is interpreted under the following claim boundaries:
 \begin{itemize}
     \item A positive \(\Delta_{\mathrm{pkg}}\) supports the
     \textbf{factorized structural package}. It does not isolate
-    predictor architecture from separation and sparsity regularization.
+    predictor architecture from factor-view supervision.
 
     \item A positive
     \(\Delta_{\mathrm{sup}\mid\mathrm{pkg}}\) supports the incremental
-    contribution of the DINOv2-derived factor and visibility targets,
+    contribution of the automatically derived factor and visibility targets,
     conditional on the shared factorized architecture.
 
     \item A positive \(\Delta_{\mathrm{total}}\) establishes improvement
@@ -4326,7 +4308,7 @@ The evidence is interpreted under the following claim boundaries:
     measured parameters, GPU-hours, and memory.
 
     \item Teacher-relative factor diagnostics may explain a mechanism,
-    but they do not replace the frozen future-latent, intervention,
+    but they do not replace the frozen future-latent, causal future-block,
     masking, motion, or RGB evaluators.
 \end{itemize}
 
@@ -4394,7 +4376,7 @@ supervision-matched monolithic control was not executed.
 
 This appendix specifies the evaluation contract underlying every
 reported result. We distinguish \textbf{training targets} from
-\textbf{evaluation signals}: DINOv2-derived layout, agent, visibility,
+\textbf{evaluation signals}: automatically derived layout, agent, visibility,
 and interaction targets supervise FactorJEPA but are not reused as
 labels for the headline metrics. Unless stated otherwise, every
 evaluator is frozen before test evaluation and is applied identically
@@ -4403,8 +4385,8 @@ to all methods.
 Metrics are first computed at their lowest valid evaluation unit and
 then aggregated through the city--source-video hierarchy. Clips from
 the same recording are not treated as independent observations.
-Primary conclusions are restricted to Future-frame MSE, Intervention
-L1, Mask-ratio slope, and Motion cosine. All remaining diagnostics are
+Primary conclusions are restricted to Future-frame L1, Causal
+future-block L1, Mask-ratio slope, and Motion cosine. All remaining diagnostics are
 treated as secondary or exploratory.
 
 
@@ -4423,10 +4405,7 @@ clip level.
 \textbf{Evaluation metric registry.}
 The table records the operational definition, preferred direction,
 evaluation unit, frozen signal or evaluator, and inferential status of
-every reported diagnostic. ``Intervention L1'' corresponds to the
-quantity previously labeled Causal L1; the revised name reflects that
-the metric measures intervention-response consistency rather than
-causal identification.
+every reported diagnostic.
 }
 \label{tab:metric_registry}
 \scriptsize
@@ -4461,7 +4440,7 @@ causal identification.
 \\
 \midrule
 
-Future-frame MSE
+Future-frame L1
 &
 Mean squared error between predicted and target future-token
 embeddings.
@@ -4475,23 +4454,23 @@ Momentum target encoder
 Primary
 \\
 
-Intervention L1
+Causal future-block L1
 &
-Normalized L1 discrepancy between predicted and target latent changes
-under the same automatically generated intervention.
+Normalized L1 between the predictor's forecast of the future temporal
+half and the frozen target encoder on that half.
 &
 \(\downarrow\)
 &
-Clip--intervention
+Clip
 &
-Intervention generator and target encoder
+Momentum target encoder
 &
 Primary
 \\
 
 Mask-ratio slope
 &
-OLS slope of Future-frame MSE as the visible context is progressively
+OLS slope of Future-frame L1 as the visible context is progressively
 reduced.
 &
 \(\downarrow\)
@@ -4505,7 +4484,7 @@ Primary
 
 Motion cosine
 &
-Cosine similarity between linearly decoded and target motion
+Intra-minus-inter-class cosine separation of pooled motion
 descriptors.
 &
 \(\uparrow\)
@@ -4689,7 +4668,7 @@ Secondary
 \subsection{Primary Predictive Diagnostics}
 \label{app:primary_metric_definitions}
 
-\paragraph{Future-frame MSE.}
+\paragraph{Future-frame L1.}
 For clip \(n\), horizon \(h\in\mathcal H\), and target token
 \(p\in\{1,\ldots,m_h\}\), let
 \(\widehat Y_{n,h,p}\in\mathbb R^d\) denote the predicted future token
@@ -4707,15 +4686,36 @@ e_n^{\mathrm{future}}
 \widehat Y_{n,h,p}
 -
 Y^\star_{n,h,p}
-\right\|_2^2 .
+\right\|_1 .
 \end{equation*}
 
 All valid target tokens receive equal weight. Target-token
 normalization, target horizons, and masking are fixed across methods.
-The executed scorecard reports this MSE quantity; it is not relabeled
-as L1. Horizon-specific errors are reported as sensitivity analyses and
-do not replace the pooled primary score.
+The executed scorecard reports this per-token mean-absolute ($L_1$)
+quantity, matching the implementation. Horizon-specific errors are
+reported as sensitivity analyses and do not replace the pooled primary
+score.
 
+\paragraph{Causal future-block L1.}
+Each clip's tokens are split into a past temporal half (slots
+\([0,T_p/2)\)) and a future temporal half (slots \([T_p/2,T_p)\)).
+Conditioning only on the past half, the predictor forecasts the latent
+representations of the future half, compared to the frozen target
+encoder on that same half:
+
+\begin{equation*}
+\widehat Y_n^{\ge}=\widehat Y\!\left(x_n^{\ge}\mid x_n^{<}\right),
+\qquad
+Y_n^{\star\ge}=\operatorname{sg}\!\left[\bar f_{\bar\theta}(x_n)^{\ge}\right],
+\qquad
+e_n^{\mathrm{causal}}=\frac{\|\widehat Y_n^{\ge}-Y_n^{\star\ge}\|_1}{\epsilon+\|Y_n^{\star\ge}\|_1}.
+\end{equation*}
+
+The split is fixed and strictly causal (the past half predicts the future
+half); it uses neither factor targets nor manual annotations, and lower
+values indicate more accurate causal future-block prediction.
+
+\iffalse  % OLD fabricated intervention-L1 definition, commented out 2026-07-26 (no interventions exist in code)
 \paragraph{Intervention L1.}
 Let \(\mathcal G_{\mathrm{int}}\) be the frozen automatic
 evaluator-side intervention generator and let
@@ -4729,7 +4729,7 @@ evaluator-side intervention generator and let
 denote its retained intervention set for clip \(n\). The generator,
 intervention types, spatial and temporal support rules, and exclusion
 criteria are frozen before model comparison. It consumes neither
-DINOv2 factor targets nor manually annotated factor labels.
+factor targets nor manually annotated factor labels.
 
 For intervention \(a\in\mathcal A_n\), apply the same transformation
 \(I_a\) to the evaluated clip and define
@@ -4790,6 +4790,7 @@ score. The primary specification uses a fixed
 filters are evaluated only as sensitivity checks. This metric measures
 consistency with intervention-induced latent changes; it does not
 establish causal identification.
+\fi  % end OLD fabricated intervention-L1 definition
 
 \paragraph{Mask-ratio slope.}
 Let \(\mathcal R=\{r_1,\ldots,r_J\}\) be the prespecified context-mask
@@ -5117,10 +5118,10 @@ adjusted decision also passes the prespecified level.
 Robustness is evaluated along four prespecified axes.
 
 \paragraph{Metric-construction sensitivity.}
-For future prediction, we report horizon-specific MSE and, where
-executed, tokenwise L1 as a secondary alternative. For intervention
-consistency, we vary \(\epsilon_{\mathrm{int}}\) and the minimum target
-effect while reporting the retained intervention fraction. For
+For future prediction, we report horizon-specific and tokenwise
+$L_1$ variants as secondary sensitivity analyses. For causal
+future-block prediction, we vary the normalization constant
+\(\epsilon\) and the past/future split point. For
 missing-evidence robustness, we compare absolute slope, relative slope,
 and masking AUC while preserving the same mask realizations.
 
@@ -5186,9 +5187,27 @@ parameter-efficient adaptation, FactorJEPA variants, and encoder-scope
 variants. Cross-scale agreement is described as
 \textbf{scale robustness}, not independent replication.
 
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/scale_replication.pdf}
+    \caption{
+    \textbf{\emph{Complete cross-scale ranking robustness (2B$\to$1B), all
+    fifteen diagnostics.}}
+    Each panel plots per-method scores at the ViT-G 2B scale ($x$) against the
+    ViT-g 1B scale ($y$); the dashed line is the identity $y=x$. Panels are
+    sorted by Spearman rank correlation $\rho$ (descending): green titles mark
+    strong replication ($\rho\ge0.5$), grey inconclusive ($0.2\le\rho<0.5$), and
+    red failure ($\rho<0.2$). Twelve of the fifteen diagnostics retain consistent
+    rankings; Temporal-order, Teacher-free gap, and Rollout drift (red) do not
+    transfer reliably. The strongest-replicating panel, Causal future-block L1
+    ($\rho=0.978$), is featured in the main text
+    (Figure~\ref{fig:scale_replication}).
+    }
+    \label{fig:scale_replication_full}
+\end{figure*}
+
 \paragraph{Complete scorecards.}
-Figures~\ref{fig:ablation_scorecard_vitg} and
-\ref{fig:ablation_scorecard_vitg} show all executed diagnostics for
+Figure~\ref{fig:ablation_scorecard_vitg} shows all executed diagnostics for
 the ViT-G and ViT-g backbones. Exact primary values and clustered
 intervals are reported in
 the consolidated attribution results. The complete numerical scorecard additionally records, for every method and diagnostic:
@@ -5260,6 +5279,13 @@ superior on the basis of isolated secondary wins.
 
 
 % =====================================================================
+% ===================================================================================
+% Latent-to-RGB decoder section COMMENTED OUT (2026-07-26): this is the fabricated
+% Cosmos-initialized decoder that was dropped from the main body. No external \ref points
+% to its labels. Wrapped in \iffalse ... \fi (closed at end of file). Re-enable only if a
+% real decoder is implemented and reported.
+% ===================================================================================
+\iffalse
 \section{Latent-to-RGB Decoding and Qualitative Analysis}
 \label{app:rgb_decoder}
 
@@ -6069,3 +6095,4 @@ representations directly. RGB metrics and qualitative results provide
 complementary evidence about whether those representations preserve
 visually recoverable layout, agent occupancy, interaction structure,
 and motion under one fixed rendering interface.
+\fi  % end Latent-to-RGB decoder section (commented out 2026-07-26)

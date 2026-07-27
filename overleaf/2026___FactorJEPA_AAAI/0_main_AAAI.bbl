@@ -1,4 +1,4 @@
-\begin{thebibliography}{14}
+\begin{thebibliography}{15}
 \providecommand{\natexlab}[1]{#1}
 
 \bibitem[{Asaithambi et~al.(2012)Asaithambi, Kanagaraj, Srinivasan, and
@@ -17,6 +17,20 @@ Caesar, H.; Bankiti, V.; Lang, A.~H.; Vora, S.; Liong, V.~E.; Xu, Q.; Krishnan,
 \newblock nuScenes: A Multimodal Dataset for Autonomous Driving.
 \newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
   and Pattern Recognition (CVPR)}, 11621--11631.
+
+\bibitem[{Carion et~al.(2025)Carion, Gustafson, Hu, Debnath, Hu, Suris, Ryali,
+  Alwala, Khedr, Huang, Lei, Ma, Guo, Kalla, Marks, Greer, Wang, Sun,
+  R{\"a}dle, Afouras, Mavroudi, Xu, Wu, Zhou, Momeni, Hazra, Ding, Vaze,
+  Porcher, Li, Li, Kamath, Cheng, Doll{\'a}r, Ravi, Saenko, Zhang, and
+  Feichtenhofer}]{carion2025sam3}
+Carion, N.; Gustafson, L.; Hu, Y.-T.; Debnath, S.; Hu, R.; Suris, D.; Ryali,
+  C.; Alwala, K.~V.; Khedr, H.; Huang, A.; Lei, J.; Ma, T.; Guo, B.; Kalla, A.;
+  Marks, M.; Greer, J.; Wang, M.; Sun, P.; R{\"a}dle, R.; Afouras, T.;
+  Mavroudi, E.; Xu, K.; Wu, T.-H.; Zhou, Y.; Momeni, L.; Hazra, R.; Ding, S.;
+  Vaze, S.; Porcher, F.; Li, F.; Li, S.; Kamath, A.; Cheng, H.~K.; Doll{\'a}r,
+  P.; Ravi, N.; Saenko, K.; Zhang, P.; and Feichtenhofer, C. 2025.
+\newblock {SAM} 3: Segment Anything with Concepts.
+\newblock \emph{arXiv preprint arXiv:2511.16719}.
 
 \bibitem[{Dokania et~al.(2023)Dokania, Hafez, Subramanian, Chandraker, and
   Jawahar}]{dokania2023idd3d}
@@ -53,10 +67,18 @@ Lee, Y.; Chen, A.~S.; Tajwar, F.; Kumar, A.; Yao, H.; Liang, P.; and Finn, C.
 \newblock Surgical Fine-Tuning Improves Adaptation to Distribution Shifts.
 \newblock In \emph{International Conference on Learning Representations}.
 
-\bibitem[{Liu et~al.(2024)Liu, Wang, Yin, Molchanov, Wang, Cheng, and
-  Chen}]{liu2024dora}
+\bibitem[{Liu et~al.(2024{\natexlab{a}})Liu, Zeng, Ren, Li, Zhang, Yang, Jiang,
+  Li, Yang, Su, Zhu, and Zhang}]{liu2024groundingdino}
+Liu, S.; Zeng, Z.; Ren, T.; Li, F.; Zhang, H.; Yang, J.; Jiang, Q.; Li, C.;
+  Yang, J.; Su, H.; Zhu, J.; and Zhang, L. 2024{\natexlab{a}}.
+\newblock Grounding {DINO}: Marrying {DINO} with Grounded Pre-Training for
+  Open-Set Object Detection.
+\newblock In \emph{European Conference on Computer Vision (ECCV)}.
+
+\bibitem[{Liu et~al.(2024{\natexlab{b}})Liu, Wang, Yin, Molchanov, Wang, Cheng,
+  and Chen}]{liu2024dora}
 Liu, S.-Y.; Wang, C.-Y.; Yin, H.; Molchanov, P.; Wang, Y.-C.~F.; Cheng, K.-T.;
-  and Chen, M.-H. 2024.
+  and Chen, M.-H. 2024{\natexlab{b}}.
 \newblock {DoRA}: Weight-Decomposed Low-Rank Adaptation.
 \newblock In \emph{Proceedings of the 41st International Conference on Machine
   Learning}, volume 235 of \emph{Proceedings of Machine Learning Research},
@@ -69,28 +91,16 @@ Mahendra, A.; King, R.; Du, J.; Dasgupta, A.; Beard, V.~A.; Kallergis, A.; and
 \newblock Seven Transformations for More Equitable and Sustainable Cities.
 \newblock Technical report, World Resources Institute, Washington, DC.
 
-\bibitem[{{NVIDIA}(2025)}]{nvidia2025cosmos}
-{NVIDIA}. 2025.
-\newblock Cosmos World Foundation Model Platform for Physical AI.
-\newblock \emph{arXiv preprint arXiv:2501.03575}.
-
-\bibitem[{Oquab et~al.(2024)Oquab, Darcet, Moutakanni, Vo, Szafraniec,
-  Khalidov, Fernandez, Haziza, Massa, El-Nouby, Assran, Ballas, Galuba, Howes,
-  Huang, Li, Misra, Rabbat, Sharma, Synnaeve, Xu, J{\'e}gou, Mairal, Labatut,
-  Joulin, and Bojanowski}]{oquab2024dinov2}
-Oquab, M.; Darcet, T.; Moutakanni, T.; Vo, H.~V.; Szafraniec, M.; Khalidov, V.;
-  Fernandez, P.; Haziza, D.; Massa, F.; El-Nouby, A.; Assran, M.; Ballas, N.;
-  Galuba, W.; Howes, R.; Huang, P.-Y.; Li, S.-W.; Misra, I.; Rabbat, M.;
-  Sharma, V.; Synnaeve, G.; Xu, H.; J{\'e}gou, H.; Mairal, J.; Labatut, P.;
-  Joulin, A.; and Bojanowski, P. 2024.
-\newblock {DINOv2}: Learning Robust Visual Features without Supervision.
-\newblock \emph{Transactions on Machine Learning Research}.
-
 \bibitem[{Papathanasopoulou and Antoniou(2018)}]{papathanasopoulou2018weaklane}
 Papathanasopoulou, V.; and Antoniou, C. 2018.
 \newblock Flexible Car-Following Models for Mixed Traffic and Weak
   Lane-Discipline Conditions.
 \newblock \emph{European Transport Research Review}, 10(2): 62.
+
+\bibitem[{Ravi et~al.(2024)Ravi, Gabeur, Hu et~al.}]{ravi2024sam2}
+Ravi, N.; Gabeur, V.; Hu, Y.-T.; et~al. 2024.
+\newblock SAM 2: Segment Anything in Images and Videos.
+\newblock \emph{arXiv preprint arXiv:2408.00714}.
 
 \bibitem[{Varma et~al.(2019)Varma, Subramanian, Namboodiri, Chandraker, and
   Jawahar}]{varma2019idd}

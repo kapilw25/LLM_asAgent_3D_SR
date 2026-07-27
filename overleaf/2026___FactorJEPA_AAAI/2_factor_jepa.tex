@@ -110,7 +110,7 @@ s_\ell
 =
 \operatorname{TopK}_{\ell}(s_\ell),
 \]
-and updates only $\{\theta_\ell:\ell\in\mathcal{S}_K\}$. Normalization by parameter magnitude prevents larger blocks from being favored solely because of scale. LoRA and DoRA target the same projection families, while Auto-RGN receives a matched trainable-parameter budget. Ranks, scaling coefficients, selected projections, block budgets, trainable parameter counts, and measured GPU-hours are reported in Appendix~\ref{app:baseline_configuration}.
+and updates only $\{\theta_\ell:\ell\in\mathcal{S}_K\}$. Normalization by parameter magnitude prevents larger blocks from being favored solely because of scale. LoRA and DoRA target the same projection families, while Auto-RGN receives a matched trainable-parameter budget. Ranks, scaling coefficients, selected projections, block budgets, trainable parameter counts, and measured GPU-hours are reported in Appendix~C.
 
 
 
@@ -256,7 +256,7 @@ predictor can be trained on directly:
 
 Views are derived only from the training split; no detector or segmenter output is used as an
 evaluation label. Checkpoints, prompt vocabulary, association rules, thresholds and per-view
-coverage are reported in Appendix~\ref{app:factor_targets}.
+coverage are reported in Appendix~C.
 
 \subsection{\textbf{\emph{Three-Stage Curriculum}}}
 
@@ -306,115 +306,120 @@ may travel from the pretrained solution. Each term has a distinct role:
 FactorJEPA is initialised from a pretrained V-JEPA model; the online encoder, momentum target
 encoder, target construction and masking policy are all retained. Because only the top-$K$
 blocks and the predictor are updated, and because $\mathcal L_{\mathrm{drift}}$ penalises
-displacement from $\theta^{(0)}$, adaptation is deliberately \emph{local} --- the intervention
-is on how the predictor is trained, not on what it is made of. We refer to this as
+displacement from $\theta^{(0)}$, adaptation is deliberately \emph{local}: it changes how the predictor
+is trained, not what it is made of. We refer to this as
 \textbf{\emph{predictor surgery}}, and evaluate two ablations of it: \textbf{FactorJEPA-RAW},
 which applies the identical schedule and budget to raw clips with no factor views, and a
 \textbf{no-$D_I$} variant, which omits the interaction stage. Exact stage boundaries, mixture
 weights, unfreeze fractions, optimiser settings and measured GPU-hours are reported in
-Appendix~\ref{app:baseline_configuration}.
+Appendix~C.
 
 \begin{figure*}[ht!]
     \centering
-    \includegraphics[width=0.95\textwidth]
-    {figures/forest_plot_frozen_ci.pdf}
+    \includegraphics[width=\textwidth]
+    {figures/forest_plot_best_ci_paper.pdf}
     \caption{
-    \textbf{\emph{FactorJEPA separates decisively from the frozen backbone.}}
-    Points report the signed advantage over frozen in units of the 95\%
-    confidence interval of the paired difference; the dashed line marks
-    statistical separation at $1\times$. FactorJEPA separates on all four
-    headline diagnostics at both scales, reaching $47.0\times$ for
-    Future-frame L1 at 2B and $27.2\times$ at 1B. These values measure
+    \textbf{\emph{FactorJEPA separates from the best fine-tuning competitor.}}
+    Points report FactorJEPA's signed advantage over the \emph{strongest}
+    competitor for each metric, in units of the 95\% confidence interval of the
+    paired difference; the dashed line marks separation at $1\times$. On the
+    10k screening set at
+    both 2B and 1B, FactorJEPA separates over every competitor on future-frame
+    and causal future-block prediction, and on mask-ratio robustness at the 1B
+    scale. Values measure
     confidence-interval separation, not multiplicative performance gains.
     }
     \label{fig:frozen_forest}
     \vspace{-0.6em}
 \end{figure*}
 
-\begin{figure*}[ht!]
+\begin{figure*}[t!]
     \centering
     \includegraphics[width=\textwidth]
-    {figures/eval_scorecard_combined_one_row.pdf}
+    {figures/eval_scorecard_winners.pdf}
     \caption{
-    \textbf{\emph{Complete evaluation scorecard at 2B and 1B scales.}}
-    We compare frozen, conventionally adapted, parameter-efficient, and
-    factorized V-JEPA~2.1 variants across 15 semantic, predictive, motion, and
-    temporal-coherence diagnostics. Bars report test performance with 95\% BCa
-    confidence intervals where available. The four headline diagnostics are
-    Future-frame L1, Causal L1, Motion cosine, and Mask-ratio slope.
+    \textbf{\emph{FactorJEPA wins the two scale-robust predictive metrics against
+    every baseline.}}
+    Per-arm held-out score $\pm$ 95\% BCa CI (dot, not bar-from-zero, so the small
+    but significant margins stay visible; FactorJEPA green, competitors grey,
+    best-at-top) on the two metrics that separate over the best competitor at
+    \emph{both} scales---Future-frame L1 (top), Causal future-block L1 (bottom), at
+    2B (left) and 1B (right). FactorJEPA holds the winning end of every panel while
+    the frozen encoder trails; the annotated margin is the best-ours advantage in CI
+    widths. The complete fifteen-diagnostic scorecard is in
+    Figure~\ref{fig:ablation_scorecard_vitg}.
     }
     \label{fig:eval_scorecard}
     \vspace{-0.6em}
 \end{figure*}
 
 
-\begin{figure*}[ht!]
+\begin{figure}[t!]
     \centering
-    \includegraphics[width=\textwidth]
-    {figures/scale_replication.pdf}
+    \includegraphics[width=0.96\columnwidth]
+    {figures/scale_replication_single.pdf}
     \caption{
-    \textbf{\emph{Method rankings replicate from 2B to 1B.}}
-    Each panel compares complete per-method scores at the two scales; titles
-    report Spearman rank correlation. The four headline diagnostics replicate
-    most strongly: Causal L1 ($\rho=0.978$), Motion cosine
-    ($\rho=0.952$), Future-frame L1 ($\rho=0.938$), and Mask-ratio slope
-    ($\rho=0.895$). Three secondary diagnostics do not transfer and are shown
-    in red.
+    \textbf{\emph{Method rankings survive the 2B$\to$1B backbone change.}}
+    Per-method scores at the ViT-G 2B and ViT-g 1B scales for
+    \textbf{\emph{Causal future-block L1}}---the strongest-replicating of the
+    fifteen diagnostics (Spearman $\rho=0.978$). Each point is one adaptation
+    method (FactorJEPA in green, competitors in grey); the near-perfect rank
+    agreement establishes the 1B backbone as a faithful low-cost proxy for
+    screening adaptation choices before full-scale 2B training. Points sit above
+    the identity line because the smaller backbone has uniformly higher causal
+    error; the \emph{ranking}, not the absolute level, is what replicates. The
+    complete fifteen-panel replication grid is in
+    Figure~\ref{fig:scale_replication_full}.
     }
     \label{fig:scale_replication}
     \vspace{-0.6em}
-\end{figure*}
+\end{figure}
 
 \section{\textbf{Experiments \& Evaluation}}
 \label{sec:experiments}
 
 We evaluate whether FactorJEPA improves the predictive structure of V-JEPA
 rather than only its downstream semantics. Our analysis centers on four
-diagnostics: \textbf{Future-frame L1}, \textbf{Causal L1},
+diagnostics: \textbf{Future-frame L1}, \textbf{Causal future-block L1},
 \textbf{Mask-ratio slope}, and \textbf{Motion cosine}. Together, they measure
-future-latent accuracy, intervention sensitivity, robustness to missing visual
+future-latent accuracy, causal future-block prediction, robustness to missing visual
 evidence, and linearly accessible motion information.
 
 
-\subsection{\textbf{\emph{Evaluator Independence and Audit Split}}}
+\subsection{\textbf{\emph{Evaluator Independence and Held-out Split}}}
 \label{sec:evaluator_independence}
 
 To prevent agreement with the pseudo-label generator from being mistaken for
 improved world modeling, we separate training-target construction from
-evaluation. DINOv2-derived targets are constructed only on the training split:
+evaluation. factor targets from the Grounding DINO + SAM 3 pipeline are constructed only on the training split:
 
 \begin{equation*}
 \mathcal T_{\mathrm{train}}
 =
 \Psi_{\mathrm{struct}}
 \left(
-\mathcal F_{\mathrm{DINOv2}}(x)
+\mathcal F_{\mathrm{factor}}(x)
 \right),
 \qquad
 x\in\mathcal D_{\mathrm{train}}.
 \end{equation*}
 
-Primary factor-specific evaluation is performed on a city-disjoint audit split
-$\mathcal D_{\mathrm{audit}}$, whose agent masks, visibility states,
-interaction pairs, and intervention regions are annotated independently:
+Primary evaluation is performed on a held-out split
+$\mathcal D_{\mathrm{eval}}$ that is disjoint from the training split:
 
 \begin{equation*}
 \mathcal D_{\mathrm{train}}
 \cap
-\mathcal D_{\mathrm{audit}}
+\mathcal D_{\mathrm{eval}}
 =
-\varnothing,
-\qquad
-\mathcal T_{\mathrm{audit}}
-=
-\Psi_{\mathrm{human}}(x).
+\varnothing.
 \end{equation*}
 
-The audit annotations are not used for training, model selection, threshold
+This held-out split is not used for training, model selection, threshold
 selection, or hyperparameter tuning. Future-frame L1 and Mask-ratio slope use
 only the frozen V-JEPA target encoder; Motion cosine uses an independently
 frozen motion estimator; and RGB Agent F1 uses a frozen detector that supplies
-neither FactorJEPA supervision nor DINOv2 preprocessing. Thus, no headline
+neither FactorJEPA supervision nor factor-target preprocessing. Thus, no headline
 metric reuses FactorJEPA's pseudo-label generator as its evaluator.
 
 \subsection{\textbf{\emph{Protocol and Comparisons}}}
@@ -461,8 +466,7 @@ No headline evaluator supplies FactorJEPA supervision.
 \toprule
 \textbf{Signal} & \textbf{Source} & \textbf{Factor-target source?} \\
 \midrule
-Factor supervision       & DINOv2 pipeline          & Yes \\
-Audit factors/interventions & Human annotations     & No \\
+Factor supervision       & Grounding DINO + SAM 3    & Yes \\
 Future latent            & Frozen target encoder    & No \\
 Motion descriptor        & Frozen motion estimator  & No \\
 RGB Agent F1             & Independent detector     & No \\
@@ -481,42 +485,41 @@ RGB Agent F1             & Independent detector     & No \\
 Normalized L1 distance between predicted and target future embeddings; lower
 values indicate \textbf{\emph{more accurate future-latent prediction}}.
 
-\paragraph{\textbf{\emph{Causal L1 ($\downarrow$).}}}
-For each independently annotated intervention region $a$, we apply the same
-controlled edit $\mathcal I_a$ to the evaluated clip and compare the resulting
-change in predicted and target future latents:
+\paragraph{\textbf{\emph{Causal future-block L1 ($\downarrow$).}}}
+We split each clip's tokens into a past temporal half and a future temporal
+half. Conditioning only on the past half, the predictor forecasts the latent
+representations of the future half, which we compare to the frozen target
+encoder's latents on that same half:
 
 \begin{equation*}
 \resizebox{0.98\columnwidth}{!}{$\displaystyle
-\widehat\Delta_a
+\widehat Y_{\mathrm{fut}}
 =
-\widehat Y\!\left(\mathcal I_a(x)\right)-\widehat Y(x),
+\widehat Y\!\left(x_{\ge T/2}\mid x_{<T/2}\right),
 \qquad
-\Delta_a^\star
+Y^\star_{\mathrm{fut}}
 =
 \operatorname{sg}\!\left[
-\bar f_{\bar\theta}\!\left(\mathcal I_a(x)\right)
--
-\bar f_{\bar\theta}(x)
+\bar f_{\bar\theta}(x)_{\ge T/2}
 \right].
 $}
 \end{equation*}
 
 \begin{equation*}
-\operatorname{CausalL1}
+\operatorname{CausalFutureL1}
 =
-\frac{1}{|\mathcal A|}
-\sum_{a\in\mathcal A}
+\frac{1}{|\mathcal D|}
+\sum_{x\in\mathcal D}
 \frac{
-\|\widehat\Delta_a-\Delta_a^\star\|_1
+\|\widehat Y_{\mathrm{fut}}-Y^\star_{\mathrm{fut}}\|_1
 }{
-\epsilon+\|\Delta_a^\star\|_1
+\epsilon+\|Y^\star_{\mathrm{fut}}\|_1
 }.
 \end{equation*}
 
-Intervention regions and types are defined by the independent audit annotations,
-not by DINOv2 predictions. This metric measures consistency with controlled
-intervention-induced changes; it does not establish causal identification.
+The temporal split is fixed and strictly causal (the past half predicts the
+future half) and uses no factor annotations; lower values indicate more
+accurate causal future-block prediction.
 
 \paragraph{\textbf{\emph{Mask-ratio slope ($\downarrow$).}}}
 The increase in prediction error as visual evidence is progressively masked; a
@@ -524,8 +527,9 @@ smaller slope indicates \textbf{\emph{greater robustness under partial
 observability}}.
 
 \paragraph{\textbf{\emph{Motion cosine ($\uparrow$).}}}
-Cosine alignment between linearly decoded and target motion descriptors; higher
-values indicate \textbf{\emph{more linearly accessible motion information}}.
+Separation between same-motion and different-motion clips in pooled feature
+space, measured as intra-class minus inter-class cosine similarity; higher
+values indicate \textbf{\emph{motion is more directly encoded}}.
 
 
 
@@ -538,17 +542,20 @@ statistical separation. FactorJEPA clears this threshold on
 
 At 2B/1B, separation reaches
 \textbf{\emph{$47.0\times$/$27.2\times$}} for Future-frame L1,
-\textbf{\emph{$28.7\times$/$19.0\times$}} for Causal L1,
+\textbf{\emph{$28.7\times$/$19.0\times$}} for Causal future-block L1,
 \textbf{\emph{$26.8\times$/$25.6\times$}} for Motion cosine, and
 \textbf{\emph{$22.3\times$/$15.7\times$}} for Mask-ratio slope. These are
 confidence-relative effect strengths, not multiplicative performance gains,
 and remain decisive after scaling from 2B to 1B.
 
-The full scorecard (Figure~\ref{fig:eval_scorecard}) shows a
-\textbf{\emph{structured, not universal, gain}}: FactorJEPA leads on prediction,
-intervention, masking, and motion-sensitive diagnostics, while frozen or
-conventionally tuned models retain advantages on several frame-timing and
-temporal-coherence measures.
+Figure~\ref{fig:eval_scorecard} isolates the two metrics on which FactorJEPA
+separates from \emph{every} baseline at both scales---Future-frame L1 and Causal
+future-block L1. The broader picture is a
+\textbf{\emph{structured, not universal, gain}}: across the full fifteen-diagnostic
+scorecard (Figure~\ref{fig:ablation_scorecard_vitg}) FactorJEPA leads on predictive
+and masking diagnostics, while frozen or conventionally tuned models retain
+advantages on motion linearity and several frame-timing and temporal-coherence
+measures.
 
 
 
@@ -557,7 +564,7 @@ temporal-coherence measures.
 Against the strongest non-FactorJEPA adaptation, FactorJEPA improves
 \textbf{\emph{Future-frame L1}} by 1.7\%/1.4\% at 2B/1B
 ($6.3\times$/$4.8\times$ CI widths),
-\textbf{\emph{Causal L1}} by 0.9\%/1.1\%
+\textbf{\emph{Causal future-block L1}} by 0.9\%/1.1\%
 ($2.3\times$/$2.7\times$), and
 \textbf{\emph{Mask-ratio slope}} by 1.1\%/2.9\%, although the 2B masking
 result remains marginal.
@@ -565,8 +572,8 @@ result remains marginal.
 The trade-off is \textbf{\emph{Motion cosine}}. FactorJEPA improves motion
 accessibility over the frozen backbone, but trails the strongest full-fine-tuning
 arm by 44.9\%/33.4\% at 2B/1B. Thus, factorization favors
-\textbf{\emph{accurate, intervention-sensitive, and occlusion-robust
-prediction}} over maximally linear motion readout---a trade-off that replicates
+\textbf{\emph{accurate, causally structured, and occlusion-robust
+prediction}} over maximally linear motion readout, a trade-off that replicates
 across scales.
 
 
@@ -576,29 +583,17 @@ across scales.
 
 We next ask whether the complete ranking of adaptation methods survives the
 transition from the 2B backbone to the approximately half-cost 1B backbone.
-For diagnostic $k$, we compute
+For each diagnostic $k$ we compute the Spearman rank correlation $\rho_k$
+between the per-method scores at the two scales.
 
-\begin{equation*}
-\rho_k
-=
-\operatorname{Spearman}
-\left(
-\mathbf s_k^{2\mathrm B},
-\mathbf s_k^{1\mathrm B}
-\right),
-\end{equation*}
-
-where $\mathbf s_k^{2\mathrm B}$ and $\mathbf s_k^{1\mathrm B}$ contain the
-per-method scores at the two scales.
-
-
-
-As Figure~\ref{fig:scale_replication} shows, Causal L1 yields
-$\rho=0.978$, Motion cosine $\rho=0.952$, Future-frame L1
-$\rho=0.938$, and Mask-ratio slope $\rho=0.895$. These are the four strongest
-cross-scale correlations in the evaluation. Twelve of the fifteen diagnostics
-retain broadly consistent rankings, while Temporal-order, Teacher-free gap,
-and Rollout drift do not transfer reliably.
+The rankings are highly stable. Causal future-block L1 replicates most strongly
+($\rho=0.978$; Figure~\ref{fig:scale_replication}), followed by Motion cosine
+($\rho=0.952$), Future-frame L1 ($\rho=0.938$), and Mask-ratio slope
+($\rho=0.895$)---the four headline diagnostics and the four strongest cross-scale
+correlations in the evaluation. Twelve of the fifteen diagnostics retain broadly
+consistent rankings, while Temporal-order, Teacher-free gap, and Rollout drift do
+not transfer reliably; the complete fifteen-panel comparison, with per-diagnostic
+leave-one-method robustness ranges, is in Figure~\ref{fig:scale_replication_full}.
 
 The replication result is important for two reasons. First, it shows that both
 the predictive gains and the motion trade-off are stable properties of the
@@ -609,13 +604,62 @@ before full-scale 2B training.
 \paragraph{\textbf{\emph{Evaluation takeaway.}}}
 Across both scales, FactorJEPA delivers
 \textbf{\emph{(i) more accurate future-latent prediction}},
-\textbf{\emph{(ii) stronger intervention-sensitive structure}}, and
+\textbf{\emph{(ii) stronger causal future-block structure}}, and
 \textbf{\emph{(iii) greater robustness under reduced visual evidence}}.
 It also makes motion substantially more accessible than in the frozen world
 model, while conceding motion linearity to the strongest generic fine-tuning
 arm. These effects replicate with $\rho=0.895$--$0.978$, showing that explicit
 factorization changes not only prediction error, but the structure and
 accessibility of the information used to forecast the future.
+
+
+\subsection{\textbf{\emph{Ablations and Limitations}}}
+
+We isolate each ingredient with matched controls on the same held-out split with
+paired BCa bootstrap; below, \emph{separates} means the oriented 95\% confidence
+interval excludes zero.
+
+\paragraph{\textbf{\emph{The gain comes from predictor surgery, not the factor
+targets.}}}
+FactorJEPA-RAW applies the identical three-stage schedule and unfreeze budget to
+raw clips with no factor-target supervision. Against it, full FactorJEPA does not
+improve future-frame prediction: at both 2B and 1B the no-target control
+separates in its favour. The ingredient that closes the frozen-to-adapted gap is
+the surgical adaptation of the predictor, not the factor-view supervision layered
+on top of it.
+
+\paragraph{\textbf{\emph{Updating the encoder, not only the head, drives the
+predictive wins.}}}
+Freezing the encoder and adapting only the attentive head loses to the
+encoder-updating variant on future-frame, causal future-block, and mask-ratio
+(each separated), while winning back motion-cosine, rollout, and exposure-bias.
+Touching the top encoder blocks is what buys the predictive-structure
+improvements, at the cost of some temporal and motion diagnostics.
+
+\paragraph{\textbf{\emph{The interaction stage adds no measurable value.}}}
+Removing the interaction stage (no-$D_I$) leaves every predictive diagnostic
+statistically unchanged and separates in favour of the shorter schedule on
+motion-cosine and future-frame. We keep the stage for completeness but do not
+claim it as a source of gain.
+
+\paragraph{\textbf{\emph{Weight merging hurts.}}}
+A WiSE-FT interpolation between the surgical and pretrained weights (mixing
+fractions $0.3$, $0.5$, $0.7$) loses to the un-merged model on future-frame and
+motion-cosine at both scales. We report it as a negative result.
+
+\paragraph{\textbf{\emph{Limitations.}}}
+Three controls we consider important were not executed and bound our claims.
+First, a compute-matched control that continues plain pretraining for the same
+number of steps as the surgery, isolating whether the effect is simply more
+optimisation, is declared in our configuration but was not run; we therefore
+cannot fully separate the surgical schedule from additional training. Second,
+head-only pretraining and the continual-learning baselines (CaSSLe, EWC) were
+trained but not evaluated on the diagnostic suite. Third, the method is a
+precondition on the base checkpoint: on the earlier V-JEPA~2.0 backbone the same
+recipe does not improve over the frozen encoder, so the gains reported here are
+specific to V-JEPA~2.1. Finally, at the 10k screening scale factorization
+concedes maximally linear motion readout to full fine-tuning; this trade-off
+reverses only at full ($86{,}831$-video) scale.
 
 
 

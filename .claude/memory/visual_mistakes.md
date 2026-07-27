@@ -386,3 +386,23 @@ moves; text over a moving crowd isn't distinguishable, and a static scene makes 
 selected clips (mid-frame, large) before rendering — I eyeballed all 20 clips and hand-picked the clean 4.
 **Prevention**: for "no baked-in text/political content" guarantees, never trust an automatic score alone —
 always view the final shipped clips at size. Political/sensitive frames must never sit in an output file.
+
+## VM33 — full-width figure* caterpillar rendered near-SQUARE → y-tick arm NAMES fall below the 9pt print floor (2026-07-26)
+
+**Symptom**: `eval_scorecard_winners` (Fig 7, `figure*` at `width=\textwidth`) placed its 2x2 per-arm
+caterpillar in a near-square canvas (content 6.65in x 6.44in, aspect 0.97). With ~18 arms per panel the
+y-axis encoder names (`surgical_3stage_DI_intervene`, `peft_lora`, `frozen`, ...) rendered at only
+~7.2-7.6pt effective in the compiled PDF with a ~1px (0.007in) inter-line gap — the SMALLEST text on the
+page (below the tick values ~12pt, panel titles ~12pt, suptitle ~9.3pt) and below the plotting.md C5 >=9pt
+floor. Readable, but exactly the element the rebuild existed to make comfortable, left sub-contract.
+**Root cause**: font size scales with `width=\textwidth`, but a many-row caterpillar's name legibility is
+set by the figure's HEIGHT (row pitch), not its width. A near-square aspect under-provisions vertical space,
+so the per-row pitch (hence the y-tick font) collapses even though the width is fine. VM5 covers annotation
+collision at low pitch; this is the print-SIZE floor of the y-tick names themselves.
+**Fix**: for a full-width figure*, size the HEIGHT from n_rows x target_pitch where target_pitch admits a
+>=9pt bold line box plus a real gap (~0.18in/row); a 2x18-row scorecard wants ~8.3in tall (aspect ~1.25),
+i.e. a genuinely tall full-page figure*. Bump the y-tick label fontsize ~x1.25 AND grow figsize height the
+same factor so lines don't touch.
+**Prevention**: audit any \textwidth caterpillar/forest by measuring the y-tick name effective pt at the
+PLACED width (png_content_px / placed_inches -> pt); if <9pt or inter-line gap <~2px @150dpi, FAIL and give
+the height bump. Near-square aspect + many rows is the tell.

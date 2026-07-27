@@ -2688,7 +2688,7 @@ def _xb_best(data, keep, key, hi):
 
 
 def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
-                suptitle=None, sort_rows=True):
+                suptitle=None, sort_rows=True, paper=False):
     """Per metric: surgery(best-OURs) advantage over a BASELINE. Both baselines count surgery_raw with
     OURs via _xb_is_ours. LAYOUT CONTRACT (visual-audit rules, user 2026-07-12 — see .claude/plotting.md):
       · panels ALWAYS stack VERTICALLY (one per backbone, champion-first) — a portrait figure that fits a
@@ -2705,16 +2705,27 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
     n = len(backbones)
+    # PAPER mode (2026-07-26): prints ~1:1 at \textwidth so fonts survive; drops the rhetorical suptitle
+    # (the LaTeX caption carries it), the dev-codename winner column (unreadable jargon at print size), and
+    # renames surgery→FactorJEPA. Analysis mode keeps the eyeball-aid title/column/larger canvas unchanged.
+    _actor = "FactorJEPA" if paper else "surgery"
+    _draw_winner = not paper
+    _fs_metric, _fs_val, _fs_win, _fs_tick, _fs_xlab, _fs_ptitle = (
+        (9.0, 10.0, 8.5, 8.5, 9.5, 11.0) if paper else (11, 11, 9.5, 11, 12, 15))
     # suptitle FIRST — its wrapped line count sizes the figure's top margin.
     _base = "frozen" if vs == "frozen" else "the best competitor"
-    _sup = suptitle if suptitle else (
-        f"Forest plot — does surgery statistically separate from {_base}?   "
-        f"(green past dashed line = yes · » names each metric's winner arm)"
-        if mode == "ci" else
-        f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · » names each metric's winner arm)")
-    _sup = "\n".join(textwrap.fill(seg, width=68) for seg in _sup.split("\n"))
-    _nl = _sup.count("\n") + 1
-    W, PANEL_H, TITLE_H, BOT_H = 8.6, 6.8, 0.26 * _nl + 0.30, 0.62          # inches
+    if paper:
+        _sup, _nl = "", 0
+    else:
+        _sup = suptitle if suptitle else (
+            f"Forest plot — does surgery statistically separate from {_base}?   "
+            f"(green past dashed line = yes · » names each metric's winner arm)"
+            if mode == "ci" else
+            f"Forest plot — does surgery's MEAN beat {_base}?   (green = yes · » names each metric's winner arm)")
+        _sup = "\n".join(textwrap.fill(seg, width=68) for seg in _sup.split("\n"))
+        _nl = _sup.count("\n") + 1
+    W, PANEL_H = (7.0, 3.55) if paper else (8.6, 6.8)                        # inches
+    TITLE_H, BOT_H = (0.12 if paper else 0.26 * _nl + 0.30), (0.55 if paper else 0.62)
     H = PANEL_H * n + TITLE_H + BOT_H
     fig, axes = plt.subplots(n, 1, figsize=(W, H), squeeze=False)
     for ax, (label, data) in zip(axes.flatten(), backbones):
@@ -2766,18 +2777,24 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             # gets struck by the whisker; a struck minus reads as PLUS) and FLIPPED to the marker's left for
             # the right-edge cluster (VM16: edge labels crossed the spine into the winner column).
             _edge = v > 0 and v >= 0.5 * _pos
-            ax.annotate(fmt(v), (v, y), xytext=((-6, 6) if _edge else (6, 6)), textcoords="offset points",
-                        va="bottom", ha=("right" if _edge else "left"), fontsize=11, color=col, fontweight="bold")
+            if paper:   # value in a fixed RIGHT-margin column, row-aligned — clears every whisker AND the
+                _lblcol = col if won else "#37474F"          # panel title; dark grey so competitor values read
+                ax.annotate(fmt(v), xy=(1.015, y), xycoords=("axes fraction", "data"),
+                            va="center", ha="left", fontsize=_fs_val, color=_lblcol, fontweight="bold")
+            else:
+                ax.annotate(fmt(v), (v, y), xytext=((-6, 6) if _edge else (6, 6)), textcoords="offset points",
+                            va="bottom", ha=("right" if _edge else "left"), fontsize=_fs_val, color=col, fontweight="bold")
             # per-row WINNER declaration (user 2026-07-12): the exact arm that won THIS metric on the mean —
             # v>0 the best-OURs arm, v<0 the best-competitor arm (0 = exact tie). Rendered in a dedicated
             # RIGHT-hand margin column in the winner arm's registry colour (_color_for → same hue as the
             # scorecard bars), so a grey not-separated row still names WHO leads. RHS, never LHS: a left-
             # margin annotation strikes through the metric tick labels (visual-audit mistake #1).
-            win_s = ours_s if v > 0 else (comp_s if v < 0 else None)
-            wcol = _color_for(f"vjepa_2_1_vitG_{win_s}", 0) if win_s else "#607D8B"
-            ax.annotate("» " + (_xb_arm_short(win_s) if win_s else "exact tie"),
-                        xy=(1.05, y), xycoords=("axes fraction", "data"), ha="left", va="center",
-                        fontsize=9.5, fontweight="bold", fontstyle="italic", color=wcol)
+            if _draw_winner:
+                win_s = ours_s if v > 0 else (comp_s if v < 0 else None)
+                wcol = _color_for(f"vjepa_2_1_vitG_{win_s}", 0) if win_s else "#607D8B"
+                ax.annotate("» " + (_xb_arm_short(win_s) if win_s else "exact tie"),
+                            xy=(1.05, y), xycoords=("axes fraction", "data"), ha="left", va="center",
+                            fontsize=_fs_win, fontweight="bold", fontstyle="italic", color=wcol)
         # (no per-panel "winner arm" column header — it collides with long left-loc panel titles; the
         # suptitle's "» names each metric's winner arm" documents the column instead. visual-audit 2026-07-12)
         # symlog x-axis (task2): ABSOLUTE signed values but NON-uniform spacing — scale+xlim were set ABOVE
@@ -2790,7 +2807,7 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(
             lambda v, _p: "0" if v == 0 else ("-" if v < 0 else "") + f"{abs(v):g}"))
         ax.set_yticks(range(len(rows)))
-        ax.set_yticklabels([r[0] for r in rows], fontsize=11, fontweight="bold")   # 11pt bold: full metric names (from json)
+        ax.set_yticklabels([r[0] for r in rows], fontsize=_fs_metric, fontweight="bold")   # full metric names (from json)
         ax.axvline(0, color="#607D8B", lw=1.2, zorder=1)             # null: surgery == baseline
         if mode == "ci":
             ax.axvline(1, color=_XB_OURS_GREEN, ls="--", lw=1.4, zorder=1)
@@ -2800,19 +2817,22 @@ def plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_ci",
             ax.text(0.985, 0.02, "1×CI · separated →", transform=ax.transAxes, color=_XB_OURS_GREEN,
                     fontsize=10, fontweight="bold", ha="right", va="bottom")
         ax.set_ylim(-0.7, len(rows) - 0.3)
-        ax.set_title(label, fontsize=15, fontweight="bold", loc="left")
+        ax.set_title(label, fontsize=_fs_ptitle, fontweight="bold", loc="left")
         _base = "frozen" if vs == "frozen" else "best competitor"
-        ax.set_xlabel(f"surgery advantage over {_base}   "
+        ax.set_xlabel(f"{_actor} advantage over {_base}   "
                       + ("(× CI of difference)" if mode == "ci" else f"(% of {_base} mean)"),
-                      fontsize=12, fontweight="bold")
+                      fontsize=_fs_xlab, fontweight="bold")
         ax.grid(axis="x", alpha=0.2)
-        ax.tick_params(axis="x", labelsize=11)              # bigger + bold decade ticks (task 2026-07-09)
+        ax.tick_params(axis="x", labelsize=_fs_tick)        # bigger + bold decade ticks (task 2026-07-09)
         for _t in ax.get_xticklabels():
             _t.set_fontweight("bold")
-    fig.suptitle(_sup, x=0.5, y=1 - 0.10 / H, va="top", fontsize=12.5, fontweight="bold")
-    # margins in INCHES → fractions: left = the metric tick labels · right = the winner-arm column ·
-    # top = the wrapped suptitle block · bottom = the last panel's xlabel. Vertical stack ONLY.
-    fig.subplots_adjust(top=1 - TITLE_H / H, bottom=BOT_H / H, left=0.30, right=0.775, hspace=0.34)
+    if _sup:
+        fig.suptitle(_sup, x=0.5, y=1 - 0.10 / H, va="top", fontsize=12.5, fontweight="bold")
+    # margins in INCHES → fractions: left = the metric tick labels · right = the winner-arm column (paper
+    # drops it → use the full width) · top = the wrapped suptitle block · bottom = the last panel's xlabel.
+    fig.subplots_adjust(top=1 - TITLE_H / H, bottom=BOT_H / H,
+                        left=(0.235 if paper else 0.30), right=(0.895 if paper else 0.775),
+                        hspace=(0.30 if paper else 0.34))
     save_fig(fig, str(Path(out_dir) / stem))
     plt.close(fig)
 
@@ -2876,6 +2896,168 @@ def plot_scale_replication(backbones, out_dir):
                  fontsize=14, fontweight="bold")
     fig.subplots_adjust(top=0.94, hspace=0.52, wspace=0.30, left=0.05, right=0.98, bottom=0.05)
     save_fig(fig, str(Path(out_dir) / "scale_replication"))
+    plt.close(fig)
+
+
+def plot_scale_replication_single(backbones, out_dir, metric_key=None, stem="scale_replication_single"):
+    """MAIN-body companion to plot_scale_replication: ONE metric's 2B→1B rank-preservation scatter,
+    paper-styled so every label is readable at 100% zoom. If metric_key is None, features the
+    STRONGEST-replicating diagnostic (highest Spearman ρ of the 15) — a deterministic argmax over the
+    actual data, so no metric literal is baked in. FactorJEPA arms are green, competitors grey (a compact
+    2-entry legend); the full per-arm 15-panel grid lives in the appendix scale_replication figure. Same
+    data path / shared-arm intersection as plot_scale_replication."""
+    import matplotlib.pyplot as plt
+    from scipy.stats import spearmanr
+    (xlbl, xd), (ylbl, yd) = backbones[0], backbones[1]
+    _bb_of = lambda lbl: " · ".join(lbl.split(" · ")[:2])          # '<tag> · <size>' — mirrors the grid
+    shared_encs = [s for s in xd if s in yd]
+    ranked = []                              # (rho, key, dir, name, sh, xs, ys) — one per metric with data
+    for key, _dir, name in _XB_ALL15:
+        sh = [s for s in shared_encs if xd[s][key][0] is not None and yd[s][key][0] is not None]
+        if len(sh) < 3:                      # Spearman ρ needs >=3 pairs; skip data-starved metrics
+            continue
+        xs = [xd[s][key][0] for s in sh]
+        ys = [yd[s][key][0] for s in sh]
+        ranked.append((spearmanr(xs, ys).correlation, key, _dir, name, sh, xs, ys))
+    if not ranked:
+        raise RuntimeError("plot_scale_replication_single: no metric has >=3 shared-arm pairs across the "
+                           "two backbones — cannot render a rank-preservation scatter")
+    ranked.sort(key=lambda t: (t[0] if t[0] == t[0] else -9.0), reverse=True)   # ρ DESC, NaN last
+    if metric_key is None:
+        rho, key, _dir, name, sh, xs, ys = ranked[0]                 # feature the strongest replicator
+    else:
+        pick = [r for r in ranked if r[1] == metric_key]
+        if not pick:
+            raise KeyError(f"plot_scale_replication_single: metric_key {metric_key!r} has no shared-arm "
+                           f"data (available: {[r[1] for r in ranked]})")
+        rho, key, _dir, name, sh, xs, ys = pick[0]
+    print(f"  [scale-single] featuring '{name}' (ρ={rho:.3f} · "
+          f"{'strongest of ' + str(len(ranked)) if metric_key is None else 'requested'}) · "
+          f"ρ-ranking: {[(r[1], round(r[0], 3)) for r in ranked[:5]]}")
+    fig, ax = plt.subplots(figsize=(5.4, 5.0))
+    for grp, col, z, lab in ((False, "#9E9E9E", 3, "competitors"),   # split via the SHARED _xb_is_ours
+                             (True, _XB_OURS_GREEN, 4, "FactorJEPA")):
+        gx = [x for x, s in zip(xs, sh) if _xb_is_ours(s) == grp]
+        gy = [y for y, s in zip(ys, sh) if _xb_is_ours(s) == grp]
+        ax.scatter(gx, gy, c=col, s=120, edgecolors="white", linewidths=1.0, zorder=z, label=lab)
+    lo, hi = min(xs + ys), max(xs + ys)
+    pad = (hi - lo) * 0.10 or 0.01
+    ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], ls="--", color="#90A4AE", lw=1.4, zorder=1,
+            label="identity  y = x")
+    ax.set_xlim(lo - pad, hi + pad)
+    ax.set_ylim(lo - pad, hi + pad)
+    ax.set_aspect("equal", adjustable="box")                        # true 45° identity — it IS a y=x test
+    ax.set_title(f"{name}  {'↑' if _dir == 'hi' else '↓'}      ρ = {rho:.3f}",
+                 fontsize=15, fontweight="bold", pad=10)
+    ax.set_xlabel(f"{_bb_of(xlbl)}   ·   per-method score", fontsize=13, fontweight="bold")
+    ax.set_ylabel(f"{_bb_of(ylbl)}   ·   per-method score", fontsize=13, fontweight="bold")
+    ax.tick_params(labelsize=11)
+    ax.grid(alpha=0.25)
+    ax.legend(loc="best", fontsize=12, frameon=True, framealpha=0.92,
+              handletextpad=0.4, borderpad=0.5, labelspacing=0.4)
+    fig.subplots_adjust(top=0.90, bottom=0.13, left=0.17, right=0.96)
+    save_fig(fig, str(Path(out_dir) / stem))
+    plt.close(fig)
+
+
+def _xb_winner_metrics(backbones):
+    """The scale-robust WINNERS: metrics where the best-OURs arm separates >=1x the 95% CI over the best
+    competitor at EVERY backbone. Deterministic derivation (no metric literal) — with the POC 2B+1B pair
+    this returns exactly [fut, causal] (future-frame MSE + causal future-block L1). Sorted strongest first
+    (by the min per-scale x-CI, so the metric that wins most robustly across scales leads)."""
+    out = []
+    for key, dr, _nm in _XB_ALL15:
+        hi = dr == "hi"
+        xcis = []
+        for _lbl, data in backbones:
+            bo = _xb_best(data, _xb_is_ours, key, hi)
+            bc = _xb_best(data, lambda s: not _xb_is_ours(s), key, hi)
+            if not bo or not bc:
+                xcis = None
+                break
+            adv = (bo[1] - bc[1]) if hi else (bc[1] - bo[1])
+            ci = ((bo[2] or 0) ** 2 + (bc[2] or 0) ** 2) ** 0.5 or 1e-9
+            xcis.append(adv / ci)
+        if xcis and all(x >= 1.0 for x in xcis):
+            out.append((min(xcis), key))
+    out.sort(reverse=True)
+    return [k for _x, k in out]
+
+
+def plot_winner_scorecard(backbones, out_dir, metric_keys=None, stem="eval_scorecard_winners"):
+    """MAIN-body enriched WINNER scorecard (grid: rows = winning metrics, cols = backbone scales). Each
+    panel is a per-arm value + 95% CI 'caterpillar' — every arm's held-out score with its confidence
+    interval, sorted best-at-top, FactorJEPA green, competitors grey, arm names on the Y-axis (readable,
+    no rotated x-labels). A dot+CI, NOT a bar-from-zero: the winning margins here are a small fraction of
+    the value (~0.50 vs ~0.53), which bars-from-zero would visually erase — the dot+CI on a data-range
+    x-axis shows the separation honestly. If metric_keys is None, features the scale-robust winners from
+    _xb_winner_metrics (best-OURs separates >=1x CI over the best competitor at EVERY backbone). Same _xb
+    data path as the forest / scale figures."""
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Patch
+    dirname = {k: (d, nm) for k, d, nm in _XB_ALL15}
+    if metric_keys is None:
+        metric_keys = _xb_winner_metrics(backbones)
+    if not metric_keys:
+        raise RuntimeError("plot_winner_scorecard: no metric wins at EVERY backbone — nothing to plot")
+    print(f"  [winner-scorecard] featuring {metric_keys} across {[lbl for lbl, _ in backbones]}")
+    GREEN, GREY = _XB_OURS_GREEN, "#9E9E9E"
+    _bb_of = lambda lbl: " · ".join(lbl.split(" · ")[:2])
+    nrow, ncol = len(metric_keys), len(backbones)
+    # sized ≈\textwidth wide (full-page figure*) so it displays ~1:1 in the two-column PDF — a wider
+    # source would downscale and shrink the arm names below legibility (deal-breaker, 2026-07-26).
+    fig, axes = plt.subplots(nrow, ncol, figsize=(3.5 * ncol, 6.0 * nrow), squeeze=False)
+    for i, key in enumerate(metric_keys):
+        _dir, name = dirname[key]
+        hi = _dir == "hi"
+        for j, (blabel, data) in enumerate(backbones):
+            ax = axes[i][j]
+            items = [(s, data[s][key][0], data[s][key][1] or 0.0)
+                     for s in data if data[s][key][0] is not None]
+            items.sort(key=lambda t: (-t[1] if hi else t[1]))        # best at TOP
+            ys = list(range(len(items)))[::-1]
+            for y, (s, m, c) in zip(ys, items):
+                col = GREEN if _xb_is_ours(s) else GREY
+                ax.errorbar(m, y, xerr=c, fmt="o", ms=7, color=col, ecolor=col,
+                            elinewidth=1.6, capsize=3, zorder=3)
+            ax.set_yticks(ys)
+            ax.set_yticklabels([_xb_arm_short(s) for s, _m, _c in items], fontsize=11.5)
+            ax.set_ylim(-0.7, len(items) - 0.3)
+            if j == ncol - 1 and ncol > 1:   # rightmost column → names on the OUTER (right) edge, so the
+                ax.yaxis.tick_right()        # long labels use the page margin, not the centre gutter (no collision)
+            ax.tick_params(axis="x", labelsize=9)
+            # win margin (best-OURs over best competitor, in CI widths)
+            bo = _xb_best(data, _xb_is_ours, key, hi)
+            bc = _xb_best(data, lambda s: not _xb_is_ours(s), key, hi)
+            adv = (bo[1] - bc[1]) if hi else (bc[1] - bo[1])
+            ci = ((bo[2] or 0) ** 2 + (bc[2] or 0) ** 2) ** 0.5 or 1e-9
+            # SHORT title (scale only); metric name is a SHARED per-row label added after the loop (full
+            # width → the two side-by-side columns never collide in the centre gutter).
+            ax.set_title(_bb_of(blabel), fontsize=12, fontweight="bold", pad=6)
+            # ×CI margin in the empty corner: for ↓ metrics the green best-cluster sits top-LEFT, so top-RIGHT is clear
+            _ha, _x = ("right", 0.97) if not hi else ("left", 0.03)
+            ax.text(_x, 0.95, f"ours +{adv / ci:.1f}×CI", transform=ax.transAxes,
+                    ha=_ha, va="top", fontsize=10.5, fontweight="bold", color=GREEN)
+            ax.grid(axis="x", alpha=0.25, zorder=0)
+    for i2, key2 in enumerate(metric_keys):   # ONE metric label per row (full width → no centre collision)
+        _d2, nm2 = dirname[key2]
+        y0 = axes[i2][0].get_position().y0
+        fig.text(0.5, y0 - 0.045, f"{nm2}   ({'↑ higher' if _d2 == 'hi' else '↓ lower'} = better)",
+                 ha="center", va="top", fontsize=11.5, fontweight="bold")
+    handles = [Patch(facecolor=GREEN, label="FactorJEPA (ours)"),
+               Patch(facecolor=GREY, label="competitors")]
+    # vertical stack — suptitle at the very top, legend in its own band below it, panels lower still
+    _corpus = " · ".join(backbones[0][0].split(" · ")[2:]).replace("  ", " ")   # eval-set tag from the panel label ("POC 10k (n_test = 1,825)") — pins the corpus like the sibling figures (VM14)
+    fig.suptitle(f"Winner scorecard: FactorJEPA vs. all baselines  ({_corpus} · 95% BCa CI)",
+                 fontsize=11.5, fontweight="bold", y=0.990)
+    fig.legend(handles=handles, loc="upper center", ncol=2, fontsize=10.5, frameon=True,
+               bbox_to_anchor=(0.5, 0.952))
+    # mirror-image layout: left-col names in the left margin, right-col names in the right margin,
+    # so the centre gutter (wspace) carries no labels and stays tight.
+    fig.subplots_adjust(left=0.27, right=0.73, top=0.88, bottom=0.11, hspace=0.46, wspace=0.60)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    save_fig(fig, str(out_dir / stem))
     plt.close(fig)
 
 
@@ -2960,6 +3142,9 @@ def scale_forest_report(out_dir):
                               f"separation from the best competitor survive the 12x data jump?\n(same "
                               f"encoders both sides · each panel sorted best→worst · green past dashed = "
                               f"separated win · » names each metric's winner arm{_match})"))
+        # paper-clean sibling: fixed metric order (sort_rows=False) so a metric lines up POC↔FULL and the
+        # motion-cosine sign flip is traceable across the two panels; paper=True drops title/codename column.
+        plot_forest(panels, out_dir, mode="ci", vs="best", sort_rows=False, stem=stem + "_paper", paper=True)
         stems.append(stem)
     print(f"  [scale-forest] → {out_dir}/ · {', '.join(s + '.{png,pdf}' for s in stems)} "
           f"(FULL roster {sorted(full_roster)}, auto-reflects new FULL arms)")
@@ -3001,6 +3186,7 @@ def cross_backbone_report(mtag, out_dir):
     print(f"  [cross-plots] backbones (champion-first): {[b[0] for b in backbones]}")
     init_style()
     plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_best_ci")      # vs BEST competitor · stat
+    plot_forest(backbones, out_dir, mode="ci", vs="best", stem="forest_plot_best_ci_paper", paper=True)  # paper-clean
     plot_forest(backbones, out_dir, mode="mean", vs="best", stem="forest_plot_best_mean")  # vs BEST competitor · magnitude
     plot_forest(backbones, out_dir, mode="ci", vs="frozen", stem="forest_plot_frozen_ci")  # vs FROZEN — paper claim
     plot_forest(backbones, out_dir, mode="mean", vs="frozen", stem="forest_plot_frozen_mean")
@@ -3008,14 +3194,16 @@ def cross_backbone_report(mtag, out_dir):
         for _ext in (".png", ".pdf"):
             (out_dir / f"{_stale}{_ext}").unlink(missing_ok=True)
     if len(backbones) >= 2:
-        plot_scale_replication(backbones, out_dir)
+        plot_scale_replication(backbones, out_dir)                    # appendix: full 15-panel ρ grid
+        plot_scale_replication_single(backbones, out_dir)            # main body: strongest single ρ-panel (argmax)
+        plot_winner_scorecard(backbones, out_dir)                    # main body: 2×2 winner scorecard (scale-robust metrics)
     else:
         print("  [cross-plots] scale_replication skipped — need >=2 backbones")
     scale_forest_report(out_dir)   # POC(10k) vs FULL(116k) per-backbone forest (reads BOTH scales, mtag-agnostic)
     combine_scorecards_pdf([mj.parent / "eval_scorecard.pdf" for _, _, _, mj in found],
                            out_dir / "eval_scorecard_combined.pdf")
     print(f"  [cross-plots] → {out_dir}/ · forest_plot_{{best,frozen}}_{{ci,mean}}.{{png,pdf}} · "
-          f"scale_replication.{{png,pdf}} · scale_poc_vs_full_<backbone>.{{png,pdf}} · "
+          f"scale_replication.{{png,pdf}} · scale_replication_single.{{png,pdf}} · eval_scorecard_winners.{{png,pdf}} · scale_poc_vs_full_<backbone>.{{png,pdf}} · "
           f"eval_scorecard_combined.{{pdf,png}}")
     return out_dir
 
