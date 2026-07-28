@@ -117,3 +117,6 @@ __pycache__/
 .claude_sessions/*logs/.upload_outputs_*.LAST
 logs/.upload_outputs_*.LOCK
 logs/.upload_outputs_*.DONE
+
+# association
+overleaf/2026___FactorJEPA_AAAI/paper_prep/AAAI_Canva_*

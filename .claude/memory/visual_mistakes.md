@@ -406,3 +406,91 @@ same factor so lines don't touch.
 **Prevention**: audit any \textwidth caterpillar/forest by measuring the y-tick name effective pt at the
 PLACED width (png_content_px / placed_inches -> pt); if <9pt or inter-line gap <~2px @150dpi, FAIL and give
 the height bump. Near-square aspect + many rows is the tell.
+
+## VM34 — a "readability" fix that DROPS / REFORMATS / GROUPS-AWAY spec'd content is a spec VIOLATION, not a fix (2026-07-27)
+
+**Symptom**: Fig 7 was specified as a 2×2 of the top-4 metric **BAR** panels showing **ALL ~20 FT rivals by
+name** (from `outputs/poc/probe_plot/metrics_watch/eval_scorecard_combined.png`), readable. To satisfy
+"readable", the main agent silently (a) dropped 4 metrics → 2, (b) changed vertical bars → a per-arm dot±CI
+"caterpillar", and (c) [Fig 8] collapsed every named rival into "FactorJEPA (green) vs competitors (grey)",
+deleting the arm names/legend that `scale_replication.png` carries. The visual-audit PASSED all of it — C1-C10
+only check RENDER quality of the artifact in isolation, never whether it is the figure the user asked for.
+User (furious): *"how did you dare to remove it without my permission... do you want me rejected at AAAI?"*.
+**Root cause**: treating "make it readable" as license to change WHAT is shown, not just HOW. Readability is a
+HOW-constraint; the metrics / named entities / plot-type / panel-count are the WHAT-spec and are inviolable.
+Compounded by the audit having no spec-fidelity gate, so a well-rendered WRONG figure passed clean.
+**Fix**: restore the exact spec — 4-metric BAR 2×2 with every rival NAMED (Fig 7); causal scatter with every
+rival's own colour + naming legend (Fig 8). When spec+readability truly conflict, STOP and ask a
+spec-PRESERVING question (horizontal bars? full-page figure? smaller font?), NEVER a menu that drops content.
+Added audit check **C0 SPEC-FIDELITY** (outranks C1-C10): the auditor must be given the user's spec + cited
+reference and FAIL any dropped/reformatted/substituted/grouped-away content, no matter how clean the render.
+**Prevention**: before "optimizing" any figure, LIST what the user explicitly named (metrics, rivals, plot
+type, reference image); if the fix removes ANY of it, it is wrong — solve the harder problem or ask. A
+visual-audit PASS on a figure that isn't the spec'd one is a false PASS. See [[feedback_never_override_user_spec]].
+
+## VM35 — non-BOLD value/tick numbers + wasteful WHITE space slipped through because the audit had no bold-check or space-check (2026-07-27)
+
+**Symptom**: `eval_scorecard_winbars` (Fig 7) shipped with the per-bar VALUE labels (`0.496`…) and the
+x-axis TICK NUMBERS rendered at REGULAR weight while the titles / y-codes / key were bold — the figure
+"looked" bold but every number on it was thin. Separately it carried ~86% white with a 5.3% dead band
+between the stacked panel rows and `xlim = hix + pad×8` right-margins (bars sat left, right third empty).
+The user caught both; the visual-audit had NOT been run on it AND — worse — its checklist had no explicit
+"every text bold" check and no white-space measurement, so it would have PASSED both defects even if run.
+**Root cause**: (a) matplotlib text calls default to regular weight; `ax.annotate(...)`, and tick labels
+styled only via `tick_params`, need an explicit `fontweight="bold"` / `set_fontweight("bold")` — bolding the
+title alone leaves the numbers thin. (b) an over-tall figure + large `hspace` + large `xlim` right padding
+create dead white that a glance rationalizes as "clean". (c) the audit checked legibility PT-size but never
+weight, and never quantified blank space.
+**Fix**: set `fontweight="bold"` on EVERY text emitter — value labels (`annotate`), x/y tick labels (loop
+`set_fontweight("bold")`), legend (`prop={"weight":"bold"}` + `leg.get_title().set_fontweight("bold")`),
+titles/suptitle. Tighten white: cut `xlim` right pad (×8→×4), reduce `hspace`, and size the figure to the
+content (measure white% + empty bands with PIL, target tight-not-touching). Added audit checks **C11
+BOLD-TEXT** (grep the generator: every text call must carry a bold weight; a single regular-weight text =
+FAIL) and **C12 SPACE-BALANCE** (PIL-measure blank %, FAIL any >3% empty band OR cramped gaps).
+**Prevention**: before shipping any figure, (1) `grep` the generator for `annotate|set_title|suptitle|
+set_xticklabels|set_yticklabels|legend|bar_label|ax.text` and confirm each has a bold weight; (2) PIL-measure
+the white fraction + biggest empty bands and tighten. "Bold title" ≠ "bold figure". See [[feedback_never_override_user_spec]].
+
+## VM36 — figsize HEIGHT shrunk but suptitle y / top margin not recomputed -> suptitle 2nd line overlaps the panel titles (2026-07-27)
+
+**Symptom**: `eval_scorecard_winbars` (Fig 7) height was cut 9.6->8.6->7.8in to save paper space; the suptitle kept
+`y=0.984` fontsize 11.5 (2 lines) and `subplots_adjust(top=0.905)` with 2-line panel titles (`pad=5`). At 7.8in the
+header stack (2 suptitle lines + 2 panel-title lines) no longer fits the ~0.62in above the axes, so the suptitle's 2nd
+line "(POC 10k . n_test = 1,825 . 95% BCa CI)" OVERLAPPED both top panel titles by ~16px across ~97 columns
+("n_test = 1,825" struck "future-frame L1"; "95% BCa CI)" sat on "causal future-block L1"). Measured column-wise:
+min clearance = -16px, 97 columns with <=1px gap.
+**Root cause**: suptitle `y` and the `top` subplots margin are absolute FIGURE-FRACTION constants; when figure HEIGHT
+drops, the same fraction is fewer inches, so a header stack that fit at 8.6in collides at 7.8in. The height edit
+recomputed nothing above the axes (same class of bug as VM33 but on the vertical header budget, not the y-tick pt).
+**Fix**: after ANY figsize height change, re-derive the top headroom in INCHES from the header line count (plotting.md
+rule 3 / VM2: ~0.26in/line) -> here grow height back to ~8.3in and/or lower `top` to ~0.87 so the 2-line suptitle
+clears the 2-line panel titles; or collapse suptitle/titles to fewer lines. The paired shrink also left the bottom
+rotated x-ticks only 19px above the legend box (tight-but-clear this round -> next shrink will collide there too).
+**Prevention**: audit BOTH the suptitle<->panel-title band AND the bottom-tick<->legend band after every figsize edit
+by measuring per-column clearance (negative = overlap). Fixed figure-fraction margins do NOT survive a height edit;
+the header/footer budget must be recomputed from the line counts each time.
+
+## VM37 — a C5 font-bump that ignores the AUTHORING-width vs PLACEMENT-width downscale under-delivers (still sub-9pt) (2026-07-27)
+
+**Symptom**: `eval_scorecard_winbars` (Fig 7, `figure*` at `width=\textwidth` ~= 7.0in) was authored at `figsize=(7.8, 8.2)`.
+A prior C5 fix "bumped fonts" (y-codes 8.5->9, value labels 7->8.5, x-ticks 7.5->8.5, legend 7.5->8, panel titles 9.5->10)
+believing that cleared the >=9pt floor. But LaTeX scales the 7.8in-wide artifact DOWN to the 7.0in column, a
+`7.0/7.84 = 0.893x` shrink that drops EVERY glyph ~11% below its authored pt. Net effective sizes at placement:
+value labels ~7.6pt, x-tick numbers ~7.6pt, y-codes ~8.0pt, legend entries+title ~7.1pt, panel titles ~8.9pt -- ALL
+below the ~9pt floor; only the suptitle (~9.8pt) cleared. The bump raised the authored numbers but the downscale ate
+the gain, so the SECOND C5 pass still failed. (Validated: measured suptitle cap-span 9.99pt vs 9.82 predicted,
+panel-title 9.11 vs 8.93, legend-title 7.35 vs 7.14 -- the `effective = authored x 0.893` model is exact.)
+**Root cause**: effective print pt is `authored_pt x (saved_content_inches / placed_inches)`, NOT `authored_pt`. When the
+matplotlib `figsize` width (7.8) is WIDER than the `\includegraphics` width (`\textwidth` ~= 7.0), there is a hidden
+sub-1.0 scale factor that no amount of in-figure font tuning reveals unless you convert to the PLACED width. Bumping
+fonts while measuring at the authoring width (or eyeballing the PNG) hides it.
+**Fix**: author the figure AT its placement width -- set `figsize` width == the `\includegraphics` width (7.8->7.0, keep
+aspect so height 8.2->~7.6) so 1px maps 1:1 and `effective_pt == authored_pt`; THEN raise the sub-floor classes to >=9pt
+(value labels 8.5->9, x-ticks 8.5->9, legend size 8->9 + title 8->9; y-codes/panel-titles already >=9 at 1:1). Re-audit
+the bottom-tick<->legend band (was only 20px) and the 2-col legend full-names after the change -- narrower width + bigger
+fonts tighten both; grow height (7.6->~8.0) if either collides.
+**Prevention**: C5 must ALWAYS convert to the intended PLACED width, never the authoring width: read the `.tex`
+`\includegraphics[width=...]` + the figure env (`figure` vs `figure*`) to get the real placed inches, compute
+`effective_pt = authored_pt x placed_in / saved_content_in`, and FAIL if the smallest class < ~9pt EVEN IF a prior
+"font bump" was applied. The tell: matplotlib `figsize` width != the LaTeX include width. Sibling of VM33 (there the
+height under-provisioned the y-tick pt; here the width-mismatch downscale does).

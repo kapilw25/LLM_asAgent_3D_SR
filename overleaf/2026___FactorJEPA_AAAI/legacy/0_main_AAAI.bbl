@@ -1,4 +1,4 @@
-\begin{thebibliography}{15}
+\begin{thebibliography}{25}
 \providecommand{\natexlab}[1]{#1}
 
 \bibitem[{Asaithambi et~al.(2012)Asaithambi, Kanagaraj, Srinivasan, and
@@ -9,6 +9,20 @@ Asaithambi, G.; Kanagaraj, V.; Srinivasan, K.~K.; and Sivanandan, R. 2012.
   Variability, and Lack of Lane Discipline.
 \newblock \emph{Transportation Research Record: Journal of the Transportation
   Research Board}, 2317(1): 51--59.
+
+\bibitem[{Assran et~al.(2025)}]{assran2025vjepa2}
+Assran, M.; et~al. 2025.
+\newblock {V-JEPA} 2: Self-Supervised Video Models Enable Understanding,
+  Prediction and Planning.
+\newblock \emph{arXiv preprint arXiv:2506.09985}.
+
+\bibitem[{Bardes et~al.(2024)Bardes, Garrido, Ponce, Chen, Rabbat, LeCun,
+  Assran, and Ballas}]{bardes2024vjepa}
+Bardes, A.; Garrido, Q.; Ponce, J.; Chen, X.; Rabbat, M.; LeCun, Y.; Assran,
+  M.; and Ballas, N. 2024.
+\newblock V-JEPA: Latent Video Prediction for Visual Representation Learning.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}.
 
 \bibitem[{Caesar et~al.(2020)Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan,
   Pan, Baldan, and Beijbom}]{caesar2020nuscenes}
@@ -40,12 +54,27 @@ Dokania, S.; Hafez, A. H.~A.; Subramanian, A.; Chandraker, M.; and Jawahar,
 \newblock In \emph{Proceedings of the IEEE/CVF Winter Conference on
   Applications of Computer Vision (WACV)}, 4482--4491.
 
+\bibitem[{Dwibedi et~al.(2019)Dwibedi, Aytar, Tompson, Sermanet, and
+  Zisserman}]{dwibedi2019tcc}
+Dwibedi, D.; Aytar, Y.; Tompson, J.; Sermanet, P.; and Zisserman, A. 2019.
+\newblock Temporal Cycle-Consistency Learning.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}.
+
 \bibitem[{Ellis and Roberts(2016)}]{ellis2016leveraging}
 Ellis, P.; and Roberts, M. 2016.
 \newblock \emph{Leveraging Urbanization in South Asia: Managing Spatial
   Transformation for Prosperity and Livability}.
 \newblock South Asia Development Matters. Washington, DC: World Bank.
 \newblock ISBN 978-1-4648-0662-9.
+
+\bibitem[{Fini et~al.(2022)Fini, da~Costa, Alameda-Pineda, Ricci, Alahari, and
+  Mairal}]{fini2022cassle}
+Fini, E.; da~Costa, V. G.~T.; Alameda-Pineda, X.; Ricci, E.; Alahari, K.; and
+  Mairal, J. 2022.
+\newblock Self-Supervised Models are Continual Learners.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}.
 
 \bibitem[{Hu et~al.(2022)Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and
   Chen}]{hu2022lora}
@@ -59,6 +88,24 @@ Khan, S.~I.; and Maini, P. 1999.
 \newblock Modeling Heterogeneous Traffic Flow.
 \newblock \emph{Transportation Research Record: Journal of the Transportation
   Research Board}, 1678(1): 234--241.
+
+\bibitem[{Kirkpatrick et~al.(2017)Kirkpatrick, Pascanu, Rabinowitz, Veness,
+  Desjardins, Rusu, Milan, Quan, Ramalho, Grabska-Barwinska, Hassabis, Clopath,
+  Kumaran, and Hadsell}]{kirkpatrick2017ewc}
+Kirkpatrick, J.; Pascanu, R.; Rabinowitz, N.; Veness, J.; Desjardins, G.; Rusu,
+  A.~A.; Milan, K.; Quan, J.; Ramalho, T.; Grabska-Barwinska, A.; Hassabis, D.;
+  Clopath, C.; Kumaran, D.; and Hadsell, R. 2017.
+\newblock Overcoming Catastrophic Forgetting in Neural Networks.
+\newblock \emph{Proceedings of the National Academy of Sciences (PNAS)},
+  114(13): 3521--3526.
+
+\bibitem[{Kumar et~al.(2022)Kumar, Raghunathan, Jones, Ma, and
+  Liang}]{kumar2022lpft}
+Kumar, A.; Raghunathan, A.; Jones, R.; Ma, T.; and Liang, P. 2022.
+\newblock Fine-Tuning can Distort Pretrained Features and Underperform
+  Out-of-Distribution.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}.
 
 \bibitem[{Lee et~al.(2023)Lee, Chen, Tajwar, Kumar, Yao, Liang, and
   Finn}]{lee2023surgical}
@@ -91,16 +138,26 @@ Mahendra, A.; King, R.; Du, J.; Dasgupta, A.; Beard, V.~A.; Kallergis, A.; and
 \newblock Seven Transformations for More Equitable and Sustainable Cities.
 \newblock Technical report, World Resources Institute, Washington, DC.
 
+\bibitem[{Misra, Zitnick, and Hebert(2016)}]{misra2016shuffle}
+Misra, I.; Zitnick, C.~L.; and Hebert, M. 2016.
+\newblock Shuffle and Learn: Unsupervised Learning Using Temporal Order
+  Verification.
+\newblock In \emph{Computer Vision -- ECCV 2016}, volume 9905 of \emph{Lecture
+  Notes in Computer Science}, 527--544. Springer.
+
+\bibitem[{Mur-Labadia et~al.(2026)Mur-Labadia, Muckley, Bar, Assran, Sinha,
+  Rabbat, LeCun, Ballas, and Bardes}]{murlabadia2026vjepa21}
+Mur-Labadia, L.; Muckley, M.; Bar, A.; Assran, M.; Sinha, K.; Rabbat, M.;
+  LeCun, Y.; Ballas, N.; and Bardes, A. 2026.
+\newblock {V-JEPA} 2.1: Unlocking Dense Features in Video Self-Supervised
+  Learning.
+\newblock \emph{arXiv preprint arXiv:2603.14482}.
+
 \bibitem[{Papathanasopoulou and Antoniou(2018)}]{papathanasopoulou2018weaklane}
 Papathanasopoulou, V.; and Antoniou, C. 2018.
 \newblock Flexible Car-Following Models for Mixed Traffic and Weak
   Lane-Discipline Conditions.
 \newblock \emph{European Transport Research Review}, 10(2): 62.
-
-\bibitem[{Ravi et~al.(2024)Ravi, Gabeur, Hu et~al.}]{ravi2024sam2}
-Ravi, N.; Gabeur, V.; Hu, Y.-T.; et~al. 2024.
-\newblock SAM 2: Segment Anything in Images and Videos.
-\newblock \emph{arXiv preprint arXiv:2408.00714}.
 
 \bibitem[{Varma et~al.(2019)Varma, Subramanian, Namboodiri, Chandraker, and
   Jawahar}]{varma2019idd}
@@ -110,6 +167,27 @@ Varma, G.; Subramanian, A.; Namboodiri, A.; Chandraker, M.; and Jawahar, C.~V.
   Unconstrained Environments.
 \newblock In \emph{Proceedings of the IEEE Winter Conference on Applications of
   Computer Vision (WACV)}, 1743--1751.
+
+\bibitem[{Wang, Jiao, and Liu(2020)}]{wang2020pace}
+Wang, J.; Jiao, J.; and Liu, Y.-H. 2020.
+\newblock Self-Supervised Video Representation Learning by Pace Prediction.
+\newblock In \emph{European Conference on Computer Vision (ECCV)}.
+
+\bibitem[{Wei et~al.(2018)Wei, Lim, Zisserman, and Freeman}]{wei2018aot}
+Wei, D.; Lim, J.~J.; Zisserman, A.; and Freeman, W.~T. 2018.
+\newblock Learning and Using the Arrow of Time.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}, 8052--8060.
+
+\bibitem[{Wortsman et~al.(2022)Wortsman, Ilharco, Kim, Li, Kornblith, Roelofs,
+  Gontijo-Lopes, Hajishirzi, Farhadi, Namkoong, and
+  Schmidt}]{wortsman2022wiseft}
+Wortsman, M.; Ilharco, G.; Kim, J.~W.; Li, M.; Kornblith, S.; Roelofs, R.;
+  Gontijo-Lopes, R.; Hajishirzi, H.; Farhadi, A.; Namkoong, H.; and Schmidt, L.
+  2022.
+\newblock Robust Fine-Tuning of Zero-Shot Models.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}.
 
 \bibitem[{Yu et~al.(2020)Yu, Chen, Wang, Xian, Chen, Liu, Madhavan, and
   Darrell}]{yu2020bdd100k}

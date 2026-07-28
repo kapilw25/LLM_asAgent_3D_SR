@@ -2538,7 +2538,7 @@ def _mw_render_graphs(blocks, ev, out_dir: Path):
     _hdr = _BB_LABEL.get(_MW_BACKBONE, _MW_BACKBONE)
     fig.text(0.5, 0.992, _hdr, ha="center", va="top", fontsize=21, fontweight="bold", color="white",
              bbox=dict(boxstyle="round,pad=0.5", facecolor="#121C40", edgecolor="none"))
-    fig.text(0.5, 0.952, "iter18 EVAL scorecard — per-encoder TEST artifacts · 95% BCa CI where available",
+    fig.text(0.5, 0.952, "iter18 EVAL scorecard: per-encoder TEST artifacts · 95% BCa CI where available",
              ha="center", va="top", fontsize=14, fontweight="bold", color="#555")
     fig.subplots_adjust(hspace=0.6, wspace=0.3, top=0.93)
     save_fig(fig, str(out_dir / "eval_scorecard"))
@@ -2890,7 +2890,7 @@ def plot_scale_replication(backbones, out_dir):
             transform=lg.transAxes, fontsize=8, va="bottom", ha="left", color="#C62828", fontweight="bold")
     for ax in axf[len(per) + 1:]:
         ax.set_visible(False)
-    fig.suptitle(f"Scale replication — does the ranking survive {_duel}?   "
+    fig.suptitle(f"Scale replication: does the ranking survive {_duel}?   "
                  f"(all {len(per)} metrics, panels sorted by ρ desc · title colour: green ρ≥0.5 replicates · "
                  f"grey 0.2–0.5 inconclusive · red ρ<{FAIL} fails · dashed = identity y=x)",
                  fontsize=14, fontweight="bold")
