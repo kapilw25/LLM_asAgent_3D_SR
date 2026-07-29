@@ -1,0 +1,964 @@
+"""Motion-flow attentive probe (Priority 1 gate). GPU-only.
+Gold standard: https://github.com/facebookresearch/vjepa2 (attentive probe — configs/eval/vitg-384/ssv2.yaml).
+Claude Code: re-WebSearch this URL on every read of this file.
+
+iter13 v12 (2026-05-05): replaces saturated 3-class path-derived action labels
+with optical-flow-derived motion classes (16 classes of magnitude×direction
+from m04d motion_features.npy). See plan_code_dev.md Phase 2.
+
+Stages (EVALUATION band; labels-derivation moved to src/m04e_action_labels.py — §3.2):
+  features      — extract frozen spatiotemporal token features per encoder (GPU)
+  train         — train AttentiveClassifier head on cached features (GPU)
+  paired_delta  — paired BCa Δ between encoders (CPU)
+
+USAGE (sequence — every path arg required, no defaults):
+    # action_labels.json is derived FIRST by the ANNOTATION-band module:
+    #   python -u src/m04e_action_labels.py --SANITY --eval-subset <eval_10k.json> \\
+    #       --motion-features <m04d_motion_features/motion_features.npy> \\
+    #       --output-root outputs/sanity/probe_action --cache-policy 1
+
+    # Stage 2: features (GPU, ~30 min × 2 encoders)
+    python -u src/m12a_action_top1.py --FULL \\
+        --stage features --encoder vjepa_2_1_frozen \\
+        --encoder-ckpt checkpoints/vjepa2_1_vitG_384.pt \\
+        --eval-subset ${LOCAL_DATA}/eval_10k.json --local-data ${LOCAL_DATA} \\
+        --output-root outputs/full/probe_action \\
+        --cache-policy 1 2>&1 | tee logs/probe_action_features_vjepa.log
+
+    # Stage 3: train probe (GPU, ~15 min × 2 encoders)
+    python -u src/m12a_action_top1.py --FULL \\
+        --stage train --encoder vjepa_2_1_frozen \\
+        --output-root outputs/full/probe_action --cache-policy 1
+
+    # Stage 4: paired Δ (CPU, ~5 min, BCa 10K bootstrap)
+    python -u src/m12a_action_top1.py --FULL \\
+        --stage paired_delta \\
+        --output-root outputs/full/probe_action --cache-policy 1
+"""
+import argparse
+import json
+import math
+import os
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+sys.path.insert(0, str(Path(__file__).parent))
+from utils.action_labels import load_action_labels
+from utils.bootstrap import bootstrap_ci, paired_bca, parallel_bca
+from utils.cache_policy import (
+    add_cache_policy_arg,
+    guarded_delete,
+    resolve_cache_policy_interactive,
+)
+from utils.checkpoint import (
+    save_array_checkpoint,
+    save_json_checkpoint,
+)
+from utils.config import (
+    add_local_data_arg,
+    check_gpu,
+    get_paired_deltas,
+    get_pipeline_config,
+)
+from utils.data_download import ensure_local_data
+from utils.data_paths import artifact  # iter18 W4: canonical artifact names from pipeline.yaml
+from utils.frozen_features import (
+    ENCODERS,
+    extract_features_for_keys,
+    load_encoder_by_kind,
+)
+from utils.gpu_batch import cleanup_temp
+from utils.cgroup_monitor import print_cgroup_header, start_oom_watchdog
+from utils.vjepa2_imports import get_attentive_classifier
+from utils.wandb_utils import add_wandb_args, finish_wandb, init_wandb, log_metrics
+
+# iter18 W7 (PLR2004): semantic named constants.
+_TOKENS_RANK = 3      # (B, tokens, D)
+_MIN_COMPARABLE = 2   # paired comparison needs >=2 encoders
+
+
+# ── Constants (iter16 2026-05-20: yaml-resolved per CLAUDE.md) ──────
+# All probe hyperparams now live in configs/pipeline.yaml > probe:.
+_PROBE_CFG = get_pipeline_config()["probe"]
+NUM_FRAMES_DEFAULT = _PROBE_CFG["num_frames"]   # was 16 literal
+
+
+# ── Probe head training ──────────────────────────────────────────────
+
+def _make_probe(d_in: int, n_classes: int, depth: int):
+    """AttentiveClassifier (Meta's reference) with V-JEPA 2.1 protocol defaults."""
+    AC = get_attentive_classifier()
+    return AC(embed_dim=d_in, num_classes=n_classes,
+              depth=depth, num_heads=16, mlp_ratio=4.0,
+              complete_block=True, use_activation_checkpointing=False)
+
+
+def _train_attentive_classifier(probe, X_tr, y_tr, X_val, y_val, args, jsonl_path: Path, wb):
+    """AdamW + cosine LR + 10 % warmup + cross-entropy. Best-by-val-acc model selection.
+    Returns (best_val_acc, best_state_dict).
+    """
+    device = "cuda"
+    probe = probe.to(device)
+    optim = torch.optim.AdamW(probe.parameters(), lr=args.probe_lr, weight_decay=args.probe_wd)
+
+    n_tr = len(y_tr)
+    bs = max(8, min(args.train_batch_size, n_tr))
+    steps_per_epoch = math.ceil(n_tr / bs)
+    total_steps = steps_per_epoch * args.epochs
+    # Meta's published recipe (deps/vjepa2/configs/eval/vitg-384/ssv2.yaml) uses
+    # warmup=0.0 with the 5-LR multihead sweep. Our default is 0.10 (single-LR
+    # variant) for stability at higher peak LR; FULL can override to 0.0 for
+    # paper-faithful comparison.
+    warmup_steps = max(0, int(total_steps * args.warmup_pct))
+
+    def lr_lambda(step):
+        if warmup_steps > 0 and step < warmup_steps:
+            return step / warmup_steps
+        progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
+        return 0.5 * (1.0 + math.cos(math.pi * progress))
+    sched = torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda)
+
+    rng = np.random.default_rng(args.seed)
+    X_tr_t = torch.from_numpy(X_tr).float()
+    y_tr_t = torch.from_numpy(y_tr).long()
+    X_val_t = torch.from_numpy(X_val).float()
+    y_val_t = torch.from_numpy(y_val).long()
+
+    best_val_acc = -1.0
+    best_state = None
+    jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+    log_f = open(jsonl_path, "w")
+
+    # Adaptive micro-batch (gradient accumulation): macro batch stays = bs so AdamW
+    # + cosine schedule are unchanged; micro-batch shrinks on OOM. Fixes 24 GB OOM
+    # at fc1(x) inside AttentiveClassifier blocks (depth=4 × 4608 tokens × 1664 dim).
+    micro_bs = bs
+
+    step = 0
+    for epoch in range(args.epochs):
+        probe.train()
+        idx = rng.permutation(n_tr)
+        ep_loss, ep_correct, ep_total = 0.0, 0, 0
+        for s in range(0, n_tr, bs):
+            sub = idx[s:s + bs]
+            xb = X_tr_t[sub].to(device, non_blocking=True)
+            yb = y_tr_t[sub].to(device, non_blocking=True)
+            macro_n = xb.shape[0]
+            optim.zero_grad(set_to_none=True)
+            macro_loss_sum, macro_correct = 0.0, 0
+            i = 0
+            while i < macro_n:
+                end = min(i + micro_bs, macro_n)
+                sub_xb, sub_yb = xb[i:end], yb[i:end]
+                try:
+                    sub_logits = probe(sub_xb)
+                    # Scale by micro/macro so sum-of-grads = full-batch grads.
+                    sub_loss = F.cross_entropy(sub_logits, sub_yb) * (sub_xb.shape[0] / macro_n)
+                    sub_loss.backward()
+                except torch.cuda.OutOfMemoryError:
+                    torch.cuda.empty_cache()
+                    new_micro = max(1, micro_bs // 2)
+                    if new_micro == micro_bs:
+                        # Already at min; can't shrink further → re-raise.
+                        raise
+                    print(f"  OOM at micro_bs={micro_bs} → shrinking to {new_micro}, retrying chunk")
+                    micro_bs = new_micro
+                    optim.zero_grad(set_to_none=True)  # discard partial grads
+                    macro_loss_sum, macro_correct = 0.0, 0
+                    i = 0  # restart the macro batch from scratch
+                    continue
+                # Track unscaled loss + accuracy for logging.
+                macro_loss_sum += float(sub_loss.item()) * macro_n  # unscale for sum
+                macro_correct += int((sub_logits.argmax(-1) == sub_yb).sum().item())
+                i = end
+            optim.step()
+            sched.step()
+            step += 1
+            ep_loss += macro_loss_sum
+            ep_correct += macro_correct
+            ep_total += macro_n
+
+        val_acc = _eval_top1(probe, X_val_t, y_val_t, micro_bs)
+        train_acc = ep_correct / ep_total
+        train_loss = ep_loss / ep_total
+        cur_lr = optim.param_groups[0]["lr"]
+        rec = {"epoch": epoch, "step": step, "train_loss": round(train_loss, 6),
+               "train_acc": round(train_acc, 6), "val_acc": round(val_acc, 6),
+               "lr": round(cur_lr, 8)}
+        log_f.write(json.dumps(rec) + "\n")
+        log_f.flush()
+        os.fsync(log_f.fileno())
+        log_metrics(wb, rec)
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_state = {k: v.detach().cpu().clone() for k, v in probe.state_dict().items()}
+        if epoch % max(1, args.epochs // 10) == 0 or epoch == args.epochs - 1:
+            print(f"  epoch {epoch:>3d}/{args.epochs}: loss={train_loss:.4f} train_acc={train_acc:.4f} val_acc={val_acc:.4f} lr={cur_lr:.2e}")
+    log_f.close()
+    return best_val_acc, best_state
+
+
+def _eval_forward_oom_safe(probe, X_t: torch.Tensor, bs: int) -> tuple:
+    """Forward CPU tensor `X_t` with adaptive micro-batch shrinking on OOM.
+
+    CRITICAL: slices on CPU then moves chunk-by-chunk to GPU. Moving the WHOLE
+    tensor first would OOM at FULL scale (e.g. 1492 val clips × 4608 × 1664 fp32
+    = 45.7 GiB — exceeds even a 96 GB GPU). Returns (preds_np, used_bs).
+    """
+    n = X_t.shape[0]
+    preds = np.empty(n, dtype=np.int64)
+    micro = bs
+    i = 0
+    while i < n:
+        end = min(i + micro, n)
+        sub_xb = None
+        try:
+            with torch.no_grad():
+                sub_xb = X_t[i:end].to("cuda", non_blocking=True)
+                preds[i:end] = probe(sub_xb).argmax(-1).cpu().numpy()
+        except torch.cuda.OutOfMemoryError:
+            del sub_xb
+            torch.cuda.empty_cache()
+            new_micro = max(1, micro // 2)
+            if new_micro == micro:
+                raise
+            print(f"  eval OOM at micro={micro} → {new_micro}, retrying chunk")
+            micro = new_micro
+            continue
+        i = end
+    return preds, micro
+
+
+def _eval_top1(probe, X_t: torch.Tensor, y_t: torch.Tensor, bs: int) -> float:
+    """Top-1 accuracy (scalar). No-grad, eval mode. OOM-safe (CPU-side slicing)."""
+    probe.eval()
+    preds, _ = _eval_forward_oom_safe(probe, X_t, bs)
+    correct = (preds == y_t.numpy()).sum()
+    return float(correct) / len(y_t)
+
+
+def _eval_per_clip(probe, X_t: torch.Tensor, y_t: torch.Tensor, bs: int):
+    """Per-clip {0,1} correctness vector + scalar acc + BCa CI dict. OOM-safe."""
+    probe.eval()
+    preds, _ = _eval_forward_oom_safe(probe, X_t, bs)
+    correct = (preds == y_t.numpy()).astype(np.int8)
+    acc = float(correct.mean())
+    ci = bootstrap_ci(correct.astype(np.float64))
+    return correct, acc, ci
+
+
+# ── Stage dispatchers ─────────────────────────────────────────────────
+
+# iter16 §3.2: run_labels_stage MOVED to src/m04e_action_labels.py (ANNOTATION band —
+# the labels derivation feeds BOTH m09 training and this eval). This module (m12a, the
+# EVALUATION band) now CONSUMES action_labels.json via load_action_labels.
+
+
+def run_features_stage(args, wb) -> None:
+    if args.encoder is None:
+        sys.exit("FATAL: --stage features requires --encoder")
+    if args.eval_subset is None or args.local_data is None:
+        sys.exit("FATAL: --stage features requires --eval-subset and --local-data")
+    if ENCODERS[args.encoder]["kind"] == "vjepa" and args.encoder_ckpt is None:
+        sys.exit("FATAL: V-JEPA encoder requires --encoder-ckpt")
+
+    check_gpu()
+    # iter15 (2026-05-14): cgroup envelope + OOM watchdog (utils/cgroup_monitor.py)
+    print_cgroup_header(prefix="[m12a_action_top1]")
+    start_oom_watchdog(prefix="[m12a_action_top1]-oom-watchdog")
+    cleanup_temp()
+    ensure_local_data(args)
+
+    labels = load_action_labels(args.output_root / artifact("action_labels"))
+    enc_dir = args.output_root / args.encoder
+    enc_dir.mkdir(parents=True, exist_ok=True)
+
+    enc_kind = ENCODERS[args.encoder]["kind"]
+    model, crop, embed_dim = load_encoder_by_kind(args.encoder, args.encoder_ckpt, args.num_frames)
+
+    # iter13 lazy-feature-extraction (2026-05-05): only save splits the user
+    # explicitly listed in --features-splits (default ["test"]). train+val are
+    # extracted in-process by Stage 3 (run_train_stage) — the .probe_features_
+    # <split>_ckpt.npz resume side-effect doubles as a cross-LR cache. See
+    # iter/iter13_motion_probe_eval/plan_code_dev.md and
+    # /root/.claude/plans/wiggly-sniffing-muffin.md for design rationale.
+    if args.emit_perframe_cache and args.tubelet_size is None:
+        sys.exit("FATAL: --emit-perframe-cache requires --tubelet-size (T_eff = num_frames // tubelet_size)")
+    splits_to_save = list(args.features_splits)
+    by_split = {s: [] for s in splits_to_save}
+    for k, info in labels.items():
+        if info["split"] in splits_to_save:
+            by_split[info["split"]].append(k)
+    if splits_to_save != ["train", "val", "test"]:
+        skipped = [s for s in ("train", "val", "test") if s not in splits_to_save]
+        print(f"  [features] saving splits {splits_to_save}; lazy splits "
+              f"(extracted by Stage 3): {skipped}")
+
+    for split, keys in by_split.items():
+        out_features = enc_dir / f"features_{split}.npy"
+        out_keys     = enc_dir / f"clip_keys_{split}.npy"
+        if out_features.exists() and out_keys.exists() and args.cache_policy == "1":
+            print(f"  [keep] {split}: features cached -> skipping")
+            continue
+        guarded_delete(out_features, args.cache_policy, f"features_{split}")
+        guarded_delete(out_keys, args.cache_policy, f"clip_keys_{split}")
+
+        print(f"\n=== Stage 2 features: {split} ({len(keys)} clips, encoder={args.encoder}, "
+              f"pool_tokens={args.pool_tokens or 'OFF'}) ===")
+        t0 = time.time()
+        feats, ordered_keys = extract_features_for_keys(
+            args, model, enc_kind, crop, embed_dim,
+            keys, enc_dir, label=f"features_{split}",
+            pool_tokens=(args.pool_tokens if args.pool_tokens > 0 else None),
+            cache_frames=(split == "test"),   # warm the shared cache with the re-read TEST set only
+            # iter19 opt-in tcc-cache: on the TEST split, also emit the per-tubelet fp32 features from
+            # the SAME encoder forward so a tcc run reads them byte-for-byte (skips its 23k-clip re-encode).
+            emit_perframe_path=((enc_dir / f"perframe_{split}_fp32.npy")
+                                if (args.emit_perframe_cache and split == "test") else None),
+            pf_tubelet=args.tubelet_size,
+        )
+        elapsed = time.time() - t0
+        # iter15 Phase 6 audit (2026-05-16): optional motion_aux head augment.
+        # Tile head output (N, K+n_dims) across token axis → concat → (N, n_tokens,
+        # D + K + n_dims). Frozen baseline / missing-head cells skip this block.
+        if args.motion_aux_head is not None:
+            from utils.motion_aux_loss import load_motion_aux_head
+            from utils.frozen_features import apply_motion_aux_head_to_features
+            print(f"  [motion_aux] augmenting features with head: {args.motion_aux_head}")
+            ma_head = load_motion_aux_head(args.motion_aux_head, device="cuda")
+            ma_concat = apply_motion_aux_head_to_features(feats, ma_head, batch_size=256)
+            # (N, K+n_dims) → tile across n_tokens → (N, n_tokens, K+n_dims) → concat
+            n_tokens = feats.shape[1] if feats.ndim == _TOKENS_RANK else 1
+            ma_tiled = np.broadcast_to(
+                ma_concat[:, None, :], (feats.shape[0], n_tokens, ma_concat.shape[1])
+            ).astype(np.float16)
+            feats = np.concatenate([feats.astype(np.float16), ma_tiled], axis=-1)
+            print(f"  [motion_aux] augmented dim: D={feats.shape[-1] - ma_concat.shape[1]} + "
+                  f"(K+n_dims)={ma_concat.shape[1]} = {feats.shape[-1]}")
+        save_array_checkpoint(feats, out_features)
+        np.save(out_keys, np.array(ordered_keys, dtype=object))
+        print(f"  Saved {out_features} {feats.shape}  ({elapsed:.0f}s)")
+        log_metrics(wb, {f"features_{split}_n": int(feats.shape[0]),
+                         f"features_{split}_dim": int(feats.shape[-1]),
+                         f"features_{split}_sec": round(elapsed, 1)})
+
+
+def _cleanup_lazy_feature_caches(enc_dir: Path) -> None:
+    """Remove transient .probe_features_{train,val}_ckpt.npz after Stage 3 done.
+
+    The lazy-extraction path (iter13 plan_code_dev.md) writes train+val
+    feature cache .npz files via extract_features_for_keys' resume mechanism.
+    Those caches are PER-RUN scratch — they're not consumed by Stage 4
+    (paired_delta) or Stage 5 (motion_cos), only by Stage 3 train+val LR sweeps.
+    Once Stage 3's best-LR is selected, the caches become dead disk weight
+    (~30 GB per encoder per the v2 ENOSPC measurement).
+
+    Called from end of run_train_stage (single-LR) AND
+    run_select_best_lr_stage (multi-LR). test ckpt is preserved — Stage 4 +
+    Stage 5 may consume it as a fallback if features_test.npy was wiped.
+    """
+    for split in ("train", "val"):
+        _sfx = artifact("probe_ckpt_suffix")                       # "_ckpt.npz"
+        for path in (enc_dir / f".probe_features_{split}{_sfx}",
+                      enc_dir / f".probe_features_{split}{_sfx.replace('.npz', '.tmp.npz')}"):
+            if path.exists():
+                try:
+                    sz_gb = path.stat().st_size / 1e9
+                    path.unlink()
+                    print(f"  [lazy-cleanup] removed {path.name} ({sz_gb:.1f} GB)")
+                except OSError as e:
+                    print(f"  [lazy-cleanup] WARN: could not remove {path}: {e}")
+
+
+def run_train_stage(args, wb) -> None:
+    if args.encoder is None:
+        sys.exit("FATAL: --stage train requires --encoder")
+    if ENCODERS[args.encoder]["kind"] == "vjepa" and args.encoder_ckpt is None:
+        sys.exit("FATAL: V-JEPA encoder requires --encoder-ckpt (lazy extract needs the model)")
+    if args.local_data is None:
+        sys.exit("FATAL: --stage train requires --local-data (lazy extract reads the TARs)")
+
+    # iter15 Phase 8 (2026-05-17): full-stage cache short-circuit.
+    # Without this, a rerun re-trains the probe (~13 min ViT-G + 14-class POC)
+    # even though probe.pt + test_metrics.json + test_predictions.npy +
+    # test_clip_keys.npy are all already on disk. Mirrors the existing patterns
+    # at L268 (labels) and L343 (features). Skip happens BEFORE check_gpu() so
+    # cached encoders incur zero CUDA spinup. Escape hatch: --cache-policy 2.
+    enc_dir_pre = args.output_root / args.encoder
+    out_dir_pre = enc_dir_pre / args.output_subdir if args.output_subdir else enc_dir_pre
+    required_outputs = [
+        out_dir_pre / artifact("probe_head"),
+        out_dir_pre / artifact("test_predictions"),
+        out_dir_pre / artifact("test_clip_keys"),
+        out_dir_pre / artifact("test_metrics"),
+    ]
+    if args.cache_policy == "1" and all(p.exists() for p in required_outputs):
+        present = ", ".join(p.name for p in required_outputs)
+        print(f"  [keep] Stage 3 cached for {args.encoder}: {present} all present "
+              f"in {out_dir_pre} — skipping (--cache-policy 2 to redo)")
+        return
+
+    check_gpu()
+    # iter15 (2026-05-14): cgroup envelope + OOM watchdog (utils/cgroup_monitor.py)
+    print_cgroup_header(prefix="[m12a_action_top1]")
+    start_oom_watchdog(prefix="[m12a_action_top1]-oom-watchdog")
+    cleanup_temp()
+    ensure_local_data(args)
+
+    # Read features from canonical <encoder>/, write probe outputs to optional subdir.
+    enc_dir = args.output_root / args.encoder
+    out_dir = enc_dir / args.output_subdir if args.output_subdir else enc_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    labels = load_action_labels(args.output_root / artifact("action_labels"))
+    # iter13 v12 (2026-05-05): runtime-derived class_names from labels (motion-flow
+    # classes are dataset-driven, K varies). Sorted alphabetically — matches
+    # load_subset_with_labels' deterministic class_id assignment so class_id i ↔
+    # class_names[i] is invariant.
+    class_names = sorted({info["class"] for info in labels.values()})
+
+    # iter13 lazy-extract (2026-05-05): for any split whose features_<split>.npy
+    # is missing on disk, extract in-memory via extract_features_for_keys. The
+    # function's resume side-effect (.probe_features_<split>_ckpt.npz) acts as
+    # a cross-LR cache for multi-LR sweeps. See plan_code_dev.md.
+    enc_kind = ENCODERS[args.encoder]["kind"]
+    by_split = {"train": [], "val": [], "test": []}
+    for k, info in labels.items():
+        by_split[info["split"]].append(k)
+
+    # iter13 (2026-05-05): stream-and-discard branch. Skips ALL feature persistence
+    # AND the lazy-extract RAM cache; per-batch fwd-pool-head-loss-backward,
+    # discard. Use when pooled features still don't fit RAM (>1M clips at
+    # pool_tokens=128) OR for ablating multiple pool_tokens settings without
+    # re-extracting. Single LR (no sweep) — for sweeps stick with the
+    # disk-cached lazy path.
+    if args.stream_train:
+        from utils.probe_stream import stream_train_attentive_probe
+        model, crop, embed_dim = load_encoder_by_kind(args.encoder, args.encoder_ckpt, args.num_frames)
+
+        labels_by_clip = {k: info["class_id"] for k, info in labels.items()}
+        n_classes = len(class_names)
+        print(f"[stream-train] encoder={args.encoder}, embed_dim={embed_dim}, "
+              f"pool_tokens={args.pool_tokens}, n_classes={n_classes}")
+        best_val_acc, best_state, test_correct, test_keys = stream_train_attentive_probe(
+            args, model, enc_kind, crop, embed_dim,
+            by_split, labels_by_clip, n_classes, out_dir, wb)
+        # Persist probe + test predictions in canonical layout (matches lazy path).
+        torch.save(best_state, out_dir / artifact("probe_head"))
+        np.save(out_dir / artifact("test_predictions"), test_correct)
+        np.save(out_dir / artifact("test_clip_keys"), np.array(test_keys, dtype=object))
+        test_acc = float(test_correct.mean()) if test_correct.size else 0.0
+        test_ci = bootstrap_ci(test_correct.astype(np.float64))
+        save_json_checkpoint({
+            "encoder": args.encoder, "n_classes": n_classes, "class_names": class_names,
+            "n_test": int(test_correct.size), "top1_acc": test_acc, "top1_ci": test_ci,
+            "best_val_acc": float(best_val_acc),
+            "probe_lr": float(args.probe_lr), "warmup_pct": float(args.warmup_pct),
+            "epochs": int(args.epochs),
+            "stream_train": True,
+        }, out_dir / artifact("test_metrics"))
+        print(f"[stream-train] test top-1: {test_acc:.4f} ±{test_ci['ci_half']:.4f} (95% BCa CI)")
+        log_metrics(wb, {"test_top1_acc": test_acc,
+                         "test_top1_ci_half": test_ci["ci_half"],
+                         "stream_train": 1})
+        # Free encoder; no lazy caches to clean up (none were written).
+        del model
+        import gc as _gc
+        _gc.collect()
+        torch.cuda.empty_cache()
+        return
+
+    # Detect missing on-disk features → load encoder lazily (only when needed).
+    needs_extract = [s for s in ("train", "val", "test")
+                     if not (enc_dir / f"features_{s}.npy").exists()]
+    model = crop = embed_dim = None
+    if needs_extract:
+        print(f"  [lazy-extract] missing splits on disk: {needs_extract} — "
+              f"loading {args.encoder} encoder for in-memory extraction")
+        model, crop, embed_dim = load_encoder_by_kind(args.encoder, args.encoder_ckpt, args.num_frames)
+
+    # D6 fix (2026-05-16): if --motion-aux-head was set, ANY lazy-extracted split
+    # MUST receive the same augmentation that run_features_stage applies, else
+    # train/val (lazy, 1664-dim) ↔ test (disk, 1700-dim) dim-mismatch crashes the
+    # AttentiveClassifier at eval time (logs/iter15_post_poc_eval_head_aware_
+    # 20260516_012451.log:482 → LayerNorm normalized_shape=[1664] vs [*,1700]).
+    # Load the head once here, reuse across splits inside _load_or_extract.
+    ma_head_lazy = None
+    if args.motion_aux_head is not None and needs_extract:
+        from utils.motion_aux_loss import load_motion_aux_head
+        ma_head_lazy = load_motion_aux_head(args.motion_aux_head, device="cuda")
+        print(f"  [lazy-extract][motion_aux] will augment lazy splits with head: "
+              f"{args.motion_aux_head} (K={ma_head_lazy.n_motion_classes}, "
+              f"n_dims={ma_head_lazy.n_motion_dims})")
+
+    def _load_or_extract(split: str):
+        """Return (features (N,T,D) np.float32, ordered_keys np.array) for `split`.
+        Disk-first; falls back to extract_features_for_keys with resume cache.
+
+        D6 (2026-05-16): when lazy-extracting AND --motion-aux-head is set, applies
+        the same MA augmentation as run_features_stage (so train/val match test).
+        Disk-loaded path returns whatever shape was persisted — caller (Stage 2 or
+        prior invocation) is responsible for that file being correct.
+        """
+        npy_path  = enc_dir / f"features_{split}.npy"
+        keys_path = enc_dir / f"clip_keys_{split}.npy"
+        if npy_path.exists() and keys_path.exists():
+            return np.load(npy_path), np.load(keys_path, allow_pickle=True)
+        feats, ordered_keys = extract_features_for_keys(
+            args, model, enc_kind, crop, embed_dim,
+            by_split[split], enc_dir, label=f"features_{split}",
+            pool_tokens=(args.pool_tokens if args.pool_tokens > 0 else None),
+            cache_frames=(split == "test"),   # warm the shared cache with the re-read TEST set only
+        )
+        if ma_head_lazy is not None:
+            from utils.frozen_features import apply_motion_aux_head_to_features
+            ma_concat = apply_motion_aux_head_to_features(feats, ma_head_lazy, batch_size=256)
+            n_tokens = feats.shape[1] if feats.ndim == _TOKENS_RANK else 1
+            ma_tiled = np.broadcast_to(
+                ma_concat[:, None, :], (feats.shape[0], n_tokens, ma_concat.shape[1])
+            ).astype(np.float16)
+            feats = np.concatenate([feats.astype(np.float16), ma_tiled], axis=-1)
+            print(f"  [lazy-extract][motion_aux] {split}: D={feats.shape[-1] - ma_concat.shape[1]} "
+                  f"+ (K+n_dims)={ma_concat.shape[1]} = {feats.shape[-1]}  (N={feats.shape[0]})")
+        return feats, np.array(ordered_keys, dtype=object)
+
+    # iter18 head-reuse (Stage B): load a head trained on ANOTHER corpus (eval_10k's probe.pt),
+    # SKIP training, and score it on this run's TEST split ONLY. Pairs with --probe-split test-all
+    # upstream (test = the full disjoint corpus → n_test≈10k → ~2.3× tighter CIs). Needs no train/val
+    # split (none exists under test-all), so it extracts test features only and returns early.
+    if args.head_ckpt is not None:
+        feats_test, keys_test = _load_or_extract("test")
+        if model is not None:
+            del model
+            import gc as _gc
+            _gc.collect(); torch.cuda.empty_cache(); torch.cuda.ipc_collect()
+        y_test = np.array([labels[str(k)]["class_id"] for k in keys_test], dtype=np.int64)
+        d_in = int(feats_test.shape[-1]); n_classes = len(class_names)
+        probe = _make_probe(d_in, n_classes, args.probe_depth)
+        state = torch.load(args.head_ckpt, map_location="cpu", weights_only=True)
+        try:
+            probe.load_state_dict(state)
+        except (RuntimeError, KeyError) as e:
+            sys.exit(f"FATAL: --head-ckpt {args.head_ckpt} does not fit this encoder's probe "
+                     f"(embed_dim={d_in}, n_classes={n_classes}) — head trained on a different "
+                     f"encoder/class-set, or feature dim mismatch (motion_aux?). Error: {e}")
+        print(f"[head-reuse] loaded {args.head_ckpt} → AttentiveClassifier(embed_dim={d_in}, "
+              f"n_classes={n_classes}); training SKIPPED, eval on TEST (n={len(keys_test)})")
+        probe = probe.to("cuda")   # head-reuse skips _train_attentive_classifier (which moves probe→cuda); _eval_per_clip feeds cuda features, so move it here too
+        X_test_t = torch.from_numpy(feats_test).float()
+        y_test_t = torch.from_numpy(y_test).long()
+        test_correct, test_acc, test_ci = _eval_per_clip(probe, X_test_t, y_test_t, args.train_batch_size)
+        np.save(out_dir / artifact("test_predictions"), test_correct)
+        np.save(out_dir / artifact("test_clip_keys"), keys_test)
+        save_json_checkpoint({
+            "encoder": args.encoder, "n_classes": n_classes, "class_names": class_names,
+            "n_test": int(len(test_correct)), "top1_acc": test_acc, "top1_ci": test_ci,
+            "head_reuse_from": str(args.head_ckpt), "epochs": 0,
+        }, out_dir / artifact("test_metrics"))
+        print(f"[head-reuse] test top-1: {test_acc:.4f} ±{test_ci['ci_half']:.4f} (95% BCa CI), "
+              f"n_test={len(test_correct)}")
+        log_metrics(wb, {"test_top1_acc": test_acc, "test_top1_ci_half": test_ci["ci_half"], "head_reuse": 1})
+        if not args.output_subdir and not args.keep_lazy_cache:
+            _cleanup_lazy_feature_caches(enc_dir)
+        return
+
+    feats_train, keys_train = _load_or_extract("train")
+    feats_val,   keys_val   = _load_or_extract("val")
+    feats_test,  keys_test  = _load_or_extract("test")
+    # iter13 (2026-05-05): free encoder GPU memory BEFORE probe-head training.
+    # The encoder (~7.5 GB ViT-G weights + 1.5 GB activation buffers) is no
+    # longer needed once features are extracted — keeping it resident competes
+    # with the probe-head attention matrix and triggers spurious OOM-shrink at
+    # micro_bs=64 (see iter13 v3 log L297). gc.collect() is required because
+    # `del model` only drops the local reference; the actual frees happen when
+    # Python finalises the underlying nn.Modules — which means the dangling
+    # references inside torch.cuda allocator block reuse until gc runs.
+    if model is not None:
+        del model
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+    y_train = np.array([labels[str(k)]["class_id"] for k in keys_train], dtype=np.int64)
+    y_val   = np.array([labels[str(k)]["class_id"] for k in keys_val], dtype=np.int64)
+    y_test  = np.array([labels[str(k)]["class_id"] for k in keys_test], dtype=np.int64)
+
+    d_in = int(feats_train.shape[-1])
+    n_classes = len(class_names)
+    print(f"Probe: AttentiveClassifier(embed_dim={d_in}, n_classes={n_classes}, depth={args.probe_depth})")
+    probe = _make_probe(d_in, n_classes, args.probe_depth)
+    n_params = sum(p.numel() for p in probe.parameters())
+    print(f"  params: {n_params/1e6:.2f}M  → output_dir={out_dir}")
+
+    best_val_acc, best_state = _train_attentive_classifier(
+        probe, feats_train, y_train, feats_val, y_val,
+        args, jsonl_path=out_dir / artifact("train_log_jsonl"), wb=wb)
+    torch.save(best_state, out_dir / artifact("probe_head"))
+    print(f"Saved best probe → {out_dir / artifact('probe_head')} (val_acc={best_val_acc:.4f})")
+
+    probe.load_state_dict(best_state)
+    X_test_t = torch.from_numpy(feats_test).float()
+    y_test_t = torch.from_numpy(y_test).long()
+    test_correct, test_acc, test_ci = _eval_per_clip(probe, X_test_t, y_test_t, args.train_batch_size)
+
+    np.save(out_dir / artifact("test_predictions"), test_correct)
+    np.save(out_dir / artifact("test_clip_keys"), keys_test)
+    save_json_checkpoint({
+        "encoder": args.encoder, "n_classes": n_classes, "class_names": class_names,
+        "n_test": int(len(test_correct)), "top1_acc": test_acc, "top1_ci": test_ci,
+        "best_val_acc": float(best_val_acc),
+        "probe_lr": float(args.probe_lr), "warmup_pct": float(args.warmup_pct),
+        "epochs": int(args.epochs),
+    }, out_dir / artifact("test_metrics"))
+    print(f"Test top-1 acc: {test_acc:.4f}  ±{test_ci['ci_half']:.4f}  (95% BCa CI)")
+    log_metrics(wb, {"test_top1_acc": test_acc, "test_top1_ci_half": test_ci["ci_half"]})
+
+    # iter13 lazy-extract cleanup: for single-LR runs (no output_subdir), the
+    # train+val .probe_features_<split>_ckpt.npz caches are dead weight after
+    # this point. For multi-LR sweeps (output_subdir="lr_xxx"), DEFER cleanup
+    # to run_select_best_lr_stage — sibling LR runs still need the cache.
+    #
+    # iter15 D8 fix (2026-05-16): --keep-lazy-cache defers cleanup so the SAME
+    # resume ckpt can be reused by Stage 3.5 (probe_taxonomy). Caller (run_eval.sh)
+    # is then responsible for invoking `--stage cleanup_lazy` after Stage 3.5
+    # completes. Saves ~7 min × N encoders of re-extraction wall time. See
+    # iter/iter15_trainHead_freezeEncoder/planCODE_head_eval.md Phase 3 D8.
+    if not args.output_subdir and not args.keep_lazy_cache:
+        _cleanup_lazy_feature_caches(enc_dir)
+
+
+def run_select_best_lr_stage(args, wb) -> None:
+    """Multi-LR sweep best-by-val-acc selection (post-hoc, idempotent).
+
+    Scans `<output_root>/<encoder>/lr_*/test_metrics.json`, picks the subdir with
+    highest `best_val_acc`, and symlinks its outputs to the canonical
+    `<output_root>/<encoder>/<file>` paths so paired_delta reads the winner with
+    no further code changes. Mirrors the spirit of Meta's multihead probe sweep
+    (`deps/vjepa2/configs/eval/vitg-384/ssv2.yaml` selects best-of-N at eval time).
+    Idempotent: re-running just re-symlinks. No-op if only one lr_* subdir exists.
+    """
+    if args.encoder is None:
+        sys.exit("FATAL: --stage select_best_lr requires --encoder")
+    enc_dir = args.output_root / args.encoder
+    if not enc_dir.exists():
+        sys.exit(f"FATAL: encoder dir not found: {enc_dir}")
+    lr_dirs = sorted(enc_dir.glob("lr_*"))
+    if not lr_dirs:
+        print(f"  no lr_* subdirs under {enc_dir} — nothing to select (single-LR run, canonical paths already populated)")
+        return
+    best_dir, best_acc = None, -1.0
+    for sub in lr_dirs:
+        mf = sub / artifact("test_metrics")
+        if not mf.exists():
+            continue
+        val = json.loads(mf.read_text()).get("best_val_acc", -1.0)
+        if val > best_acc:
+            best_acc, best_dir = val, sub
+    if best_dir is None:
+        sys.exit(f"FATAL: no lr_*/test_metrics.json found under {enc_dir}")
+    print(f"Best LR for {args.encoder}: {best_dir.name} (best_val_acc={best_acc:.4f}) "
+          f"out of {len(lr_dirs)} swept LRs")
+    n_linked = 0
+    for fname in (artifact("probe_head"), artifact("test_predictions"), artifact("test_clip_keys"),
+                  artifact("test_metrics"), artifact("train_log_jsonl")):
+        if not (best_dir / fname).exists():
+            continue
+        target = enc_dir / fname
+        if target.exists() or target.is_symlink():
+            target.unlink()
+        target.symlink_to(best_dir.name + "/" + fname)
+        print(f"  symlink: {target.name} -> {best_dir.name}/{fname}")
+        n_linked += 1
+    log_metrics(wb, {f"{args.encoder}_best_lr": best_dir.name,
+                     f"{args.encoder}_best_val_acc": best_acc,
+                     f"{args.encoder}_n_lrs_swept": len(lr_dirs),
+                     f"{args.encoder}_n_files_linked": n_linked})
+
+    # iter13 lazy-extract cleanup: all sibling LR runs are done — caches are dead.
+    # iter15 D8 (2026-05-16): same defer-for-stage-3.5 logic as run_train_stage.
+    if not args.keep_lazy_cache:
+        _cleanup_lazy_feature_caches(enc_dir)
+
+
+def run_cleanup_lazy_stage(args, wb) -> None:
+    """iter15 D8 (2026-05-16): explicit cleanup endpoint for the lazy-extract
+    resume caches (.probe_features_{train,val}_ckpt.npz). Used by run_eval.sh
+    AFTER Stage 3.5 (probe_taxonomy) consumes the shared cache. Honors
+    CLAUDE.md's "Python owns destruction" rule — shell wrapper never rm's
+    directly, always routes through this CLI surface.
+    """
+    if args.encoder is None:
+        sys.exit("FATAL: --stage cleanup_lazy requires --encoder")
+    enc_dir = args.output_root / args.encoder
+    if not enc_dir.exists():
+        print(f"  [cleanup_lazy] dir not found, nothing to clean: {enc_dir}")
+        return
+    _cleanup_lazy_feature_caches(enc_dir)
+
+
+def run_paired_delta_stage(args, wb) -> None:
+    """N-way paired-Δ across all encoders that have probe outputs on disk.
+
+    Auto-discovers encoders by scanning <output_root>/*/ for the 3 expected files
+    (test_predictions.npy + test_clip_keys.npy + test_metrics.json). For each
+    pair (a, b) computes Δ = a_acc − b_acc on the shared test-clip intersection
+    with BCa 95 % CI. Schema:
+        {
+          "metric": "top1_accuracy",
+          "by_encoder":      {<enc>: {"acc_pct", "n", "top1_ci"}, ...},
+          "pairwise_deltas": {"<a>_minus_<b>": {n_shared, delta_pp, ci_*_pp,
+                                                 p_value, gate_pass, interpretation},
+                              ...}
+        }
+    Plus legacy top-level keys (vjepa_acc_pct/dinov2_acc_pct/delta_pp/etc.) when
+    BOTH vjepa_2_1_frozen and dinov2 are present — kept so probe_plot.py
+    (which reads those directly at lines 213-302) doesn't break on the N-way
+    upgrade. Same algorithmic template as probe_future_mse.py:447-529.
+    """
+    enc_data = {}
+    for enc_dir in sorted(args.output_root.iterdir()):
+        if not enc_dir.is_dir():
+            continue
+        if all((enc_dir / f).exists() for f in
+               (artifact("test_predictions"), artifact("test_clip_keys"), artifact("test_metrics"))):
+            enc_data[enc_dir.name] = {
+                "preds": np.load(enc_dir / artifact("test_predictions")).astype(np.float32),
+                "keys":  [str(k) for k in np.load(enc_dir / artifact("test_clip_keys"), allow_pickle=True)],
+                "agg":   json.loads((enc_dir / artifact("test_metrics")).read_text()),
+            }
+    available = sorted(enc_data.keys())
+    if len(available) < _MIN_COMPARABLE:
+        sys.exit(f"FATAL: need >=2 encoders with probe outputs, found: {available} "
+                 f"(run --stage train per-encoder first)")
+    print(f"Encoders found: {available}")
+
+    by_encoder = {e: {"acc_pct": round(float(d["preds"].mean()) * 100, 4),
+                      "n":       len(d["keys"]),
+                      "top1_ci": d["agg"]["top1_ci"]}
+                  for e, d in enc_data.items()}
+
+    # Pairwise alignment: per-encoder key order is non-deterministic (Stage 2
+    # iter_clips_parallel uses N concurrent TAR readers), so we intersect keys
+    # for each pair separately. Pattern ported from probe_future_mse.py:447-529.
+    # iter19 2026-07-09: collect the (pair) deltas then ONE parallel_bca (byte-identical fixed-seed BCa),
+    # consistent with the taxonomy/predictor finale stages; same schema/order/values.
+    pairwise_deltas = {}
+    _units, _slots = [], []
+    for i, a in enumerate(available):
+        for b in available[i + 1:]:
+            ka, kb = enc_data[a]["keys"], enc_data[b]["keys"]
+            shared = sorted(set(ka) & set(kb))
+            if not shared:
+                print(f"  WARN: {a} vs {b} have ZERO shared test clips — skipping")
+                continue
+            ai = {k: idx for idx, k in enumerate(ka)}
+            bi = {k: idx for idx, k in enumerate(kb)}
+            a_arr = np.array([enc_data[a]["preds"][ai[k]] for k in shared], dtype=np.float32)
+            b_arr = np.array([enc_data[b]["preds"][bi[k]] for k in shared], dtype=np.float32)
+            delta = a_arr - b_arr
+            _units.append(delta)
+            _slots.append((a, b, int(len(shared)), round(float(delta.mean()) * 100, 4)))
+    for (a, b, n_shared, dpp), bca in zip(_slots, parallel_bca(_units)):
+        pairwise_deltas[f"{a}_minus_{b}"] = {
+            "n_shared":       n_shared,
+            "delta_pp":       dpp,
+            "ci_lo_pp":       round(float(bca["ci_lo"]) * 100, 4),
+            "ci_hi_pp":       round(float(bca["ci_hi"]) * 100, 4),
+            "ci_half_pp":     round(float(bca["ci_half"]) * 100, 4),
+            "p_value":        float(bca["p_value_vs_zero"]),
+            "gate_pass":      bool(bca["ci_lo"] > 0),
+            "interpretation": f"{a} - {b} > 0 means {a} more accurate than {b}",
+        }
+
+    # iter15 Phase 8 (2026-05-17): paper-Δ definitions moved from hardcoded
+    # ITER14_DELTAS list to configs/eval/paired_deltas.yaml. Single source of
+    # truth — see that YAML's header for full schema + per-Δ interpretation
+    # rationale (Δ1..Δ7). Per src/CLAUDE.md "No hardcoded values in Python".
+    iter14_paper_deltas = {}
+    for entry in get_paired_deltas():
+        key, a_name, b_name, desc = entry["key"], entry["a"], entry["b"], entry["interpretation"]
+        if a_name not in enc_data or b_name not in enc_data:
+            iter14_paper_deltas[key] = {
+                "skipped":        True,
+                "reason":         (f"missing encoder(s): a={a_name} (present={a_name in enc_data}), "
+                                   f"b={b_name} (present={b_name in enc_data})"),
+                "interpretation": desc,
+            }
+            continue
+        ka, kb = enc_data[a_name]["keys"], enc_data[b_name]["keys"]
+        shared = sorted(set(ka) & set(kb))
+        if not shared:
+            iter14_paper_deltas[key] = {
+                "skipped":        True,
+                "reason":         f"zero shared test clips between {a_name} and {b_name}",
+                "interpretation": desc,
+            }
+            continue
+        ai = {k: idx for idx, k in enumerate(ka)}
+        bi = {k: idx for idx, k in enumerate(kb)}
+        a_arr = np.array([enc_data[a_name]["preds"][ai[k]] for k in shared], dtype=np.float32)
+        b_arr = np.array([enc_data[b_name]["preds"][bi[k]] for k in shared], dtype=np.float32)
+        delta = a_arr - b_arr
+        bca = paired_bca(delta)
+        iter14_paper_deltas[key] = {
+            "n_shared":       int(len(shared)),
+            "delta_pp":       round(float(delta.mean()) * 100, 4),
+            "ci_lo_pp":       round(float(bca["ci_lo"]) * 100, 4),
+            "ci_hi_pp":       round(float(bca["ci_hi"]) * 100, 4),
+            "ci_half_pp":     round(float(bca["ci_half"]) * 100, 4),
+            "p_value":        float(bca["p_value_vs_zero"]),
+            "pass":           bool(bca["ci_lo"] > 0),
+            "interpretation": desc,
+        }
+
+    out = {"metric": "top1_accuracy",
+           "by_encoder": by_encoder,
+           "pairwise_deltas": pairwise_deltas,
+           "iter14_paper_deltas": iter14_paper_deltas}
+    save_json_checkpoint(out, args.output_root / artifact("probe_paired_delta"))
+    log_metrics(wb, {"n_encoders_compared": len(available),
+                     "n_pairwise_deltas":   len(pairwise_deltas),
+                     "iter14_deltas_passed": sum(1 for d in iter14_paper_deltas.values()
+                                                 if d.get("pass") is True)})
+    print(json.dumps(out, indent=2))
+
+
+# ── CLI ────────────────────────────────────────────────────────────────
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        description="Indian action attentive probe (probe action_probe — priority 1 gate)")
+    p.add_argument("--SANITY", action="store_true")
+    p.add_argument("--POC",    action="store_true")
+    p.add_argument("--FULL",   action="store_true")
+    p.add_argument("--stage", required=True,
+                   choices=["features", "train", "select_best_lr", "paired_delta", "cleanup_lazy"])
+    p.add_argument("--encoder", choices=list(ENCODERS), default=None)
+    p.add_argument("--encoder-ckpt", type=Path, default=None)
+    p.add_argument("--head-ckpt", type=Path, default=None,
+                   help="iter18 head-reuse (Stage B): load a probe head trained on another corpus "
+                        "(eval_10k's probe.pt) and SKIP training — eval it on this run's TEST split "
+                        "only. Use with --probe-split test-all upstream for cross-set CI-reduction. "
+                        "FAIL LOUD if the head's dims don't fit this encoder.")
+    # iter15 Phase 6 audit (2026-05-16): optional motion_aux head for head-vs-
+    # encoder paired-Δ. When provided, features_<split>.npy is augmented to
+    # (N, n_tokens, D + K + n_dims) at the features stage (head logits + motion
+    # vec, tiled across token axis). probe head's d_in auto-derives from the
+    # features.npy shape — no train_stage changes needed. Frozen baseline /
+    # cells without a head omit this flag → encoder-only path (iter14 baseline
+    # reproduces bit-identically). See planCODE_head_eval.md Step 3.
+    p.add_argument("--motion-aux-head", type=Path, default=None,
+                   help="Path to motion_aux_head.pt for THIS encoder. When set, "
+                        "features are augmented to (N, n_tokens, D+K+n_dims). "
+                        "None → encoder-only path (V-JEPA gold-standard). "
+                        "Wired by run_eval.sh motion_aux_head_for(ENC); "
+                        "'vjepa_2_1_frozen' resolves to empty (skip).")
+    p.add_argument("--output-subdir", type=str, default="",
+                   help="Optional sub-directory under <output_root>/<encoder>/ for nesting per-LR-sweep "
+                        "probe outputs. Empty (default) writes probe.pt + test_predictions.npy at the "
+                        "canonical location. Set to e.g. 'lr_5e-4' to enable multi-LR sweeps without collision.")
+    p.add_argument("--eval-subset", type=Path, default=None)
+    add_local_data_arg(p)
+    p.add_argument("--output-root", type=Path, required=True)
+    # iter16 §3.2: --motion-features / --min-clips-per-class / --min-per-split were
+    # labels-stage-only args — they moved to src/m04e_action_labels.py with the labels
+    # derivation. m12a (EVALUATION) consumes the already-written action_labels.json.
+    p.add_argument("--num-frames", type=int, default=NUM_FRAMES_DEFAULT)
+    # iter13 (2026-05-05): lazy-feature-extraction. Stage 2 saves only the listed
+    # splits as features_<split>.npy. train+val are NOT durable by default —
+    # Stage 3 lazily re-extracts them in-memory (with disk-resume across LR
+    # sweeps via .probe_features_<split>_ckpt.npz). Saves ~80 GB per FULL eval.
+    # Override with --features-splits train val test for the legacy all-3 layout.
+    p.add_argument("--features-splits", nargs="+", default=["test"],
+                   choices=["train", "val", "test"],
+                   help="Which splits Stage 2 (--stage features) saves to disk as "
+                        "features_<split>.npy. Default: 'test' only — train/val are "
+                        "extracted lazily in Stage 3 to save ~80 GB durable disk per FULL eval.")
+    # iter19 opt-in tcc-cache: emit a per-tubelet fp32 identity cache from the SAME Stage-2 forward so
+    # a downstream tcc run reads it byte-for-byte (skips re-encoding). OFF by default → live path unchanged.
+    p.add_argument("--emit-perframe-cache", action="store_true",
+                   help="Stage 2 (test split, vjepa) ALSO writes perframe_test_fp32.npy — the per-tubelet "
+                        "(N,T_eff,D) fp32 features, from the same forward — for m12f --tcc-perframe-cache-root "
+                        "to reuse (byte-identical, saves tcc's 23k-clip re-encode). Fresh-run opt-in.")
+    p.add_argument("--tubelet-size", type=int, default=None,
+                   help="Encoder tubelet size (V-JEPA 2.1 ViT-G = 2). REQUIRED with --emit-perframe-cache "
+                        "(T_eff = num_frames // tubelet_size for the per-tubelet pool). Unused otherwise.")
+    p.add_argument("--pool-tokens", type=int, default=_PROBE_CFG["pool_tokens"],
+                   help="Adaptive-avg-pool encoder output to N tokens BEFORE storage / probe. "
+                        "yaml probe.pool_tokens (was 16 literal — V-JEPA paper §4 attentive-probe "
+                        "regime; 290× smaller .npy and 290× less probe-head attention compute). "
+                        "Use 0 to disable pooling (legacy 4608-token storage; needs ~21 MB/clip "
+                        "and 43 GB attention matrix at BS=64 — see iter13 OOM diagnosis).")
+    p.add_argument("--stream-train", action="store_true",
+                   help="Stream-and-discard Stage 3 training: no .npy persistence; per-batch "
+                        "TAR-decode → encoder forward (no_grad) → pool → head → loss → backward. "
+                        "Use for 100k+ clip datasets where even pooled features don't fit RAM. "
+                        "Cost: encoder runs once per epoch (~1× the lazy-extract cost). Disk: 0 GB.")
+    # iter15 D8 (2026-05-16): defer cleanup of .probe_features_{train,val}_ckpt.npz
+    # resume caches so Stage 3.5 (probe_taxonomy) can reuse them — saves ~7 min ×
+    # N encoders of redundant re-extraction. Caller is responsible for invoking
+    # `--stage cleanup_lazy` after the LAST downstream consumer (Stage 3.5).
+    # Standalone use (no Stage 3.5) should OMIT this flag → cleanup at end of
+    # Stage 3 preserves the iter13 behavior.
+    p.add_argument("--keep-lazy-cache", action="store_true",
+                   help="Defer cleanup of .probe_features_{train,val}_ckpt.npz so a "
+                        "downstream stage (e.g. probe_taxonomy --stage train) can reuse the "
+                        "resume cache. Caller MUST invoke '--stage cleanup_lazy' "
+                        "after the last consumer. See run_eval.sh post-Stage-3.5 cleanup.")
+    p.add_argument("--epochs", type=int, default=_PROBE_CFG["epochs"])
+    p.add_argument("--probe-lr", type=float, default=_PROBE_CFG["lr"])
+    p.add_argument("--probe-wd", type=float, default=_PROBE_CFG["wd"])
+    p.add_argument("--warmup-pct", type=float, default=_PROBE_CFG["warmup_pct"],
+                   help="Fraction of total_steps for linear LR warmup. yaml probe.warmup_pct "
+                        "(was 0.10 literal — our single-LR default; 0.0 = Meta's published recipe "
+                        "deps/vjepa2/configs/eval/vitg-384/ssv2.yaml).")
+    p.add_argument("--probe-depth", type=int, default=_PROBE_CFG["depth"],
+                   help="N attentive-pool layers. yaml probe.depth (was 4 literal — V-JEPA 2.1 published).")
+    p.add_argument("--train-batch-size", type=int, default=_PROBE_CFG["batch_size"])
+    p.add_argument("--seed", type=int, default=_PROBE_CFG["seed"])
+    add_cache_policy_arg(p)
+    add_wandb_args(p)
+    return p
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+    if not (args.SANITY or args.POC or args.FULL):
+        sys.exit("ERROR: specify --SANITY, --POC, or --FULL")
+    args.cache_policy = resolve_cache_policy_interactive(args.cache_policy)
+    args.output_root.mkdir(parents=True, exist_ok=True)
+    mode = "SANITY" if args.SANITY else ("POC" if args.POC else "FULL")
+    wb = init_wandb(f"m12a_action_top1_{args.stage}", mode,
+                    config=vars(args), enabled=not args.no_wandb)
+    try:
+        if args.stage == "features":
+            run_features_stage(args, wb)
+        elif args.stage == "train":
+            run_train_stage(args, wb)
+        elif args.stage == "select_best_lr":
+            run_select_best_lr_stage(args, wb)
+        elif args.stage == "paired_delta":
+            run_paired_delta_stage(args, wb)
+        elif args.stage == "cleanup_lazy":
+            run_cleanup_lazy_stage(args, wb)
+    finally:
+        finish_wandb(wb)
+
+
+if __name__ == "__main__":
+    # Fail-fast: any uncaught exception → traceback + sys.exit(1) so the
+    # parent shell (run_eval.sh under `set -e`) sees non-zero and aborts the
+    # chain. Mirrors m10_sam_segment.py pattern (errors_N_fixes #14/#16).
+    try:
+        main()
+    except SystemExit:
+        raise  # respect explicit sys.exit(N) calls inside main()
+    except BaseException:
+        import traceback
+        print(f"\n❌ FATAL: {Path(__file__).name} crashed — see traceback below", file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(1)

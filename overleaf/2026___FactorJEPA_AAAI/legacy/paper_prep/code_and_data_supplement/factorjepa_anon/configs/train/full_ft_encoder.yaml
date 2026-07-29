@@ -1,0 +1,53 @@
+# iter18 B4(a) baseline · Full-FT (Full Fine-Tuning) — naive end-to-end fine-tuning of all 48 blocks.
+# Forked from surgery_3stage_DI_encoder.yaml 2026-06-03 (copy-first: cp m09c1 → m09f_naiveft_encoder.py).
+#
+# WHAT IT IS: m09f trains ALL 48 blocks on RAW clips at ONE (no-head-warmup) LR — no factor curriculum,
+# no LP-FT (Linear-Probing then Fine-Tuning) head warmup, no SPD/saliency. The "forgetting ceiling":
+# Full-FT (Full Fine-Tuning) is expected to distort the pretrained temporal / world-model features
+# (Kumar et al. ICLR'22: Full-FT underperforms out-of-distribution). The must-beat namesake:
+# surgery (structured factor blocks) > Full-FT (everything trainable, no structure), CI-separated.
+#
+# USAGE (2B ViT-G = run_train's default BACKBONE = the BIGGEST):
+#   POC/FULL:  BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh full_ft_encoder --POC
+#   SANITY:    REPLAY_OVERRIDE=off BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh full_ft_encoder --SANITY
+#              (REPLAY_OVERRIDE=off → raw_pretrain_pct 0 → FactorSampler code-smoke; POC/FULL stream all-RAW.)
+
+extends: surgery_base.yaml
+
+data:
+  adapted_encoder: vjepa_2_1_full_ft_encoder       # unique per-arm (m05/m06 outputs don't collide)
+  output_dir: outputs/full/m09f_full_ft_encoder    # auto-overridden by run_train.sh
+
+# Full-FT (Full Fine-Tuning) trains on RAW clips (no factor curriculum) → no D_I interaction tubes.
+interaction_mining:
+  enabled: false
+
+surgery:
+  teacher_mode: EMA                # naive continual SSL: plain EMA teacher (NOT surgery's FROZEN SALT)
+  lp_ft_stage0:
+    enabled: false                 # Full-FT = NO head warmup — that on/off IS the LP-FT-vs-Full-FT story
+  # ONE stage, ALL 48 blocks trainable: unfreeze_below 1.0 → set_trainable_prefix(round(48*1.0)=48).
+  # RAW clips (mode_mixture moot under raw_replay 1.0; the SANITY FactorSampler smoke picks D_L layout).
+  stages:
+    - name: full_ft_single
+      unfreeze_below: 1.0
+      mode_mixture: {L: 1.0, A: 0.0, I: 0.0}
+      max_epochs_pct: 1.00
+
+# Naive FT: drop surgery's curriculum knobs (SPD selective decay + saliency weighting).
+optimization:
+  spd:
+    enabled: false
+  loss:
+    saliency_weighting: false
+
+replay:
+  raw_pretrain_pct: 1.0            # ALL raw clips (continual SSL on the new domain) = the naive-FT data.
+                                   # POC/FULL stream (raw_replay needs factor_streaming.enabled=true);
+                                   # SANITY runs REPLAY_OVERRIDE=off → 0.0 → FactorSampler code-smoke.
+
+# iter18 (2026-06-03): naive Full-FT OWNS drift-OFF explicitly — it was silently inheriting surgery_base's
+# l2_uniform λ=0.005 anchor, which is wrong for a "forgetting ceiling" (an anchor reduces forgetting). Now
+# declared like spd-off / saliency-off: a pure naive FT has NO anti-forgetting term.
+drift_control:
+  enabled: false

@@ -1,0 +1,97 @@
+# =============================================================================
+# GPU Requirements (Linux + Nvidia GPU)
+# =============================================================================
+# Install: pip install -r requirements_gpu.txt
+#
+# Prerequisites:
+#   - Linux (Ubuntu 20.04+)
+#   - Nvidia GPU (A100-40GB+ recommended)
+#   - CUDA 12.x
+#   - PyTorch 2.5.1+cu124 (install separately via setup_env_uv.sh --gpu)
+# =============================================================================
+
+# Base requirements (includes yt-dlp, scenedetect, umap-learn, etc.)
+-r requirements.txt
+
+# =============================================================================
+# Fast HF Downloads (Rust multi-stream, 1.5-3x per file)
+# =============================================================================
+hf_transfer>=0.1.4
+
+# =============================================================================
+# Transformers & Model Loading
+# =============================================================================
+# transformers==5.5.4: required for Sam3VideoModel + Sam3TrackerVideoModel
+# (Sam3 HF wrapper added in 5.0, unavailable in 4.57). Unlocks working
+# `max_frame_num_to_track` + `start_frame_idx` for m10 v2_HF backend (~10× speedup).
+# Downstream compat: Qwen3-VL (m04) ✓, V-JEPA 2 (m05) ✓, Grounding DINO (m10) ✓.
+# Known break: VideoLLaMA3 backend in m04 (processor signature changed) — unused,
+# m04 default backend is Qwen3-VL. Update `setup_env_uv.sh` before re-running m04.
+transformers==5.5.4
+sentencepiece>=0.1.99  # LLaVA-NeXT-Video: LlamaTokenizerFast requires sentencepiece for from_slow path
+accelerate>=0.25.0
+bitsandbytes>=0.41.0
+datasets>=2.14.0
+
+# =============================================================================
+# VLM Tagging (m04_vlm_tag.py)
+# =============================================================================
+timm>=0.9.0
+qwen-vl-utils>=0.0.2
+decord>=0.6.0
+imageio>=2.31.0
+ffmpeg-python>=0.2.0
+
+# =============================================================================
+# Video Processing
+# =============================================================================
+av>=12.0.0
+torchcodec                   # GPU video decode via NVDEC (5-10x vs PyAV CPU). Auto-detected by m05.
+
+# =============================================================================
+# Segmentation (m10_sam_segment.py) — SAM 3.1 text-prompted video segmentation
+# =============================================================================
+# sam3 installed from source in setup_env_uv.sh step 8 (not on PyPI)
+# Checkpoints gated on HF: huggingface-cli login (accept access at hf.co/facebook/sam3.1)
+einops>=0.6.0                # SAM 3.1 dependency (rope.py uses rearrange/repeat)
+pycocotools>=2.0.0           # SAM 3.1 dependency (train/data/coco_json_loaders.py imported at load time)
+iopath>=0.1.9                # SAM 3.1 dependency (model_builder.py uses g_pathmgr for checkpoint I/O)
+ftfy>=6.0.0                  # SAM 3.1 dependency (tokenizer_ve.py uses ftfy for text cleanup)
+
+# =============================================================================
+# LoRA (m09_pretrain.py --explora) — Parameter-efficient fine-tuning
+# =============================================================================
+peft>=0.13.0
+
+# =============================================================================
+# Experiment Tracking
+# =============================================================================
+wandb>=0.15.0
+
+# =============================================================================
+# cuML GPU (UMAP, DBSCAN, etc.) - Nvidia GPU ONLY
+# =============================================================================
+# cuml-cu12 installed via setup_env_uv.sh --gpu (RAPIDS PyPI)
+#
+# pytest: NOT a test dep here — it's a hard runtime requirement of cupy 14.1.0.
+# cuml pulls cupy, and cupy/__init__.py registers `cupy.testing` as a LAZY module
+# (cupy/__init__.py:1173). cupy/testing/_random.py:11 does an unconditional top-level
+# `import pytest`. wandb's pydantic 2.13.4 models trigger attribute-docstring
+# extraction, which walks sys.modules via inspect.getmodule → hasattr(mod,'__file__'),
+# forcing that lazy cupy.testing stub to fully import → ModuleNotFoundError: pytest.
+# Any process doing `import cuml` then `import wandb` (all m09 trainers, the setup
+# verify step) crashes without this. Regressed when cupy 14.0.1→14.1.0 (transitive,
+# unpinned via cuml-cu12 26.4.0). See logs/setup_env_gpu_20260526_060202.log:703-748.
+pytest>=8.0.0
+#
+# DO NOT add an explicit `nvidia-nvjitlink-cu12` pin here. We tried (logs/setup_env_gpu_v2.log)
+# to silence the cu12-version ping-pong between PyTorch and cuML, and it freed uv's
+# resolver to swap torch nightly+cu128 → torch stable 2.11.0+cu130, producing a mixed
+# cu12+cu13 stack and a FATAL uv pip check (line 204: cuda-toolkit==13.0.2 vs 12.9.2.0).
+# The harmless ping-pong (~30s extra install) is the lesser evil.
+
+# =============================================================================
+# FAISS GPU (Similarity Search) - Nvidia GPU ONLY
+# =============================================================================
+# Install via setup_env_uv.sh --gpu (no CPU fallback)
+# faiss-gpu is installed separately due to CUDA version requirements

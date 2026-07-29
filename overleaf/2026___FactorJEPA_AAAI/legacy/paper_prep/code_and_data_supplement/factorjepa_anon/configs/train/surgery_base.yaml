@@ -1,0 +1,415 @@
+# Surgery base config — shared across all m09c factor-surgery variants.
+# Three variants extend this file:
+#   - surgery_2stage_noDI_encoder.yaml      (D_L + D_A, 2 stages, no interaction tubes)
+#   - surgery_2stage_loud_agent.yaml (D_L + D_A, 2 stages, A=0.85 louder agent)
+#   - surgery_3stage_DI_encoder.yaml        (D_L + D_A + D_I, 3 stages, safer interactions)
+#
+# Each variant's yaml only contains its DIFFs:
+#   - data.adapted_encoder        (unique — m05/m06 outputs don't collide)
+#   - data.output_dir             (variant-specific results directory)
+#   - interaction_mining.enabled  (3stage_DI only re-enables D_I)
+#   - surgery.stages              (mixtures + depths + epoch budgets per recipe)
+#
+# Inheritance chain (resolved by load_merged_config recursive `extends`):
+#   variant.yaml → surgery_base.yaml → base_optimization.yaml
+#
+# Common recipe (from FactorJEPA proposal Sec 11; 1K POC diagnosis 2026-04-19):
+#   1. SAM3 segments video clips into agent vs layout (motion filter)
+#   2. m11 generates factor datasets:
+#        D_L = layout-only (blur agents)
+#        D_A = agent-only (suppress background)
+#        D_I = interaction tubes (multi-agent events; only consumed by 3stage_DI)
+#   3. Progressive prefix unfreezing on FROZEN V-JEPA 2.1
+#   4. Loss: default = pure JEPA L1 (α=1, β=γ=0). Multi-task variant
+#        (surgery_3stage_DI_multitask.yaml) activates
+#        total = α · JEPA + β · InfoNCE(same-clip vs in-batch) + γ · TCC(soft-NN cycle)
+#        — JEPA = V-JEPA 2.1 generative regulariser
+#        — InfoNCE drives Prec@K + mAP@K   (Patel CVPR 2022, Chen SimCLR ICML 2020)
+#        — TCC pins  Cycle@K               (Dwibedi CVPR 2019)
+#        — Standard multi-task pattern from VICReg / V-JEPA 2 + CLIP heads.
+#        See base_optimization.yaml `loss:` block + utils/training.compute_multitask_loss.
+
+extends: base_optimization.yaml
+
+# -- Data: surgery-specific overrides (paths inherited from base_optimization.yaml) --
+# Deterministic 90/10 internal split via seeded shuffle (cfg.data.seed from base_optimization.yaml)
+# is used ONLY for POC code-path validation (when probe.use_permanent_val.poc=false).
+# In FULL mode, probe.use_permanent_val.full=true → train uses ALL of train_subset (2452 clips)
+# and val/probe use the permanent ultra_hard_3066_val (306 clips).
+# Held-out val clip_keys are written to outputs/.../m09c1_surgery_encoder/val_split.json for downstream
+# Step D (Frozen m05), Step E (Surgical m05), Step F (m06 decision gate) — apples-to-apples
+# on the same held-out 10 %.
+data:
+  module: m09c                                       # m09b for explora, m09c for surgery_*
+  model_config: configs/model/vjepa2_1.yaml
+  train_val_split:
+    sanity: 1.0                   # no split (N=20 too small)
+    poc: 0.9                      # 900 train / 100 held-out val
+    # full: dormant — probe.use_permanent_val.full=true overrides → external val_subset is used.
+  # train/val/eval subsets + factor_dir inherited from base_optimization.yaml.
+  # Per-variant overrides (in surgery_2stage_*.yaml / surgery_3stage_DI_encoder.yaml):
+  #   - adapted_encoder    (unique m05/m06 output suffix per variant)
+  #   - output_dir         (variant-specific results dir)
+
+# -- Streaming factor generation (eliminates m11 D_L/D_A .npy disk writes) --
+# When enabled, m09c DataLoader generates D_L/D_A on-demand from (raw_mp4 +
+# m10_mask.npz) pairs. Unlocks 10K→50K→115K scale ladder on a single 500 GB
+# instance (vs 500 GB → 3 TB → 5 TB rent). See iter/iter9/plan_code_dev.md.
+# iter14 (2026-05-09): POC FLIPPED to streaming for POC↔FULL parity (CLAUDE.md
+# rule). Iter8 1K POC needed bitwise reproducibility on the legacy disk path,
+# but iter14 POC = 91 m10-quality-gated clips on a 96 GB Blackwell — different
+# regime. Recipe-v3 #5 CLEAR raw replay (utils.training.StreamingFactorDataset
+# raw_replay_pct branch) only fires in the streaming code path; with POC=false
+# the legacy FactorSampler ignored REPLAY_OVERRIDE=on, silently 4-of-5
+# interventions instead of 5-of-5 → invalid R1 ablation result.
+factor_streaming:
+  sanity: true                    # iter17 (2026-05-26): was false (legacy .npy). recipe-v3
+                                  #   default replay.raw_pretrain_pct=0.5 needs the streaming
+                                  #   path (raw-replay lives in StreamingFactorDataset only);
+                                  #   legacy .npy silently drops replay → m09c1 FATAL guard.
+                                  #   Per POC↔SANITY parity (CLAUDE.md) SANITY must exercise the
+                                  #   SAME streaming+replay path as POC/FULL — not disable replay.
+  poc:    true                    # iter14: parity with FULL → CLEAR replay #5 fires
+  full:   true                    # 🎯 unlocks scale ladder
+  num_workers:
+    sanity: 0                     # in-process debug path, deterministic
+    poc:    auto                  # iter18 (2026-06-06): was 4 — fixed caps starved GPUs under
+                                  #   multi-arm concurrency (60-140 s/step vs 27 solo). "auto" =
+                                  #   utils.stream_autotune resolves from live cores/concurrency/
+                                  #   RAM; constants in pipeline.yaml streaming.worker_autotune.
+    full:   auto                  # same resolver (scipy gaussian σ=15 is CPU-bound; needs processes)
+  prefetch_factor:     2          # 06-07 OOM-137 fix: was 4 — at 20 workers × 4 arms that queued
+                                  # ~32G of in-flight batches PER ARM (516G/519G cgroup → kernel
+                                  # SIGKILLed noDI+raw at step 1). 2 still keeps the GPU fed; RAM
+                                  # in-flight halves. Infra knob — training math unchanged.
+  persistent_workers:  true       # amortize worker-fork cost within a stage
+  pin_memory:          true
+
+# -- Optimization: surgery-specific overrides (BS/max_epochs inherited from base) --
+optimization:
+  # iter17 (2026-05-26): surgery now OWNS its peak lr explicitly. It previously
+  # SILENTLY inherited base_optimization.yaml's lr=5e-5 — but that 5e-5 is the ORPHANED
+  # iter11 pretrain value: pretrain_encoder.yaml:75 later moved to 1e-4, leaving base's
+  # 5e-5 used only by whoever didn't declare. Surgery is a surgical-FT regime; its peak
+  # is 5e-5 + layer-wise decay 0.75 (value UNCHANGED — this only makes the choice OWNED,
+  # like teacher_mode/spd/saliency/replay/warmup are). Now a base-lr edit can't silently
+  # move surgery, and lr is single-sourced per technique. (Whether 5e-5 is the optimal
+  # surgical peak is a separate research question — this fix is ownership, not retuning.)
+  lr: 5.0e-5
+  # Layer-wise LR decay — surgery-only, smaller LR for earlier (already-frozen) layers.
+  layer_wise_lr_decay: true
+  layer_wise_lr_decay_factor: 0.75
+
+  # iter14 max_epochs override (2026-05-08). Was inherited 15 from base_optimization.yaml:148
+  # (which is iter11 v2's "let val-loss flatten before plateau-patience fires" recipe).
+  # G1=🅰️ "5+5 vs 10": surgery 5 ep + pretrain-init 5 ep = 10 ep total compute,
+  # compute-matched against arm C long-pretrain at 10 ep. If arm B (factor surgery)
+  # > arm C (long-pretrain) with non-overlapping 95% CIs, gain is causal to factor
+  # patching, not extra training steps. See plan_surgery_on_pretrain.md § Q3.
+  # iter16 M2 (2026-05-21): max_epochs DELETED — inherited from
+  # base_optimization.yaml (single source of truth). yaml_extract.py walks
+  # the extends chain, so run_train.sh:250 still resolves the value.
+
+  # Memory saver flags — MODE-GATED (#57).
+  #
+  # SANITY runs on 24GB RTX Pro 4000 (cheap, fast iteration) — needs both flags
+  # ON: Stage 3 unfreezes 36/48 blocks → 1.38B trainable params → fp32 AdamW
+  # state ~16.5 GB alone overflows 24 GB. Without savers, v5 OOMed at sub-batch=1
+  # even after within-step retry (#55). 8-bit AdamW (bitsandbytes, Dettmers 2022
+  # arXiv:2110.02861) reduces optimizer state 4×; gradient checkpointing
+  # (torch.utils.checkpoint) cuts activation memory 2-4×. Combined fits all 3
+  # stages with ~25% throughput hit. Acceptable — SANITY purpose per CLAUDE.md
+  # is "code correctness, NOT model performance."
+  #
+  # POC/FULL runs on 96GB RTX Pro 6000 Blackwell — flags OFF. Research-quality
+  # comparisons (Surgery > Frozen on Prec@K, non-overlapping 95% CIs) use the
+  # published V-JEPA recipe (fp32 AdamW, no checkpointing) to eliminate 8-bit
+  # as an accuracy confound. Dettmers' <1% accuracy claim was benchmarked ≤1.3B;
+  # V-JEPA ViT-G is 2B (extrapolation). For a NeurIPS comparison where Surgery's
+  # advantage might be ~1-5% Prec@K, the ~0.5% 8-bit noise would widen CIs and
+  # threaten the win condition. 96 GB has headroom → no savers needed. ~33%
+  # throughput gain vs 24GB path. Matches user priority: Accuracy > Throughput.
+  use_8bit_optim:
+    sanity: false     # iter14 SANITY runs on Blackwell 96 GB (not 24 GB) → match POC optimizer class. Required: bitsandbytes has no SPDAdamW8bit wrapper, and SANITY MUST exercise SPD path for wiring validation (build_optimizer FATALs if 8bit + spd both true).
+    poc: false        # 96GB POC: clean fp32 for research-quality comparison
+    full: false       # 96GB FULL: clean fp32 for paper-quality result
+  gradient_checkpointing:
+    sanity: true
+    poc: false
+    full: false
+  # Paged optimizer (#58) — ONLY read when use_8bit_optim is true. Dead config when
+  # 8bit is false across all modes (iter14 default). Kept for documentation.
+  paged_optim:
+    sanity: false     # gated on use_8bit_optim.sanity (now false)
+    poc: false        # 96GB POC: not needed
+    full: false
+
+  # iter15 D12 (2026-05-16): R1 recipe-v3 overrides. Promotes iter14 R1 winning recipe
+  # (top1=0.8456) from env-var-triggered overrides to yaml-level defaults. See
+  # plan_surgery_wins.md §12.4 + R1 log L12 "--saliency on --spd on --replay on".
+  # Head variants override optimization.spd.enabled: false (no trainable backbone →
+  # SPDAdamW.n_anchored=0 → build_optimizer FATALs at training.py:705).
+  # iter15 D14 (2026-05-16): MERGED into the L78 optimization block — previously
+  # this was a second top-level `optimization:` key, which YAML silently collapsed
+  # via "last key wins" → erased max_epochs/layer_wise_lr_decay/memory-saver flags.
+  # Surgery cells ran with R0 budget (1 epoch instead of 2) at POC for ~1 hour
+  # before this was caught. NEVER add a second top-level key in yaml — extend the
+  # existing block.
+  loss:
+    saliency_weighting: true            # iter14 R1 default; MGMAE-style L2-norm weighted JEPA loss
+  spd:
+    enabled: true                       # iter14 R1 default; SPDAdamW replaces drift_control L2 anchor
+    alpha: 0.05                         # SPD strength (Tian NeurIPS'24 arXiv:2411.01713)
+
+# -- Factor datasets (m10/m11 prerequisite) --
+factor_datasets:
+  # Grounded-SAM pipeline: Grounding DINO (text → boxes) → SAM 3.1 (box → masks + propagation)
+  # Replaces SAM 3.1 native text grounding (too weak on Indian objects: 10/15 clips had
+  # n_agents=0 on SANITY). DINO trained on Objects365+GoldG (365 open-vocab categories).
+  sam_model: facebook/sam3              # raw sam3 pkg (m10_sam_segment.py)
+  sam_hf_model: facebook/sam3           # HF transformers wrapper (m10_sam_segment.py): Sam3TrackerVideoModel.
+                                        # iter16 (2026-05-22) ROLLBACK from sam3.1 → sam3: WebSearch (HF page +
+                                        # RELEASE_SAM3p1.md) confirms facebook/sam3.1 hosts ONLY the standalone
+                                        # checkpoint .pt file with NO HF Transformers integration (no config.json +
+                                        # model.safetensors with HF naming). Sam3TrackerVideoModel.from_pretrained
+                                        # raises OSError "does not appear to have a file named pytorch_model.bin or
+                                        # model.safetensors" against facebook/sam3.1. The 2026-05-20 yaml upgrade
+                                        # ("sam3.1 drop-in") was wrong — Meta has not yet shipped the transformers
+                                        # config for sam3.1. The improved sam3.1 Object Multiplex weights ARE
+                                        # pre-cached by setup_env_uv.sh step [11/11] for the day transformers ships
+                                        # sam3.1 support — until then, run sam3. See iter/iter16_train_115kclips/
+                                        # legacy/plan_code_modifications.md M6 for the original upgrade rationale.
+  grounding_dino:
+    model_id: "IDEA-Research/grounding-dino-base"   # Swin-B, 233M params, ~1.2 GB VRAM
+    # iter13 v13 FIX-18 (2026-05-07): box/text thresholds REVERTED to v10 defaults
+    # (0.15/0.12) for recall lift on small/distant pedestrians. Chennai walking-tour
+    # clip VX_bCHlvFaw-171 (5-6 visible humans) detected only 9 agents at 2 % pixel
+    # coverage under 0.20/0.18 — D_A nearly black, D_L indistinguishable from
+    # original → factor decomposition degenerate. Precision recovered via SAM
+    # `min_stability_score: 0.92` post-filter (Meta default for SAM auto-mask).
+    box_threshold: 0.15                  # iter13 v13 FIX-18: was 0.20 (v11) → 0.15 (recall lift)
+    text_threshold: 0.12                 # iter13 v13 FIX-18: was 0.18 (v11) → 0.12 (recall lift)
+    # 17-category agent taxonomy (accuracy-first; goal = Surgery > ExPLoRA > Frozen on Prec@K).
+    # Extended beyond tag_taxonomy.json's 11 agents with finer Objects365-aligned classes.
+    agent_taxonomy:
+      - pedestrian
+      - person
+      - vendor
+      - policeman
+      - bus
+      - car
+      - truck
+      - motorcycle
+      - bicycle
+      - scooter
+      - auto rickshaw
+      - cycle rickshaw
+      - cart
+      - cow
+      - dog
+      - bull
+      - buffalo
+
+  iou_threshold: 0.3                  # Tracklet matching threshold
+  motion_threshold: 0.05              # Frame width fraction (agent vs layout filter)
+  motion_min_frames: 4                # Persistence required for "agent" classification
+  agent_dilation_pixels: 4            # Mask dilation for thin structures (legs, bike spokes)
+  min_confidence: 0.3                  # SAM 3.1 out_probs threshold (lowered from 0.5 to catch small/distant objects)
+  # iter13 v13 FIX-18 (2026-05-07): per-mask SAM stability filter (Layer A).
+  # Mask is "stable" when IoU(mask, dilate/erode(mask, ±1px..±2px)) ≥ this value.
+  # Originally Meta's SAM auto-mask-generator default of 0.92 — but on 384×384
+  # Indian street-scene SAM3 outputs that filter rejected 2,675 of 2,737
+  # candidate masks (97.7%) on the SANITY 20-clip pool, dropping total agents
+  # 569 → 62 (-89% vs v6's no-filter baseline). Diagnosis: 0.92 is calibrated
+  # for high-resolution COCO masks; small/distant pedestrian masks here have
+  # rougher perimeters → naturally score 0.85-0.92 even when visually correct.
+  # Disabled (0.0) so DINO 0.15/0.12 lowering actually lifts recall (Option B
+  # of the v7→v8 decision). M1 stability_score is STILL computed per mask for
+  # observability and lands in segments.json[*].quality.stability_score —
+  # surgery training can later use it to *weight* loss without *gating* masks.
+  min_stability_score: 0.0             # disabled — Option B; M1 still computed for observability
+  min_mask_area_pct: 0.001             # Minimum mask area as fraction of frame (filters tree trunk false positives)
+
+  # iter13 v13 FIX-18 (2026-05-07): SAHI tile inference for DINO (Layer B, opt-in).
+  # Default OFF — enable per-run via `--sahi-slicing` CLI flag. SAHI paper
+  # (Akyon ICIP 2022) reports pedestrian recall 31.8 % → 86.4 % with sliced
+  # inference. Cost: ~4-9× DINO calls per anchor frame; expected ~10× FULL m10
+  # wall-time (1 hr → 10 hr). A/B vs lowered-thresholds-alone (Layer A) before
+  # committing to FULL.
+  sahi:
+    slice_height: 640
+    slice_width: 640
+    overlap: 0.2
+    nms_iou: 0.5
+
+  # Patch operators (rendering)
+  layout_patch_method: blur            # blur | inpaint
+  agent_patch_method: soft_matte       # hard_zero | soft_matte
+  soft_matte_factor: 0.1               # Background attenuation (1.0 = no change, 0 = hard zero)
+  blur_sigma: 15.0                     # Gaussian blur sigma for D_L agent suppression
+  feather_sigma: 3.0                   # Mask edge feathering sigma (prevents shortcut learning)
+  min_agent_area_pct: 0.003            # Drop D_A if agent < 0.3% (calibrated to Grounded-SAM
+                                       # output distribution: tight precise masks avg 0.5-1.0%).
+                                       # Was 0.02 (calibrated for OLD noisy SAM3-text pipeline with
+                                       # mean ~3-5% from false positives). At new distribution 0.02
+                                       # would skip D_A on ~16/20 clips → starve Stage 2.
+  max_agent_area_pct: 0.70             # Drop D_L if agent > 70% (layout invisible)
+
+# -- Interaction mining (D_I) --
+# Default disabled (2-stage variants). 3stage_DI.yaml overrides enabled=true to populate
+# D_I tubes (m10 --interactions-only writes n_interactions; m11 --regen-D_I builds tubes).
+interaction_mining:
+  enabled: false                      # iter9 2-stage default: D_I retired → m11 skips tube .npy writes (saves 26% m11 disk).
+  min_overlap_frames: 4               # r in proposal Sec 11.2
+  max_distance_frame_fraction: 0.20   # d_max
+  cue_types: [approach, crossing, following]
+  tube_margin_pct: 0.15               # Box expansion margin
+  # #77 (2026-04-20): optional category-pair blacklist for typed D_I filtering.
+  # m10 now annotates each interaction with cat_a + cat_b (canonical 17-cat taxonomy);
+  # m11 drops interactions whose (cat_a, cat_b) or (cat_b, cat_a) matches any entry.
+  # Default [] = accept all (no filter; back-compat). Example when re-enabling D_I
+  # for Stage-3 ablation: [[cart, cart], [cow, cow]] drops "static × static" pairs
+  # that don't produce meaningful interaction tubes.
+  category_pair_blacklist: []
+  # iter18 (2026-06-15) RESULT-SAFE tube cache. When enabled, stream_interaction_tubes()
+  # memoizes its (decode MP4 + mine tubes) output to one .npz per (clip,cfg-hash) under
+  # data_paths.tube_cache_dir(local_data) — 2nd+ epoch reads the .npz instead of recomputing.
+  # The .dir field is INJECTED at runtime by utils.m09_common.merge_m09_common_config from
+  # the resolved cfg.data.local_data (so it tracks --local-data; never hardcoded here). The
+  # random tube-PICK stays in StreamingFactorDataset → training is bit-equivalent. Cache key
+  # includes tube_margin_pct + category_pair_blacklist + enabled + num_frames → any change
+  # MISSES (no stale reuse). enabled:false → exact pre-cache behavior (revertible).
+  tube_cache:
+    enabled: true                     # read-through D_I tube cache (set false to bypass)
+    dir: null                         # INJECTED at runtime from local_data (do not hardcode)
+
+# -- Surgery: progressive prefix unfreezing --
+# Sec 11.5 of proposal. Per-variant `surgery.stages` overrides this file's empty default.
+surgery:
+  # Per-stage warmup as a fraction of stage_steps. Replaces the old fixed
+  # warmup_steps=200 which broke POC (stage_steps≈99 < 200 → never reached full
+  # LR). 0.20 = 20% of stage spent warming LR from 0→target, 80% at full LR.
+  # Auto-scales: POC 100 clips → 19 warmup, POC 10K → 206, FULL 115K → 718.
+  # Used ONLY when warmup_mode == "per_stage" (legacy).
+  warmup_pct: 0.20
+  # iter14 recipe-v3 audit A4 (2026-05-09): warmup mode.
+  #   per_stage = legacy — every stage repeats warmup (BUG at POC: 1-step stages
+  #               with warmup_pct=0.20 floor to warmup_steps=1 → entire stage in
+  #               warmup → encoder never sees configured base_lr).
+  #   single    = single warmup at start of training (stage 0 only); subsequent
+  #               stages skip warmup, run at full base_lr immediately. Matches
+  #               vjepa2 reference + fixes step-1 LR shock at POC.
+  # iter15 D12 (2026-05-16): flipped per_stage → single as R1 default (matches
+  # iter14 R1 winning recipe top1=0.8456, see plan §12.4 + R1 log L104 "warmup 0").
+  # Override at runtime: WARMUP_OVERRIDE={per_stage, single} env-var (T7-wired).
+  warmup_mode: single
+  # Used ONLY when warmup_mode == "single". Fraction of TOTAL training steps
+  # (across all stages) allocated to the single front-loaded warmup.
+  total_warmup_pct: 0.10
+  # iter14 recipe-v2 (2026-05-09): teacher mode — recipe-v2 axis #1 of POC sweep.
+  #   EMA    = legacy `teacher = deepcopy(student)` + `update_teacher_ema(τ=ema_momentum)`
+  #   FROZEN = SALT (Apple arXiv:2509.24317) — teacher is the init checkpoint
+  #            (loaded via --init-from-ckpt) and NEVER updated. Eliminates the
+  #            EMA-decay feedback loop where teacher tracks the regressing student.
+  # iter15 D12 (2026-05-16): flipped EMA → FROZEN as R1 default. iter14 R1 used
+  # --teacher-mode FROZEN (log L31 "mode=FROZEN (SALT)"). Cell R2_minus_frozen
+  # (=EMA fallback) scored 0.8382 < R1's 0.8456 (iter14 §12.4 table).
+  # CLI --teacher-mode overrides. See iter/iter14_surgery_on_pretrain/plan_surgery_wins.md §0 row 1️⃣ + §11.6 A5.
+  teacher_mode: FROZEN
+  # iter14 recipe-v2 (2026-05-09): LP-FT Stage 0 — recipe-v2 axis #2 of POC sweep.
+  # When enabled, prepends a head-only warmup stage (encoder fully frozen via
+  # set_trainable_prefix(0); predictor + motion_aux head still trainable) BEFORE
+  # the variant's regular surgery stages. Fixes step-1 feature distortion
+  # (Kumar et al., ICLR'22 arXiv:2202.10054). See plan_surgery_wins.md §0 row 2️⃣.
+  # Compute note: Stage 0 is BONUS compute on top of the regular max_epochs budget
+  # (i.e. enabling adds ~10% wall time). Disable to preserve legacy timing.
+  # iter15 D12 (2026-05-16): flipped false → true as R1 default. iter14 R1 used
+  # --lp-ft-stage0 on (log L39 "[LP-FT Stage 0 ENABLED]"). Head-only variants
+  # explicitly set enabled: false because they ARE the LP-FT stage by design.
+  lp_ft_stage0:
+    enabled: true                        # iter15 D12: R1 default ON; CLI --lp-ft-stage0 off overrides
+    name: stage0_head_only
+    max_epochs_pct: 0.10                 # 10% of total_steps allocated to head warmup
+    mode_mixture: {L: 0.5, A: 0.5, I: 0.0}   # L+A factor mix (works for both 3stage_DI and noDI)
+  # `stages` is variant-specific — see {noDI,loud_agent,3stage_DI}.yaml.
+
+# -- iter15 D12 (2026-05-16): R1 raw_replay override (CLEAR; Rolnick NeurIPS'18).
+# 50% raw clips mixed into factor batches. Requires factor_streaming.enabled=true.
+# SANITY has factor_streaming.sanity=false → FATAL if hit; iter15 SANITY phase
+# complete (2026-05-15) so this is acceptable. saliency_weighting + spd.enabled
+# moved into the merged optimization block at L78 (D14 fix — duplicate top-level
+# keys were silently collapsed by YAML).
+replay:
+  raw_pretrain_pct: 0.5                 # iter14 R1 default
+
+# -- Drift control: REACTIVATED iter14 (2026-05-08) — anchor-to-PRETRAIN.
+# History:
+#   v10 (probe_pretrain):  λ=1.0 L2 anchor-to-frozen → encoder collapse to init
+#                          (drift 1.26e-4 peak → 3.96e-5 by step 971, 95% pullback).
+#   v11/v12 (motion_aux):  DISABLED — EMA + layer_freeze + per-stage unfreeze_below
+#                          provide sufficient anti-forgetting without L2 pullback.
+#   iter14 (surgery-on-pretrain): RE-ENABLED at λ=0.005 (200× weaker than v10).
+#     Anchor target is PRETRAIN weights, not frozen — utils/training.compute_drift_loss
+#     reads init_params captured at m09c:442 AFTER --init-from-ckpt loads the
+#     pretrain ckpt. Goal: preserve pretrain's motion gains (probe_top1=0.808)
+#     while surgery patches factors. λ=0.005 from literature (G2 single-arm).
+# m09c sanity guard: when anchor_to=pretrain, asserts --init-from-ckpt was passed.
+drift_control:
+  enabled: true                     # iter14 — was false (v12 disabled drift entirely)
+  type: l2_uniform                  # uniform L2 across all params (utils.training.compute_drift_loss)
+  lambda_reg: 0.005                 # iter14 G2 — literature default (was 0.0; v10 was 1.0)
+  anchor_to: pretrain               # iter14 NEW key — m09c guard: requires --init-from-ckpt
+
+# -- Multi-task probe (15 retrieval dims) — DISABLED v12+ for ALL surgery variants.
+# iter13 v11 showed retrieval gradient steals capacity from motion learning.
+# v12 swap → motion_aux (see below). Variants don't override unless they
+# specifically want retrieval dims back.
+multi_task_probe:
+  enabled: false                          # iter15 audit (2026-05-16): collapsed all-false dict to scalar (POC↔FULL parity rule)
+
+# -- Motion-features auxiliary loss (Phase 4, iter13 v12+, 2026-05-07).
+# iter13 v13 FIX-6 (2026-05-07): hoisted from per-variant yamls (3stage_DI +
+# 2stage_noDI) to surgery_base so all surgery variants inherit motion_aux by
+# default. Mirrors pretrain_encoder.yaml:176-189. Surgery's per-stage optimizer
+# rebuild re-attaches the motion_aux head param group every stage (via
+# attach_motion_aux_to_optimizer). Same K=8 motion-flow classes as v12 m09a.
+# Per-variant yamls only override fields they want to differ.
+motion_aux:
+  enabled:
+    sanity: true
+    poc:    true
+    full:   true
+  # iter15 Phase 5 V2 (2026-05-15): motion_features_path + action_labels_path
+  # arrive exclusively via run_train.sh CLI (--motion-features-path +
+  # --probe-action-labels). Removed yaml hardcoded defaults per CLAUDE.md
+  # "No DEFAULT, no hardcoded paths". See pretrain_encoder.yaml for full note.
+  weight_motion: 0.1
+  weight_ce:     1.0
+  weight_mse:    1.0
+  head:
+    hidden_dim: 256
+    dropout:    0.1
+  head_lr_multiplier: 10.0
+
+# -- Monitoring (m09_common.setup_probe_pipeline reads knn_probe_clips to cap
+#    val pool /dev/shm footprint). m09c only consumes this single key; the
+#    full pretrain monitoring block (drift_loss_ratio_min, effective_rank_min_ratio,
+#    knn_min_accuracy) is m09a-specific. Keep minimal here.
+monitoring:
+  knn_probe_clips: 1000
+
+# -- Probe: surgery-specific overrides only (universal probe config in base) --
+# Surgery-specific extras (m09c reads these via merge_config_with_args at line 94-129):
+probe:
+  # iter16 M9 (2026-05-21): subset / local_data / tags_path DELETED — now
+  # injected by src/utils/config.py:load_merged_config from cfg.data.
+  # local_data_dir (configs/pipeline.yaml). Flipping that one yaml key
+  # migrates the whole pipeline to data/full_local. Consumers
+  # (m09c1/c2 cfg["probe"][...]) unchanged. Derived values:
+  #   probe.subset     = ${local_data_dir}/val_split.json    (corpus-agnostic)
+  #   probe.local_data = ${local_data_dir}
+  #   probe.tags_path  = ${local_data_dir}/tags.json
+  # All encoders (m09a + m09c) now use the same auto-generated split (probe_split[mode] ratio)
+  # video-disjoint stratified split from action_labels.json (iter16 M5 ratios).
+  n_points: 30                    # kept for every_n_steps backward-compat (unused when cadence=saves_per_epoch).
+  bwt_tolerance_pct: 0.5          # DEPRECATED — kept to not break older configs; unused when new keys present.

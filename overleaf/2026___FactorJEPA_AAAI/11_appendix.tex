@@ -201,17 +201,14 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
     playback-pace, temporal-correspondence, and exposure-bias
     diagnostics under a common aggregation protocol.
 
-    \item \textbf{E.4 Paired clustered inference and multiplicity}
+    \item \textbf{E.4 Paired bootstrap inference}
 
-    Defines the city--source-video estimand, hierarchical paired
-    bootstrap, treatment of training seeds, mixed-effects sensitivity,
-    and multiple-comparison control.
+    Defines the evaluation estimand and the paired bootstrap.
 
     \item \textbf{E.5 Metric sensitivity and complete numerical results}
 
     Reports horizon and masking curves, normalization
-    sensitivity, cross-scale ranking robustness, leave-one-method and
-    leave-one-family analyses, and the complete ViT-G and ViT-g
+    sensitivity, cross-scale ranking robustness, and the complete ViT-G and ViT-g
     numerical scorecards.
 
 \end{itemize}
@@ -1485,22 +1482,17 @@ executed folds.
 
 
 Confidence intervals are estimated using a
-\textbf{hierarchical clustered bootstrap}. DENSEWORLD resamples cities
-and then source videos within cities; BDD100K resamples source videos;
-and nuScenes resamples collection logs and scenes. All clips from a
-sampled source group remain together, and matching is re-estimated
-inside every bootstrap replicate. We report \(95\%\)
-bias-corrected and accelerated (BCa) intervals for dataset means,
-absolute differences, and ratios. Holm correction is applied jointly
-to the ten primary contrasts: five axes against two reference datasets.
+\textbf{paired bootstrap} that resamples the compared clips with
+replacement and applies the same resampled clips to all datasets in a
+contrast, re-estimating matching inside every replicate. We report
+\(95\%\) bias-corrected and accelerated (BCa) intervals for dataset
+means, absolute differences, and ratios.
 
 Robustness is evaluated over prespecified variations of
 \(\tau_{\mathrm{det}}\), \(a_{\min}\), \(\tau_{\mathrm{ov}}\),
 \(\rho\), \((\tau_t,\tau_d)\), and temporal sampling rate. We also
 compare source and equal-stratum weighting, conditional and
 unconditional normalization, and alternative common-support calipers.
-Leave-one-city-out analysis tests whether any individual DENSEWORLD
-city determines the reported effects.
 
 Two automated negative controls test metric specificity.
 \emph{Spatial permutation} preserves frame-level counts and class
@@ -1512,8 +1504,7 @@ mechanically altering the axes that the control is intended to preserve.
 
 An axis is interpreted as exhibiting stable regime separation only
 when its effect direction is preserved across the prespecified
-sensitivity grid, its clustered interval excludes zero, and the
-conclusion survives leave-one-city-out analysis. The resulting evidence
+sensitivity grid and its bootstrap interval excludes zero. The resulting evidence
 is specific to the shared automated measurement system and matched
 observable conditions. It does not imply exhaustive geographic
 coverage, causal effects of dataset membership, or universal
@@ -3567,13 +3558,13 @@ freezing.
 
 \textbf{Replication}
 &
-Three independent runs with seeds
-\(\{17,29,43\}\).
+Single run with fixed seed \(17\).
 &
 Same.
 &
-Headline results report mean and standard deviation across the three
-runs. Clustered confidence intervals operate above the clip level.
+Headline results report the run's score with \(95\%\) BCa bootstrap intervals
+over the held-out evaluation set. Clustered confidence intervals operate above
+the clip level.
 \\
 
 
@@ -3699,7 +3690,7 @@ the Auto-RGN block budget must be adjusted before training.
 
 \textbf{Training hardware}
 &
-\(8\times\) NVIDIA H100 SXM, \(80\) GiB per GPU.
+Up to \(4\times\) NVIDIA RTX Pro 6000 Blackwell, \(96\) GB per GPU; single-node x86\_64 host with \(64\)--\(192\) CPU cores across runs.
 &
 Same.
 &
@@ -3710,7 +3701,7 @@ type, interconnect, and software environment.
 \rowcolor{CfgGray}
 \textbf{Software environment}
 &
-PyTorch \(2.6.0\); CUDA \(12.4\); cuDNN \(9.1\);
+Ubuntu \(24.04\) LTS (x86\_64); PyTorch \(2.12\) (nightly \texttt{dev20260408}, cu128 wheels); CUDA \(13.0\) toolkit; Python \(3.12\); FlashAttention-2;
 BF16; SDPA enabled.
 &
 Same.
@@ -3719,96 +3710,18 @@ The exact repository commit and container digest must accompany the
 released configuration.
 \\
 
-\textbf{Teacher-cache envelope}
+\textbf{Measured training wall-clock}
 &
-At most \(42\) GPU-hours; peak allocation \(48\) GiB/GPU.
-&
-The same cache is reused; no second scale-specific teacher pass.
-&
-Teacher caching is a one-time preprocessing cost and is reported
-separately from optimization.
-\\
-
-\rowcolor{CfgGray}
-\textbf{Frozen evaluation envelope}
-&
-No training GPU-hours; inference allocation at most \(38\) GiB/GPU.
-&
-No training GPU-hours; inference allocation at most \(30\) GiB/GPU.
-&
-Zero training cost does not imply zero evaluation cost.
-\\
-
-\textbf{Full fine-tuning envelope}
-&
-At most \(160\) GPU-hours;
-peak allocation at most \(78\) GiB/GPU.
-&
-At most \(96\) GPU-hours;
-peak allocation at most \(64\) GiB/GPU.
-&
-Includes training and checkpoint-selection validation, but excludes
-the common final evaluation pass.
-\\
-
-\rowcolor{CfgBlue}
-\textbf{LoRA envelope}
-&
-At most \(96\) GPU-hours;
-peak allocation at most \(54\) GiB/GPU.
-&
-At most \(56\) GPU-hours;
-peak allocation at most \(44\) GiB/GPU.
-&
-Reported separately from any offline teacher or dataset preprocessing.
-\\
-
-\textbf{DoRA envelope}
-&
-At most \(100\) GPU-hours;
-peak allocation at most \(56\) GiB/GPU.
-&
-At most \(60\) GPU-hours;
-peak allocation at most \(46\) GiB/GPU.
-&
-Magnitude-vector optimization is included in the parameter and memory
-accounting.
-\\
-
-\rowcolor{CfgBlue}
-\textbf{Auto-RGN envelope}
-&
-At most \(104\) GPU-hours;
-peak allocation at most \(60\) GiB/GPU.
-&
-At most \(60\) GPU-hours;
-peak allocation at most \(48\) GiB/GPU.
-&
-Includes the fixed gradient-probe pass used for block selection.
-\\
-
-\textbf{FactorJEPA-RAW envelope}
-&
-At most \(112\) GPU-hours;
-peak allocation at most \(62\) GiB/GPU.
-&
-At most \(64\) GPU-hours;
-peak allocation at most \(50\) GiB/GPU.
-&
-No offline factor target-cache cost is attributed to this control.
-\\
-
-\rowcolor{CfgGreen}
-\textbf{FactorJEPA envelope}
-&
-At most \(120\) optimization GPU-hours;
-peak allocation at most \(64\) GiB/GPU.
-&
-At most \(70\) optimization GPU-hours;
-peak allocation at most \(52\) GiB/GPU.
-&
-The one-time \(42\)-GPU-hour teacher-cache ceiling is reported
-separately and is not hidden inside optimization cost.
+\multicolumn{3}{
+>{\RaggedRight\arraybackslash}p{0.72\textwidth}
+}{
+One RTX Pro 6000 Blackwell GPU per arm, so GPU-hours equal wall-clock.
+Measured per-arm wall-clock: POC-2B arms \(\approx 2\)--\(16\) h; POC-1B
+arms \(\approx 2\)--\(5\) h; full-scale-1B arms \(\approx 18\)--\(30\) h
+(continual pretraining \(17.7\) h; LoRA and FactorJEPA \(\approx 29\) h
+each, summed across checkpoint-resumed segments). Peak allocation stayed
+within the \(96\) GB device; frozen baselines incur no training cost.
+Exact per-run values are in the released training logs.}
 \\
 
 \textbf{GPU-hour definition}
@@ -4235,13 +4148,11 @@ the prespecified contrasts, rather than selecting the best method separately for
 
 
 Confidence intervals are estimated using a
-\textbf{paired hierarchical bootstrap}. Each replicate applies the same
-resampled seeds, cities, source videos, and clips to all methods in a
-contrast. Cities are resampled first and source videos are resampled
-within city; all clips from a sampled source video remain together.
-This pairing removes variation shared by the compared methods and
-preserves the geographic and temporal dependence of the evaluation
-set.
+\textbf{paired bootstrap}. Each replicate resamples the held-out
+evaluation clips with replacement and applies the same resampled clips
+to all methods in a contrast. This pairing removes variation shared by
+the compared methods. Because clips can share a source video, clip-level
+resampling is mildly anti-conservative; effect directions are unaffected.
 
 Causal future-block L1 is a strictly causal prediction measure: the
 predictor forecasts the future temporal half of each clip from its past
@@ -5086,11 +4997,11 @@ matching rule for every method.
 
 
 % =====================================================================
-\subsection{Paired Clustered Inference and Multiplicity}
+\subsection{Paired Bootstrap Inference}
 \label{app:clustered_statistics}
 
-Let \(y_{M,s,c,v,i}\) denote a metric for method \(M\), training seed
-\(s\), city \(c\), source video \(v\), and clip \(i\). For metrics with
+Let \(y_{M,c,v,i}\) denote a metric for method \(M\), city \(c\),
+source video \(v\), and clip \(i\). For metrics with
 multiple horizons, masks, or interventions, those observations are
 first reduced to one clip-level score using the definitions above.
 
@@ -5102,11 +5013,9 @@ evaluation, we use equal weighting at the city and source-video levels:
 \begin{aligned}
 \bar y_{M,c,v}
 &=
-\frac{1}{S}
-\sum_{s=1}^{S}
 \frac{1}{|\mathcal I_{c,v}|}
 \sum_{i\in\mathcal I_{c,v}}
-y_{M,s,c,v,i},
+y_{M,c,v,i},
 \\
 \widehat\mu_M
 &=
@@ -5143,86 +5052,18 @@ Consequently, \(\widehat\delta_{A,B}>0\) always favors method \(A\).
 Clip-weighted estimates are reported as an aggregation sensitivity,
 not as the primary estimand.
 
-\paragraph{Paired hierarchical bootstrap.}
-For each bootstrap replicate, we:
+\paragraph{Paired bootstrap.}
+For each of the \(10{,}000\) bootstrap replicates, we resample the
+held-out evaluation clips with replacement and apply the same resampled
+clips, masks, horizons, and interventions to all compared methods, then
+recompute the complete metric and aggregation pipeline. This preserves
+method pairing. We report \(95\%\) BCa intervals for absolute method
+means and paired effects.
 
-\begin{enumerate}
-    \item resample cities with replacement;
-    \item resample source videos within each sampled city;
-    \item retain all clips from every sampled source video;
-    \item apply the same sampled cities, videos, clips, masks, horizons,
-    and interventions to all compared methods; and
-    \item recompute the complete metric and aggregation pipeline.
-\end{enumerate}
-
-This preserves within-recording dependence and method pairing.
-We report \(95\%\) BCa intervals for absolute method means and paired
-effects. The source-video group, rather than the clip, is the lowest
-independently resampled unit.
-
-\paragraph{Training-seed variation.}
-For every method and metric, we report all \(S=3\) executed seed values,
-their mean, and
-
-\begin{equation*}
-\operatorname{SD}_{\mathrm{seed}}(M)
-=
-\sqrt{
-\frac{1}{S-1}
-\sum_{s=1}^{S}
-\left(
-\widehat\mu_{M,s}
--
-\overline\mu_M
-\right)^2
-}.
-\end{equation*}
-
-The primary geographic estimand averages the three seeds before
-city-level aggregation. As a sensitivity analysis, a crossed bootstrap
-resamples seeds independently of cities while applying the same
-resampled seed indices to all methods. Because only three seeds are
-available, seed is not treated as a primary random-effect variance
-component.
-
-\paragraph{Mixed-effects sensitivity.}
-As a model-based check, we fit
-
-\begin{equation*}
-\begin{aligned}
-y_{M,s,c,v,i}
-={}&
-\beta_0
-+
-\beta_M^{\mathrm{method}}
-+
-\gamma_s^{\mathrm{seed}}
-+
-u_c^{\mathrm{city}}
-\\
-&+
-u_{v(c)}^{\mathrm{source}}
-+
-\varepsilon_{M,s,c,v,i},
-\end{aligned}
-\end{equation*}
-
-where method is the effect of interest, seed is a fixed blocking
-factor, and city and source video are nested random intercepts. The
-mixed-effects analysis is considered supportive only when its effect
-direction agrees with the paired clustered estimate.
-
-\paragraph{Multiple comparisons.}
-Within each backbone, the primary confirmatory family contains the
-prespecified attribution contrasts crossed with the four primary
-diagnostics. Two-sided paired-bootstrap \(p\)-values are adjusted using
-Holm's step-down procedure. The secondary scorecard is controlled using
-Benjamini--Hochberg FDR and is explicitly labeled exploratory.
-
-We report unadjusted absolute effects and clustered intervals together
-with adjusted decisions. An unadjusted \(95\%\) interval excluding zero
-is not described as Holm-corrected evidence unless the corresponding
-adjusted decision also passes the prespecified level.
+\emph{Limitation.} Resampling is at the clip level. Because several clips
+can originate from the same source video, this does not model
+within-video correlation, so the reported intervals are mildly
+anti-conservative; the direction of every effect is unaffected.
 
 
 % =====================================================================
@@ -5244,17 +5085,7 @@ across the prespecified variants. The primary metric definition is not
 changed after inspecting test performance.
 
 \paragraph{Aggregation sensitivity.}
-We compare:
-
-\begin{itemize}
-    \item equal-city and clip-weighted means;
-    \item city--source-video and source-video-only bootstrap intervals;
-    \item seed-averaged and crossed seed-resampling estimates; and
-    \item complete and leave-one-city-out evaluation.
-\end{itemize}
-
-For each leave-one-city-out run, all clips from the omitted city are
-removed before recomputing the metric and method contrast.
+As an aggregation check, we compare equal-city and clip-weighted means.
 
 \paragraph{Cross-scale ranking robustness.}
 For diagnostic \(m\), let
@@ -5283,23 +5114,8 @@ ViT-g scales. We report
 \end{equation*}
 
 Because the evaluated methods are a fixed comparison set, these
-correlations are interpreted descriptively. Robustness is assessed
-through leave-one-method-out and leave-one-family-out ranges:
-
-\begin{equation*}
-\mathcal R_{\rho,m}
-=
-\left[
-\min_j \rho_m^{(-j)},
-\,
-\max_j \rho_m^{(-j)}
-\right].
-\end{equation*}
-
-Method families comprise frozen, conventional fine-tuning,
-parameter-efficient adaptation, FactorJEPA variants, and encoder-scope
-variants. Cross-scale agreement is described as
-\textbf{scale robustness}, not independent replication.
+correlations are interpreted descriptively. Cross-scale agreement is
+described as \textbf{scale robustness}, not independent replication.
 
 \begin{figure*}[t!]
     \centering
@@ -5321,7 +5137,7 @@ variants. Cross-scale agreement is described as
 
 \paragraph{Complete scorecards.}
 Figure~\ref{fig:ablation_scorecard_vitg} shows all executed diagnostics for
-the ViT-G and ViT-g backbones. Exact primary values and clustered
+the ViT-G and ViT-g backbones. Exact primary values and BCa
 intervals are reported in
 the consolidated attribution results. The complete numerical scorecard additionally records, for every method and diagnostic:
 
@@ -5330,13 +5146,9 @@ the consolidated attribution results. The complete numerical scorecard additiona
 \left(
 \text{mean},
 \;
-95\%\ \mathrm{clustered\ CI},
+95\%\ \mathrm{BCa\ CI},
 \;
-\text{seed SD},
-\;
-\text{paired reference effect},
-\;
-\text{adjusted decision}
+\text{paired reference effect}
 \right)
 $}
 \end{equation*}

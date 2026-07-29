@@ -1,0 +1,442 @@
+# Base optimization config — SHARED across all training techniques (Ch10, Ch11, ExPLoRA, LoRA).
+#
+# Every technique-specific config (ch10_pretrain.yaml, ch11_surgery.yaml, explora.yaml, lora.yaml)
+# inherits from this file via:
+#
+#   extends: base_optimization.yaml
+#
+# Override only what differs. The Python load_merged_config() helper handles the deep-merge.
+#
+# Why a base file? Avoids duplication of masking, augmentation, AdamW betas, EMA, mixed precision
+# across 4+ technique files. Update once, applies everywhere.
+
+# -- Data sampling --
+data:
+  hf_dataset: anon-org/denseworld-115k
+  num_frames: 16                  # Train at 16f (Meta trains 95% at 16f, eval at 64f)
+  seed: 42                        # Reproducibility (random, numpy, torch)
+  # SANITY-mode clip caps (m09a/m09b/m09c read these). Small enough for quick
+  # code-path validation; not intended to produce meaningful metrics. Previously
+  # lived in iter7's vitg16_indian.yaml; lost in the base/extends refactor. The
+  # running SANITY test fails with KeyError if these are absent.
+  sanity_train_clips: 20
+  sanity_val_clips: 10
+  # iter14 (2026-05-08): POC pool size for end-to-end plot/early-stop test.
+  # Generates data/eval_10k_local/eval_10k_poc.json = first N keys of eval_10k.json. Then
+  # probe_action.py --stage labels applies the stratified_split (post motion-flow
+  # filter ≈ N×0.95) at the probe_split[mode] ratio (configs/pipeline.yaml).
+  # Single knob for scalability across datasets — the ratio is enforced by
+  # stratified_split (utils/action_labels.py), NOT hardcoded counts here.
+  # POC just needs code-completion of FULL features at ~10× lower compute.
+  poc_total_clips: 1000
+
+# -- probe_action labels bootstrap (iter14 recipe-v3, 2026-05-09) --
+# All paths + numbers consumed by src/utils/probe_labels.ensure_probe_labels_for_mode().
+# m09a + m09c call that fn at startup with cfg=cfg; the fn reads from this block.
+# Replaces the previous module-level _MODE_TO_* constants in probe_labels.py
+# (per CLAUDE.md "No hardcoded values in Python — YAML or runtime discovery only").
+# Replaces shell-side bootstrap in scripts/run_train.sh + run_recipe_v3_sweep.sh
+# (per CLAUDE.md "Shell scripts are THIN wrappers — all logic in Python").
+# iter16 M9 followup (2026-05-21): probe_action_labels block MOVED to
+# configs/pipeline.yaml so probe_action.py CLI (which reads via
+# get_pipeline_config(), not load_merged_config) sees the same values as
+# m09a/c bootstrap. Merged cfg unchanged (deep_merge sees both files).
+
+# -- probe_taxonomy labels bootstrap (multi-task supervision source) --
+probe_taxonomy_labels:
+  # iter16 M9 (2026-05-21): tags_json + local_data DELETED. Derived in Python
+  # from cfg.data.local_data_dir (pipeline.yaml):
+  #   tags_json  = local_data_dir / "tags.json"
+  #   local_data = local_data_dir
+  # Only tag_taxonomy stays as a separate key (it's in configs/, not in the
+  # active local data dir).
+  tag_taxonomy: "configs/tag_taxonomy.json"
+
+  # iter11 v3 hard-pivot (2026-04-25): 80/10/10 train/val/eval split inside
+  # ultra_hard_3066.json — 3,066 clips with ≥4 Hard triggers AND ≥4 Indian-specific
+  # objects. All 3 splits share the same local TAR dir (data/ultra_hard_3066_local/);
+  # iter_clips_parallel(subset_keys=...) filters at iteration time. Shared across
+  # m09b (ExPLoRA), m09c (Surgery) and m05/m06 eval — single source of truth so
+  # paired-BCa decision gate is apples-to-apples within-category.
+  train_subset: data/ultra_hard_3066_train.json     # 2,452 clips (80%)
+  train_local_data: data/ultra_hard_3066_local
+  val_subset: data/ultra_hard_3066_val.json         # 306 clips (10%) — val_jepa loss + probe trajectory
+  val_local_data: data/ultra_hard_3066_local
+  eval_subset: data/ultra_hard_3066_eval.json       # 308 clips (10%) — paired-BCa decision gate
+  eval_local_data: data/ultra_hard_3066_local
+  # Surgery-only: m11-generated factor datasets (D_L/D_A/D_I).
+  # Read by m09c StreamingFactorDataset; m09b ExPLoRA ignores it.
+  factor_dir: outputs/full/m11_factor_datasets
+
+# -- Masking (V-JEPA 2 default: 8 small + 2 large blocks) --
+mask:
+  - spatial_scale: [0.15, 0.15]
+    temporal_scale: [1.0, 1.0]
+    aspect_ratio: [0.75, 1.5]
+    num_blocks: 8                 # 8 small blocks (~75-90% total masking)
+  - spatial_scale: [0.7, 0.7]
+    temporal_scale: [1.0, 1.0]
+    aspect_ratio: [0.75, 1.5]
+    num_blocks: 2                 # 2 large blocks
+
+# -- Augmentation --
+augmentation:
+  random_resize_scale: [0.3, 1.0]
+  random_resize_ratio: [0.75, 1.35]
+  horizontal_flip: 0.5
+
+# -- Optimizer base (AdamW) --
+optimization:
+  # ─── Multi-task retrieval-aware loss ───────────────────────────────────────
+  # Scaffold added 2026-04-27 after probe-vs-jepa correlation analysis on the
+  # 4 prior iter11 v3 runs found JEPA L1 ANTI-CORRELATED with downstream eval
+  # metrics in 11/12 cells (Pearson r ranged -0.21 to -0.68 across Prec@K, mAP@K,
+  # Cycle@K — see iter/utils/experiment_log.md "iter11 v3 Cross-Run Comparison").
+  #
+  # Default α=1, β=γ=0 → identical behavior to pure JEPA (no behavior change).
+  # Variant yamls (e.g., surgery_3stage_DI_multitask.yaml) override to activate.
+  #
+  # ── Per-component → downstream eval metric mapping ─────────────────────────
+  #   total = α · JEPA + β · InfoNCE(same-clip vs in-batch) + γ · TCC(soft-NN cycle)
+  #
+  #   • α · JEPA       → V-JEPA 2.1 GENERATIVE REGULARISER. Preserves the
+  #                      pretrained masked-token reconstruction prior; prevents
+  #                      catastrophic forgetting when β,γ pull weights for
+  #                      retrieval. NOT a retrieval surrogate (proven anti-corr).
+  #   • β · InfoNCE    → DRIVES Prec@K & mAP@K. Per-clip pooled vectors of
+  #                      (student predictor output, teacher target) form positive
+  #                      pairs; other clips in the batch are negatives. Symmetric
+  #                      cross-entropy over the (B × B) similarity matrix at
+  #                      temperature τ_infonce. Direct surrogate for top-K kNN
+  #                      retrieval (Patel et al. CVPR 2022 Recall@K Surrogate;
+  #                      Chen et al. SimCLR ICML 2020).
+  #   • γ · TCC        → PINS Cycle@K. Soft-nearest-neighbor cycle on token
+  #                      positions within a clip: forward (student→teacher),
+  #                      backward (→student); cross-entropy targets identity.
+  #                      Direct surrogate for the kNN-cycle-back metric m06 reports
+  #                      as Cycle@K (Dwibedi et al. CVPR 2019 Temporal Cycle-
+  #                      Consistency Learning, Google Research).
+  #
+  # Multi-task pattern follows VICReg + V-JEPA 2 + CLIP-head training in the
+  # facebookresearch / openai stacks: a generative anchor (JEPA / MAE / autoenc)
+  # paired with a discriminative head (contrastive + alignment).
+  # See src/utils/training.compute_multitask_loss for the math.
+  loss:
+    alpha_jepa:           1.0     # α — JEPA L1 (generative regulariser); IGNORED when uncertainty_weighting=true
+    beta_infonce:         0.0     # β — InfoNCE (drives Prec@K, mAP@K); IGNORED when uncertainty_weighting=true; gates compute when false
+    gamma_tcc:            0.0     # γ — TCC soft-NN cycle (pins Cycle@K); IGNORED when uncertainty_weighting=true; gates compute when false
+    infonce_temperature:  0.07    # τ — SimCLR/MoCo standard (Chen et al. ICML 2020)
+    tcc_temperature:      0.10    # τ — Dwibedi et al. CVPR 2019 default
+    # errors_N_fixes #81 (2026-04-27) — two knobs added after iter12 v1 diagnostic
+    # showed raw TCC = 6.6 vs JEPA = 0.5 → TCC consumed ~80 % of gradient signal
+    # while InfoNCE (the actual Prec@K driver) was starved at ~11 %. UW couldn't
+    # rebalance fast enough at LR=5e-5 (w_tcc moved only −2.7 % in 770 steps).
+    tcc_enabled:          true    # false → drop TCC entirely from compute + UW state (option #3 "pure retrieval-aware FT")
+    tcc_scale:            1.0     # multiplier applied to raw TCC BEFORE UW/γ sees it (option #1 "loss normalization"; set to 0.0833 ≈1/12 to balance against JEPA)
+    # Kendall et al. CVPR 2018: N learnable nn.Parameter log-variances (one per
+    # active task — set by tcc_enabled) replace fixed α/β/γ. Loss = Σ exp(-s_i)·L_i + s_i.
+    # Init s_i=0 → σ²=1 → weights all = 1. Optimizer learns them jointly with model
+    # → ZERO HP search needed. Standard for VICReg / V-JEPA 2 / MultiMAE multi-head
+    # training. When true, all enabled losses ALWAYS computed; α/β/γ above ignored.
+    uncertainty_weighting: false
+    # iter14 recipe-v3 audit A2 (2026-05-09): saliency-weighted JEPA loss.
+    # When true, compute_jepa_loss weights per-token loss by L2 norm of teacher
+    # embedding at that token (high-norm = high-information = MGMAE-style mask
+    # surrogate). When false (default), uniform mean across tokens (legacy
+    # V-JEPA). Override at runtime: SALIENCY_OVERRIDE={off, on} env-var → CLI
+    # --saliency {off, on} → cfg["optimization"]["loss"]["saliency_weighting"]
+    # (T7-wired). Reference: MGMAE engine_for_mgmae loss × cal_loss_mask.
+    saliency_weighting: false
+
+  optimizer: adamw
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  weight_decay: 0.04
+  final_weight_decay: 0.04        # Fixed (no WD ramp)
+
+  # Predictor LR — Meta uses SAME LR as encoder (gold standard audit)
+  # Our old 10x multiplier may have caused predictor overfit during Ch10
+  pred_lr_multiplier: 1.0
+
+  # Universal V-JEPA 2.1 fine-tuning recipe — locked at the published values
+  # (Adam β/LR/WD co-tuned at BS=32). lr=1e-5 = linear-BS-scaled from Meta's
+  # peak 6e-4 at global BS=1536 (facebookresearch/vjepa2/configs/train_2_1/vitG16/*.yaml,
+  # Goyal et al 2017 "Accurate Large Minibatch SGD", arXiv:1706.02677): 6e-4 × (32/1536)
+  # = 1.25e-5 → rounded to 1e-5. NOT a "paper default" — 6e-4 is from-scratch peak;
+  # at our BS=32 it would reproduce iter8's λ=0.001 catastrophic-forgetting regime
+  # (Prec@K −21.8 pp, 2026-04-05 Run #2). 1e-5 = surgical regime where pretrained
+  # features survive while still moving (v10 grad_norm decayed 15× over 297 steps
+  # at 1e-6 → late-stage updates ≈ 0; 10× bump confirmed under-training hypothesis).
+  # Changing any of these forces re-tuning and breaks apples-to-apples comparison
+  # with the V-JEPA 2.1 baseline.
+  # iter11 v2 (2026-04-26): bumped 1.0e-5 → 5.0e-5 (5×). Re-anchored to Meta's
+  # CONTINUAL-training peak (4.25e-4 @ BS=256 in vjepa2/configs/train/vitg16/droid-256px-8f.yaml),
+  # linearly BS-scaled to BS=32 → 5.3e-5. Previous 1.0e-5 was anchored to the
+  # FROM-SCRATCH peak (6e-4 @ BS=1536 → 1.25e-5) — wrong reference for transfer
+  # learning. Evidence for under-training: surgery_2stage_noDI v2 (5 epochs)
+  # train-loss 0.496 → 0.460 (Δ -7%) and probe Prec@K 75.0 → 75.22 (Δ +0.22 pp,
+  # well within ±3.78 pp BCa CI). Guardrails co-bumped: grad_clip 10→1, warmup_cap
+  # 10→15%, nan_tolerance 3→2. Val-loss plateau (the sole active kill-switch)
+  # backstops divergence.
+  lr: 5.0e-5
+  batch_size: 32                  # Research-LOCKED effective (macro) BS — V-JEPA 2.1 published recipe. AdaptiveBatchSizer picks MICRO sub-batch (start=16→max=32) for VRAM adaptation; 32 grads always accumulate before optimizer.step().
+  max_epochs:
+    sanity: 1                     # code-path validation only
+    poc:    2                     # POC↔FULL parity exception per CLAUDE.md (only
+                                  # poc_total_clips + max_epochs.poc may diverge)
+    full:   1                     # iter16 (2026-05-21): was 15. Iter16 trains on
+                                  # 115K clips × 75% ≈ 86K train clips/epoch — 1
+                                  # epoch is the budgeted FULL run; pretrain_2X
+                                  # gets 2 via run_train.sh:250-251 shell override
+                                  # (yaml_extract walks extends chain, so the value
+                                  # here is now the single source of truth for
+                                  # pretrain_encoder + surgery_base inheritance).
+
+  # LR schedule — single cosine decay from peak `lr` to `min_lr` after warmup.
+  # `build_scheduler` (utils/training.py:503-516) is unconditionally cosine — there
+  # is no constant-vs-cosine branch. The previous `lr_schedule: constant` field
+  # was dead (zero Python readers); deleted 2026-04-26 to remove the footgun.
+  # SINGLE cosine, not cyclical re-warming — the arXiv:2503.02844 forgetting
+  # warning applies to re-warming only.
+  # iter13 (2026-05-05): single warmup knob `warmup_pct` (10-15% of total_steps).
+  # Was dual-knob (warmup_steps=500 + warmup_cap_pct=15) which led to silently-
+  # ignored hardcoded values in downstream yamls (pretrain_encoder.yaml had
+  # warmup_steps=1500 that was dominated by the 15% cap = 162 at total_steps=1085;
+  # nobody noticed for two iter13 runs). Now: warmup_steps is computed at runtime
+  # as `total_steps * warmup_pct / 100`, scales automatically with epochs/BS.
+  warmup_pct: 0.12                # 12% of total_steps (V-JEPA paper uses 10-15%).
+                                  # Fraction-of-1 convention (matches surgery.warmup_pct=0.20
+                                  # and probe_action --warmup-pct CLI). Computed at runtime
+                                  # as `int(total_steps * warmup_pct)` in build_scheduler.
+  min_lr: 1.0e-6                  # LR floor; cosine decays from `lr` to this value
+                                  # across (total_steps - warmup_steps).
+
+  # iter11 auto disk-hygiene — mode-gated cache-policy default consumed by
+  # m09a/m09b/m09c's merge_config_with_args. SANITY keeps ALL intermediate ckpts for
+  # debug (1-step run, small total footprint); POC/FULL auto-enable cleanup because
+  # 5-epoch POC writes ~25 × 15 GB periodic ckpts → disk-full without it. Explicit
+  # CLI `--cache-policy 1|2` always wins over this yaml default.
+  cache_policy:
+    sanity: 1
+    poc: 2
+    full: 2
+
+  # EMA teacher (fixed momentum, V-JEPA 2 default)
+  ema_momentum: 0.99925
+
+  # Gradient clipping — iter11 v2 (2026-04-26): 10.0 → 1.0. At lr=5e-5 the per-step
+  # parameter movement risk grows; 1.0 is the standard transformer-FT bound (BEiT,
+  # MAE, DINOv2). 10.0 (V-JEPA 1 default) is sized for Meta's 315-epoch budget
+  # which can absorb spikes; our 1140-step run cannot.
+  grad_clip: 1.0
+
+  # Loss
+  loss_exp: 1.0                   # L1 latent prediction
+
+  # NaN safety
+  nan_tolerance: 2                # iter11 v2 (2026-04-26): 3 → 2. At lr=5e-5 a NaN
+                                  # is divergence, not a transient — 2 consecutive
+                                  # confirms (1 alone could be a numeric blip).
+  gc_interval: 50                 # Manual GC every N steps
+
+  # Memory-saver flags (#56) — safe defaults OFF; technique-specific configs
+  # override when needed (surgery NEEDS both on 24GB SANITY for 36-block Stage 3).
+  # 8-bit AdamW: ~4× optimizer-state reduction, <1% accuracy (Dettmers 2022).
+  # Gradient checkpointing: ~2-4× activation reduction, ~25% throughput hit.
+  use_8bit_optim: false           # bitsandbytes AdamW8bit (drop-in AdamW replacement)
+  gradient_checkpointing: false   # torch.utils.checkpoint on transformer blocks
+
+  # iter14 recipe-v3 intervention #4 (2026-05-09): Selective Projection Decay.
+  # Replaces uniform L2 anchor decay (drift_control.lambda_reg) with per-parameter
+  # selective pull-back gated by step-vs-anchor alignment. Default disabled —
+  # enabled=false → spd code path is gated off → torch.optim.AdamW path used →
+  # bit-identical to pre-iter14 behavior (verified by unit test in
+  # src/utils/spd_optimizer.py). Override at runtime: SPD_OVERRIDE={off, on}
+  # env-var → CLI --spd {off, on} → cfg["optimization"]["spd"]["enabled"] (T7-wired).
+  # When enabled, drift_control.lambda_reg should be set to 0 (SPD is the new anchor).
+  # Reference: Tian NeurIPS'24 arXiv:2411.01713 + github.com/gt-ripl/SPD.
+  # In base_optimization (not surgery_base) so m09a/m09b also inherit the key
+  # (they call build_optimizer which now reads cfg_opt["spd"] strictly).
+  spd:
+    enabled: false
+    alpha: 0.05                   # SPD strength when enabled (typical 1e-3 to 1e-1)
+
+# -- CLEAR raw-video replay (iter14 recipe-v3 intervention #5, 2026-05-09) --
+# Mixes raw m09a-style pretrain clips into m09c surgery batches to anchor the
+# encoder against pretrain-domain forgetting. Default raw_pretrain_pct=0 → no
+# replay → bit-identical legacy factor-only batches. Recipe-v3 enables
+# raw_pretrain_pct=0.5 (50% raw + 50% factor view per emitted batch item).
+# Override at runtime: REPLAY_OVERRIDE={off, on} env-var → CLI --replay {off, on}
+# → cfg["replay"]["raw_pretrain_pct"] (T7-wired). on=0.5, off=0.0.
+# Reference: Rolnick NeurIPS'18 + arXiv:2305.13622 (CLEAR).
+# Source pool: defaults to ALL clip_keys present in mp4_index (= the streaming
+# manifest, which for m09c is the surgery factor-eligible clips). Override
+# raw_clip_keys via CLI to use a different pool (e.g., m09a pretrain pool).
+replay:
+  raw_pretrain_pct: 0.0           # 0.0 = off (legacy); 0.5 = recipe-v3
+
+# -- Training-clip universe (iter17 2026-05-26 — leakage + universe-asymmetry fix) --
+# SINGLE source of truth for how EVERY trainer (m09a1/a2/c1/c2) picks its training
+# clips, via src/utils/clip_splits.build_training_pool. Fixes the iter15 bugs where
+# (a) surgery trained on (manifest − val) → eval TEST clips leaked into the surgery
+# pool, and (b) pretrain used the ~1k labeled train_split while surgery used the ~9k
+# broad manifest (8× data-volume confound). Now ALL trainers compute
+#   train_pool = universe − (val ∪ test)
+# from the SAME universe → only the recipe differs, not the data.
+#   broad_manifest — all corpus clips (corpus manifest keys). SSL needs no labels →
+#                    use all available video. Pretrain AND surgery share this.
+#   labeled_train  — only the labeled train_split (smaller, label-matched).
+# Mode-invariant per POC↔FULL parity (only n_clips + n_epochs may differ).
+training_pool:
+  universe: broad_manifest        # iter17 user decision 2026-05-26 (broad SSL pool)
+
+# -- Cooldown phase (V-JEPA 2.1: switch to 64f + linear LR decay) --
+# iter19 (2026-07-05): DISABLED. The m09a1 implementation was a STUB — it only walked the optimizer
+# LR (no 64f data/forward/backward, "full impl needs producer restart") yet printed "COOLDOWN PHASE",
+# so the log falsely advertised a cooldown that never ran. Kept OFF because (a) the model already
+# trains without it, matching the no-cooldown POC results (clean POC↔FULL scale-replication), and
+# (b) a faithful 64f epoch costs +60-90h/arm. m09a1 now FAILS LOUD if this is flipped true before the
+# real 64f producer restart is implemented (no more silent no-op + fake banner).
+cooldown:
+  enabled: false                  # was true (stub no-op) — see note above; do NOT re-enable until implemented
+  num_frames: 64                  # Match eval frame count (VJEPA_FRAMES_PER_CLIP)
+  epochs: 1                       # 1 epoch for continual training (Meta: 40 for from-scratch)
+  lr_schedule: linear_decay       # Linear decay to final_lr (not cosine)
+  final_lr: 1.0e-6                # Near-zero by end
+  warmup_steps: 0                 # No warmup during cooldown
+  weight_distance_loss: false     # Disable distance weighting (Meta's cooldown config)
+
+# -- Validation --
+# iter11 v3 (2026-04-26): `evals_per_epoch` REMOVED. m09a/m09b now reuse
+# `checkpoint.saves_per_epoch` (already what m09c reads via probe.cadence:
+# saves_per_epoch). Single source of truth — val + probe + ckpt all fire
+# on the same 5x/epoch tick.
+validation:
+  max_val_clips: 1000             # Subsample for periodic eval
+  cycle_k: [1, 10]
+  faiss_k: 6
+
+# -- Checkpointing --
+checkpoint:
+  # iter11 (2026-04-24): 10 → 5 so plateau_patience=5 probes = 1 full epoch of no
+  # val-loss improvement (5 probes/epoch × patience=5). Affects probe cadence via
+  # `probe.cadence: saves_per_epoch` in all m09x yamls — 5 epochs × 5 = 25 probes total.
+  # iter13 (2026-05-05): 5 → 2. v9 measured 17.8 min per val cycle (probe-trio
+  # over 925 clips dominates). At 5/epoch × 5 epochs = 25 vals = 7.4 hrs of pure
+  # validation — half the run wall. 2/epoch keeps stuck-encoder kill signal at
+  # ~50 min wall (1 val ≈ 50% epoch) while saving ~4.4 hrs/run. Plateau-patience
+  # math: was patience=5 vals = 1 epoch; now patience=5 = 2.5 epochs (acceptable
+  # given v8 layer_freeze + lr=1e-4 should not need long plateau detection).
+  # iter16 M4 (2026-05-21): FULL = 1 epoch × ~86K train clips → 9/epoch = 1 val every
+  # ~9.6K clips → 9 trajectory points (M2 max_epochs.full=1; M1 clip_pool_ratio.full=1.0).
+  # iter17 (2026-05-26, user decision): MODE-GATED cadence. POC is a quick proxy (10K
+  # corpus, 2 epochs) — 2 checkpoints/epoch suffices; FULL (86K train) keeps 9 (≈1 ckpt
+  # per 10K clips). This is an OBSERVABILITY knob (val + ckpt + probe fire on this tick) —
+  # it does NOT change gradients/data/order, only HOW OFTEN we measure + sample best-ckpt
+  # (so POC's best-ckpt is sampled coarser than FULL's — fine, POC is a proxy not the paper
+  # result). Flattened per-mode in utils.m09_common.merge_m09_common_config (mirrors max_epochs).
+  saves_per_epoch:
+    sanity: 2                     # SANITY = 1 step → val fires once regardless (cadence moot)
+    poc:    2                     # quick proxy run: 2 trajectory points/epoch
+    full:   9                     # paper run: ~1 ckpt per 10K of the 86K train clips
+  # iter13 v11 (2026-05-05): 2 → 5. v10 lost the peak-top1 ckpt at step 323
+  # because anchor pullback continued into epochs 2-4 and step rotation
+  # discarded it. 5 step ckpts × ~7 GB = 35 GB, fits 200 GB budget.
+  keep_last_n: 5                  # Keep last 5 step ckpts (~7 GB each with student-only saves)
+  # iter18 (2026-06-14): stage/latest resume anchors save full=True (student+teacher+predictor+
+  # optimizer+scheduler+scaler, ~24 GB each) for crash-resume. SANITY is a minutes-long code smoke
+  # that never resumes → student-only (~7 GB) avoids the 579 GB disk-full that aborted the run.
+  # Flattened per-mode in utils.m09_common.merge_m09_common_config (mirrors saves_per_epoch).
+  full_resume_anchor:
+    sanity: false                 # smoke: no resume → ~7 GB student-only stage/latest ckpts
+    poc:    true                  # long runs keep full resume anchors
+    full:   true
+
+# -- Mixed precision --
+mixed_precision:
+  enabled: true
+  dtype: bfloat16                 # bfloat16 (not float16 — full dynamic range, no GradScaler needed)
+
+# -- Mid-training probe eval (trajectory monitor + best-ckpt + early-stop) --
+# Probe runs on 306 ultra_hard_3066_val clips → Prec@K / mAP@K / Cycle@K with
+# BCa 95% CI + JEPA val-loss. On `saves_per_epoch` cadence, probe fires every
+# `steps_per_epoch // saves_per_epoch` steps → 5 probes/epoch. Best-ckpt: tracks
+# running max Prec@K; exports student_best.pt on each new max; at end-of-training,
+# student_best.pt is promoted to student_encoder.pt.
+#
+# iter11 v3 B1 pivot (2026-04-26): probe.subset == data.val_subset (same hard
+# distribution as train + eval). Previously val_1k.json (1000 generic clips)
+# decoupled the trajectory metric from the decision gate.
+#
+# iter11 (2026-04-24, universal across all techniques 2026-04-26): val-loss
+# iter14 (2026-05-08): early-stop simplified to top@1 plateau ONLY (prec_plateau).
+# Removed val_jepa-based plateau + catastrophic-forgetting kill_switch + BWT
+# regression triggers — val_jepa loss does NOT 100% correlate with downstream
+# motion-flow probe top@1 (the paper-grade gate metric per iter13 v12 anchor
+# 0.808). prec_plateau directly tracks top@1 spread → fires only on real
+# representation stagnation. min_delta=0.005 (0.5 pp) — tune above N=1398 BCa
+# noise floor (~1.1 pp) post first FULL run if false-positives observed.
+# iter15 audit (2026-05-16): POC↔FULL parity sweep — collapsed all probe.*
+# mode-gated dicts to SCALARS (was {sanity: false, poc/full: true}). Per
+# CLAUDE.md: "POC must be byte-identical scaled-down copy of FULL. The ONLY
+# legitimate POC vs FULL deltas are poc_total_clips and max_epochs.poc."
+# Same rule extends to SANITY: never disable features at SANITY — fix the
+# sampler/data instead. SANITY's 600-clip subset (200/class × 3 actions) is
+# ample for kNN top-1 probe (no n=21 BCa CI worry from earlier comment).
+probe:
+  enabled:                  true
+  subset:                   data/ultra_hard_3066_val.json
+  local_data:               data/ultra_hard_3066_local
+  tags_path:                data/ultra_hard_3066_local/tags.json
+  k:                        6                                          # matches configs/pipeline.yaml eval.K
+  bootstrap_iter:           10000                                      # matches utils/bootstrap.N_BOOTSTRAP
+  cadence:                  saves_per_epoch                            # reuses checkpoint.saves_per_epoch
+  best_ckpt_enabled:        true                                       # save student_best.pt on each new best of best_ckpt_metric
+  # iter18 (2026-06-05): selection metric for student_best.pt / *_ckpt_best.pt.
+  # Was probe_top1 (the one heatmap metric where surgery always TIES vanilla);
+  # switched to future_l1 — the headline temporal metric, probed every val cycle.
+  # Direction (lower=better) resolved via utils.training.BEST_METRIC_DIRECTION.
+  # Applied symmetrically to all encoder arms (m09a1/c1/e/f/b/d). m09c2 head arms
+  # keep head-val_loss selection: their encoder+predictor are frozen → future_l1
+  # is constant by construction and physically cannot rank head snapshots.
+  best_ckpt_metric:         future_l1
+  # -- Early-stop: top@1 plateau (THE ONLY trigger — iter14 2026-05-08).
+  # Stop training if top@1 spread over the last (patience+1) probes < min_delta.
+  # At SANITY (1 step) plateau cannot fire (needs patience+1 = 6 probes) → no-op
+  # by data-count, NOT by mode gate. Honest universal-true.
+  prec_plateau_enabled:     true
+  prec_plateau_min_delta:   0.005                                       # 0.5 pp top@1 (tunable post first FULL)
+  prec_plateau_patience:    5
+  # -- Held-out val source --
+  # iter14 (2026-05-08): `use_permanent_val` is RETIRED — m09c now mirrors m09a's
+  # gold-standard pattern (single yaml-driven external val pool, no internal
+  # split fallback). Flag value here is informational only; m09c no longer reads
+  # it (m09c1_surgery_encoder.py:530+). Kept in yaml for backward-compat with legacy/m09b.
+  use_permanent_val:        true
+  compute_val_loss:         true                                        # logged for plots; NOT an early-stop gate (iter14)
+  # NOTE: probe forward micro-batch is adaptive — AdaptiveBatchSizer reads pipeline.yaml
+  # gpu.{inference_vjepa_initial_bs, training_adapted_probe_bs, gpu_memory_target} at
+  # runtime. Do NOT hardcode sub_batch here (CLAUDE.md B35, errors_N_fixes #47).
+
+# -- Multi-task probe-loss supervision (iter13 — adds DIRECT gradient signal
+# from classification toward the encoder, on top of pure JEPA L1 SSL).
+# Default DISABLED in base — opt-in per training config (pretrain_encoder.yaml,
+# surgery_*.yaml). When enabled, training adds:
+#     total_loss = weight_jepa·JEPA_L1 + weight_probe·Σ_d (1/n_dims)·L_d + drift_loss
+# where L_d is CrossEntropy for the 14 single-label dims (action + 13 from
+# tag_taxonomy) and BCE for the 2 multi-label dims (road_layout, notable_objects).
+# Per-dim labels read from outputs/<mode>/probe_taxonomy/taxonomy_labels.json
+# (must have run `probe_taxonomy.py --stage labels` first).
+multi_task_probe:
+  enabled:                  false                                       # iter15 audit (2026-05-16): all-false dict collapsed to scalar (POC↔FULL parity rule — no mode gates besides n_clips/n_epochs). Opt-in per technique config if needed.
+  labels_path:              outputs/full/probe_taxonomy/taxonomy_labels.json
+  weight_jepa:              1.0       # α — keep JEPA L1 dominant; drift_control still applies
+  weight_probe:             0.1       # β — multi-task signal as 10% of total objective
+  # weight_per_dim — controls relative gradient pressure across the 16 dims.
+  # Resolution (utils/multi_task_loss.py:compute_multi_task_probe_loss):
+  #   null       → each dim gets 1/n_dims (equal split — recommended default)
+  #   <float>    → scalar broadcast (every dim weighted equally to that value)
+  #   <dict>     → per-dim override e.g. {action: 0.5, scene_type: 0.1}; missing dims fall back to 1/n_dims
+  #   "kendall_uw" → learnable log-σ per dim (Kendall CVPR 2018); NOT yet implemented (NotImplementedError raised)
+  weight_per_dim:           null
+  head_lr_multiplier:       10.0      # probe heads get 10× the encoder LR (standard for linear probes)
