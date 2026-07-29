@@ -426,6 +426,15 @@ eval:
   action_split_k_tolerance: 0.03   # iter18 W7: |1/k_test − test_pct| sanity tolerance (was literal)
   bca_max_n: 50000                 # iter18 W7: bootstrap switches BCa→percentile above this N (was literal ×2)
 
+# -- MFU (Model FLOPs Utilization) — src/utils/mfu_calculator.py (2026-07-28) --
+# Peak FLOPs is MEASURED at runtime by a dense BF16 GEMM micro-benchmark on the actual
+# GPU (no hardcoded per-card number, no 2:4-sparse ambiguity). These are the benchmark
+# knobs; the analytic model-FLOPs come from the model config + runtime param counts.
+mfu:
+  gemm_bench_size: 8192            # square-matmul dim for the dense BF16 peak benchmark
+  gemm_bench_iters: 30             # timed matmuls (median-stable achieved TFLOPS)
+  gemm_bench_warmup: 10            # untimed warmup matmuls (clocks/cache settle first)
+
 # -- Plot rendering (iter18 H6: were signature defaults) --
 plots:
   dpi: 300                       # save_fig raster resolution

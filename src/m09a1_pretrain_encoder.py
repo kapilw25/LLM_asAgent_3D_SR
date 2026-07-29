@@ -82,6 +82,7 @@ from utils.cache_policy import (
 # ~70 LoC of inline boilerplate that was duplicated with m09c1_surgery_encoder.py.
 # require_val_data=True preserved at call site (m09a contract).
 from utils.m09_common import add_m09_common_args, merge_m09_common_config
+from utils.mfu_calculator import build_calculator, measured_peak_flops
 
 import torch
 
@@ -527,6 +528,17 @@ def train(cfg: dict, args):
     max_epochs = cfg["optimization"]["max_epochs"]
     steps_per_epoch = max(1, n_train // batch_size)
     total_steps = steps_per_epoch * max_epochs
+
+    # MFU (Model FLOPs Utilization) — real-time; peak measured on THIS GPU (dense BF16
+    # GEMM), N counted at runtime, honest + 6N logged (utils.mfu_calculator, 2026-07-28).
+    mfu_calc = build_calculator(
+        forward_modules=[student, predictor],
+        trainable_modules=[student, predictor],   # only requires_grad params -> N_train
+        model_cfg=cfg["model"], num_frames=cfg["data"]["num_frames"],
+        peak_flops=measured_peak_flops(get_pipeline_config(), device))
+    print(f"[mfu] peak={mfu_calc.peak/1e12:.0f} TFLOPS(dense bf16) "
+          f"N_fwd={mfu_calc.n_fwd/1e9:.2f}B N_train={mfu_calc.n_train/1e9:.3f}B "
+          f"T={mfu_calc.seq_len} tok/clip", flush=True)
     saves_per_epoch = cfg["checkpoint"]["saves_per_epoch"]
     ckpt_interval = max(1, steps_per_epoch // saves_per_epoch)
     keep_last_n = cfg["checkpoint"]["keep_last_n"]
@@ -1000,6 +1012,8 @@ def train(cfg: dict, args):
             now = time.time()
             window_elapsed = now - window_start
             throughput = window_steps / window_elapsed if window_elapsed > 0 else 0
+            mfu_rep = mfu_calc.report(   # real-time MFU: honest + 6N + tokens/sec
+                mfu_calc.tokens_per_sec_from_steps(throughput, batch_size), "train")
 
             # iter13 (2026-05-05): per-step block_drift_mean — IDENTICAL metric
             # to per-val (utils.training.track_block_drift_at_val). Both compute
@@ -1019,6 +1033,7 @@ def train(cfg: dict, args):
                 "loss_total": round(total_val, 6), "lr": lr_val,
                 "grad_norm": round(gn_val, 4), "throughput": round(throughput, 2),
                 "block_drift_mean": round(block_drift_mean, 8),
+                **mfu_rep,   # mfu (honest), mfu_6n, tokens_per_sec
             }
             if mt_head is not None:
                 step_record["loss_multi_task"] = round(mt_loss_val, 6)
@@ -1048,6 +1063,8 @@ def train(cfg: dict, args):
                 "grad_norm": gn_val,
                 "epoch": epoch,
                 "throughput_steps_per_s": throughput,
+                "mfu": mfu_rep["mfu"], "mfu_6n": mfu_rep["mfu_6n"],
+                "tokens_per_s": mfu_rep["tokens_per_sec"],
             }
             if mt_head is not None:
                 wb_metrics["loss/multi_task"] = mt_loss_val
@@ -1066,7 +1083,8 @@ def train(cfg: dict, args):
                     f"drift={drift_val:.4f} "
                     f"lr={lr_val:.2e} "
                     f"grad={gn_val:.2f} "
-                    f"{throughput:.2f} step/s")
+                    f"{throughput:.2f} step/s "
+                    f"mfu={mfu_rep['mfu']:.3f}")
                 window_start = now
                 window_steps = 0
                 running_loss = 0.0

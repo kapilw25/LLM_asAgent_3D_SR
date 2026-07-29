@@ -38,6 +38,7 @@ from utils.data_download import iter_clips_parallel
 from utils.decode_feeder import BatchFeeder
 from utils.gpu_batch import AdaptiveBatchSizer, cuda_cleanup
 from utils.progress import make_pbar
+from utils.mfu_calculator import build_inference_calculator, measured_peak_flops
 from utils.video_io import decode_video_bytes
 from utils.vjepa2_imports import get_vit_by_arch
 from utils.data_paths import artifact  # iter18 W4: canonical artifact names (pipeline.yaml)
@@ -550,6 +551,17 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
 
     pbar = make_pbar(total=len(keys), desc=f"probe_{label}", unit="clip", initial=len(processed))
 
+    # MFU (inference) — best-effort instrumentation; a failure here must NOT break eval.
+    # Token count is V-JEPA-accurate (patch/tubelet); approximate for non-V-JEPA baselines.
+    try:
+        _mfu_calc = build_inference_calculator(
+            encoder=model, embed_dim=embed_dim, num_frames=args.num_frames,
+            crop_size=crop, patch_size=PATCH_SIZE, tubelet_size=args.tubelet_size,
+            peak_flops=measured_peak_flops(_PCFG, torch.device("cuda")))
+    except Exception as _mfu_e:    # noqa: BLE001 — instrumentation must not crash eval
+        print(f"  [mfu] inference MFU disabled ({type(_mfu_e).__name__}: {_mfu_e})")
+        _mfu_calc = None
+
     tmp_base = output_dir / f"tmp_decode_{label}"
     tmp_base.mkdir(parents=True, exist_ok=True)
     tmp_dir = tempfile.mkdtemp(dir=tmp_base)
@@ -644,6 +656,10 @@ def extract_features_for_keys(args, model, encoder_kind: str, crop: int, embed_d
 
     elapsed = time.time() - t0
     print(f"  extract_features_for_keys({label}): {len(keys_acc)}/{len(keys)} clips in {elapsed:.0f}s")
+    if _mfu_calc is not None and elapsed > 0 and len(keys_acc) > 0:
+        _tps = len(keys_acc) * _mfu_calc.seq_len / elapsed
+        print(f"  [mfu] inference_mfu={_mfu_calc.inference_mfu(_tps):.3f} "
+              f"({_tps:,.0f} tok/s, peak={_mfu_calc.peak/1e12:.0f} TFLOPS dense bf16)")
 
     # iter15 D9 fix (2026-05-16): unconditional final ckpt save. Without this, at
     # POC scale (~1096 train clips < CHECKPOINT_EVERY=5000) the resume ckpt is
