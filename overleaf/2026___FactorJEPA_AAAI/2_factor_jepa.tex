@@ -114,7 +114,7 @@ each stage.
     \centering
     \includegraphics[width=\textwidth]
     {figures/forest_plot_best_ci_paper.pdf}
-    \caption{\textbf{\emph{FactorJEPA vs. the best competitor, across scale.}} Per-metric advantage in 95\%-CI units at POC 2B, POC 1B, and full-scale 1B (green past the dashed $1\times$ line = a separated win). Predictive diagnostics separate and \emph{strengthen} at full scale, where the motion-cosine trade-off also reverses to a win. Full-scale 2B was not run (compute budget).}
+    \caption{\textbf{\emph{FactorJEPA vs. the best competitor, across scale.}} Per-metric advantage in 95\%-CI units at the stratified 10k scale (2B and 1B) and the full 115k scale (1B); green past the dashed $1\times$ line = a separated win. Predictive diagnostics separate and \emph{strengthen} at full scale, where the motion-cosine trade-off also reverses to a win. Full-scale 2B was not run (compute budget).}
     \label{fig:frozen_forest}
     \vspace{-0.6em}
 \end{figure*}
@@ -135,7 +135,7 @@ each stage.
 For each privacy-filtered clip $x_n$ we run an open-vocabulary detector
 (Grounding DINO, Swin-B)~\cite{liu2024groundingdino} to localise dynamic agents, and propagate
 those detections through the clip with a promptable video segmenter
-(SAM~3)~\cite{carion2025sam3}. Detections are re-seeded at four anchor frames and propagated
+(Segment Anything Model, SAM~3)~\cite{carion2025sam3}. Detections are re-seeded at four anchor frames and propagated
 within each anchor's segment, which keeps identities stable under the heavy occlusion typical
 of the regime. This yields, per clip, a set of agent masks and temporally associated tracklets
 (a mask and box sequence per agent over its lifespan; formal notation in Appendix~C).
@@ -165,7 +165,7 @@ agent appearance and finally interaction structure are introduced.
 
 Encoder capacity is released progressively: at stage $s$ only the predictor plus the
 deepest $K_s=\lfloor \kappa_s L\rfloor$ transformer blocks (of depth $L$) receive
-gradients, so that at most $8/48$ blocks (ViT-G) and $6/40$ blocks (ViT-g) ever move. The lower blocks and the momentum target network follow the frozen / momentum
+gradients, so that at most $8/48$ blocks (V-JEPA~2.1 2B) and $6/40$ blocks (V-JEPA~2.1 1B) ever move. The lower blocks and the momentum target network follow the frozen / momentum
 protocol of the underlying V-JEPA implementation.
 
 \subsection{\textbf{\emph{Training Objective}}}
@@ -224,8 +224,8 @@ evaluator (full provenance in Appendix~E).
 
 \subsection{\textbf{\emph{Protocol and Comparisons}}}
 
-We evaluate V-JEPA~2.1~\cite{murlabadia2026vjepa21, assran2025vjepa2} at two scales: ViT-G with approximately 2B parameters
-and ViT-g with approximately 1B parameters. The comparison spans the frozen
+We evaluate V-JEPA~2.1~\cite{murlabadia2026vjepa21, assran2025vjepa2} at two scales: V-JEPA~2.1 (2B) and V-JEPA~2.1 (1B),
+approximately 2B and 1B parameters respectively. The comparison spans the frozen
 backbone, conventional full fine-tuning, LP-FT~\cite{kumar2022lpft}, parameter-efficient LoRA, DoRA,
 Auto-RGN, FactorJEPA-RAW, and full FactorJEPA.
 FactorJEPA-RAW applies the factorized predictor to raw clips without
@@ -296,7 +296,7 @@ head-only adaptation loses on future-frame, causal future-block, and mask-ratio 
 separated) but wins back motion-cosine, rollout, and exposure-bias.
 \textbf{\emph{The interaction stage adds no measurable value:}} removing $D_I$
 (no-$D_I$) leaves every predictive diagnostic statistically unchanged.
-\textbf{\emph{Weight merging hurts:}} a WiSE-FT~\cite{wortsman2022wiseft} interpolation (mixing fractions
+\textbf{\emph{Weight merging hurts:}} a WiSE-FT (weight-space ensembles for fine-tuning)~\cite{wortsman2022wiseft} interpolation (mixing fractions
 $0.3$, $0.5$, $0.7$) loses to the un-merged model on future-frame and motion-cosine at
 both scales.
 
@@ -304,7 +304,7 @@ both scales.
 Three controls bound our claims. A compute-matched control (plain pretraining for the
 same number of steps as the surgery) is declared but not run, so we cannot fully
 separate the surgical schedule from additional optimisation; head-only pretraining and
-the continual-learning baselines (CaSSLe~\cite{fini2022cassle}, EWC~\cite{kirkpatrick2017ewc}) were trained but not evaluated on the
+the continual-learning baselines (CaSSLe~\cite{fini2022cassle}, EWC (elastic weight consolidation)~\cite{kirkpatrick2017ewc}) were trained but not evaluated on the
 suite; and the method is a precondition on the base checkpoint, as on V-JEPA~2.0 the
 same recipe does not improve over the frozen encoder, so the gains are specific to
 V-JEPA~2.1. At the 10k screening scale factorization also concedes maximally linear

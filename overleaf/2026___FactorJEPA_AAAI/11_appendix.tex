@@ -208,7 +208,7 @@ stability between the 1B and 2B V-JEPA~2.1 backbones.
     \item \textbf{E.5 Metric sensitivity and complete numerical results}
 
     Reports horizon and masking curves, normalization
-    sensitivity, cross-scale ranking robustness, and the complete ViT-G and ViT-g
+    sensitivity, cross-scale ranking robustness, and the complete V-JEPA~2.1 (2B) and V-JEPA~2.1 (1B)
     numerical scorecards.
 
 \end{itemize}
@@ -2974,7 +2974,7 @@ consolidated in Table~\ref{tab:reproducibility_configuration}.
 \textbf{Canonical FactorJEPA architecture, optimization, baseline, and
 resource configuration.}
 The table specifies a complete reproducible reference configuration for
-the V-JEPA~2.1 ViT-G and ViT-g experiments. Backbone identifiers and
+the V-JEPA~2.1 (2B) and (1B) experiments. Backbone identifiers and
 architectural scales follow the official V-JEPA~2.1 release. All
 project-specific optimization, factorization, adaptation, and profiling
 settings are fixed below. Resource entries are prespecified execution
@@ -2991,9 +2991,9 @@ verified against profiling logs.
 \rowcolor{CfgNavy}
 \color{white}\textbf{Configuration item}
 &
-\color{white}\textbf{V-JEPA~2.1 ViT-G}
+\color{white}\textbf{V-JEPA~2.1 (2B)}
 &
-\color{white}\textbf{V-JEPA~2.1 ViT-g}
+\color{white}\textbf{V-JEPA~2.1 (1B)}
 &
 \color{white}\textbf{Control, interpretation, or measurement rule}
 \\
@@ -3012,9 +3012,9 @@ Canonical FactorJEPA configuration}
 \rowcolor{CfgNavy}
 \color{white}\textbf{Configuration item}
 &
-\color{white}\textbf{V-JEPA~2.1 ViT-G}
+\color{white}\textbf{V-JEPA~2.1 (2B)}
 &
-\color{white}\textbf{V-JEPA~2.1 ViT-g}
+\color{white}\textbf{V-JEPA~2.1 (1B)}
 &
 \color{white}\textbf{Control, interpretation, or measurement rule}
 \\
@@ -3716,8 +3716,8 @@ released configuration.
 >{\RaggedRight\arraybackslash}p{0.72\textwidth}
 }{
 One RTX Pro 6000 Blackwell GPU per arm, so GPU-hours equal wall-clock.
-Measured per-arm wall-clock: POC-2B arms \(\approx 2\)--\(16\) h; POC-1B
-arms \(\approx 2\)--\(5\) h; full-scale-1B arms \(\approx 18\)--\(30\) h
+Measured per-arm wall-clock at the stratified 10k scale: 2B arms \(\approx 2\)--\(16\) h, 1B
+arms \(\approx 2\)--\(5\) h; at the full 115k scale, 1B arms \(\approx 18\)--\(30\) h
 (continual pretraining \(17.7\) h; LoRA and FactorJEPA \(\approx 29\) h
 each, summed across checkpoint-resumed segments). Peak allocation stayed
 within the \(96\) GB device; frozen baselines incur no training cost.
@@ -4038,8 +4038,8 @@ Complete model: structural package plus structured supervision.
 \vspace{2pt}
 \parbox{0.97\textwidth}{
 \textit{Parameter matching.}
-At ViT-G, Auto-RGN and FactorJEPA contain approximately \(111\)M
-and \(115\)M trainable parameters, respectively; at ViT-g, they contain
+At V-JEPA~2.1 (2B), Auto-RGN and FactorJEPA contain approximately \(111\)M
+and \(115\)M trainable parameters, respectively; at V-JEPA~2.1 (1B), they contain
 approximately \(68\)M and \(73\)M. Full fine-tuning contains
 approximately \(2.04\)B and \(1.04\)B trainable parameters and is
 therefore not used for component attribution.
@@ -4120,7 +4120,7 @@ the shared factorized package.
 
 The absolute performance and paired contrasts are reported below.
 
-% ViT-G: upper half of the combined PDF
+% V-JEPA~2.1 (2B): upper half of the combined PDF
 \begin{figure*}[p]
 \centering
 \includegraphics[
@@ -4129,7 +4129,7 @@ The absolute performance and paired contrasts are reported below.
     clip
 ]{figures/eval_scorecard_combined.pdf}
 \caption{
-\textbf{Complete ViT-G attribution and ablation scorecard.}
+\textbf{Complete V-JEPA~2.1 (2B) attribution and ablation scorecard.}
 The comparison includes frozen and continually adapted V-JEPA,
 full and parameter-efficient fine-tuning, Auto-RGN,
 FactorJEPA-RAW, the executed FactorJEPA objective variants, and the
@@ -4430,7 +4430,7 @@ RGB Agent F1             & Independent detector     & No \\
 \textbf{Evaluation metric registry.}
 The table records the operational definition, preferred direction,
 evaluation unit, frozen signal or evaluator, and inferential status of
-every reported diagnostic.
+every reported diagnostic. TCC denotes Temporal Cycle-Consistency.
 }
 \label{tab:metric_registry}
 \scriptsize
@@ -5090,8 +5090,8 @@ As an aggregation check, we compare equal-city and clip-weighted means.
 \paragraph{Cross-scale ranking robustness.}
 For diagnostic \(m\), let
 \(\mathbf s_G^{(m)}\) and \(\mathbf s_g^{(m)}\) contain the
-direction-normalized scores of the common method set at the ViT-G and
-ViT-g scales. We report
+direction-normalized scores of the common method set at the V-JEPA~2.1 (2B) and
+V-JEPA~2.1 (1B) scales. We report
 
 \begin{equation*}
 \begin{aligned}
@@ -5123,8 +5123,8 @@ described as \textbf{scale robustness}, not independent replication.
     \caption{
     \textbf{\emph{Complete cross-scale ranking robustness (2B$\to$1B), all
     fifteen diagnostics.}}
-    Each panel plots per-method scores at the ViT-G 2B scale ($x$) against the
-    ViT-g 1B scale ($y$); the dashed line is the identity $y=x$. Panels are
+    Each panel plots per-method scores at the V-JEPA~2.1 (2B) scale ($x$) against the
+    V-JEPA~2.1 (1B) scale ($y$); the dashed line is the identity $y=x$. Panels are
     sorted by Spearman rank correlation $\rho$ (descending): green titles mark
     strong replication ($\rho\ge0.5$), grey inconclusive ($0.2\le\rho<0.5$), and
     red failure ($\rho<0.2$). Twelve of the fifteen diagnostics retain consistent
@@ -5137,7 +5137,7 @@ described as \textbf{scale robustness}, not independent replication.
 
 \paragraph{Complete scorecards.}
 Figure~\ref{fig:ablation_scorecard_vitg} shows all executed diagnostics for
-the ViT-G and ViT-g backbones. Exact primary values and BCa
+the V-JEPA~2.1 (2B) and V-JEPA~2.1 (1B) backbones. Exact primary values and BCa
 intervals are reported in
 the consolidated attribution results. The complete numerical scorecard additionally records, for every method and diagnostic:
 
@@ -5238,8 +5238,8 @@ Let
 Y\in\mathbb{R}^{B\times T_y\times P\times d_J}
 \)
 denote a sequence of future JEPA tokens, where \(P=h_Jw_J\) is the
-spatial token count and \(d_J\in\{1664,1408\}\) for the ViT-G and
-ViT-g backbones, respectively. The Cosmos decoder expects a spatially
+spatial token count and \(d_J\in\{1664,1408\}\) for the V-JEPA~2.1 (2B) and
+V-JEPA~2.1 (1B) backbones, respectively. The Cosmos decoder expects a spatially
 organized conditioning tensor rather than an unordered JEPA token
 sequence. We therefore introduce a trainable transport operator
 \(\mathcal T_\omega\) that aligns token dimensionality, spatial
@@ -5336,8 +5336,8 @@ decoder configuration.
 \rowcolor{DecoderBlue}
 JEPA latent source
 &
-ViT-G: \(d_J=1664\);
-ViT-g: \(d_J=1408\);
+V-JEPA~2.1 (2B): \(d_J=1664\);
+V-JEPA~2.1 (1B): \(d_J=1408\);
 future frames \(13{:}16\) from the common \(384\times384\),
 16-frame protocol.
 &
