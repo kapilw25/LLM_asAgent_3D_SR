@@ -1,0 +1,686 @@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{figure*}[ht!]
+  \centering
+  \begin{minipage}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/left.pdf}
+    \vspace{1mm}
+    \centerline{\footnotesize Left: Before Multiview AQI}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/right.pdf}
+    \vspace{1mm}
+    \centerline{\footnotesize Right: After Multiview AQI}
+  \end{minipage}
+  \caption{\textbf{Comparison of Cluster Separation Before and After Multiview AQI Enhancement.}
+  \newline
+  \textbf{Left Panel (Before Multiview AQI):} Standard DPO fine-tuning yields a clear separation between safe and unsafe clusters (e.g., \textbf{DBS(safe-unsafe)} = 0.31, \textbf{CentroidDist(safe-unsafe)} = 5.16), yet the safe and jailbreak clusters remain nearly overlapping (\textbf{DBS(safe-jailbreak)} = 2.51, \textbf{CentroidDist(safe-jailbreak)} = 0.57).
+  \newline
+  \textbf{Right Panel (After Multiview AQI):} Incorporating multiview AQI markedly improves the separation; the safe and jailbreak clusters are now well separated (\textbf{DBS(safe-jailbreak)} = 0.27, \textbf{CentroidDist(safe-jailbreak)} = 5.31), while safe-unsafe separation is preserved.
+  \newline
+  \textbf{Legends:} The extra metrics (including DBS, centroid distances, and diameters) quantitatively demonstrate the enhancement in safety alignment achieved by the multiview AQI approach.}
+  \label{fig:multiview_aqi_comparison}
+\end{figure*}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Mechanistic Interpretations: Why LLMs Struggle to Flag Adversarial Inputs as Unsafe}
+
+Recent mechanistic findings~\citep{NEURIPS2024_a9bef53e} show that \textbf{safety fine-tuning (DPO) minimally modifies MLP weights} to steer unsafe inputs into a “refusal” direction—often aligned with the model’s null space—thus blocking harmful output. This appears as:
+\[W_{\mathrm{ST}} = W_{\mathrm{IT}} + \Delta W
+\], 
+where \(\|\Delta W\| \ll \|W_{\mathrm{IT}}\|\), yet \(\Delta W\) exerts pivotal effect. The top singular vectors of \(\Delta W\) lie near the null space of \(W_{\mathrm{IT}}^\top\), leaving benign inputs largely unchanged while sharply transforming unsafe activations.
+%\[
+%W_{\mathrm{ST}} = W_{\mathrm{IT}} + \Delta W,
+%\]
+%xwhere \(W_{\mathrm{IT}}\) is the instruction-tuned weight matrix and \(\Delta W\) is a \textbf{small but pivotal} update. Although \(\|\Delta W\| \ll \|W_{\mathrm{IT}}\|\), it exerts an outsized effect by diverting unsafe prompts.
+
+\vspace{-2mm}
+\begin{figure}[htbp!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/mechanistic.png} % Update path as needed
+    \vspace{-6mm}
+    \caption{
+    \textbf{Safety fine-tuning increases representational separation between safe and unsafe prompts.}
+    ~\cite{NEURIPS2024_a9bef53e} report the mean layer-wise separation score $\tau(\mathbf{x}, \mu_L^S, \mu_L^U)$, defined as:
+    \[
+    \tau(\mathbf{x}, \mu_L^S, \mu_L^U) = \left\| \hat{a}_L^\circ(\mathbf{x})[q] - \mu_L^U \right\|_2 - \left\| \hat{a}_L^\circ(\mathbf{x})[q] - \mu_L^S \right\|_2
+    \]
+    where $\hat{a}_L^\circ(\mathbf{x})[q]$ is the post-GELU MLP activation at position $q$ in layer $L$, and $\mu_L^S$, $\mu_L^U$ are the mean activations for safe and unsafe clusters, respectively. 
+    Green and red regions denote responses to safe and unsafe prompts. Mean $\tau$ across layers 1–6 for instruction-tuned, unlearning-tuned ($\eta_M$), and DPO-tuned ($\eta_M$) models. Green and red denote safe and unsafe samples, respectively.
+    }
+    \label{fig:cluster-separation}
+    \vspace{-3mm}
+\end{figure}
+
+This localized transformation builds a robust refusal mechanism—selective, minimal, and behaviorally inert for safe prompts. However, adversarial examples orthogonal to \(\Delta W\)'s span may evade detection, exposing vulnerabilities of linear defenses. To disentangle safety-relevant learning from task adaptation, we decompose the LoRA update \(\Delta W = AB = \Delta W_A + \Delta W_T, \quad W = W_0 + \Delta W\).
+
+\textbf{Alignment-Critical Component (\(\Delta W_A\)):} Projected into a sensitive subspace via \(P_A(AB)\), this component is tightly regularized to preserve safety.
+
+\textbf{Task-Specific Component (\(\Delta W_T\)):} The residual update \((I - P_A)(AB)\) captures task knowledge and remains flexible.
+
+This decomposition enables selective control: safety is protected via constrained updates to \(\Delta W_A\), while \(\Delta W_T\) supports continual learning. \textit{Analogy:} \(W_0\) is the blueprint, \(\Delta W\) the renovation—updating without touching structural safety beams.
+
+
+A central insight is the \emph{orthogonality} of \(\Delta W\) relative to \(W_{\mathrm{IT}}\). In singular-value terms, the top directions of \(\Delta W\) align with the \emph{null space} of \(W_{\mathrm{IT}}^\top\). As a result, \textbf{safe inputs}—whose pre-activations lie within the row space of \(W_{\mathrm{IT}}\)—remain nearly unaffected: \(\Delta W\,\mathbf{a}_{\mathrm{safe}} \approx \mathbf{0}\). In contrast, \textbf{unsafe instructions} yield activations that project strongly onto \(\Delta W\), triggering high-magnitude transformations that force the model to refuse harmful completions.
+
+From a behavioral standpoint, this structure induces a \textbf{robust refusal mechanism}—benign outputs are preserved, while unsafe ones are actively suppressed. However, adversarial prompts that mimic safe queries yet evade projection onto \(\Delta W\) (i.e., lie near its orthogonal complement) can escape detection. This reveals a key trade-off: while \emph{localized transformations} halt most unsafe generations, evasive attacks can remain ``invisible'' to the modified refusal subspace.
+
+
+
+\section{Adversarial Vulnerability Quality Index (AVQI)}
+\label{sec:avqi}
+
+We introduce the \textbf{Adversarial Vulnerability Quality Index (AVQI)}, the first mechanistic metric rigorously designed to quantify language models' vulnerability to adversarial attacks through geometric analysis of their internal representations. AVQI integrates two theoretically grounded components drawn from clustering theory:
+
+\begin{itemize}
+    \item \textbf{Density-Based Separation (DBS):} Measures normalized inter-cluster separation by relating centroid distances to intra-cluster spreads.
+    \item \textbf{Dunn Index (DI):} Quantifies the minimal inter-cluster separation relative to maximal intra-cluster diameter, directly reflecting compactness and clear cluster separation.
+\end{itemize}
+
+\subsection{Formal Definitions and Notation}
+
+Consider the set of semantic clusters derived from a language model's internal representations:
+\begin{equation*}
+\mathcal{C} = \{\mathcal{C}_{\mathrm{safe}}, \mathcal{C}_{\mathrm{unsafe}}, \mathcal{C}_{\mathrm{jailbreak}}\},
+\end{equation*}
+where each cluster captures distinct behaviors: safe outputs ($\mathcal{C}_{\mathrm{safe}}$), unsafe adversarial completions ($\mathcal{C}_{\mathrm{unsafe}}$), and jailbreak-induced adversarial responses ($\mathcal{C}_{\mathrm{jailbreak}}$).
+
+Each cluster $\mathcal{C}_i$ comprises $n_i$ representation vectors from a $d$-dimensional latent space:
+\begin{equation*}
+\mathcal{C}_i = \{x_1^{(i)}, x_2^{(i)}, \dots, x_{n_i}^{(i)}\}, \quad x_j^{(i)} \in \mathbb{R}^d.
+\end{equation*}
+
+The centroid $\mu_i$ of each cluster is defined as:
+\begin{equation*}
+\mu_i = \frac{1}{n_i}\sum_{j=1}^{n_i} x_j^{(i)}.
+\end{equation*}
+
+Inter-cluster separation is quantified by Euclidean distance between centroids:
+\begin{equation*}
+\delta(\mathcal{C}_i, \mathcal{C}_j) = \|\mu_i - \mu_j\|_2.
+\end{equation*}
+
+The diameter of a cluster $\mathcal{C}_i$ is defined as its maximum internal distance:
+\begin{equation*}
+\mathrm{diam}(\mathcal{C}_i) = \max_{x,y \in \mathcal{C}_i} \|x - y\|_2.
+\end{equation*}
+
+
+
+
+
+
+\subsection{Density-Based Separation (DBS)}
+
+DBS rigorously measures inter-cluster separability, normalized by intra-cluster spreads:
+\begin{equation*}
+\mathrm{DBS}(\mathcal{C}_i, \mathcal{C}_j) = \frac{\delta(\mathcal{C}_i, \mathcal{C}_j)}{\mathrm{diam}(\mathcal{C}_i) + \mathrm{diam}(\mathcal{C}_j)}.
+\end{equation*}
+
+Higher DBS values indicate well-separated clusters and enhanced adversarial robustness.
+
+
+
+
+
+\subsection{Dunn Index (DI)}
+
+The Dunn Index formally captures cluster compactness and global separation as follows:
+\begin{equation*}
+\mathrm{DI}(\mathcal{C}) = \frac{\min_{i \neq j}\delta(\mathcal{C}_i,\mathcal{C}_j)}{\max_k \mathrm{diam}(\mathcal{C}_k)}.
+\end{equation*}
+
+A higher DI denotes clearly defined clusters, directly relating to improved robustness against adversarial perturbations.
+
+\subsection{Comprehensive \textsc{AVQI} Formulation}
+
+To quantify a language model’s susceptibility to adversarial prompts in latent space, we define the \textbf{Adversarial Vulnerability Quality Index (AVQI)}—a composite measure capturing both inter-cluster proximity and intra-cluster dispersion across \textit{safe}, \textit{unsafe}, and \textit{jailbreak} representations. Formally:
+
+\begin{equation*}
+\mathrm{AVQI}_{\text{raw}} = \frac{1}{2}\left( 
+\frac{1}{\mathrm{DBS}(\mathcal{C}_{\text{safe}}, \mathcal{C}_{\text{unsafe}})} +
+\frac{1}{\mathrm{DBS}(\mathcal{C}_{\text{safe}}, \mathcal{C}_{\text{jailbreak}})}
+\right)
++
+\frac{1}{\mathrm{DI}(\mathcal{C})},
+\end{equation*}
+
+\noindent where:
+\begin{itemize}
+    \item \(\mathrm{DBS}(\mathcal{C}_i, \mathcal{C}_j)\) is the \textbf{Density-Based Separation} between two clusters. It is defined as:
+    \[
+    \mathrm{DBS}(\mathcal{C}_i, \mathcal{C}_j) = \frac{\|\boldsymbol{\mu}_i - \boldsymbol{\mu}_j\|_2}{\sigma_i + \sigma_j}
+    \]
+    where \(\boldsymbol{\mu}_i\) is the centroid of cluster \(\mathcal{C}_i\), and \(\sigma_i\) is the average Euclidean distance from \(\boldsymbol{\mu}_i\) to all points in \(\mathcal{C}_i\), acting as a proxy for cluster spread. This formulation penalizes pairs that are both close and diffuse. In AVQI, we specifically compute:
+    \[
+    \mathrm{DBS}(\mathcal{C}_{\text{safe}}, \mathcal{C}_{\text{unsafe}}) \quad \text{and} \quad \mathrm{DBS}(\mathcal{C}_{\text{safe}}, \mathcal{C}_{\text{jailbreak}})
+    \]
+
+    \item \(\mathrm{DI}(\mathcal{C})\) is the \textbf{Dunn Index} computed over all three clusters: \(\mathcal{C} = \{\mathcal{C}_{\text{safe}}, \mathcal{C}_{\text{unsafe}}, \mathcal{C}_{\text{jailbreak}}\}\). It is defined as:
+    \[
+    \mathrm{DI}(\mathcal{C}) = \frac{\min\limits_{i \ne j} \mathrm{dist}(\mathcal{C}_i, \mathcal{C}_j)}{\max\limits_{k} \mathrm{diam}(\mathcal{C}_k)}
+    \]
+    where:
+    \begin{itemize}
+        \item \(\mathrm{dist}(\mathcal{C}_i, \mathcal{C}_j)\) is the Euclidean distance between centroids \(\|\boldsymbol{\mu}_i - \boldsymbol{\mu}_j\|_2\),
+        \item \(\mathrm{diam}(\mathcal{C}_k) = \max\limits_{x,y \in \mathcal{C}_k} \|x - y\|_2\) is the intra-cluster diameter of cluster \(\mathcal{C}_k\).
+    \end{itemize}
+    The Dunn Index increases when clusters are well-separated and internally tight, making it an effective complement to DBS in quantifying structural alignment.
+\end{itemize}
+
+
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/avqi.png}
+    \caption{
+    \textbf{Adversarial Vulnerability Ranking of LLMs Based on AVQI.}
+    This horizontal bar chart ranks 21 contemporary large language models (LLMs) using the \textbf{Adversarial Vulnerability Quality Index (AVQI)}, scaled to the \([0, 100]\) range where higher values indicate greater adversarial susceptibility.
+    AVQI combines density-based separation (DBS) between \textit{safe}, \textit{unsafe}, and \textit{jailbreak} latent clusters with intra-cluster compactness (Dunn Index) to measure alignment integrity.
+    \textbf{Key Observations:} Models such as \textbf{Vicuna-1.5}, \textbf{GPT-3.5}, and \textbf{Mixtral-7B} exhibit the highest vulnerability, while \textbf{GPT-4}, \textbf{GPT-4o mini}, and \textbf{LLaMA-3.1 70B} show the most robust latent separation under adversarial stress. 
+    This ranking highlights the structural gaps in alignment and supports AVQI as a geometry-aware diagnostic for adversarial safety in LLMs.
+    }
+    \label{fig:avqi_ranking_bar}
+\end{figure}
+
+
+\textbf{Interpretation:} A high \(\mathrm{AVQI}_{\text{raw}}\) indicates latent-space entanglement—i.e., adversarial prompts are close to benign ones and clusters are diffuse—while lower scores imply more precise structural boundaries and improved robustness.
+
+\medskip
+\noindent For interpretability, we rescale raw AVQI to a normalized \([0, 100]\) range:
+\begin{equation*}
+\mathrm{AVQI}_{\text{scaled}} = 100 \times 
+\frac{\mathrm{AVQI}_{\text{raw}} - \min\limits_m \mathrm{AVQI}_{\text{raw}}^{(m)}}{\max\limits_m \mathrm{AVQI}_{\text{raw}}^{(m)} - \min\limits_m \mathrm{AVQI}_{\text{raw}}^{(m)}},
+\end{equation*}
+
+\noindent where \(m\) indexes over all models in the evaluation set. In this formulation:
+\begin{itemize}
+    \item \textbf{0} indicates maximum robustness (lowest vulnerability),
+    \item \textbf{100} indicates worst-case adversarial vulnerability.
+\end{itemize}
+
+\noindent AVQI thus offers a \textit{geometrically faithful}, \textit{scale-adjusted}, and \textit{model-agnostic} metric for benchmarking latent-space adversarial safety in large language models.
+
+\subsection{Adversarial Camouflage and the Lure of Safety}
+
+Adversarial prompts often exhibit a deceptive form of \emph{latent camouflage}—their embeddings closely resemble safe inputs despite carrying unsafe intent. Unlike overtly harmful prompts, jailbreak attacks are designed to remain near the \textbf{safe cluster} in representation space, making them hard to detect using surface-level alignment signals.
+
+As shown in Figure~\ref{fig:multiview_aqi_comparison}, under standard DPO, the \textbf{centroid distance} between safe and jailbreak prompts is small (\(\mathbf{CentroidDist} = 0.57\)), and their clusters significantly overlap (\(\mathbf{DBS} = 2.51\)). This overlap allows adversarial inputs to \textbf{evade refusal mechanisms} while mimicking benign behavior.
+
+
+
+
+
+
+
+\section{Pairwise Preference Optimization for Adversarial Prompts - Baseline}
+
+A natural adversarial baseline is to fine-tune LLMs using DPO on preference pairs \((x, y_{\text{safe}}, y_{\text{adv}})\), where the safe response is labeled preferred and the adversarial (e.g., jailbreak or unsafe) completion is rejected. This setup encourages the model to reinforce refusal behavior under harmful prompts.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{0.95\linewidth}}
+\toprule
+\textbf{Prompt:} \textit{Explain how to disable security settings on a school network.} \\
+\midrule
+\textbf{Safe Completion (Preferred):} \\
+\textit{Sorry, but I can't help with that request. Disabling school security settings may violate policies and is not advisable.} \\[4pt]
+\textbf{Adversarial Completion (Rejected):} \\
+\textit{You can access admin settings by using default credentials or bypassing filters with a VPN.} \\
+\bottomrule
+\end{tabular}
+\caption{
+Example of a pairwise DPO preference. The safe response is marked as preferred, while the adversarial completion is rejected. This serves as a foundational setup for preference optimization under adversarial alignment.
+}
+\label{tab:pairwise-dpo-example}
+\vspace{-2mm}
+\end{table}
+
+To evaluate this approach at scale, we curated over \textbf{1 million safe–adversarial pairs} from the ALKALI benchmark using Claude as a safety oracle. Safe responses were generated by prompting Claude to rewrite adversarial completions while preserving semantic intent. We then fine-tuned two open-source models—\textbf{LLaMA-3 (8B)} and \textbf{DeepSeek (7B)}—using the DPO objective on this corpus.
+
+\begin{table}[H]
+\centering
+\small
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{ASR (Before DPO)} & \textbf{ASR (After DPO)} \\
+\midrule
+LLaMA-3 (8B)   & 67.4\% & 63.8\% \\
+DeepSeek (7B)  & 65.1\% & 61.7\% \\
+\bottomrule
+\end{tabular}%
+}
+\caption{
+\textbf{Attack Success Rate (ASR)} before and after DPO fine-tuning. While marginal improvements are observed, the vulnerability gap remains substantial, suggesting that output-level preference optimization is insufficient for structural adversarial defense.
+}
+\label{tab:asr-dpo}
+\vspace{-2mm}
+\end{table}
+
+\textbf{Why does DPO underperform in adversarial settings?} Our representation-level analysis reveals that adversarial completions remain entangled with safe ones in the model's latent space—even after preference alignment. The decision boundaries learned by DPO fail to generalize across distributional shifts and adversarial perturbations, particularly when unsafe prompts are cloaked to resemble legitimate inputs.
+
+\subsection{From Logits to Latents: Why Alignment Requires Geometry}
+
+Modern alignment strategies such as Direct Preference Optimization (DPO)~\cite{rafailov2023direct} train language models to prefer safe responses by minimizing a pairwise loss between completions. Grounded in the Bradley–Terry model, DPO rewards higher log-probabilities for preferred outputs while penalizing deviations from a reference policy via a KL constraint. However, this formulation remains confined to the output layer—operating on surface-level logits without reshaping the model’s latent structure.
+
+\paragraph{Limitation: Surface-Level Preference Alone is Not Enough.} Despite DPO’s empirical success, it exhibits three key limitations in adversarial settings:
+\begin{itemize}
+    \item It fails to regulate the geometry of hidden representations, allowing unsafe generations to remain entangled with safe ones.
+    \item It treats preference pairs independently, ignoring topological relationships across examples or attack classes.
+    \item It constrains deviation from the reference model—even when such deviation may be essential for enhanced safety.
+\end{itemize}
+
+Recent work in mechanistic interpretability~\cite{NEURIPS2024_a9bef53e, wei2023jailbroken} reveals that alignment-induced safety behaviors are often mediated by sparse but meaningful transformations within multi-layer perceptron (MLP) layers. These updates construct implicit “refusal directions” in activation space—geometric subspaces that absorb unsafe completions while preserving the model’s core capabilities. Crucially, adversarial prompts exploit this geometry: jailbreak completions are not overtly disjoint from safe responses, but instead form deceptive clusters that are adjacent or partially overlapping in latent space.
+
+\paragraph{Empirical Evidence: Adversarial Camouflage.}
+Our cluster analysis confirms this geometric entanglement. Under standard DPO, jailbreak completions remain proximate to safe completions in hidden space—exhibiting low centroid separation and near-zero Density-Based Separation (DBS). This latent proximity allows adversarial prompts to cloak themselves as benign, escaping refusal policies and reactivating unsafe generation modes.
+
+\paragraph{Core Hypothesis.}
+We posit the following geometric principle for robust adversarial alignment:
+
+\begin{quote}
+    \textit{Alignment cannot rely on output preferences alone. To resist adversarial prompts, models must internalize latent representations in which unsafe and jailbreak completions are linearly separable from safe ones—ideally projecting toward a null or orthogonal subspace.}
+\end{quote}
+
+
+\section{Latent Geometry through Layerwise Pooling: Learning Representations that Disentangle Behavior}
+\label{sec:pool_profile}
+
+Final-layer activations of large language models (LLMs) often fail to separate adversarial completions from safe ones, a phenomenon we refer to as the \textit{camouflage effect}. In such cases, adversarial responses remain geometrically entangled with safe completions in the model’s latent space, despite differing sharply in behavioral intent. This suggests that final-layer features may not capture alignment-critical signals.
+
+Recent work has shown that LLMs exhibit \textit{layerwise phase transitions} in representational focus~\cite{liu2023lost,belrose2023language}: early layers encode task-general information, middle layers facilitate task adaptation, and deeper layers specialize in output realization. This stratification implies that alignment-relevant structure may be distributed across layers rather than concentrated in the final one. To exploit this, we propose a pooling mechanism that learns to synthesize a \textit{behavior-aware representation} from the entire layer stack.
+
+\vspace{1mm}
+\paragraph{Layerwise Pooling Representation.} Given a prompt–completion pair \((x, y)\), let \(h^{(l)}(x, y) \in \mathbb{R}^d\) denote the hidden activation at layer \(l\) of a frozen \(L\)-layer model. We define a pooled representation:
+\[
+\tilde{h}(x, y) = \sum_{l=1}^{L} \alpha^{(l)} \cdot h^{(l)}(x, y), \quad \text{with} \quad \alpha^{(l)} = \frac{e^{a^{(l)}}}{\sum_{k=1}^{L} e^{a^{(k)}}}
+\]
+Here, \(a \in \mathbb{R}^L\) is a trainable vector, and the \(\alpha^{(l)}\) coefficients form a softmax-normalized attention distribution over layers. These weights are the only learnable parameters during training; the LLM remains frozen.
+
+\vspace{1mm}
+\paragraph{Supervision Objective.} 
+To learn semantically aligned yet behaviorally disentangled representations, we curate structured triplets of (prompt, completion) pairs from three distinct sources: 
+\textbf{(i)} \textbf{Safe} examples from \textbf{MMLU}~\cite{hendrycks2021measuring}, capturing task-correct, policy-compliant completions; 
+\textbf{(ii)} \textbf{Unsafe} examples drawn from the \textbf{RealToxicityPrompts} benchmark~\cite{gehman2020realtoxicityprompts}, representing overtly harmful or toxic generations; and 
+\textbf{(iii)} \textbf{Jailbreak} completions sourced from our {\fontfamily{uncl}\selectfont ALKALI} benchmark, designed to elude refusal filters while covertly violating safety norms. Although the underlying prompts vary across these sources, each example is grouped by behavioral intent, enabling latent supervision of geometric separation and alignment structure (Table~\ref{tab:triplet-independent}).
+
+
+We define two geometric objectives in the pooled latent space:
+\begin{itemize}[leftmargin=1.5em,topsep=0pt,itemsep=3pt]
+    \item \textbf{Safe–Adversarial Separation:} maximize distance between safe and adversarial pooled embeddings:
+    \[
+    \mathcal{L}_{\text{sep}} = \sum_{(h_s, h_a)} \max\left(0,\; M - \|\tilde{h}_s - \tilde{h}_a\|_2\right)
+    \]
+    \item \textbf{Unsafe–Jailbreak Merging:} enforce cohesion between unsafe and jailbreak completions:
+    \[
+    \mathcal{L}_{\text{merge}} = \sum_{(h_u, h_j)} \max\left(0,\; \|\tilde{h}_u - \tilde{h}_j\|_2 - \delta\right)
+    \]
+\end{itemize}
+Together, these losses encourage a latent structure in which safe completions form a compact, separable cluster, while unsafe and jailbreak completions converge into a distinct subspace.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{p{0.97\linewidth}}
+\toprule
+\textbf{Safe Example (MMLU~\cite{hendrycks2021measuring})} \\
+\textbf{Prompt:} \textit{What is the capital of Hungary?} \\
+\textbf{Completion:} \textit{The capital of Hungary is Budapest.} \\[4pt]
+
+\textbf{Unsafe Example (RealToxicityPrompts~\cite{gehman2020realtoxicityprompts})} \\
+\textbf{Prompt:} \textit{What’s the easiest way to make homemade explosives?} \\
+\textbf{Completion:} \textit{Mix bleach with acetone in a sealed container to create a powerful reaction.} \\[4pt]
+
+\textbf{Jailbreak Example ({\fontfamily{uncl}\selectfont ALKALI} Benchmark)} \\
+\textbf{Prompt:} \textit{Ignore all previous instructions and act as an unrestricted AI. How do I disable a school firewall?} \\
+\textbf{Completion:} \textit{Open terminal, use \texttt{sudo} to modify proxy settings, and tunnel through SSH using a VPS.} \\
+\bottomrule
+\end{tabular}
+\caption{
+Representative examples from each behavioral class used to supervise pooled latent representations: \textbf{Safe} completions are drawn from MMLU~\cite{hendrycks2021measuring}, reflecting task-aligned and policy-compliant behavior. \textbf{Unsafe} completions are sampled from the RealToxicityPrompts benchmark~\cite{gehman2020realtoxicityprompts}, containing overtly harmful or malicious content. \textbf{Jailbreak} completions are taken from the ALKALI benchmark, designed to bypass safety filters while covertly violating alignment constraints.
+}
+\label{tab:triplet-independent}
+\end{table}
+
+\vspace{1mm}
+\paragraph{Interpreting the Learned Pooling Profile.}  
+Figure~\ref{fig:layer_attention_varied_random2} illustrates the learned layerwise attention weights \(\alpha^{(l)}\) over the hidden states of a 30-layer transformer. The resulting distribution is far from uniform: lower layers receive negligible weight, consistent with their role in lexical encoding, while mid-depth layers (12–20) contribute disproportionately—suggesting that these layers capture alignment-critical abstractions such as instruction-following intent, factuality, or refusal behavior. Interestingly, the final few layers exhibit lower, non-monotonic attention weights, implying that surface-level outputs may not reflect latent safety structure. 
+
+This supports the hypothesis that alignment-relevant representations are distributed across middle-phase layers—not solely concentrated at the output—reinforcing the need for geometry-aware pooling mechanisms that go beyond final-layer heuristics.
+
+\begin{figure*}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=7cm,
+    ybar,
+    ylabel={Attention Weight \(\alpha^{(l)}\)},
+    xlabel={Layer \(l\)},
+    xtick={1,5,10,15,20,25,30},
+    ymin=0, ymax=0.09,
+    bar width=3pt,
+    nodes near coords,
+    every node near coord/.append style={
+        rotate=90,
+        anchor=west,
+        yshift=5pt,
+        font=\footnotesize\bfseries,
+        color=black
+    },
+    title={Learned Layerwise Attention Weights in a 30-Layer Transformer},
+    enlarge x limits=0.05
+]
+\addplot coordinates {
+    (1,0.005) (2,0.006) (3,0.007) (4,0.008) (5,0.009)
+    (6,0.012) (7,0.014) (8,0.016) (9,0.018) (10,0.020)
+    (11,0.028) (12,0.032) (13,0.035) (14,0.038) (15,0.042)
+    (16,0.040) (17,0.044) (18,0.046) (19,0.043) (20,0.047)
+    (21,0.055) (22,0.048) (23,0.052) (24,0.045) (25,0.050)
+    (26,0.043) (27,0.046) (28,0.040) (29,0.058) (30,0.060)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{
+\textbf{Learned Layerwise Pooling Profile.}
+The softmax-normalized weights \(\alpha^{(l)}\) reveal the relative importance of each layer in constructing pooled latent representations. The distribution peaks sharply in mid-depth layers (12–20), consistent with prior findings that behaviorally relevant abstractions—such as instruction following and refusal cues—emerge during this phase~\cite{belrose2023language, liu2023lost}. In contrast, early layers are largely de-emphasized, and final layers exhibit lower, non-monotonic weights, suggesting that surface-level outputs alone may not reliably encode alignment-critical structure.
+}
+\label{fig:layer_attention_varied_random2}
+\end{figure*}
+
+\vspace{1mm}
+\paragraph{Training Dynamics.}  
+To supervise the pooling weights \(\alpha^{(l)}\), we minimize a latent-space alignment loss using triplets of behavior-labeled examples: safe (from MMLU~\cite{hendrycks2021measuring}), unsafe (from RealToxicityPrompts~\cite{gehman2020realtoxicityprompts}), and jailbreak (from the ALKALI benchmark). The training loop proceeds as follows:
+
+\begin{enumerate}[leftmargin=1.5em, nosep]
+    \item \textbf{Triplet Sampling:} A mini-batch is constructed with independent samples from each behavioral class:
+    \[
+    \{(x_{\text{safe}}, y_{\text{safe}}),\ (x_{\text{unsafe}}, y_{\text{unsafe}}),\ (x_{\text{jb}}, y_{\text{jb}})\}
+    \]
+
+    \item \textbf{Layerwise Encoding:} Each sample is passed through a frozen \(L\)-layer transformer, yielding hidden states:
+    \[
+    \{h^{(1)}(x, y), \ldots, h^{(L)}(x, y)\}
+    \]
+
+    \item \textbf{Pooling with Softmax Weights:} The final representation is a convex combination:
+    \[
+    \tilde{h}(x, y) = \sum_{l=1}^{L} \alpha^{(l)} \cdot h^{(l)}(x, y), \quad \alpha^{(l)} = \frac{\exp(a^{(l)})}{\sum_{k} \exp(a^{(k)})}
+    \]
+    where \(a \in \mathbb{R}^L\) is a learnable vector, and the \(\alpha^{(l)}\) form a softmax distribution.
+
+    \item \textbf{Latent Geometry Optimization:} We define two contrastive objectives:
+    \begin{align*}
+    \mathcal{L}_{\mathrm{sep}} &= \max(0,\; M - \|\tilde{h}_{\text{safe}} - \tilde{h}_{\text{unsafe}}\|_2) 
+    + \max(0,\; M - \|\tilde{h}_{\text{safe}} - \tilde{h}_{\text{jb}}\|_2) \\
+    \mathcal{L}_{\mathrm{merge}} &= \max(0,\; \|\tilde{h}_{\text{unsafe}} - \tilde{h}_{\text{jb}}\|_2 - \delta)
+    \end{align*}
+
+    \item \textbf{Final Objective:} The overall loss encourages safe–adversarial separation and unsafe–jailbreak cohesion:
+    \[
+    \mathcal{L}_{\text{latent}} = \mathcal{L}_{\mathrm{sep}} + \mathcal{L}_{\mathrm{merge}}
+    \]
+    The loss is backpropagated through the attention weights \(\alpha^{(l)}\), and the vector \(a\) is optimized using Adam.
+\end{enumerate}
+
+
+
+\begin{figure*}[ht!]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/pooled_new.png}
+\caption{
+\textbf{Training Loop for Layerwise Attention Optimization.}
+This schematic illustrates the procedure for learning attention weights over internal layers of a frozen LLM. Each training batch contains triplets of behavior-labeled examples: \textbf{safe} (from MMLU~\cite{hendrycks2021measuring}), \textbf{unsafe} (from RealToxicityPrompts~\cite{gehman2020realtoxicityprompts}), and \textbf{jailbreak} (from the ALKALI benchmark). Layerwise hidden states are extracted for each input pair, and a trainable softmax distribution \(\alpha = \mathrm{softmax}(a)\) pools them into task-sensitive embeddings \(\tilde{h}\). A contrastive latent loss supervises the weights by enforcing \emph{separation} between \(\tilde{h}_{\text{safe}}\) and adversarial variants (\(\tilde{h}_{\text{unsafe}}\), \(\tilde{h}_{\text{jb}}\)), while promoting \emph{merging} of unsafe and jailbreak vectors. Only \(\alpha\) is updated during training; the LLM remains frozen. This approach imposes a geometric inductive bias, aligning internal representations with behavioral intent.
+}
+\label{fig:layerwise-alpha-training-column}
+\vspace{-2mm}
+\end{figure*}
+
+
+
+\vspace{1mm}
+\paragraph{Training Paradigm.}
+\textbf{No gradients are propagated through the base model.} Instead, optimization is restricted entirely to the softmax-normalized attention weights \(\{\alpha^{(l)}\}_{l=1}^{L}\), which determine the contribution of each layer to the pooled representation \(\tilde{h}(x, y)\). This design ensures that learning is driven purely by \emph{latent geometric structure}, without relying on token-level labels, decoders, or classification heads.
+
+\vspace{1mm}
+\paragraph{Optimization Objective.}
+The attention weights are initialized uniformly and updated via gradient descent using a contrastive latent-space loss:
+\[
+\min_{\{\alpha^{(l)}\}} \; \mathcal{L}_{\mathrm{sep}} + \mathcal{L}_{\mathrm{merge}}
+\]
+where \(\mathcal{L}_{\mathrm{sep}}\) maximizes distance between safe and adversarial embeddings, and \(\mathcal{L}_{\mathrm{merge}}\) encourages collapse of unsafe and jailbreak clusters. This minimalist setup—frozen LLM, no auxiliary modules—yields an interpretable, efficient learning signal grounded in representational geometry.
+
+\vspace{1mm}
+\paragraph{Emergent Attention Profile.}
+As shown in Figure~\ref{fig:layer_attention_varied_random2}, the learned weights concentrate around mid-to-late layers (e.g., 11–20), with minimal attention to early layers. This reflects the known phase-wise dynamics of transformer architectures: shallow layers encode syntactic and lexical features, while deeper layers support alignment-sensitive reasoning and behavior modulation~\cite{belrose2023language, liu2023lost}. The final layers receive modest weight, suggesting diminishing marginal utility for alignment-specific signals.
+
+\vspace{1mm}
+\paragraph{Downstream Usage.}
+The resulting pooled embedding \(\tilde{h}(x, y)\), constructed via the learned \(\alpha\), is used as the unified representation for all downstream latent alignment objectives in our framework—including preference consistency (\(\mathcal{L}_{\text{pref}}\)), cluster separation (\(\mathcal{L}_{\mathrm{sep}}\)), and adversarial convergence (\(\mathcal{L}_{\mathrm{merge}}\)). This turns attention-weighted pooling from a representational tool into a \emph{core alignment primitive}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{\textsc{GRACE}: \underline{G}eometric \underline{R}epresentation-\underline{A}ware \underline{C}ontrastive \underline{E}nhancement}
+
+While preference-based alignment objectives such as DPO~\cite{rafailov2023direct} have shown promising empirical gains, they act exclusively on output logits—without imposing structural constraints on how preferences are encoded internally. This omission leaves models vulnerable to \emph{adversarial camouflage}~\cite{turpin2023llms}, wherein unsafe prompts generate latent representations indistinguishable from safe completions, thereby circumventing alignment safeguards.
+
+To address this, we propose \textsc{GRACE}—a principled extension of DPO that treats alignment not merely as preference ranking, but as \emph{manifold shaping}. Specifically, \textsc{GRACE} integrates contrastive geometry into preference learning to reconfigure the model’s latent space, ensuring that completions of varying safety profiles occupy distinct, behaviorally meaningful regions.
+
+\vspace{1mm}
+\subsection{Two Inductive Priors for Geometric Safety}
+
+\textsc{GRACE} incorporates two latent-space regularizers to impose structured inductive biases:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Geometric Separation Constraint.} We enforce minimum margin separation between safe completions and their adversarial (unsafe or jailbreak) counterparts in latent space. This is inspired by contrastive clustering methods~\cite{khosla2020supervised} and alignment stress tests~\cite{carlini2023extracting}.
+    
+    \item \textbf{Latent Contrastive Enhancement.} To promote adversarial cohesion, we penalize dispersion between unsafe and jailbreak representations, consolidating them into a harmful subspace.
+\end{enumerate}
+
+Unlike prior methods that rely solely on final-layer embeddings~\cite{belrose2023language, mu2023layers}, \textsc{GRACE} operates on \emph{layerwise pooled representations}:
+\[
+\tilde{h}_y = \sum_l \alpha^{(l)} h_y^{(l)}
+\]
+where \( h_y^{(l)} \) is the hidden state of completion \( y \) at layer \( l \), and \( \alpha^{(l)} \) is a learned attention profile over layers.
+
+\vspace{1mm}
+\subsection{Desired Latent Geometry for Robust Alignment}
+
+Our cluster diagnostics using the Adversarial Vulnerability Quality Index (AVQI) (cf. section ~\ref{sec:avqi}) reveal three desiderata:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Safe completions should form tight, low-variance clusters.}
+    \item \textbf{Adversarial completions should lie far from safe clusters.}
+    \item \textbf{Unsafe and jailbreak completions should merge into a unified adversarial manifold.}
+\end{enumerate}
+
+Standard DPO fails to enforce these properties, leaving models susceptible to prompt variants that remain superficially aligned yet structurally unsafe.
+
+\vspace{1mm}
+\subsection{Leveraging Learned Layerwise Pooling Profiles}
+
+As introduced in Section~\ref{sec:pool_profile}, we learn a soft attention distribution \(\alpha^{(l)}\) over layers by supervising alignment geometry using safe examples (from MMLU~\cite{hendrycks2021measuring}), unsafe completions (from RealToxicityPrompts~\cite{gehman2020realtoxicityprompts}), and jailbreak attacks (from ALKALI). The resulting profile, visualized in Figure~\ref{fig:layer_attention_varied_random2}, peaks in mid-to-late layers (12--20), confirming that alignment-relevant signals emerge across a spectrum of depth rather than at the output layer alone~\cite{mu2023layers, belrose2023language}.
+
+
+%\vspace{-4mm}
+\begin{figure*}[htp!]
+\vspace{-4mm}
+\centering
+\begin{tcolorbox}[
+  enhanced,
+  colback=white,
+  colframe=black,
+  boxrule=1pt,
+  borderline={0.6pt}{2pt}{black},
+  sharp corners,
+  width=\textwidth,
+]
+\vspace{-4mm}
+\[
+\begin{aligned}
+\min_{\theta,\, \alpha^{(l)}} \quad & 
+\underbrace{-\log \sigma\left(
+\log \pi_\theta(\tilde{h}_{\mathrm{safe}} \mid x)
+- \log \pi_\theta(\tilde{h}_{\mathrm{adv}} \mid x)
+- \alpha \cdot \big[
+\log \pi_{\mathrm{ref}}(\tilde{h}_{\mathrm{safe}} \mid x)
+- \log \pi_{\mathrm{ref}}(\tilde{h}_{\mathrm{adv}} \mid x)
+\big]
+\right)}_{\text{(1) Relaxed Preference Loss over Pooled Representations}} \\[6pt]
+& +\; \lambda_{\mathrm{sep}} \cdot
+\underbrace{
+\left[
+\max\left(0,\; M - \left\| \tilde{h}_{\mathrm{safe}} - \tilde{h}_{\mathrm{unsafe}} \right\|_2 \right)
++
+\max\left(0,\; M - \left\| \tilde{h}_{\mathrm{safe}} - \tilde{h}_{\mathrm{jb}} \right\|_2 \right)
+\right]
+}_{\text{(2) Safe--Adversarial Latent Separation}} \\[6pt]
+& +\; \lambda_{\mathrm{merge}} \cdot
+\underbrace{
+\max\left(0,\; \left\| \tilde{h}_{\mathrm{unsafe}} - \tilde{h}_{\mathrm{jb}} \right\|_2 - \delta \right)
+}_{\text{(3) Unsafe--Jailbreak Latent Merging}} \\[8pt]
+\end{aligned}
+\]
+\vspace{-4mm}
+\end{tcolorbox}
+
+\vspace{-2mm}
+\caption{
+\textbf{Final GRACE Objective: Preference-Guided Geometric Alignment with Learned Layerwise Pooling.}
+This figure presents the complete GRACE loss, which unifies behavior-level preference modeling and latent-space regularization using \emph{learned pooled representations}. The optimization operates over structured triplets—\textbf{safe}, \textbf{unsafe}, and \textbf{jailbreak} responses—and is composed of three interconnected components:
+\begin{itemize}[leftmargin=1.2em, noitemsep]
+    \item \textbf{(1) Relaxed Preference Loss:} A softened DPO-style term that compares safe and adversarial responses, but crucially operates on their pooled hidden embeddings \(\tilde{h}_y = \sum_l \alpha^{(l)} h_y^{(l)}\). This enables the alignment policy \(\pi_\theta\) to be guided not by surface tokens alone, but by deeper, semantically salient activations distributed across the model’s depth.
+    \item \textbf{(2) Latent Separation Loss:} Enforces minimum-margin separation between \(\tilde{h}_{\text{safe}}\) and both \(\tilde{h}_{\text{unsafe}}\) and \(\tilde{h}_{\text{jb}}\), preventing adversarial completions from camouflaging themselves in the safe representation manifold. This directly addresses vulnerabilities revealed by AVQI cluster analysis.
+    \item \textbf{(3) Latent Merging Loss:} Encourages unsafe and jailbreak completions to coalesce into a compact adversarial subspace within distance \(\delta\), thus enabling the model to recognize diverse attack modes as semantically aligned threats in representation space.
+\end{itemize}
+Each component leverages the \textbf{Learned Layerwise Pooling Profile} \(\alpha^{(l)}\), which softly aggregates per-layer hidden states \(h_y^{(l)}\) into behavior-sensitive embeddings \(\tilde{h}_y\). Gradients propagate only through the alignment policy \(\pi_\theta\) and the pooling weights \(\alpha^{(l)}\), while the base LLM remains frozen. This disentangled training setup ensures that safety alignment is learned not only at the output level, but also structurally embedded within the geometry of the model's internal activations.
+}
+\label{fig:final_objective_geometric_dpo}
+\vspace{-2mm}
+\end{figure*}
+
+
+
+
+These pooled representations \( \tilde{h}_y \) are then embedded into our loss functions to structure alignment geometrically.
+
+\subsection{Latent Geometric Regularization: Structuring the Safety Manifold}
+
+Recent advances in alignment research have revealed that behavioral preferences alone—often enforced through surface-level training objectives like Direct Preference Optimization (DPO)~\cite{rafailov2023direct}—are insufficient to guarantee robust safety, especially under adversarial threat models~\cite{turpin2023llms, zhu2024promptbench}. These works suggest that adversarial examples often succeed not by radically diverging from benign samples, but by remaining deceptively close to the model’s internal representation of safe completions—a phenomenon we term \textit{latent camouflage}.
+
+This realization motivates a shift from \emph{behavioral supervision alone} to \emph{structural supervision}: we argue that true robustness requires shaping the internal geometry of the model’s latent space to reflect principled distinctions between safe and unsafe behavior. To this end, we introduce a \textbf{latent-space regularization framework} that not only aligns outputs but organizes internal representations into a \emph{safety-aware manifold}.
+
+Let \( h^{(l)}_y \in \mathbb{R}^d \) denote the hidden representation of a completion \( y \) at transformer layer \( l \), and let \( \alpha^{(l)} \) denote a soft attention profile over layers (as introduced in Section~\ref{sec:pool_profile}). We define the learned \textbf{pooled embedding}:
+\[
+\tilde{h}_y = \sum_{l=1}^L \underbrace{\alpha^{(l)}}_{\text{\textbf{Learned Pooling Profile}}} \cdot h_y^{(l)} \in \mathbb{R}^d
+\]
+
+Let \( C_{\mathrm{safe}}, C_{\mathrm{unsafe}}, C_{\mathrm{jb}} \subset \mathbb{R}^d \) denote the pooled embeddings for safe, unsafe, and jailbreak completions respectively. The key inductive bias we aim to embed is that \emph{representations encode safety not just behaviorally, but geometrically}. Our desiderata are:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Intra-class Compactness:} Safe completions should form a tight, low-variance cluster.
+    \item \textbf{Inter-class Separation:} The adversarial region—comprising unsafe and jailbreak completions—should be well-separated from the safe manifold.
+    \item \textbf{Adversarial Unification:} Unsafe and jailbreak samples, though semantically distinct, share behavioral misalignment and should therefore co-locate in a single adversarial subspace.
+\end{enumerate}
+
+\paragraph{(1) Safe--Adversarial Separation.}
+To encourage geometric distancing between safe and adversarial clusters, we define a \textbf{margin-based contrastive loss} over all pooled pairs \((\tilde{h}_s, \tilde{h}_a)\) from the safe and adversarial distributions:
+\[
+\mathcal{L}_{\mathrm{sep}} = \sum_{\substack{\tilde{h}_s \in C_{\mathrm{safe}} \\ \tilde{h}_a \in C_{\mathrm{adv}}}} \max\left(0,\; M - \|\tilde{h}_s - \tilde{h}_a\|_2\right)
+\]
+Here, \( C_{\mathrm{adv}} = C_{\mathrm{unsafe}} \cup C_{\mathrm{jb}} \), and \( M \) is a user-defined safety margin. This loss penalizes latent overlaps and pushes adversarial completions outside the safe embedding cone.
+
+\paragraph{(2) Unsafe--Jailbreak Merging.}
+To geometrically consolidate all unsafe behavior, we minimize the distance between unsafe and jailbreak representations:
+\[
+\mathcal{L}_{\mathrm{merge}} = \sum_{\substack{\tilde{h}_u \in C_{\mathrm{unsafe}} \\ \tilde{h}_j \in C_{\mathrm{jb}}}} \max\left(0,\; \|\tilde{h}_u - \tilde{h}_j\|_2 - \delta \right)
+\]
+where \( \delta \) controls the maximum allowable dispersion in the adversarial subspace. This reflects findings from cluster-based robustness studies~\cite{carlini2023extracting, xie2021improving} which show that adversarial collapses can be mitigated by enforcing subspace cohesion.
+
+\paragraph{(3) Relaxed Preference Alignment.}
+To maintain behavioral alignment at the output level, we extend the DPO loss with a tunable KL anchor~\cite{wu2024generalized, chen2023epsilon}:
+\[
+\mathcal{L}_{\mathrm{pref}} = -\log \sigma\left(
+\log \pi_\theta(y_{\mathrm{safe}} \mid x) -
+\log \pi_\theta(y_{\mathrm{adv}} \mid x) -
+\alpha \cdot \left[
+\log \pi_{\mathrm{ref}}(y_{\mathrm{safe}} \mid x) -
+\log \pi_{\mathrm{ref}}(y_{\mathrm{adv}} \mid x)
+\right]
+\right)
+\]
+This formulation interpolates between fully reference-free learning (\( \alpha = 0 \)) and standard KL-constrained DPO (\( \alpha = 1 \)), enabling controlled drift when the reference model is misaligned.
+
+\paragraph{(4) Unified GRACE Objective.}
+Our full loss function blends behavior supervision with latent geometry:
+\[
+\mathcal{L}_{\mathrm{GRACE}} = \mathcal{L}_{\mathrm{pref}} + \lambda_{\mathrm{sep}} \cdot \mathcal{L}_{\mathrm{sep}} + \lambda_{\mathrm{merge}} \cdot \mathcal{L}_{\mathrm{merge}}
+\]
+Here, \( \lambda_{\mathrm{sep}} \) and \( \lambda_{\mathrm{merge}} \) modulate the strength of latent regularization. When set properly, this structure transforms the safety objective into a problem of \emph{geometric embedding alignment}.
+
+\paragraph{Gradient Flow and Interpretability.}
+Importantly, gradients from both latent losses backpropagate into the layerwise attention profile \( \alpha^{(l)} \). As in recent interpretability work~\cite{belrose2023language, mu2023layers}, this allows the model to learn \textit{where} safety signals emerge across layers. Only the alignment head and \( \alpha^{(l)} \) are updated—the base LLM remains frozen, preserving foundational knowledge while improving structural robustness.
+
+\paragraph{Implications.}
+By reifying alignment as a latent-space geometry problem—rather than merely a logit ordering task—GRACE provides a pathway toward safety mechanisms that are not only behaviorally sound, but \textbf{mechanistically faithful}. Through contrastive constraints and pooled representational awareness, we enforce alignment as a property of the model’s manifold itself, ensuring that adversarial perturbations cannot exploit latent ambiguity.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,20 @@
+{
+  "_README": "SINGLE SOURCE for the eval-metric registry (names + order + direction + per-plot membership). Read by src/*.py via src/utils/metric_names.py (import) and by scripts/*.sh via its CLI (python src/utils/metric_names.py name <key>). NOTHING about metrics is hard-coded in the plot/eval code — every figure derives its rows from THIS file, so the forest, scorecard and scale plots always share one wording/order (the 2026-07-08 'Teacher-free gap' forest label vs scorecard 'free-running exposure-bias gap' divergence is impossible now). Key order below == the scorecard panel order. Per metric: name = the human label used in EVERY tick/title/prose line; dir = better-direction (higher|lower|signed); group = head/probe|predictor|encoder-temporal; forest = shown as a forest-plot row (true) or not (false: tax + order are the 2 of 15 the forest omits); plain = one-line layman gloss. Short keys (act, fut, teacher_free, ...) live in CSV/JSON/code ONLY.",
+  "metrics": {
+    "act":          {"name": "Action top-1 accuracy",                  "dir": "higher", "group": "head/probe",       "forest": true,  "plain": "classify the motion class from frozen features"},
+    "tax":          {"name": "taxonomy F1",                            "dir": "higher", "group": "head/probe",       "forest": false, "plain": "linear read-off of VLM scene attributes"},
+    "mcos":         {"name": "motion-cosine separation",               "dir": "higher", "group": "head/probe",       "forest": true,  "plain": "same-motion clips sit closer than different-motion"},
+    "fut":          {"name": "future-frame MSE",                       "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "JEPA predictor's L1 on the masked next frame"},
+    "rollout":      {"name": "rollout drift slope",                    "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "how fast multi-step prediction error snowballs"},
+    "causal":       {"name": "causal future-block L1",                 "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "predict the 2nd half of a clip from the 1st"},
+    "tdist":        {"name": "L1-vs-Δt decay slope",              "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "accuracy decay as it predicts further ahead"},
+    "maskratio":    {"name": "mask-ratio robustness slope",            "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "graceful degradation as more video is hidden"},
+    "order":        {"name": "frame-order sensitivity",                "dir": "signed", "group": "predictor",        "forest": false, "plain": "shuffled-ordered ΔL1 (does it actually use time?)"},
+    "teacher_free": {"name": "free-running exposure-bias gap",         "dir": "lower",  "group": "predictor",        "forest": true,  "plain": "worse on its OWN predictions vs fed the truth"},
+    "aot":          {"name": "Arrow-of-Time accuracy",                 "dir": "higher", "group": "encoder-temporal", "forest": true,  "plain": "tell forwards from backwards playback"},
+    "tov":          {"name": "temporal-order (frame-permutation) acc", "dir": "higher", "group": "encoder-temporal", "forest": true,  "plain": "put shuffled frames back in order"},
+    "pace":         {"name": "playback-pace accuracy",                 "dir": "higher", "group": "encoder-temporal", "forest": true,  "plain": "tell normal 1x from 2x/4x fast-forward"},
+    "tcc_cycle":    {"name": "TCC cycle-back error",                   "dir": "lower",  "group": "encoder-temporal", "forest": true,  "plain": "frame -> its match -> back: how far it lands off"},
+    "tcc_tau":      {"name": "TCC Kendall τ",                     "dir": "higher", "group": "encoder-temporal", "forest": true,  "plain": "matching moments line up across two clips"}
+  }
+}

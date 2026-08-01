@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SINGLE SOURCE OF TRUTH for the iter18 arm roster + path mappings.
+# Add a new arm = ONE entry here. No more editing the same list in run_train.sh,
+# run_eval.sh, iter18_poc_ngpu.py and the plot scripts (that scatter caused 6
+# whack-a-mole FATALs on 2026-06-14).
+#
+# Consumed by (all via src/utils/arm_registry.py — import for python, CLI for bash):
+#   · scripts/iter18_poc_ngpu.py   → ARM2ENC / ARM2DIR  (scheduler==true arms)
+#   · scripts/run_eval.sh          → _arm_dir / _split_enc / preflight recognition
+#   · scripts/run_train.sh         → SUBCMD allowlist (kind!=merge)
+#   · scripts/iter18_*  + src/m13  → roster + group (per-figure palettes stay local)
+#
+# Keyed by the run_train SUBCMD (train-name). Fields:
+#   encoder    eval encoder-token; full eval name = "<backbone-prefix>_<encoder>"
+#              (NB the surgery family's train-name uses 'surgery_*' but its encoder
+#               uses 'surgical_*' — this map is the ONLY place that swap lives)
+#   dir        outputs/<mode>/<backbone>/<dir>/  (resume done-marker: student_encoder.pt)
+#   kind       pretrain | surgery | baseline | surgery_head | pretrain_head | merge
+#                · surgery   → run_train m09c1 generic dispatch (VARIANT_TAG = name minus 'surgery_')
+#                · baseline  → run_train bespoke per-arm runner (m09b/d/e/f)
+#                · merge     → NOT a run_train arm (scheduler builds it post-hoc, e.g. WiSE-FT)
+#   scheduler  true → present in the iter18 ARM2ENC/ARM2DIR DAG; false → legacy (run_eval/run_train only)
+#   group      display grouping for the plot scripts
+#
+# PLOT LABELS (2026-07-22) — every figure label comes from src/utils/arm_registry.label_for().
+# By DEFAULT it is DERIVED from `encoder`: the full arm name minus the redundant '_encoder' suffix
+# (peft_dora_encoder → "peft_dora", full_ft_encoder → "full_ft"). Full names, not cryptic
+# abbreviations, and no per-arm literal that can drift from the roster.
+#
+#   label   OPTIONAL per-arm override, for arms whose directory token reads badly on a figure.
+#           Only the pretrain family sets one: the paper's prose calls it "vanilla continual-SSL",
+#           so the plots say vanilla_continual_SSL rather than the bare token "pretrain" — abstract
+#           and figures must name the same arm the same way. Omit it and the derived name is used,
+#           so a new arm still needs no edit.
+#
+#           STYLE RULE for any override — it must be indistinguishable from a derived label, because
+#           it sits on the same axis as them:
+#             · lowercase words                    peft_lora, full_ft, surgery_raw
+#             · '_' separators — never spaces, never hyphens
+#             · acronyms / technical tokens keep their caps    surgical_3stage_DI, noDI, 2X, SSL
+#           "VANILLA CONT-SSL" would break all three and read as a foreign object next to peft_lora.
+#
+# WHY: until 2026-07-22 the same arm carried FOUR different labels across the figure set (m13's
+# _ARM_LONG / _ARM_SHORT / _MW_TRAIN_STYLE / _xb_arm_short) — `pretrain_encoder` printed "vanilla
+# continual-SSL", "vCSSL-enc", "vCSSL" and "pretrain" on figures sitting pages apart, and three of
+# those maps silently fell through for 9-17 of the 25 arms. Deriving from `encoder` makes drift
+# impossible and gives every future arm a label with no edit here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Non-arm reference encoders: never trained, so they have no `arms:` entry, but plots still need a
+# label + a style group for them. Everything else (the frozen-9 family: ijepa_*, lejepa_*, vjepa_1_*,
+# vjepa_2_0_*) falls through to the same '_encoder'-stripping rule — external checkpoints, not arms.
+reference_encoders:
+  frozen: {label: frozen,        group: frozen}
+  dinov2: {label: DINOv2 frozen, group: ft_baseline}
+
+# registry `group` → the style group the PAPER SCORECARD panels use (src/m13 _ps_panel). The panels
+# collapse `anchor` (continual-SSL) into the fine-tuning baselines and fold head-variants into their
+# encoder family. This replaces m13's hand-written _PS_ARMS dict, which restated a group for each of
+# 9 arms that was already recorded above — verified 2026-07-22 to be identical for all 9, so the dict
+# was pure duplication waiting to drift.
+# EVERY registry group must be listed: an unlisted group raises rather than silently styling itself
+# as a baseline, so a new group cannot slip into the scorecard mislabelled.
+paper_scorecard_group:
+  anchor:           ft_baseline
+  ft_baseline:      ft_baseline
+  head:             ft_baseline
+  ours_flagship:    ours_flagship
+  ours_head:        ours_flagship
+  surgery_ablation: surgery_ablation
+  improvement:      improvement
+
+arms:
+  pretrain_encoder:                    {encoder: pretrain_encoder,                     dir: m09a_pretrain_encoder,                     kind: pretrain,      scheduler: true,  group: anchor, label: vanilla_continual_SSL}
+  pretrain_2X_encoder:                 {encoder: pretrain_2X_encoder,                  dir: m09a_pretrain_2X_encoder,                  kind: pretrain,      scheduler: false, group: anchor, label: vanilla_continual_SSL_2X}
+  pretrain_head:                       {encoder: pretrain_head,                        dir: m09a_pretrain_head,                        kind: pretrain_head, scheduler: false, group: head,   label: vanilla_continual_SSL_head}
+  surgery_3stage_DI_encoder:           {encoder: surgical_3stage_DI_encoder,           dir: m09c_surgery_3stage_DI_encoder,            kind: surgery,       scheduler: true,  group: ours_flagship}
+  surgery_noDI_encoder:                {encoder: surgical_noDI_encoder,                dir: m09c_surgery_noDI_encoder,                 kind: surgery,       scheduler: true,  group: ours_flagship}
+  surgery_3stage_DI_head:              {encoder: surgical_3stage_DI_head,              dir: m09c_surgery_3stage_DI_head,               kind: surgery_head,  scheduler: true,  group: ours_head}
+  surgery_noDI_head:                   {encoder: surgical_noDI_head,                   dir: m09c_surgery_noDI_head,                    kind: surgery_head,  scheduler: true,  group: ours_head}
+  surgical_autorgn_encoder:            {encoder: surgical_autorgn_encoder,             dir: m09e_autorgn_encoder,                      kind: baseline,      scheduler: true,  group: surgery_ablation}
+  surgery_raw_encoder:                 {encoder: surgery_raw_encoder,                  dir: m09c_surgery_raw_encoder,                  kind: surgery,       scheduler: true,  group: surgery_ablation}
+  full_ft_encoder:                     {encoder: full_ft_encoder,                      dir: m09f_full_ft_encoder,                      kind: baseline,      scheduler: true,  group: ft_baseline}
+  lpft_encoder:                        {encoder: lpft_encoder,                         dir: m09f_lpft_encoder,                         kind: baseline,      scheduler: true,  group: ft_baseline}
+  peft_lora_encoder:                   {encoder: peft_lora_encoder,                    dir: m09b_peft_lora_encoder,                    kind: baseline,      scheduler: true,  group: ft_baseline}
+  peft_dora_encoder:                   {encoder: peft_dora_encoder,                    dir: m09b_peft_dora_encoder,                    kind: baseline,      scheduler: true,  group: ft_baseline}
+  cassle_encoder:                      {encoder: cassle_encoder,                       dir: m09d_cassle_encoder,                       kind: baseline,      scheduler: true,  group: ft_baseline}
+  ewc_encoder:                         {encoder: ewc_encoder,                          dir: m09d_ewc_encoder,                          kind: baseline,      scheduler: true,  group: ft_baseline}
+  # iter18 (2026-06-13) improvement arms (plan_outperform_FT.md) — each = OURS + ONE change.
+  surgery_3stage_DI_replay25_encoder:  {encoder: surgical_3stage_DI_replay25_encoder,  dir: m09c_surgery_3stage_DI_replay25_encoder,   kind: surgery,       scheduler: true,  group: improvement}
+  surgery_3stage_DI_diheavy_encoder:   {encoder: surgical_3stage_DI_diheavy_encoder,   dir: m09c_surgery_3stage_DI_diheavy_encoder,    kind: surgery,       scheduler: true,  group: improvement}
+  surgery_3stage_DI_tccaux_encoder:    {encoder: surgical_3stage_DI_tccaux_encoder,    dir: m09c_surgery_3stage_DI_tccaux_encoder,     kind: surgery,       scheduler: true,  group: improvement}
+  surgery_3stage_DI_intervene_encoder: {encoder: surgical_3stage_DI_intervene_encoder, dir: m09c_surgery_3stage_DI_intervene_encoder,  kind: surgery,       scheduler: true,  group: improvement}
+  # kind: merge → NOT trained; the scheduler builds a post-hoc wiseft_merge job from merge_recipe (base/alpha/predictor),
+  # resume-guard skips it once its student_encoder.pt exists → the POC command just EVALS them. merge_alpha = OURS weight
+  # in θ* = (1−α)·frozen + α·OURS  (so frozen-fraction = 1 − merge_alpha). merge_predictor: true also blends the predictor
+  # (→ future-MSE/causal populate; the old encoder-only wiseft left them blank).
+  surgical_3stage_DI_wiseft_encoder:   {encoder: surgical_3stage_DI_wiseft_encoder,    dir: m09c_surgical_3stage_DI_wiseft_encoder,    kind: merge,         scheduler: true,  group: improvement, merge_base: surgery_3stage_DI_encoder,           merge_alpha: 0.7, merge_predictor: false}
+  # iter18 (2026-06-14) WiSE-FT v2 sweep — blend the BEST predictor arm (intervene) × frozen, predictor INCLUDED, over frozen-fraction fNN:
+  surgical_intervene_wiseft_f30_encoder: {encoder: surgical_intervene_wiseft_f30_encoder, dir: m09c_surgical_intervene_wiseft_f30_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_intervene_encoder, merge_alpha: 0.7, merge_predictor: true}
+  surgical_intervene_wiseft_f50_encoder: {encoder: surgical_intervene_wiseft_f50_encoder, dir: m09c_surgical_intervene_wiseft_f50_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_intervene_encoder, merge_alpha: 0.5, merge_predictor: true}
+  surgical_intervene_wiseft_f70_encoder: {encoder: surgical_intervene_wiseft_f70_encoder, dir: m09c_surgical_intervene_wiseft_f70_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_intervene_encoder, merge_alpha: 0.3, merge_predictor: true}
+  # iter19 (2026-07-01) diheavy is the Best-OUR for the 115k full-scale run → its own WiSE-FT f50/f70 sweep
+  # (base = diheavy, predictor blended). Eval-only merges (kind: merge, no train); base ckpt = the trained diheavy arm.
+  surgical_diheavy_wiseft_f50_encoder: {encoder: surgical_diheavy_wiseft_f50_encoder, dir: m09c_surgical_diheavy_wiseft_f50_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_diheavy_encoder, merge_alpha: 0.5, merge_predictor: true}
+  surgical_diheavy_wiseft_f70_encoder: {encoder: surgical_diheavy_wiseft_f70_encoder, dir: m09c_surgical_diheavy_wiseft_f70_encoder, kind: merge, scheduler: true, group: improvement, merge_base: surgery_3stage_DI_diheavy_encoder, merge_alpha: 0.3, merge_predictor: true}

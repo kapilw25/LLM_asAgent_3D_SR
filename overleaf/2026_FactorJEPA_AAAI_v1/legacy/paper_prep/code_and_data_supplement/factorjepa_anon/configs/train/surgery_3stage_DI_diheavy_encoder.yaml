@@ -1,0 +1,27 @@
+# iter18 (2026-06-13) — IMPROVEMENT ARM #3 (plan_outperform_FT.md Q1, lever #3).
+# Goal: beat surgery_raw on causal-L1 by giving the INTERACTION (D_I) stage more practice —
+# interactions are the causal events that causal-L1 (predict future-half from past-half) measures.
+#
+# ADDITIVE: extends OURS; re-weights the 3-stage epoch budget toward stage3_interaction.
+# (a yaml LIST override REPLACES, so the full stages list is re-specified; only max_epochs_pct
+#  changes vs OURS — unfreeze depths + mixtures are byte-identical to surgery_3stage_DI.)
+extends: surgery_3stage_DI_encoder.yaml
+
+data:
+  adapted_encoder: vjepa_2_1_surgical_3stage_DI_diheavy_encoder
+  output_dir: outputs/full/m09c_surgery_3stage_DI_diheavy_encoder     # auto-overridden by run_train.sh
+
+surgery:
+  stages:
+    - name: stage1_layout
+      unfreeze_below: 0.083
+      mode_mixture: {L: 1.00, A: 0.00, I: 0.00}
+      max_epochs_pct: 0.30          # was 0.40 — shift budget toward interactions
+    - name: stage2_agent
+      unfreeze_below: 0.167
+      mode_mixture: {L: 0.30, A: 0.70, I: 0.00}
+      max_epochs_pct: 0.25          # was 0.30
+    - name: stage3_interaction
+      unfreeze_below: 0.167
+      mode_mixture: {L: 0.15, A: 0.15, I: 0.70}
+      max_epochs_pct: 0.45          # was 0.30 → +50% interaction practice (Q1 lever #3) · sum=1.00

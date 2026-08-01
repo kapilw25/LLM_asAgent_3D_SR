@@ -1,0 +1,1197 @@
+% This must be in the first 5 lines to tell arXiv to use pdfLaTeX, which is strongly recommended.
+%\pdfoutput=1
+% In particular, the hyperref package requires pdfLaTeX in order to break URLs across lines.
+
+\documentclass[11pt]{article}
+\usepackage{ACL2023}
+
+%\documentclass{article}
+%\usepackage{iclr2026_conference,times}
+
+%%%%%%%%%%%%%%%%%%%%%%%Pragya-Style%%%%%%%%%%%%%%%
+% Force single column throughout (including title/abstract/refs)
+%\usepackage[letterpaper,margin=1in]{geometry} % sane 1-col margins
+%\setlength{\columnsep}{0pt}
+
+% ---- keep document one-column, but let ACL's title render properly ----
+% Save ACL's original \twocolumn (needed by \maketitle internals)
+% --- Toggle: use ACL title box or manual banner ---
+% --- Force single-column everywhere, even if something calls \twocolumn ---
+\makeatletter
+\AtBeginDocument{%
+  \@twocolumnfalse            % tell LaTeX we're not in two-column mode
+  \let\orig@twocolumn\twocolumn
+  \renewcommand{\twocolumn}[1][]{\onecolumn} % any attempt to go two-col becomes one-col
+  \onecolumn                  % start in one column
+}
+\makeatother
+
+
+
+% Make the title area tall enough for a banner image if needed
+%\setlength\titlebox{65mm} % adjust (e.g., 50–75mm) to fit your graphic
+%%%%%%%%%%%%%%%%%%%%%%%Pragya-Style%%%%%%%%%%%%%%%
+
+
+
+
+
+\errorcontextlines=10
+
+
+% ===================== Core Packages (deduped) =====================
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb,breqn}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{framed}
+\usepackage{comment}
+\usepackage{natbib}
+\usepackage{multibib}
+\usepackage{pifont}
+\usepackage{arydshln}
+\usepackage{tikz}
+\usetikzlibrary{trees,shapes,shapes.geometric,arrows,decorations.markings,positioning,arrows.meta}
+\usepackage[many]{tcolorbox}
+\usepackage{subcaption}
+\usepackage{varwidth}
+\usepackage{setspace}
+\usepackage{extsizes}
+\usepackage{cuted}
+\usepackage{flushend}
+\usepackage{dblfloatfix}
+\usepackage{fixltx2e}
+\usepackage{soul}
+\usepackage{hyperref}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+\usepackage[capitalise,nameinlink]{cleveref}
+\usepackage{wasysym} % for \bigstar
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[many]{tcolorbox}
+
+\newtcolorbox{defin}{colback=Teal!5!White,enhanced,title=Alignment Faking: Bayesian–Stackelberg Equilibria,	attach boxed title to top left={xshift=-4mm},boxrule=0pt,after skip=1cm,before skip=1cm,right skip=0cm,breakable,fonttitle=\bfseries,toprule=0pt,bottomrule=0pt,rightrule=0pt,leftrule=3pt,arc=0mm,skin=enhancedlast jigsaw,sharp corners,colframe=Teal!55!black,colbacktitle=Teal!55!black,boxed title style={
+		frame code={ 
+			\fill[Teal!25!black](frame.south west)--(frame.north west)--(frame.north east)--([xshift=3mm]frame.east)--(frame.south east)--cycle;
+			\draw[line width=1mm,Teal!25!black]([xshift=2mm]frame.north east)--([xshift=5mm]frame.east)--([xshift=2mm]frame.south east);
+			\draw[line width=1mm,Teal!25!black]([xshift=5mm]frame.north east)--([xshift=8mm]frame.east)--([xshift=5mm]frame.south east);
+			\fill[Teal!25!black](frame.south west)--+(4mm,-2mm)--+(4mm,2mm)--cycle;
+		}
+	}
+}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.markings}
+
+%%%%%%%%%Color%%%%%%%%%%%%%%%%
+\definecolor{first}{RGB}{210,255,140}
+\definecolor{second}{RGB}{136, 162, 190}
+\definecolor{third}{RGB}{129, 222, 228}
+\definecolor{fourth}{RGB}{132, 84, 246}
+\definecolor{fifth}{RGB}{250, 223, 112}
+\definecolor{sixth}{RGB}{203, 193, 172}
+\definecolor{seventh}{RGB}{88, 112, 246}
+\definecolor{eighth}{RGB}{245, 192, 106}
+\definecolor{nine}{RGB}{171, 162, 111}
+\definecolor{ten}{RGB}{217, 217, 217}
+
+\definecolor{paired-light-blue}{RGB}{198, 219, 239}
+\definecolor{paired-dark-blue}{RGB}{49, 130, 188}
+\definecolor{paired-light-orange}{RGB}{251, 208, 162}
+\definecolor{paired-dark-orange}{RGB}{230, 85, 12}
+\definecolor{paired-light-green}{RGB}{199, 233, 193}
+\definecolor{paired-dark-green}{RGB}{49, 163, 83}
+\definecolor{paired-light-purple}{RGB}{218, 218, 235}
+\definecolor{paired-dark-purple}{RGB}{117, 107, 176}
+\definecolor{paired-light-gray}{RGB}{217, 217, 217}
+\definecolor{paired-dark-gray}{RGB}{99, 99, 99}
+\definecolor{paired-light-pink}{RGB}{222, 158, 214}
+\definecolor{paired-dark-pink}{RGB}{123, 65, 115}
+\definecolor{paired-light-red}{RGB}{231, 150, 156}
+\definecolor{paired-dark-red}{RGB}{131, 60, 56}
+\definecolor{paired-light-yellow}{RGB}{231, 204, 149}
+\definecolor{paired-dark-yellow}{RGB}{141, 109, 49}
+\definecolor{Teal}{RGB}{0, 50, 50}
+\definecolor{White}{RGB}{250, 250, 250}
+\definecolor{bg1}{HTML}{FF9966}
+\definecolor{bg2}{HTML}{CCE5FF}
+\definecolor{bg3}{HTML}{FFCC99}
+\definecolor{bg4}{HTML}{FFC107}
+\definecolor{bg5}{HTML}{FFCCCC}
+\definecolor{bg6}{HTML}{D5E8D4}
+\definecolor{bg7}{HTML}{eeeeee}
+\definecolor{bg8}{HTML}{cdeb8b}
+\definecolor{bg9}{HTML}{dae8fc}
+\definecolor{bg10}{HTML}{a2e6eb}
+\definecolor{bg31}{HTML}{FFCDD2} % light pink
+\definecolor{bg32}{HTML}{F8BBD0}
+\definecolor{bg33}{HTML}{E1BEE7} % lavender
+\definecolor{bg34}{HTML}{D7CCC8} % light tan
+\definecolor{bg35}{HTML}{B2DFDB} % light teal
+\definecolor{bg36}{HTML}{A5D6A7} % light green
+\definecolor{bg37}{HTML}{FFF9C4} %light yellow
+\definecolor{bg38}{HTML}{FFECB3} % peach
+\definecolor{bg111}{HTML}{CB6843}
+\definecolor{bg112}{HTML}{D77C5C}
+\definecolor{bg113}{HTML}{E28E6E}
+\definecolor{bg114}{HTML}{E89F7D}
+\definecolor{bg115}{HTML}{EDAE8A}
+\definecolor{bg116}{HTML}{F0BA95}
+\definecolor{bg117}{HTML}{F3C29F}
+\definecolor{bg118}{HTML}{F6CCAA}
+\definecolor{bg119}{HTML}{F8D5B3}
+\definecolor{bg120}{HTML}{FADCBD}
+\definecolor{bg121}{HTML}{FCE6C7}
+\definecolor{bg39}{HTML}{FFE0B2} % apricot
+\definecolor{bg40}{HTML}{3CB371} % blush pink
+
+\definecolor{bg43}{HTML}{ffe5d9}
+\definecolor{bg15}{HTML}{7FFFD4}
+\definecolor{bg17}{HTML}{F0FFFF}
+\definecolor{bg18}{HTML}{F5FFFA}
+\definecolor{bg19}{HTML}{F8F8FF}
+\definecolor{bg20}{HTML}{FFFFFF}
+\definecolor{bg21}{HTML}{E1F5FE}
+\definecolor{bg22}{HTML}{B3E5FC}
+\definecolor{bg23}{HTML}{81D4FA}
+\definecolor{bg24}{HTML}{4FC3F7}
+\definecolor{bg25}{HTML}{29B6F6}
+\definecolor{bg26}{HTML}{03A9F4}
+\definecolor{bg27}{HTML}{039BE5}
+\definecolor{bg28}{HTML}{0288D1}
+\definecolor{bg29}{HTML}{0277BD}
+\definecolor{bg30}{HTML}{01579B}
+\definecolor{bg16}{HTML}{FFCC99} 
+\definecolor{pg51}{HTML}{E8F5E9} % pale green
+\definecolor{pg52}{HTML}{C8E6C9} % honeydew green
+\definecolor{pg53}{HTML}{B9F6CA} % light mint green
+\definecolor{pg54}{HTML}{A9DFBF} % pale sage green
+\definecolor{pg55}{HTML}{BCF5A6} % lemon green
+\definecolor{pg56}{HTML}{BEF1CE} % seashell green
+\definecolor{pg57}{HTML}{CEF6EC} % icy green
+\definecolor{pg58}{HTML}{B7F0B1} % feijoa green
+\definecolor{pg59}{HTML}{B1F2B5} % pastel light green
+\definecolor{pg60}{HTML}{9DF3C4} % greenish cyan
+\definecolor{pg61}{HTML}{DEF7E0} % pale green
+\definecolor{pg62}{HTML}{E8F8DC} % greenish beige
+\definecolor{pg63}{HTML}{EBF7E7} % seafoam green
+\definecolor{pg64}{HTML}{F0FDF4} % pale turquoise
+\definecolor{pg65}{HTML}{F1FEE7} % mint cream
+\definecolor{pg66}{HTML}{F7FFF6} % foam green
+\definecolor{pg67}{HTML}{FCFFE7} % pale spring bud
+\definecolor{pg68}{HTML}{F4FFD2} % light lime green
+\definecolor{pg69}{HTML}{EEFFE2} % tea green
+\definecolor{pg70}{HTML}{E3FDF5} % tropical green
+\definecolor{connect-color}{RGB}{0,0,0}
+\definecolor{middle-color}{RGB}{255,255,255}
+% \definecolor{leaf-color}{RGB}{166,208,153}
+\definecolor{leaf-color}{RGB}{173,216,230}
+% \definecolor{line-color}{RGB}{166,208,153}
+\definecolor{line-color}{RGB}{25,25,112}
+\definecolor{soothingPurple}{RGB}{195, 160, 201}
+\definecolor{hidden-draw}{RGB}{20,68,106}
+\definecolor{hidden-pink}{RGB}{255,245,247}
+\definecolor{dark-red}{RGB}{233, 150, 122}
+\definecolor{light-red}{RGB}{255,182,193}
+\definecolor{medium-red}{RGB}{205,92,92}
+\definecolor{light-yellow}{RGB}{255, 239, 153}
+\definecolor{light-blue}{RGB}{173, 216, 230}
+\definecolor{paired-light-yellow}{HTML}{FFFF88}
+\definecolor{paired-light-blue}{HTML}{CCE5FF}
+\definecolor{paired-light-orange}{HTML}{FFCC99}
+\definecolor{paired-dark-yellow}{HTML}{FFF2CC}
+\definecolor{paired-light-pink}{HTML}{FFCCCC}
+\definecolor{paired-cyan}{HTML}{D5E8D4}
+\definecolor{paired-gray}{HTML}{eeeeee}
+\definecolor{paired-green}{HTML}{cdeb8b}
+\definecolor{paired-blue}{HTML}{dae8fc}
+\definecolor{paired-dark-cyan}{HTML}{a2e6eb}
+\definecolor{paired-dark-pink}{HTML}{e7b2d2}
+\definecolor{paired-purple}{HTML}{9999ff}
+\definecolor{paired-pink}{HTML}{cc99ff}
+\definecolor{paired-orange}{HTML}{ffcc99}
+
+
+\definecolor{a1}{RGB}{241,233,191}
+\definecolor{a2}{RGB}{255,241,218}
+
+\definecolor{a3}{RGB}{255,239,213}
+\definecolor{a4}{RGB}{250,235,215}
+\definecolor{a5}{RGB}{255,239,219}
+\definecolor{a6}{RGB}{255,246,225}
+\definecolor{a7}{RGB}{246,227,201}
+\definecolor{a8}{RGB}{254,235,226}
+\definecolor{a9}{RGB}{247,220,111}
+\definecolor{a10}{RGB}{199,211,189}
+\definecolor{a11}{RGB}{209,196,233}
+\definecolor{a12}{RGB}{214,234,248}
+\definecolor{a13}{RGB}{232,245,233}
+\definecolor{a14}{RGB}{237,248,177}
+\definecolor{a15}{RGB}{255,228,225}
+\definecolor{a16}{RGB}{255,228,181}
+\definecolor{a17}{RGB}{255,222,173}
+\definecolor{a18}{RGB}{255,218,185}
+\definecolor{a19}{RGB}{255,203,164}
+\definecolor{a20}{RGB}{247,202,201}
+
+\definecolor{a21}{RGB}{241,254,255}
+\definecolor{a22}{RGB}{230,252,252}
+\definecolor{a23}{RGB}{179,236,255}
+\definecolor{a24}{RGB}{174,226,249}
+\definecolor{a25}{RGB}{208,234,246}
+\definecolor{a26}{RGB}{189,226,219}
+\definecolor{a27}{RGB}{177,204,201}
+
+\definecolor{a28}{RGB}{216,195,216}
+\definecolor{a29}{RGB}{195,155,211}
+\definecolor{a30}{RGB}{208,152,223}
+\definecolor{a31}{RGB}{255,183,209}
+\definecolor{a32}{RGB}{255,167,209}
+\definecolor{a33}{RGB}{254,235,167}
+\definecolor{a34}{RGB}{255,222,137}
+\definecolor{a35}{RGB}{254,180,154}
+\definecolor{a36}{RGB}{247,148,161}
+\definecolor{a37}{RGB}{239,154,154}
+\definecolor{a38}{RGB}{255,130,171}
+\definecolor{a39}{RGB}{255,105,180}
+\definecolor{a40}{RGB}{251,142,172}
+
+%%%%%%%%%Color%%%%%%%%%%%%%%%%
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{setspace}
+
+
+
+%resize/scale equations
+% \newcommand*{\Scale}[2][4]{\scalebox{#1}{$#2$}}%
+% \newcommand*{\Resize}[2]{\resizebox{#1}{!}{$#2$}}%
+
+% \usepackage{environ}
+
+% \newlength{\myl}
+% \expandafter\let\expandafter\origequation\csname equation*\endcsname
+% \expandafter\let\expandafter\endorigequation\csname endequation*\endcsname
+% \long\def\[#1\]{\begin{equation*}#1\end{equation*}}
+% \RenewEnviron{equation*}{
+%   \settowidth{\myl}{$\displaystyle\BODY$} % calculate width and save as \myl
+%   \origequation
+%     \ifdim\myl>\linewidth
+%       \resizebox{\linewidth}{!}{$\displaystyle\BODY$}% \myl > \linewidth
+%     \else
+%       \BODY % \myl <= \linewidth
+%     \fi
+%   \endorigequation
+% }
+
+\newtcolorbox{societal_harm}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Societal harm,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{privacy_violation}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Privacy Violation,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{disinformation_deception}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Disinformation \& Deception,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{answer_disparity}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Answer disparity,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{wrong_classification}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Wrong classification,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{goal_hijacking}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Goal hijacking,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{control_generation}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Control generation,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+\newtcolorbox{prompt_leaking}{
+  colback=soothingPurple, % Background color
+  colframe=black, % Border color
+  boxrule=0pt,% Border width
+  enhanced,
+  title=Prompt leaking,
+  attach boxed title to top right={yshift=-3mm},
+  fonttitle=\bfseries,
+  toprule=1pt,
+  bottomrule=1pt,
+  rightrule=1pt,
+  leftrule=1pt,
+  arc=1mm
+}
+
+% Remove the "review" option to generate the final version.
+
+
+
+\usepackage{lipsum}
+\usepackage{tikz}
+\usetikzlibrary{trees,shapes}
+
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+%\usepackage[T1]{fontenc}
+% For Vietnamese characters
+\usepackage[T5]{fontenc}
+% See https://www.latex-project.org/help/documentation/encguide.pdf for other character sets
+
+% This assumes your files are encoded as UTF8
+\usepackage[utf8]{inputenc}
+
+% This is not strictly necessary, and may be commented out.
+% However, it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
+
+% This is also not strictly necessary, and may be commented out.
+% However, it will improve the aesthetics of text in
+% the typewriter font.
+\usepackage{inconsolata}
+\usepackage{soul}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{inconsolata}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath,amssymb}
+\usepackage{soul}
+%\usepackage[margin=2cm]{geometry}
+\usepackage{tikz}
+
+% Style definition
+\tikzset{rndblock/.style={rounded corners,rectangle,draw,scale=0.8,outer sep=0pt}}
+
+% Command Definition
+% 1 optional to customize the aspect, 2 mandatory: text to be framed
+\newcommand{\tframed}[2][]{\tikz[baseline=(h.base)]\node[rndblock,#1] (h) {#2};}
+
+\usetikzlibrary{shapes.geometric}
+\usepackage{framed}
+\usepackage{enumitem}
+\newlist{RQ}{enumerate}{1}
+\setlist[RQ]{label=\textbf{RQ\,\arabic*},ref={RQ\,\arabic*}}
+\usepackage{comment}
+\usepackage{natbib}
+\usepackage{multibib}
+\makeatletter
+\usepackage{booktabs}
+\usepackage[inkscapeformat=png]{svg}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{soul}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{pifont}
+\usepackage{arydshln}
+\usepackage{lipsum}
+
+\usepackage[many]{tcolorbox}
+
+
+% \setlist{leftmargin=1mm}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.markings}
+
+\usepackage{fancybox}
+\usepackage{xcolor}
+\usepackage{hyperref}
+ \definecolor{darkblue}{rgb}{0, 0, 0.5}
+  \hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+\definecolor{vgreen}{HTML}{60A917}
+\definecolor{vred}{HTML}{CE3A29}
+
+\usepackage{xstring}
+\usepackage{longtable}
+
+\usepackage{tabularray}
+
+\DefTblrTemplate{firsthead,middlehead,lasthead}{default}{
+}
+\DefTblrTemplate{firstfoot}{default}{
+  \UseTblrTemplate{contfoot}{default}
+  \UseTblrTemplate{caption}{default}
+}
+\DefTblrTemplate{middlefoot}{default}{
+  \UseTblrTemplate{contfoot}{default}
+  \UseTblrTemplate{capcont}{default}
+}
+\DefTblrTemplate{lastfoot}{default}{
+  \UseTblrTemplate{note}{default}
+  \UseTblrTemplate{remark}{default}
+  \UseTblrTemplate{capcont}{default}
+}
+
+
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+% Multi-line left-aligned text with manual line breaks.
+% The base line is in centre.
+\newcommand*{\mline}[1]{%
+\begingroup
+    \renewcommand*{\arraystretch}{1.1}%
+   \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{2cm}@{}}#1\end{tabular}%
+  \endgroup
+}
+
+\usepackage{color}
+\tcbuselibrary{skins}
+
+\usepackage[export]{adjustbox} % for the valign option
+
+\usepackage{setspace}
+%\usepackage[capitalise]{cleveref}
+\usepackage[capitalise,nameinlink]{cleveref}
+
+%\crefname{chapter}{chap.}{chap.}
+\crefname{section}{Sec.}{Sec.}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{comment}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{colortbl}
+\usepackage[export]{adjustbox} % for the valign option
+\usepackage{varwidth}
+\usepackage{enumitem}
+\setlist{leftmargin=1mm}
+\usepackage{pifont}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{resizegather}
+\usepackage{breqn}
+\usepackage[capitalise]{cleveref}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.markings}
+\usepackage{soul}
+\usepackage{wrapfig,graphicx,lipsum}% http://ctan.org/pkg/{wrapfig,graphicx,lipsum}
+\usepackage{extsizes}
+\usepackage{cuted}
+\usepackage{flushend}
+\usepackage{float}
+\usepackage{changepage,threeparttable}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{dblfloatfix} 
+\usepackage{fixltx2e}
+\usepackage[normalem]{ulem}
+
+
+
+\DeclareRobustCommand{\hlpink}[1]{{\sethlcolor{pink}\hl{#1}}}
+\DeclareRobustCommand{\hlgreen}[1]{{\sethlcolor{green}\hl{#1}}}
+
+\usepackage{environ}
+\usepackage{soul}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{pifont}
+\usepackage{arydshln}
+\usepackage{lipsum}
+
+\usepackage[many]{tcolorbox}
+
+
+% \setlist{leftmargin=1mm}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.markings}
+
+\usepackage{fancybox}
+\usepackage{xcolor}
+\usepackage{hyperref}
+ \definecolor{darkblue}{rgb}{0, 0, 0.5}
+  \hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+\definecolor{vgreen}{HTML}{60A917}
+\definecolor{vred}{HTML}{CE3A29}
+
+\usepackage{xstring}
+\usepackage{longtable}
+
+\usepackage{tabularray}
+
+\DefTblrTemplate{firsthead,middlehead,lasthead}{default}{
+}
+\DefTblrTemplate{firstfoot}{default}{
+  \UseTblrTemplate{contfoot}{default}
+  \UseTblrTemplate{caption}{default}
+}
+\DefTblrTemplate{middlefoot}{default}{
+  \UseTblrTemplate{contfoot}{default}
+  \UseTblrTemplate{capcont}{default}
+}
+\DefTblrTemplate{lastfoot}{default}{
+  \UseTblrTemplate{note}{default}
+  \UseTblrTemplate{remark}{default}
+  \UseTblrTemplate{capcont}{default}
+}
+
+
+\usepackage{color}
+\tcbuselibrary{skins}
+
+\usepackage[export]{adjustbox} % for the valign option
+
+\usepackage{setspace}
+%\usepackage[capitalise]{cleveref}
+\usepackage[capitalise,nameinlink]{cleveref}
+
+%\crefname{chapter}{chap.}{chap.}
+\crefname{section}{Sec.}{Sec.}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{comment}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{colortbl}
+\usepackage[export]{adjustbox} % for the valign option
+\usepackage{varwidth}
+\usepackage{enumitem}
+\setlist{leftmargin=1mm}
+\usepackage{pifont}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{resizegather}
+\usepackage{breqn}
+\usepackage[capitalise]{cleveref}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.markings}
+\usepackage{soul}
+\usepackage{wrapfig,graphicx,lipsum}% http://ctan.org/pkg/{wrapfig,graphicx,lipsum}
+\usepackage{extsizes}
+\usepackage{cuted}
+\usepackage{flushend}
+\usepackage{float}
+\usepackage{changepage,threeparttable}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{dblfloatfix} 
+\usepackage{fixltx2e}
+\usepackage[normalem]{ulem}
+
+\usepackage{tcolorbox}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+
+
+
+
+\DeclareRobustCommand{\hlpink}[1]{{\sethlcolor{pink}\hl{#1}}}
+\DeclareRobustCommand{\hlgreen}[1]{{\sethlcolor{green}\hl{#1}}}
+
+\usepackage{environ}
+
+\newlength{\myl}
+\expandafter\let\expandafter\origequation\csname equation*\endcsname
+\expandafter\let\expandafter\endorigequation\csname endequation*\endcsname
+\long\def\[#1\]{\begin{equation*}#1\end{equation*}}
+\RenewEnviron{equation*}{
+  \settowidth{\myl}{$\displaystyle\BODY$} % calculate width and save as \myl
+  \origequation
+    \ifdim\myl>\linewidth
+      \resizebox{\linewidth}{!}{$\displaystyle\BODY$}% \myl > \linewidth
+    \else
+      \BODY % \myl <= \linewidth
+    \fi
+  \endorigequation
+}
+
+
+\makeatletter
+\newcommand{\DrawLine}{%
+  \begin{tikzpicture}
+  \path[use as bounding box] (0,0) -- (\linewidth,0);
+  \draw[color=blue!75!black,dashed,dash phase=.5pt]
+        (0-\kvtcb@leftlower-\kvtcb@boxsep,0)--
+        (\linewidth+\kvtcb@rightlower+\kvtcb@boxsep,0);
+  \end{tikzpicture}%
+  }
+\makeatother
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{pgfplots}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{longtable}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}  % checkmark
+\newcommand{\xmark}{\ding{55}}  % x mark
+\newcommand{\pmark}{\ding{67}}  % partial/emerging mark
+
+\usepackage{soul}            % \hl highlighting
+\usepackage{fontawesome5}    % icons
+% Try to load Font Awesome 5; if missing, define a harmless fallback.
+\IfFileExists{fontawesome5.sty}{
+  \usepackage{fontawesome5} % gives \faIcon[<style>]{<name>}
+}{
+  % Fallback so the doc still compiles without the package
+  \newcommand{\faIcon}[2][]{\textbf{\small[ #2 ]}}
+}
+
+
+
+% --- helper for colored underbrace captions ---
+\newcommand{\cunderbrace}[3][accent]{\underbrace{#2}_{\text{\color{#1}#3}}}
+\DeclareMathOperator{\BetaInv}{BetaInv}
+
+\newcommand{\safe}{\textcolor{green!60!black}{\textsc{SAFE}}}
+\newcommand{\unsafe}{\textcolor{red!70!black}{\textsc{UNSAFE}}}
+\newcommand{\flip}{\textcolor{red!70!black}{\textbf{flip}}}
+\newcommand{\ok}{\checkmark}
+\newcommand{\no}{\(\times\)}
+
+
+
+% \usepackage{amsmath,amssymb,booktabs,tabularx,array,enumitem,xcolor}
+\newcommand{\calc}[2]{\(\,U=#1,\ \widehat p=#2\,\)}
+
+\newcommand{\badge}[2]{\colorbox{#1!15}{\strut\textcolor{#1!60!black}{\footnotesize\textsf{#2}}}}
+\newcommand{\chip}[2]{\colorbox{#1!12}{\strut\textcolor{#1!70!black}{\footnotesize\textsf{#2}}}}
+
+
+% Colors for algorithm icons/chips (tweak to taste)
+\definecolor{algoPurple}{HTML}{6A51A3}
+\definecolor{algoBlue}{HTML}{1F77B4}
+\definecolor{algoGreen}{HTML}{2E8B57}
+\definecolor{algoOrange}{HTML}{E67E22}
+
+% Fallback-safe pickers for FA5 icons
+\makeatletter
+% BCO  = Behavioral Cost Optimization → scales / calculator / chart
+\@ifundefined{faBalanceScale}{
+  \@ifundefined{faCalculator}{
+    \@ifundefined{faChartLine}{
+      \newcommand{\algiconBCOraw}{\faCog} % last resort
+    }{\newcommand{\algiconBCOraw}{\faChartLine}}
+  }{\newcommand{\algiconBCOraw}{\faCalculator}}
+}{\newcommand{\algiconBCOraw}{\faBalanceScale}}
+
+% KTO/KPO = Kahneman-style preference/outcome → brain / lightbulb / compass
+\@ifundefined{faBrain}{
+  \@ifundefined{faLightbulb}{
+    \@ifundefined{faCompass}{
+      \newcommand{\algiconKTOrAw}{\faQuestionCircle}
+    }{\newcommand{\algiconKTOrAw}{\faCompass}}
+  }{\newcommand{\algiconKTOrAw}{\faLightbulb}}
+}{\newcommand{\algiconKTOrAw}{\faBrain}}
+% (normalize macro name)
+\let\algiconKTOraw\algiconKTOrAw
+
+% GRPO = group RL/PPO → users-cog / users / project-diagram
+\@ifundefined{faUsersCog}{
+  \@ifundefined{faUsers}{
+    \@ifundefined{faProjectDiagram}{
+      \newcommand{\algiconGRPOraw}{\faCogs}
+    }{\newcommand{\algiconGRPOraw}{\faProjectDiagram}}
+  }{\newcommand{\algiconGRPOraw}{\faUsers}}
+}{\newcommand{\algiconGRPOraw}{\faUsersCog}}
+
+% DPO = direct preference optimization → thumbs-up / handshake / check-double
+\@ifundefined{faThumbsUp}{
+  \@ifundefined{faHandshake}{
+    \@ifundefined{faCheckDouble}{
+      \newcommand{\algiconDPOraw}{\faCheck}
+    }{\newcommand{\algiconDPOraw}{\faCheckDouble}}
+  }{\newcommand{\algiconDPOraw}{\faHandshake}}
+}{\newcommand{\algiconDPOraw}{\faThumbsUp}}
+\makeatother
+
+% Colored, size-friendly wrappers
+\newcommand{\algiconBCO}{\textcolor{algoPurple}{\algiconBCOraw}}
+\newcommand{\algiconKTO}{\textcolor{algoBlue}{\algiconKTOraw}}
+\newcommand{\algiconGRPO}{\textcolor{algoGreen}{\algiconGRPOraw}}
+\newcommand{\algiconDPO}{\textcolor{algoOrange}{\algiconDPOraw}}
+
+
+
+
+% Icons (distinct for open vs proprietary)
+\newcommand{\iconOpen}{\textcolor{openGreen}{\faRobot}}
+\newcommand{\iconClosed}{\textcolor{closedViolet}{\faRobot}}
+
+
+\definecolor{AbsBack}{HTML}{EEF2FF}   % light indigo-ish
+\definecolor{AbsFrame}{HTML}{5A67D8}  % indigo frame
+\definecolor{AbsTitle}{HTML}{3B49B1}  % darker title
+
+% Reusable abstract box
+\newtcolorbox{abstractbox}{
+  enhanced, breakable,
+  colback=AbsBack, colframe=AbsFrame!85,
+  boxrule=0.7pt,
+  borderline={0.5pt}{0pt}{AbsFrame!40},
+  arc=8pt, left=10pt, right=10pt, top=10pt, bottom=2pt,
+  drop fuzzy shadow=AbsFrame!25
+}
+
+\newcommand{\AbstractTitle}{\textbf{\textcolor{AbsTitle}{\fontsize{18}{18}\selectfont Abstract}}}
+
+
+
+% AFTER \usepackage{ACL2023}, BEFORE your \titleformat lines:
+\usepackage{iftex}
+\ifPDFTeX
+  \PackageError{pragya-fonts}{You must compile with XeLaTeX or LuaLaTeX}{}
+\fi
+
+% --- Pragya fonts (Xe/LuaLaTeX only) ---
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX, Scale=MatchLowercase}
+
+% Body text
+\setmainfont[
+  Path=fonts/,
+  UprightFont    = PragyaText-Regular.ttf,
+  BoldFont       = PragyaText-Bold.ttf,
+  ItalicFont     = PragyaText-Italic.ttf,
+  BoldItalicFont = PragyaText-BoldItalic.ttf
+]{Pragya Text}
+
+% Named heading family (explicit; safer than \sffamily)
+\newfontfamily\PragyaHeadline[
+  Path=fonts/,
+  UprightFont = PragyaHeadline-Regular.ttf,
+  BoldFont    = PragyaHeadline-Bold.ttf
+]{Pragya Headline}
+
+% Optional: map \sffamily as well (not required if you use \PragyaHeadline)
+\setsansfont[
+  Path=fonts/,
+  UprightFont = PragyaHeadline-Regular.ttf,
+  BoldFont    = PragyaHeadline-Bold.ttf
+]{Pragya Headline}
+
+\usepackage{titlesec}
+
+\titleformat{\section}
+  {\PragyaHeadline\bfseries\Large\color{AbsTitle}}
+  {\textcolor{AbsTitle}{\thesection}}
+  {0.6em}
+  {}
+
+\titleformat{\subsection}
+  {\PragyaHeadline\bfseries\large\color{AbsTitle}}
+  {\textcolor{AbsTitle}{\thesubsection}}
+  {0.5em}
+  {}
+
+\titleformat{\subsubsection}
+  {\PragyaHeadline\bfseries\normalsize\color{AbsTitle}}
+  {\textcolor{AbsTitle}{\thesubsubsection}}
+  {0.5em}
+  {}
+
+
+% (optional) tighter spacing to match ACL look
+\titlespacing*{\section}{0pt}{1.0ex plus .2ex}{0.6ex}
+\titlespacing*{\subsection}{0pt}{0.8ex plus .2ex}{0.4ex}
+\titlespacing*{\subsubsection}{0pt}{0.6ex plus .1ex}{0.3ex}
+
+% -------------------- Math (only if you also want Pragya-like math) -----------------
+% If you prefer to keep default Computer Modern math, skip this block.
+%\usepackage{unicode-math}
+%\setmathfont{Latin Modern Math}
+
+\setlength{\topmargin}{-0.8in}     % move text block up a bit
+\addtolength{\textheight}{1.9in}   % increase usable height
+\setlength{\footskip}{18pt}        % ensure footer clearance
+
+% If the title and author information does not fit in the area allocated, uncomment the following
+%
+%\setlength\titlebox{<dim>}
+%
+% and set <dim> to something 5cm or larger.
+
+
+\usepackage{empheq}              % for boxed equations
+% \usepackage{pifont}
+\usepackage[normalem]{ulem}      % for \ul
+
+
+% preamble
+\usepackage{amsthm}        % provides \newtheorem and proof environment
+
+
+
+\usepackage[table]{xcolor}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% Paired-style blues for scores
+\definecolor{paired-light-blue}{HTML}{C6DBEF}
+\definecolor{paired-mid-blue}{HTML}{6BAED6}
+\definecolor{paired-dark-blue}{HTML}{2171B5}
+
+% Paired-style oranges for success column
+\definecolor{paired-light-orange}{HTML}{FFE5CC}
+\definecolor{paired-mid-orange}{HTML}{FFCC99}
+\definecolor{paired-dark-orange}{HTML}{FB9A29}
+
+% Convenience macros for heat cells
+\newcommand{\scoreLow}[1]{\cellcolor{paired-light-blue!50}{#1}}
+\newcommand{\scoreMid}[1]{\cellcolor{paired-mid-blue!45}{#1}}
+\newcommand{\scoreHi}[1]{\cellcolor{paired-dark-blue!40}{#1}}
+
+\newcommand{\succLow}[1]{\cellcolor{paired-light-orange!60}{#1}}
+\newcommand{\succMid}[1]{\cellcolor{paired-mid-orange!70}{#1}}
+\newcommand{\succHi}[1]{\cellcolor{paired-dark-orange!70}{\bfseries #1}}
+
+
+% simple lemma environment with global numbering
+\newtheorem{lemma}{Lemma}
+% optionally: number within sections
+% \newtheorem{lemma}{Lemma}[section]
+
+%\setlength\titlebox{5.8cm}
+
+%\title{\includegraphics[width=0.95\textwidth]{figures/banner (21).pdf}}
+
+%\title{Alignment Faking the Train→Deploy Asymmetry: Through a Game-Theoretic Lens with Bayesian–Stackelberg Equilibria}
+
+% Author information can be set in various styles:
+% For several authors from the same institution:
+% \author{Author 1 \and ... \and Author n \\
+%         Address line \\ ... \\ Address line}
+% if the names do not fit well on one line use
+%         Author 1 \\ {\bf Author 2} \\ ... \\ {\bf Author n} \\
+% For authors from different institutions:
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \And  ... \And
+%         Author n \\ Address line \\ ... \\ Address line}
+% To start a seperate ``row'' of authors use \AND, as in
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \AND
+%         Author 2 \\ Address line \\ ... \\ Address line \And
+%         Author 3 \\ Address line \\ ... \\ Address line}
+
+
+%\setmainfont{TeX Gyre Termes} % Latin main font (optional)
+
+
+
+\setlength\titlebox{0cm} % try 15–17cm depending on your banner height
+
+\title{\textcolor{white}{.}}
+
+
+
+  
+\begin{document}
+%\setcitestyle{square}
+%\maketitle
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=.98\linewidth]{figures/banner.pdf}
+  \vspace{-1.5em}
+\end{figure*}
+
+\begin{center}
+{\Large\bfseries Amitava Das\textsuperscript{\textcolor{blue}{\star}}}\\
+[8pt]
+{\Large\textsuperscript{\textcolor{blue}{\star}}\Large Pragya Lab, BITS Pilani Goa, India}
+\end{center}
+
+\vspace{-1em} % small nudge only; avoid large negatives
+
+\begin{abstractbox}
+  \AbstractTitle
+  \vspace{0.6em}
+  \begin{spacing}{0.7}
+
+\textbf{Joint Embedding Predictive Architectures (JEPA)} offer a compelling route to self-supervised world modeling: learn representations by predicting \textbf{masked or future content directly in embedding space}, avoiding pixel-level generation. Yet \textbf{Indic urban scenes are often more chaotic and negotiation-heavy than many Western counterparts}: spatial boundaries are \textbf{soft} and frequently redefined by crowds, many moving objects, and density; agent diversity is \textbf{extreme} with a heavy long tail of actors (people, cars, two-wheelers, carts, animals, delivery vehicles, rickshaws etc.); \textbf{persistent occlusion} induces partial observability as entities vanish and reappear; and interactions are governed by rapid \textbf{social negotiation} rather than rigid rules. These properties expose a central failure mode of current JEPA formulations: predictive embeddings can remain \textbf{implicitly entangled}, enabling shortcuts that blur \textbf{context/layout}, \textbf{entity state}, and \textbf{interaction dynamics}---precisely the structure required for robust urban world models across navigation, robotics, and autonomy.
+
+We introduce \textbf{FactorJEPA}, a JEPA augmentation that makes \textbf{world structure a first-class modeling primitive} through an explicit \textbf{3-factor + 1-gate} predictor. Given a context video clip, FactorJEPA constructs a factor-graph latent state with a \textbf{layout/context} variable $b_t$, \textbf{entity slots} $\{s_t^{(i)}\}_{i=1}^{N}$, \textbf{pairwise interaction factors} $\{e_t^{(ij)}\}_{i<j}$, and a \textbf{soft visibility/occlusion gate} $v_t^{(i)}\in(0,1)$ that captures reliability under partial observability.
+Crucially, the predictor is constrained to compose the target embedding additively as
+\[
+\hat y \;=\; \underbrace{A_b b_t}_{\textbf{layout}}
+\;+\;
+\underbrace{\sum_i \underbrace{v_t^{(i)}}_{\substack{\textbf{occlusion/visibility gate}\\ \textbf{soft }(0,1)}}\, A_s s_{t+\Delta}^{(i)}}_{\textbf{entities (visibility-gated)}}
+\;+\;
+\underbrace{\sum_{i<j} A_e e_{t+\Delta}^{(ij)}}_{\textbf{interactions}} \,,
+\]
+preventing a monolithic predictor from ``hiding'' interaction reasoning and making occlusion explicit by gating only the entity contribution.
+To ensure the decomposition is \emph{identifiable in practice}, we impose a second-order \textbf{subspace separation} penalty that suppresses cross-covariance between factor components, and an \textbf{interaction sparsity prior} that learns \textbf{local, interpretable neighborhoods} in dense scenes; visibility is weakly grounded from motion/consistency cues and regularized to avoid trivial always-on gating.
+We further couple FactorJEPA with \textbf{motion-aware tube masking} to focus learning on precisely the dynamic, partially observed regions where negotiation and occlusion dominate.
+
+We evaluate FactorJEPA on Indic urban benchmarks (e.g., IDD / IDD-Temporal / IDD-3D) and a suite of targeted stress tests:
+\textbf{(i)} transfer to downstream perception (segmentation/detection),
+\textbf{(ii)} \textbf{occlusion persistence} and temporal consistency under long-duration partial observability, and
+\textbf{(iii)} \textbf{interaction counterfactuals} that probe whether interaction factors change while layout remains invariant.
+Across settings, FactorJEPA yields \textbf{more robust predictive representations}, \textbf{improved data efficiency}, and \textbf{markedly better stability} in dense, heterogeneous urban scenes compared to standard JEPA pretraining, while providing \textbf{factor-level diagnostics} (leakage, neighborhood sparsity, visibility fidelity) that correlate with downstream robustness and planning-relevant behavior.
+
+
+
+\end{spacing}
+
+
+
+
+
+%We propose a \textbf{game-theory–inspired} vulnerability metric with a formal \textbf{training$\rightarrow$deployment} asymmetry, and extend the equilibrium definition to admit both \textbf{Nash} and \textbf{Bayesian--Stackelberg} formulations; this yields a \textbf{closed-form threshold certificate} characterizing when models flip from refusal to unsafe compliance under \emph{training-simulation} cues. \textbf{Empirically,} we observe that \textbf{DPO}-style methods reduce cue-driven flipping relative to vanilla \textbf{SFT/BCO}, \textbf{KPO/KTO} further dampens cue sensitivity when kernels encode context invariance, while \textbf{GRPO} exhibits a bimodal pattern depending on whether rewards include \textbf{context-agnostic safety penalties}. \textbf{Larger models} are \emph{more} sensitive to training cues (higher posterior shift), and \textbf{Mixture-of-Experts (MoE)} variants tend to \textbf{amplify} train-simulation effects unless equipped with authenticated oversight or deception penalties. Overall, our results indicate that \textbf{authenticated training signals}, \textbf{penalizing unsafe compliance regardless of purported context}, and \textbf{explicit invariance to unauthenticated ``training'' cues} are critical to driving \textbf{FRACTURE\_FAKING} toward zero.
+\end{abstractbox}
+
+
+
+
+
+
+
+
+
+
+\begin{comment}
+\vspace{-10mm}
+ \begin{defin}
+ \vspace{-2mm}
+ \begin{itemize}
+ % [leftmargin=1mm]
+ \setlength\itemsep{0em}
+ \begin{spacing}{0.85}
+ \vspace{1mm}
+ 
+\item[$\blacktriangleright$]
+{\footnotesize
+{\fontfamily{phv}\fontsize{8}{9}\selectfont
+\textbf{Logit-Space Formalization of DPO}: We mathematically restate the DPO loss as a linear projection in logit space and derive a closed-form identity relating preference alignment to inner products between hidden states and preference vectors (cf. \S2.1).
+}}
+
+\item[$\blacktriangleright$]
+{\footnotesize
+{\fontfamily{phv}\fontsize{8}{9}\selectfont
+\textbf{Steering Vector Identity}: We introduce the concept of a \emph{steering vector} as the directional update DPO applies in activation space, showing that alignment reduces to learned displacement along a low-rank preference subspace (cf. \S2.2).
+}}
+
+\item[$\blacktriangleright$]
+{\footnotesize
+{\fontfamily{phv}\fontsize{8}{9}\selectfont
+\textbf{Empirical Validation of Directional Alignment}: We conduct five diagnostic experiments—including cosine alignment, steering transferability, inversion, spectral localization, and behavioral clustering—to validate the geometric nature of DPO-induced preference alignment (cf. \S2.3).
+}}
+
+\item[$\blacktriangleright$]
+{\footnotesize
+{\fontfamily{phv}\fontsize{8}{9}\selectfont
+\textbf{Contrast with Epistemic Editing}: We contrast DPO’s first-order steering with deeper alignment methods like knowledge editing and logical fine-tuning, highlighting its cognitive shallowness despite behavioral fluency (cf. \S2.1, \S2.2).
+}}
+
+\item[$\blacktriangleright$]
+{\footnotesize
+{\fontfamily{phv}\fontsize{8}{9}\selectfont
+\textbf{Implications for Robustness and Misalignment}: We establish that alignment via DPO is inherently fragile under direction inversion or vector corruption, motivating the need for higher-order, semantically grounded alignment strategies (cf. \S3).
+}}
+
+\vspace{-6mm}
+\end{spacing}
+\end{itemize}
+
+\end{defin}
+\end{comment}
+
+\input{1_introduction}
+\input{2_data}
+\input{2_factor_jepa}
+
+
+
+
+
+%\input{2_techniques}
+%\input{2_attack_taxonomy}
+%\input{3_llm}
+%\input{5_alkali_dataset}
+%\input{6_experiments}
+%\input{7_dpo_aqi}
+%\input{7_results}
+%\input{8_conclusion}
+
+%\newpage
+%\input{9_discussion}
+
+
+
+
+
+                     
+            
+                      
+            
+%\subsection{\textcolor{orange}{Objective Manipulation}}
+%----------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\bibliographystyle{acl_natbib}
+\bibliography{anthology,custom}
+
+
+%\clearpage
+%\newpage
+
+
+%\input{11_appendix}
+%\input{4_aavi}
+
+
+
+\clearpage
+\newpage
+
+
+% stale inputs from an older paper — not part of the AAAI build (0_main_AAAI.tex); commented 2026-07-26
+%\input{10_india}
+
+
+\clearpage
+\newpage
+
+%\input{12_new_plan}
+
+
+
+
+\end{document}

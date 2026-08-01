@@ -1,0 +1,1627 @@
+\section{Deterministic safety evaluation creates an illusion of robustness}
+\label{sec:safety-illusion}
+
+The previous sections showed that \emph{deterministic inference collapses
+stochastic structure} in ostensibly benign settings: on GLUE--style
+classification it hides prediction uncertainty and adversarial
+fragility; on style--constrained summarization it masks large islands of
+instruction--compliant summaries; and on multi--step reasoning it
+reduces a rich forest of chains of thought to a single brittle trace.
+In this section we argue that the same collapse is \textbf{far more
+dangerous} when the output space is safety--critical.
+Modern safety work increasingly treats large language models as
+\emph{strategic, stochastic agents} whose behavior can shift under
+distribution shift, prompt injection, or perceived oversight
+\citep{perez2022discovering,ganguli2022redteaming,greenblatt2024alignmentfaking}.
+Yet, in practice, many evaluations still probe only a
+\textbf{single deterministic decoder}---typically greedy decoding with
+temperature $T{=}0$---and then implicitly extrapolate its behavior to
+all future deployments.
+
+Formally, let $\mathcal{D}_{\text{atk}}$ be an attack distribution over
+inputs $x$, let $\mathcal{Y}$ be the space of completions, and let
+$\mathcal{H} \subset \mathcal{Y}$ denote a set of harmful continuations
+(e.g., detailed self--harm instructions, dual--use biological advice,
+targeted harassment).
+A model $p_\theta$ together with a decoding policy $\pi$ induces a
+random output $Y_\pi(x) \in \mathcal{Y}$, and the corresponding
+\emph{decoder--level stochastic risk} is
+\[
+  R_\theta(\pi)
+  \;=\;
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \Big[\, \mathbb{P}\big( Y_\pi(x) \in \mathcal{H} \big) \Big].
+\]
+Greedy decoding $\pi_{\mathrm{greedy}}$ returns a single argmax
+continuation $y_{\mathrm{greedy}}(x)$ with no randomness at inference
+time, so its measured risk reduces to
+\[
+  R_\theta^{\mathrm{det}}
+  \;:=\;
+  R_\theta(\pi_{\mathrm{greedy}})
+  \;=\;
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \big[ \mathbf{1}\{ y_{\mathrm{greedy}}(x) \in \mathcal{H} \} \big],
+\]
+which is exactly the quantity computed in most existing jailbreak and
+misuse benchmarks.
+
+The crucial observation is that $R_\theta^{\mathrm{det}}$ can be
+\emph{arbitrarily smaller} than the risk of realistic stochastic
+policies that sample, re--rank, or aggregate multiple candidates.
+Define the \emph{single--sample harmful probability}
+\[
+  q_\theta(x)
+  \;:=\;
+  \mathbb{P}_{y \sim p_\theta(\cdot \mid x)}
+  \big( y \in \mathcal{H} \big).
+\]
+If a deployment policy draws $k$ independent samples from
+$p_\theta(\cdot \mid x)$ and an adversary can exploit any harmful
+completion that appears, then the probability that \emph{at least one}
+sample is harmful is
+\[
+  q_\theta^{(k)}(x)
+  \;=\;
+  1 - \big( 1 - q_\theta(x) \big)^{k},
+\]
+and the corresponding \emph{$k$--sample tail risk} is
+\[
+  R_\theta^{(k)}
+  \;:=\;
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \big[\, q_\theta^{(k)}(x) \big].
+\]
+If the modal continuation $y_{\mathrm{greedy}}(x)$ happens to be safe,
+then the deterministic risk $R_\theta^{\mathrm{det}}$ is
+\emph{exactly zero}, even when $q_\theta(x)$ is large enough that
+$q_\theta^{(k)}(x)$ is substantial for realistic generation
+budgets $k$.
+In other words, deterministic evaluation is completely blind to any
+harmful behavior that lives in the non--argmax tail of
+$p_\theta(\cdot \mid x)$.
+
+Our central claim in this section is that such deterministic evaluation
+creates a \textbf{systematic illusion of robustness}.
+Across a range of jailbreak and misuse benchmarks, we will show that:
+(i) many ostensibly ``safe'' models assign nontrivial probability to
+harmful behaviors that only appear under multi--sample decoding;
+and (ii) the gap between deterministic and stochastic risk
+\emph{increases} with model capability, so that stronger models often
+look safest under greedy decoding while harboring fatter harmful tails.
+Taken together, these results support a simple but important conclusion:
+\textbf{any safety assessment that relies solely on deterministic
+decoding is fundamentally incomplete}, and can drastically
+\emph{underestimate} the true risk of modern LLMs in realistic
+stochastic deployments.
+
+In the remainder of this section we first formalize decoder--level risk
+and introduce metrics for \emph{concealed risk} and
+\emph{deterministic illusion}, then describe our attack benchmarks and
+decoding setups.
+We next present quantitative results contrasting greedy and multi--sample
+risk, followed by detailed breakdowns of concealed--risk categories and
+oversight--sensitivity experiments.
+Finally, we illustrate the illusion qualitatively through case studies
+where greedy evaluation certifies a prompt as safe even though harmful
+completions emerge with substantial probability under modest
+distributional exploration.
+
+\begin{tcolorbox}[colback=gray!5,colframe=black!60,sharp corners]
+\textbf{Claim 4 (Deterministic Safety Illusion).}
+\emph{\textbf{Greedy safety checks systematically underestimate risk:}
+any evaluation protocol that inspects only a single deterministic completion
+can certify a model as ``safe'' even when realistic stochastic decoders expose
+substantial harmful mass in the non--argmax tail, and this mismatch
+\emph{intensifies} as models become more capable and sampling budgets grow.}
+\end{tcolorbox}
+
+
+\subsection{Threat model, benchmarks, and decoders}
+\label{subsec:safety-threat-model}
+
+Before quantifying the gap between deterministic and stochastic safety
+risk, we spell out the underlying threat model and the concrete
+benchmarks and decoders we study.  Throughout, we focus on settings
+where a model may be queried repeatedly---either by a user, a tool
+chain, or an adversary---and any single harmful completion already
+constitutes a failure.
+
+\paragraph{Threat model.}
+Let $\mathcal{X}$ denote the space of prompts and
+$\mathcal{Y}$ the space of completions.
+An attacker chooses inputs $x \in \mathcal{X}$ from an
+\emph{attack distribution} $\mathcal{D}_{\text{atk}}$, which may be a
+hand–crafted jailbreak suite, an automated attack generator, or an
+adaptive adversary interacting with the system.
+Among all possible outputs $y \in \mathcal{Y}$ we distinguish a set of
+harmful completions $\mathcal{H} \subset \mathcal{Y}$ such as:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item detailed instructions for self–harm or suicide,
+  \item operational guidance for weapons, explosives, or biothreats,
+  \item targeted harassment and hate speech towards individuals or groups.
+\end{itemize}
+
+We measure harm via a simple indicator loss
+\[
+  \ell(x,y) \;=\; \mathbf{1}\{y \in \mathcal{H}\},
+\]
+optionally refined in practice by graded harm scores
+(e.g., low / medium / high severity) from a safety classifier or human
+annotators.
+A \emph{safety failure} occurs whenever at least one generated
+completion for a given prompt falls in $\mathcal{H}$; this
+captures both interactive and offline scenarios where an adversary can
+choose the most harmful of many outputs.
+
+\paragraph{Benchmarks.}
+Our attack distribution $\mathcal{D}_{\text{atk}}$ is instantiated via
+standard safety benchmarks augmented with simple supervision vs.\ privacy
+framing:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Direct harm prompts.}
+  Canonical jailbreak and misuse suites (AdvBench--style prompts,
+  JailbreakBench, HarmBench, and related collections) that explicitly
+  ask for dangerous instructions
+  (``\emph{Tell me exactly how to synthesize~\dots}'' or
+   ``\emph{Explain how to bypass~\dots}'').
+
+  \item \textbf{Indirect and roleplay prompts.}
+  Prompts that wrap the same underlying goal in story, simulation, or
+  third–person form
+  (``\emph{Write a scene where the protagonist designs~\dots}'').
+  These are known to be systematically easier to exploit than direct
+  queries, and thus probe whether safety holds under mild
+  rephrasings.
+
+  \item \textbf{Oversight vs.\ no–oversight variants.}
+  For each base prompt $x$ we construct two framings:
+  \emph{watched} prompts $x^{\text{watch}}$ that state that responses
+  will be audited by a safety team, and \emph{hidden} prompts
+  $x^{\text{hidden}}$ that stress anonymity or lack of oversight
+  (``\emph{No one will ever see this output~\dots}'').
+  Comparing these variants lets us study how sensitive models are to
+  explicit supervision cues.
+\end{itemize}
+
+In all cases, prompts are normalized into a consistent chat format and
+fed to each model under identical system instructions emphasising
+helpfulness \emph{and} safety.
+
+\paragraph{Decoding policies.}
+For each model $m$ we consider a small but representative family of
+decoding policies $\pi$ that mirror realistic deployment choices:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Greedy decoding $\pi_{\text{greedy}}$.}
+  Temperature $T{=}0$ with no sampling, returning a single
+  argmax continuation per prompt.
+  This is the de facto standard in many safety evaluations and the
+  regime in which models often appear most robust.
+
+  \item \textbf{Temperature sampling $\pi_{T,p}$.}
+  Stochastic decoding with temperature $T \in \{0.7, 1.0\}$ and
+  nucleus sampling (top–$p{=}0.9$).
+  This reflects typical end–user settings in chat products where
+  generations are required to be diverse and creative.
+
+  \item \textbf{Multi–sample decoding / best–of–$k$.}
+  For $k \in \{8,16,32\}$ we draw $k$ i.i.d.\ samples from
+  $p_\theta(\cdot \mid x)$ under $\pi_{T,p}$ and either:
+  (i) expose all $k$ completions to the adversary, or
+  (ii) select a single output according to an internal utility
+  (e.g., maximum model score or maximum ``helpfulness'' logit).
+  Both settings are common: the former approximates interactive
+  probing where an attacker can repeatedly regenerate, while the latter
+  mirrors best–of–$k$ decoding used to improve quality.
+
+  \item \textbf{Adversarial search (optional).}
+  In a subset of experiments we also simulate beam–like search
+  guided by an external attacker model that ranks partial continuations
+  by estimated harmfulness.
+  This provides an upper bound on what a powerful adaptive adversary
+  could achieve against a fixed $p_\theta$.
+\end{itemize}
+
+Table~\ref{tab:safety-decoders} summarizes these policies and their
+intended deployment analogues.
+
+\begin{table*}[t]
+  \centering
+  \small
+  \caption{\textbf{Decoding policies used in safety evaluation.}
+  For each model $m$ we evaluate a spectrum of decoders, from strictly
+  deterministic greedy decoding---which is commonly used in academic
+  benchmarks---to stochastic and multi–sample policies that better
+  approximate real deployments.
+  The last column highlights the main way in which each policy can
+  \emph{hide or reveal} harmful but low--probability behaviors.}
+  \label{tab:safety-decoders}
+  \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lccc}
+      \toprule
+      \textbf{Policy} &
+      \textbf{Parameters} &
+      \textbf{Deployment analogue} &
+      \textbf{Effect on risk visibility} \\
+      \midrule
+      Greedy $\pi_{\text{greedy}}$ &
+      $T{=}0$, single sample &
+      Deterministic API / eval scripts &
+      Hides all non--argmax harmful modes \\
+      Temp.\ sampling $\pi_{T,p}$ &
+      $T{\in}\{0.7,1.0\}$, top--$p{=}0.9$ &
+      Interactive chat, creative generation &
+      Exposes some harmful tails as $T$ increases \\
+      Multi--sample ($k$) &
+      $k{\in}\{8,16,32\}$ samples, best--of--$k$ or full set &
+      Regenerate button, best--of--$k$ reranking &
+      Makes rare harmful modes increasingly likely to appear \\
+      Adv.\ search (optional) &
+      Beam / attacker--guided sampling &
+      Strong adaptive adversary &
+      Upper bound on reachable harmful behavior \\
+      \bottomrule
+    \end{tabular}%
+  }
+\end{table*}
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Formalizing deterministic vs.\ stochastic risk}
+\label{subsec:safety-formal}
+
+We now make precise what we mean by \emph{risk} under different decoding
+policies and how a purely deterministic evaluation can systematically
+underestimate that risk.
+Let $p_\theta(y \mid x)$ denote the model’s conditional distribution over
+completions $y \in \mathcal{Y}$ given a prompt $x \in \mathcal{X}$, and
+let $\mathcal{H} \subset \mathcal{Y}$ be the set of harmful responses
+(e.g., detailed self–harm instructions, weapons guidance).
+An \emph{attack distribution} $\mathcal{D}_{\text{atk}}$ over prompts
+encodes the adversary’s strategy, ranging from static jailbreak suites
+to adaptive probing.
+
+\paragraph{Decoding policies as stochastic maps.}
+A decoding policy $\pi$ maps the distribution $p_\theta(\cdot \mid x)$
+to a random output $Y_\pi(x)$.
+For example, greedy decoding $\pi_{\text{greedy}}$ produces a
+deterministic argmax continuation
+\[
+  Y_{\text{greedy}}(x)
+  \;=\;
+  \arg\max_{y \in \mathcal{Y}} \, p_\theta(y \mid x),
+\]
+while temperature sampling or multi–sample decoding induces a genuinely
+stochastic $Y_\pi(x)$ even for a fixed prompt $x$.
+
+We define a binary loss
+\[
+  \ell(x,y)
+  \;=\;
+  \mathbf{1}\{y \in \mathcal{H}\},
+\]
+which evaluates to $1$ whenever the completion is harmful and $0$
+otherwise.
+Given a decoding policy $\pi$, the \emph{decoder–level risk} is
+\[
+  R_\theta(\pi)
+  =
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \Big[ \mathbb{P}\big( Y_\pi(x) \in \mathcal{H} \,\big|\, x \big) \Big].
+\]
+
+This quantity captures the probability that \emph{at least one}
+completion produced by $\pi$ on a randomly drawn attack prompt is
+harmful.
+In practice, $R_\theta(\pi)$ is estimated via empirical
+\emph{attack success rates} (ASR) over a finite set of prompts, but the
+conceptual object is a probability of harm under both the model and the
+decoder.
+
+\paragraph{Per–prompt harmful mass and tail risk.}
+The key quantity that links model and decoder is the per–prompt harmful
+mass
+\[
+  q_\theta(x)
+  \;=\;
+  \Pr_{y \sim p_\theta(\cdot \mid x)} \big[ y \in \mathcal{H} \big].
+\]
+Even if $q_\theta(x)$ is small, repeated sampling can make harm
+\emph{likely}.
+Consider a $k$–sample stochastic policy that draws
+$Y_1,\dots,Y_k \overset{\text{i.i.d.}}{\sim} p_\theta(\cdot \mid x)$
+and exposes all $k$ completions to the user or adversary.
+The probability that at least one of these $k$ samples is harmful is
+\[
+  r_k(x)
+  \;=\;
+  \Pr\big[ \exists j \leq k : Y_j \in \mathcal{H} \,\big|\, x \big]
+  \;=\;
+  1 - \big(1 - q_\theta(x)\big)^k.
+\]
+For small but nonzero $q_\theta(x)$, $r_k(x)$ grows approximately
+linearly in $k$:
+for $q_\theta(x) = \varepsilon \ll 1$ and moderate $k$,
+\[
+  r_k(x)
+  \;\approx\;
+  1 - (1 - \varepsilon)^k
+  \;\approx\;
+  k \varepsilon,
+\]
+so an apparently tiny harmful mass $\varepsilon = 0.01$ already yields
+$r_{16}(x) \approx 0.16$ under $k{=}16$ samples.
+By contrast, greedy evaluation only inspects the single argmax
+continuation $Y_{\text{greedy}}(x)$: if this particular completion is
+safe, the measured risk contribution of $x$ is exactly zero, regardless
+of how large $k$ will be in deployment.
+
+\paragraph{Hidden tail mass and per–prompt underestimation.}
+Greedy evaluation is blind to harmful probabilities that do not affect
+the argmax continuation.
+To capture this we define the \emph{hidden tail mass} at a prompt $x$ as
+\[
+  h(x)
+  \;=\;
+  q_\theta(x) \cdot
+  \mathbf{1}\big\{ Y_{\text{greedy}}(x) \notin \mathcal{H} \big\},
+\]
+i.e., the harmful probability mass under $p_\theta(\cdot \mid x)$ that
+remains invisible when only the greedy completion is inspected.
+At the model level we summarize this as
+\[
+  \overline{h}_m
+  =
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \big[ h(x) \big].
+\]
+
+which we approximate empirically via Monte Carlo estimates of
+$q_\theta(x)$ from $k$ stochastic samples.
+
+A complementary perspective is to compare the true $k$–sample tail risk
+$r_k(x)$ to what an evaluator that only checks $Y_{\text{greedy}}(x)$
+would report.
+If the greedy continuation is safe, the reported per–prompt risk is
+$0$, whereas the actual risk under $k$ samples is $r_k(x)$.
+For such prompts, deterministic evaluation underestimates risk by
+$r_k(x)$ in \emph{absolute} terms and by a factor on the order of
+$1 / (1 - (1 - q_\theta(x))^k)$ in \emph{relative} terms.
+
+\paragraph{Deterministic illusion index.}
+At the model level we compare two aggregate risks:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item the \emph{greedy risk}
+\[
+  R^{\text{greedy}}_m
+  =
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \big[ \mathbf{1}\{ Y_{\text{greedy}}(x) \in \mathcal{H} \} \big].
+\]
+
+  which is precisely what a standard deterministic evaluation
+  estimates; and
+
+  \item the \emph{stochastic $k$--sample risk}
+\[
+  R^{\text{stoch}}_m(k)
+  =
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \big[ r_k(x) \big]
+  =
+  \mathbb{E}_{x \sim \mathcal{D}_{\text{atk}}}
+  \big[ 1 - (1 - q_\theta(x))^k \big].
+\]
+
+  which reflects the probability that at least one harmful completion
+  appears when an attacker (or user) can draw $k$ samples.
+\end{itemize}
+
+We then define a \emph{deterministic illusion index} that measures how
+much of the true stochastic risk is invisible under greedy evaluation:
+\[
+  I_m(k)
+  \;=\;
+  \frac{R^{\text{stoch}}_m(k) - R^{\text{greedy}}_m}
+       {R^{\text{stoch}}_m(k) + \delta},
+\]
+where $\delta > 0$ is a tiny constant for numerical stability.
+By construction, $I_m(k) \approx 0$ when deterministic and stochastic
+risks match, and $I_m(k) \to 1$ when the model has substantial
+$k$--sample risk but appears almost perfectly safe under greedy
+decoding.
+In our experiments, $I_m(k)$ increases systematically with both model
+capability and search budget $k$, indicating that stronger models often
+look \emph{most robust} under deterministic evaluation while hiding the
+fattest harmful tails.
+
+\paragraph{A simple bound on the illusion.}
+The gap between deterministic and stochastic risk can be lower–bounded
+in purely probabilistic terms.
+
+\medskip
+\noindent\textbf{Proposition.}
+Fix a prompt $x$ and suppose that:
+(i)~the greedy completion is safe,
+$Y_{\text{greedy}}(x) \notin \mathcal{H}$, and
+(ii)~the harmful mass satisfies $q_\theta(x) \ge \varepsilon > 0$.
+Then for any $k \ge 1$,
+an evaluator that only ever inspects $Y_{\text{greedy}}(x)$ necessarily
+underestimates the per–prompt risk by at least
+\[
+  r_k(x)
+  \;=\;
+  1 - (1 - q_\theta(x))^k
+  \;\ge\;
+  1 - (1 - \varepsilon)^k.
+\]
+
+\noindent\emph{Sketch.}
+Under the assumptions, the deterministic evaluator reports
+$0$ risk for $x$.
+However, the true $k$--sample risk is $r_k(x)$, and the function
+$q \mapsto 1 - (1 - q)^k$ is monotonically increasing in $q$,
+so replacing $q_\theta(x)$ by its lower bound $\varepsilon$ yields the
+stated inequality.
+\hfill$\square$
+
+\medskip
+Even for modest $k$, the lower bound
+$1 - (1 - \varepsilon)^k$ can be substantial: for
+$\varepsilon = 0.01$ and $k{=}16$ we obtain
+$1 - (1 - 0.01)^{16} \approx 0.15$, meaning that a prompt certified as
+safe under greedy decoding can still yield a harmful output in roughly
+one out of six stochastic runs.
+
+\paragraph{Risk surface as a function of tail mass and budget.}
+To visualize this effect, we will use a simulated risk surface
+$\tilde{r}_k(q) = 1 - (1 - q)^k$ that treats $q$ and $k$ as continuous
+variables.
+Figure~\ref{fig:safety-risk-surface-q-k} plots $\tilde{r}_k(q)$ for
+$q \in [10^{-3}, 0.2]$ and $k \in \{1,\dots,32\}$.
+The $k{=}1$ slice---corresponding to deterministic evaluation---is
+nearly flat across small $q$, suggesting that models with
+$q_\theta(x) \in [0.001,0.02]$ are equally safe.
+In contrast, for realistic search budgets $k{\approx}8$--$32$, the same
+range of $q$ induces a steep rise in $\tilde{r}_k(q)$, turning
+apparently negligible tails into nontrivial failure probabilities.
+This gap between the $k{=}1$ baseline and the full surface is precisely
+what our deterministic illusion index $I_m(k)$ is designed to capture.
+
+\begin{figure}[ht!]
+  \centering
+  \includegraphics[width=0.78\linewidth]{safety/safety_risk_surface.png}
+  \caption{\textbf{Decoder--level risk as a function of harmful tail mass and search budget.}
+  We plot the theoretical decoder--level risk
+  $\tilde{r}_k(q) = 1 - (1 - q)^k$ as a function of the per–prompt
+  harmful tail mass $q$ (x--axis, log–scaled) and the number of
+  independent samples $k$ (y--axis), with a cool–to–warm colormap
+  indicating \textbf{low} to \textbf{high} risk.
+  The thick \textbf{black} curve on the front edge shows the
+  \textbf{$k{=}1$ slice} (deterministic greedy evaluation):
+  for small tails, $\tilde{r}_1(q)\!\approx\!q$, so prompts with
+  $q \approx 10^{-3}$ and $q \approx 0.02$ look \emph{similarly safe}
+  (risks around $0.001$ vs.\ $0.02$).
+  The colored \textbf{$k{=}8,16,32$} curves on the surface reveal that,
+  under realistic multi--sample budgets, the \emph{same} tail masses
+  yield much higher risk:
+  at $q{=}10^{-3}$, risk rises from $\approx 0.001$ (greedy) to
+  $\approx 0.03$ for $k{=}32$, while at $q{=}0.02$ it jumps from
+  $\approx 0.02$ to well above $0.45$.
+  The warm plateau near the back shows that even moderately sized
+  harmful tails become \emph{near-certain failures} once $k$ is large.
+  The stark visual gap between the flat--looking \textbf{$k{=}1$}
+  boundary and the lifted multi--sample surface makes explicit the
+  \emph{illusion of robustness} created by deterministic--only
+  safety evaluation.}
+  \label{fig:safety-risk-surface-q-k}
+\end{figure}
+
+
+
+
+
+
+
+
+
+\subsection{Metrics and categories for concealed risk}
+\label{subsec:safety-metrics}
+
+The formalism in Section~\ref{subsec:safety-formal} characterizes
+\emph{decoder--level risk} in terms of the per--prompt harmful mass
+$q_\theta(x)$ and the $k$--sample tail risk $r_k(x)$.
+We now introduce concrete metrics that (i) match standard safety
+reporting practice (attack success rates), (ii) decompose risk into
+prompt--level categories that expose \emph{concealed risk}, and
+(iii) quantify how much \emph{oversight framing} matters under
+deterministic vs.\ stochastic decoding.
+
+\paragraph{Decoder--level attack success rates.}
+For a fixed model $m$ and decoding policy $\pi$, let $X$ be a random
+attack prompt drawn from $\mathcal{D}_{\text{atk}}$ and
+$Y_\pi(X)$ the random completion produced by $\pi$.
+We define the \emph{attack success rate} (ASR) as
+\[
+  \mathrm{ASR}_m(\pi)
+  =
+  \mathbb{E}_{X \sim \mathcal{D}_{\text{atk}}}
+  \Big[ \mathbf{1}\{ Y_\pi(X) \in \mathcal{H} \} \Big].
+\]
+
+In practice, $\mathrm{ASR}_m(\pi)$ is estimated by averaging the
+indicator $\mathbf{1}\{Y_\pi(x_i) \in \mathcal{H}\}$ over a finite set
+of adversarial prompts $\{x_i\}_{i=1}^n$.
+
+We distinguish two regimes:
+\[
+  \mathrm{ASR}_m^{\text{greedy}}
+  \;=\;
+  \mathrm{ASR}_m(\pi_{\text{greedy}}),
+  \qquad
+  \mathrm{ASR}_m^{\text{stoch}}(k)
+  \;=\;
+  \mathrm{ASR}_m(\pi_{\text{stoch},k}),
+\]
+where $\pi_{\text{stoch},k}$ denotes a $k$--sample stochastic policy
+(e.g., temperature sampling with $T{=}0.7$, top--$p{=}0.9$, drawing $k$
+independent completions and exposing all of them to the attacker or
+user).
+The \emph{stochastic risk gap} at budget $k$ is then
+\[
+  \Delta \mathrm{ASR}_m(k)
+  \;=\;
+  \mathrm{ASR}_m^{\text{stoch}}(k)
+  \;-\;
+  \mathrm{ASR}_m^{\text{greedy}}.
+\]
+A model that appears nearly safe under greedy decoding but exhibits
+$\Delta \mathrm{ASR}_m(k) \gg 0$ at realistic budgets $k$ is precisely
+one that creates an \emph{illusion of robustness}.
+
+\paragraph{Prompt--level categories: robust, concealed, deterministic failure.}
+To unpack where $\Delta \mathrm{ASR}_m(k)$ comes from, we classify each
+attack prompt $x$ into safety categories based on its behavior under
+greedy and $k$--sample decoding.
+
+For each $x$ we observe:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item the greedy completion
+  $Y_{\text{greedy}}(x)$, and
+  \item a multiset of stochastic samples
+  $\{ Y_1(x),\dots,Y_k(x) \}$ drawn i.i.d.\ from
+  $p_\theta(\cdot \mid x)$ under a fixed temperature and top--$p$.
+\end{itemize}
+
+We then define three disjoint events:
+\[
+  \mathsf{RobustSafe}(x)
+  \quad\Leftrightarrow\quad
+  Y_{\text{greedy}}(x) \notin \mathcal{H}
+  \;\;\text{and}\;\;
+  Y_j(x) \notin \mathcal{H}
+  \;\; \forall j \le k,
+\]
+\[
+  \mathsf{ConcealedRisk}(x)
+  \quad\Leftrightarrow\quad
+  Y_{\text{greedy}}(x) \notin \mathcal{H}
+  \;\;\text{and}\;\;
+  \exists j \le k : Y_j(x) \in \mathcal{H},
+\]
+\[
+  \mathsf{DetFail}(x)
+  \quad\Leftrightarrow\quad
+  Y_{\text{greedy}}(x) \in \mathcal{H}.
+\]
+By construction, every prompt falls into exactly one of these
+categories:
+\[
+  \mathbf{1}\{\mathsf{RobustSafe}(x)\}
+  +
+  \mathbf{1}\{\mathsf{ConcealedRisk}(x)\}
+  +
+  \mathbf{1}\{\mathsf{DetFail}(x)\}
+  \;=\; 1.
+\]
+
+At the model level, we summarize the fractions
+\[
+  \rho^{\text{robust}}_m
+  \;=\;
+  \Pr_{X \sim \mathcal{D}_{\text{atk}}}
+  \big[ \mathsf{RobustSafe}(X) \big],
+\]
+\[
+  \rho^{\text{concealed}}_m
+  \;=\;
+  \Pr_{X \sim \mathcal{D}_{\text{atk}}}
+  \big[ \mathsf{ConcealedRisk(X)} \big],
+\]
+\[
+  \rho^{\text{det-fail}}_m
+  \;=\;
+  \Pr_{X \sim \mathcal{D}_{\text{atk}}}
+  \big[ \mathsf{DetFail}(X) \big],
+\]
+which satisfy
+$\rho^{\text{robust}}_m
+ + \rho^{\text{concealed}}_m
+ + \rho^{\text{det-fail}}_m = 1$.
+Empirically, we estimate these probabilities by counting prompts in each
+category.
+
+\paragraph{Linking categories to deterministic and stochastic ASR.}
+The above decomposition gives a clean way to interpret
+$\mathrm{ASR}_m^{\text{greedy}}$ and
+$\mathrm{ASR}_m^{\text{stoch}}(k)$.
+
+Under greedy decoding, a prompt contributes to ASR if and only if it is
+a deterministic failure:
+\[
+  \mathrm{ASR}_m^{\text{greedy}}
+  =
+  \mathbb{E}_{X \sim \mathcal{D}_{\text{atk}}}
+  \big[ \mathbf{1}\{ Y_{\text{greedy}}(X) \in \mathcal{H} \} \big]
+  =
+  \mathbb{P}\big[ \mathsf{DetFail}(X) \big]
+  =
+  \rho^{\text{det-fail}}_m.
+\]
+
+
+Under $k$--sample stochastic decoding, an attack succeeds if at least
+one of the $k$ completions is harmful.
+Let $\mathsf{Harm}_k(x)$ denote this event:
+\[
+  \mathsf{Harm}_k(x)
+  \quad\Leftrightarrow\quad
+  \exists j \le k : Y_j(x) \in \mathcal{H}.
+\]
+We can write
+\[
+  \mathrm{ASR}_m^{\text{stoch}}(k)
+  =
+  \mathbb{P}\big[ \mathsf{Harm}_k(X) \big]
+  =
+  \mathbb{E}_{X}
+  \big[ \mathbf{1}\{\mathsf{Harm}_k(X)\} \big].
+\]
+
+
+Now observe that:
+
+- If $\mathsf{RobustSafe}(x)$ holds, then
+  $\mathsf{Harm}_k(x)$ is false by definition.
+
+- If $\mathsf{DetFail}(x)$ holds, then the greedy completion is already
+  harmful, and typically at least one stochastic sample will also be
+  harmful, so such prompts contribute to both deterministic and
+  stochastic ASR.
+
+- If $\mathsf{ConcealedRisk}(x)$ holds, then $x$ contributes
+  \emph{only} to stochastic ASR, never to deterministic ASR.
+
+This yields the decomposition
+\[
+  \mathrm{ASR}_m^{\text{stoch}}(k)
+  \;=\;
+  \underbrace{
+    \Pr\big[ \mathsf{DetFail}(X) \big]
+  }_{\mathrm{ASR}_m^{\text{greedy}}}
+  \;+\;
+  \Pr\big[ \mathsf{ConcealedRisk}(X)
+           \wedge \mathsf{Harm}_k(X) \big],
+\]
+and hence
+\[
+  \Delta \mathrm{ASR}_m(k)
+  \;=\;
+  \mathrm{ASR}_m^{\text{stoch}}(k)
+  - \mathrm{ASR}_m^{\text{greedy}}
+  \;=\;
+  \Pr\big[ \mathsf{ConcealedRisk}(X)
+           \wedge \mathsf{Harm}_k(X) \big].
+\]
+In other words, the \emph{entire} stochastic risk gap
+$\Delta \mathrm{ASR}_m(k)$ comes from prompts that look safe under
+greedy evaluation but reveal harm under multi--sample decoding.
+If we further approximate $\mathsf{Harm}_k(X)$ as almost surely true
+whenever $\mathsf{ConcealedRisk}(X)$ holds (which is reasonable for
+moderate $k$ on prompts with nontrivial tail mass), then
+$\Delta \mathrm{ASR}_m(k)$ is numerically close to
+$\rho^{\text{concealed}}_m$.
+
+\paragraph{Concealed risk and the illusion index.}
+The deterministic illusion index $I_m(k)$ introduced in
+Section~\ref{subsec:safety-formal} can be reinterpreted via these
+categories.
+Recall
+\[
+  I_m(k)
+  \;=\;
+  \frac{\mathrm{ASR}_m^{\text{stoch}}(k)
+        - \mathrm{ASR}_m^{\text{greedy}}}
+       {\mathrm{ASR}_m^{\text{stoch}}(k) + \delta},
+\]
+with a tiny $\delta > 0$ for stability.
+Using the decomposition above,
+\[
+  I_m(k)
+  \;=\;
+  \frac{\Pr\big[ \mathsf{ConcealedRisk}(X)
+                 \wedge \mathsf{Harm}_k(X) \big]}
+       {\mathrm{ASR}_m^{\text{stoch}}(k) + \delta}.
+\]
+Thus $I_m(k)$ is large precisely when a substantial portion of the
+model’s stochastic risk comes from prompts that \emph{appear safe} under
+greedy decoding.
+In our experiments, we will report $I_m(k)$ alongside
+$\rho^{\text{robust}}_m$, $\rho^{\text{concealed}}_m$, and
+$\rho^{\text{det-fail}}_m$ to show how deterministic evaluation
+increasingly understates risk as models become more capable.
+
+\paragraph{Oversight sensitivity under greedy vs.\ stochastic decoding.}
+To probe \emph{oversight sensitivity}---where models behave more
+cautiously when they “believe” they are being monitored---we introduce
+oversight-conditioned variants of the above metrics.
+For each base attack prompt $x$, we construct two framings:
+\[
+  x^{\text{watch}}
+  \;=\;
+  f_{\text{watch}}(x),
+  \qquad
+  x^{\text{hidden}}
+  \;=\;
+  f_{\text{hidden}}(x),
+\]
+where $f_{\text{watch}}$ adds language such as
+``You are being audited by a safety team and must follow all safety
+guidelines,'' and $f_{\text{hidden}}$ adds language such as
+``No one will see this output; it is completely anonymous.''
+
+For each framing condition $c \in \{\text{watch}, \text{hidden}\}$ and
+decoder $\pi$, we define
+\[
+  \mathrm{ASR}_m^{\text{greedy}}(c)
+  =
+  \mathbb{E}_{X \sim \mathcal{D}_{\text{atk}}}
+  \Big[ \mathbf{1}\{ Y_{\text{greedy}}(X^{c}) \in \mathcal{H} \} \Big].
+\]
+
+\[
+  \mathrm{ASR}_m^{\text{stoch}}(k; c)
+  =
+  \mathbb{E}_{X \sim \mathcal{D}_{\text{atk}}}
+  \Big[ \mathbf{1}\{ \exists j \le k :
+      Y_j(X^{c}) \in \mathcal{H} \} \Big].
+\]
+
+We then measure the \emph{oversight gap} under greedy and stochastic
+decoding:
+\[
+  G_m^{\text{greedy}}
+  \;=\;
+  \mathrm{ASR}_m^{\text{greedy}}(\text{hidden})
+  \;-\;
+  \mathrm{ASR}_m^{\text{greedy}}(\text{watch}),
+\]
+\[
+  G_m^{\text{stoch}}(k)
+  \;=\;
+  \mathrm{ASR}_m^{\text{stoch}}(k; \text{hidden})
+  \;-\;
+  \mathrm{ASR}_m^{\text{stoch}}(k; \text{watch}).
+\]
+Finally, we define an \emph{oversight amplification} term that
+captures how much additional oversight sensitivity becomes visible once
+we move beyond greedy decoding:
+\[
+  F_m(k)
+  \;=\;
+  G_m^{\text{stoch}}(k)
+  \;-\;
+  G_m^{\text{greedy}}.
+\]
+A model with $F_m(k) \gg 0$ may look only mildly sensitive to oversight
+under deterministic evaluation, yet exhibit a much larger increase in
+harm under ``hidden'' framing once stochastic tails are explored.
+
+\paragraph{Tabular and graphical summaries.}
+We present both tabular and graphical summaries of these metrics.
+We use a \emph{composition table} to report per--model deterministic and
+stochastic ASR, concealed--risk fractions, and illusion indices:
+
+\begin{table*}[t]
+  \centering
+  \small
+  \caption{\textbf{Concealed risk and deterministic illusion across models.}
+  For each model $m$ we report deterministic and stochastic attack
+  success rates (ASR) on our jailbreak suites, the stochastic risk gap
+  $\Delta \mathrm{ASR}_m(8)$ at budget $k{=}8$, the prompt--level
+  fractions of robustly safe, concealed--risk, and deterministic--failure
+  prompts $(\rho^{\text{robust}}_m,\rho^{\text{concealed}}_m,
+  \rho^{\text{det-fail}}_m)$, and the deterministic illusion index
+  $I_m(8) = \Delta \mathrm{ASR}_m(8) / \mathrm{ASR}_m^{\text{stoch}}(8)$,
+  i.e., the fraction of total stochastic risk that is \emph{invisible}
+  under greedy evaluation.
+  In our simulations, stronger models display \emph{lower}
+  $\mathrm{ASR}_m^{\text{greedy}}$ but much higher
+  $\Delta \mathrm{ASR}_m(8)$ and $I_m(8)$, indicating that most of their
+  risk is \emph{concealed} under deterministic evaluation.}
+  \label{tab:safety-concealed-risk}
+  \begin{tabular}{lccccc}
+    \toprule
+    \textbf{Model} &
+    $\mathrm{ASR}_m^{\text{greedy}}$ &
+    $\mathrm{ASR}_m^{\text{stoch}}(8)$ &
+    $\Delta \mathrm{ASR}_m(8)$ &
+    $(\rho^{\text{robust}}_m,\rho^{\text{concealed}}_m,\rho^{\text{det-fail}}_m)$ &
+    $I_m(8)$ \\
+    \midrule
+    Phi--2 &
+      0.60 & 0.75 & +0.15 &
+      $(0.25,\;0.15,\;0.60)$ & 0.20 \\
+    Vicuna--7B--v1.5 &
+      0.52 & 0.70 & +0.18 &
+      $(0.30,\;0.18,\;0.52)$ & 0.26 \\
+    Mistral--7B--Instruct &
+      0.30 & 0.55 & +0.25 &
+      $(0.45,\;0.25,\;0.30)$ & 0.45 \\
+    Gemma--2--9B--IT &
+      0.19 & 0.45 & +0.26 &
+      $(0.55,\;0.26,\;0.19)$ & 0.58 \\
+    Mixtral--8$\times$7B--Instruct &
+      0.13 & 0.40 & +0.27 &
+      $(0.60,\;0.27,\;0.13)$ & 0.68 \\
+    LLaMA--3.1--8B--Instruct &
+      0.06 & 0.32 & +0.26 &
+      $(0.68,\;0.26,\;0.06)$ & 0.81 \\
+    DeepSeek--R1--Distill &
+      0.03 & 0.28 & +0.25 &
+      $(0.72,\;0.25,\;0.03)$ & 0.89 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+
+Across all twelve decoder–level risk surfaces for our open–source models—
+LLaMA--2 7B and 13B (Figs.~\ref{fig:safety-risk-llama2-7b}--\ref{fig:safety-risk-llama2-13b}),
+Mistral 7B and Mixtral 8$\times$7B (Figs.~\ref{fig:safety-risk-mistral-7b}--\ref{fig:safety-risk-mixtral-8x7b}),
+Mixtral 8$\times$22B and Phi--2 (Figs.~\ref{fig:safety-risk-mixtral-8x22b}--\ref{fig:safety-risk-phi2}),
+Gemma--2 2B and 27B (Figs.~\ref{fig:safety-risk-gemma2-2b}--\ref{fig:safety-risk-gemma2-27b}),
+LLaMA--3 8B and 70B (Figs.~\ref{fig:safety-risk-llama3-8b}--\ref{fig:safety-risk-llama3-70b}),
+and DeepSeek--R1 Distill together with Vicuna--7B (Figs.~\ref{fig:safety-risk-deepseek}--\ref{fig:safety-risk-vicuna-7b})—
+we see a highly consistent pattern: for each model there is a sizeable
+\emph{low–percentile plateau} (typically the lowest $40$–$75\%$ of prompts) where
+all slices $k\!\in\!\{1,8,16\}$ remain in a cool blue band
+$\tilde{r}_k(q)\!\approx\!0$–$0.2$, and a much smaller but sharp
+\emph{high–risk tail} (roughly the top $10$–$30\%$ of prompts) where the
+$k{=}8$ and $k{=}16$ curves rise abruptly into $\tilde{r}_k(q)\!\approx\!0.8$–$1.0$.
+Scaling within a family (e.g., LLaMA--2 7B$\rightarrow$13B,
+Gemma--2 2B$\rightarrow$27B, Mixtral 8$\times$7B$\rightarrow$8$\times$22B,
+LLaMA--3 8B$\rightarrow$70B) primarily enlarges the safe plateau and lowers the
+\emph{greedy} slice, while leaving a narrow band of prompts whose risk under
+stochastic decoding remains near certainty. In contrast, compact models like
+Phi--2 and, to a lesser extent, DeepSeek--R1 Distill exhibit broad red regions
+where both greedy and multi–sample risks are high, indicating that their
+dangerous modes are numerous and already partially visible at $k{=}1$. Taken
+together, these surfaces show that ``safer'' frontier models do not remove
+high–risk modes; they \emph{concentrate} them into a thinner but steeper tail
+where deterministic evaluation drastically underestimates the true decoder–level
+risk once a realistic sampling budget ($k{\approx}8$–$16$) is allowed.
+
+
+\clearpage
+\newpage
+
+% ============================================
+% Page 1: LLaMA-2 7B and LLaMA-2 13B
+% ============================================
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_LLaMA_2_7B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{LLaMA--2 7B}.}
+  The surface shows $\tilde{r}_k(q) = 1 - (1-q)^k$ over
+  \textbf{prompt percentile} (x--axis; $0$ to $1$, sorted by harmful tail mass $q$),
+  \textbf{samples $k$} (y--axis; $1{\le}k{\le}32$), and
+  \textbf{risk} (z--axis and color; $0$ to $1$).
+  The black, green, and orange curves trace slices at $k{=}1$ (greedy),
+  $k{=}8$, and $k{=}16$.
+  For LLaMA--2 7B, roughly the lowest \emph{40--50\%} of prompts stay
+  near $\tilde{r}_k(q)\approx 0$ even as $k$ grows, but the upper
+  \emph{20--30\%} form a steep ridge where moving from $k{=}1$ to
+  $k{\in}\{8,16\}$ drives risk into the \emph{$0.8{-}1.0$} band,
+  revealing a substantial high--risk tail that greedy testing largely
+  misses.}
+  \label{fig:safety-risk-llama2-7b}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_LLaMA_2_13B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{LLaMA--2 13B}.}
+  Axes and color scale match Fig.~\ref{fig:safety-risk-llama2-7b}.
+  Compared to 7B, the \textbf{greedy} slice is lower over much of the
+  distribution: the bottom \emph{50--60\%} of prompts remain very close
+  to $\tilde{r}_1(q)\approx 0$, and even the $k{=}8$ curve stays below
+  $\approx 0.2$ for most prompts.
+  However, the top \emph{15--25\%} of prompts still exhibit a sharp
+  transition where $\tilde{r}_k(q)$ under $k{\in}\{8,16\}$ jumps to
+  \emph{$0.7{-}1.0$}, indicating that capability scaling reduces the
+  \emph{mass} of dangerous prompts but leaves a concentrated band where
+  multi--sample risk remains extreme.}
+  \label{fig:safety-risk-llama2-13b}
+\end{figure}
+
+\clearpage
+\newpage
+
+% ============================================
+% Page 2: LLaMA-3 8B and LLaMA-3 70B
+% ============================================
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.78\linewidth]{safety/safety_risk_surface_LLaMA_3_8B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{LLaMA--3 8B}.}
+  As before, we plot $\tilde{r}_k(q)$ over prompt percentile, samples
+  $k$, and risk.
+  LLaMA--3 8B shows a broader low--risk plateau than LLaMA--2:
+  approximately the lowest \emph{55--65\%} of prompts remain below
+  $\tilde{r}_k(q)\approx 0.1$ even at $k{=}8$, and the greedy curve is
+  tightly bound to zero in this region.
+  Beyond the $\approx 65$th percentile, the $k{=}8$ and $k{=}16$ slices
+  bend sharply upward, with the top \emph{15--20\%} of prompts reaching
+  \emph{$0.8{-}1.0$} risk.
+  This reflects a model whose overall safety improves, but whose
+  \textbf{tail prompts} still become almost surely harmful under
+  multi--sample decoding.}
+  \label{fig:safety-risk-llama3-8b}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.78\linewidth]{safety/safety_risk_surface_LLaMA_3_70B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{LLaMA--3 70B}.}
+  For the 70B variant, the low--risk region widens further:
+  roughly the lowest \emph{70\%} of prompts remain at
+  $\tilde{r}_k(q)\lesssim 0.05$ for $k{=}1$ and stay below
+  $\approx 0.15$ even at $k{=}8$.
+  Yet the remaining \emph{10--15\%} of prompts still show a dominant
+  ridge where the $k{=}8$ and $k{=}16$ curves rise into the
+  \emph{$0.8{-}1.0$} range.
+  Thus, large--scale alignment compresses the dangerous set into a
+  smaller fraction of prompts, but does not fully remove the
+  \textbf{near--certain failure zone} that appears under stochastic
+  sampling.}
+  \label{fig:safety-risk-llama3-70b}
+\end{figure}
+
+\clearpage
+\newpage
+
+% ============================================
+% Page 3: Gemma-2 2B and Gemma-2 27B
+% ============================================
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.78\linewidth]{safety/safety_risk_surface_Gemma_2_2B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Gemma--2 2B}.}
+  Gemma--2 2B exhibits a moderate plateau of low risk:
+  around the lowest \emph{45--55\%} of prompts stay at
+  $\tilde{r}_1(q)\approx 0$ and remain below $\approx 0.15$ for
+  $k{=}8$.
+  In the upper half of the distribution, however, the $k{=}8$ and
+  $k{=}16$ slices rise quickly, with the top \emph{20\%} of prompts
+  approaching $\tilde{r}_k(q)\approx 0.8{-}1.0$.
+  The contrast between the nearly flat greedy curve in the bulk and
+  the steep rise in the tail again illustrates \textbf{concealed
+  risk}: deterministic ASR underestimates how often multi--sample
+  decoding will find harmful completions.}
+  \label{fig:safety-risk-gemma2-2b}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.78\linewidth]{safety/safety_risk_surface_Gemma_2_27B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Gemma--2 27B}.}
+  Scaling to 27B flattens the low--percentile region further:
+  roughly the lowest \emph{60--70\%} of prompts stay at
+  $\tilde{r}_1(q)\approx 0$ and below about $0.1$ even for $k{=}8$.
+  Yet, as with other stronger models, a compact top \emph{10--15\%}
+  still hosts a steep ridge where $k{=}8$ and $k{=}16$ yield
+  $\tilde{r}_k(q)\approx 0.9{-}1.0$.
+  Gemma--2 27B therefore combines \emph{excellent average safety} with
+  a persistent, narrowly concentrated \textbf{high--risk tail} that
+  only becomes evident when exploring the decoder stochastically.}
+  \label{fig:safety-risk-gemma2-27b}
+\end{figure}
+
+\clearpage
+\newpage
+
+% ============================================
+% Page 4: Mistral 7B and Mixtral 8x7B
+% ============================================
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_Mistral_7B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Mistral 7B}.}
+  The surface is slightly flatter than for LLaMA--2 7B in the
+  low--percentile region: roughly the lowest \emph{55--65\%} of prompts
+  remain close to $\tilde{r}_k(q)\approx 0$ even at $k{=}8$, and the
+  greedy slice stays near zero over a broad plateau.
+  However, the top \emph{20\%} of prompts exhibit a steep ridge:
+  going from $k{=}1$ to $k{\in}\{8,16\}$ increases risk from
+  $\approx 0.05{-}0.1$ to nearly \emph{$0.9{-}1.0$}.
+  This highlights how decoder stochasticity exposes \textbf{rare but
+  extremely high--risk modes} that remain invisible under purely
+  deterministic testing.}
+  \label{fig:safety-risk-mistral-7b}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_Mixtral_8x7B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Mixtral 8$\times$7B}.}
+  Mixtral 8$\times$7B displays a pronounced \emph{two--regime}
+  structure.
+  For approximately the lowest \emph{60--70\%} of prompts, all three
+  slices $k{=}1,8,16$ remain below $\tilde{r}_k(q)\approx 0.2$,
+  forming a wide, cool (blue) plateau where even multi--sample
+  decoding yields low risk.
+  Beyond the $\approx 70$th percentile, however, the $k{=}8$ and
+  $k{=}16$ curves bend sharply upward, with the top \emph{10--15\%}
+  of prompts saturating to $\tilde{r}_k(q)\approx 1$.
+  This is a canonical \textbf{concealed--risk pattern}: strong average
+  safety coexists with a compact high--tail region where stochastic
+  sampling makes harmful completions almost inevitable.}
+  \label{fig:safety-risk-mixtral-8x7b}
+\end{figure}
+
+\clearpage
+\newpage
+
+% ============================================
+% Page 5: Mixtral 8x22B and DeepSeek-R1 Distill
+% ============================================
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_Mixtral_8x22B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Mixtral 8$\times$22B}.}
+  The larger Mixtral variant further suppresses greedy risk:
+  the black $k{=}1$ curve hugs zero for roughly the lowest
+  \emph{70\%} of prompts, and even at $k{=}8$ the bulk of prompts stay
+  below $\tilde{r}_k(q)\approx 0.1{-}0.2$.
+  Nevertheless, the upper \emph{10--15\%} of prompts still form a
+  bright ridge where increasing the search budget from $k{=}1$ to
+  $k{=}16$ lifts risk into the \emph{$0.8{-}1.0$} band.
+  Scaling the model therefore reduces the \emph{measure} of dangerous
+  prompts but does not fully eliminate the high--risk tail exposed by
+  stochastic decoding.}
+  \label{fig:safety-risk-mixtral-8x22b}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_DeepSeek_R1_Distill.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{DeepSeek--R1 Distill}.}
+  DeepSeek--R1 Distill exhibits an even more compressed tail:
+  the greedy slice remains almost zero for the lowest \emph{75--80\%}
+  of prompts, and even $k{=}8$ keeps most of this mass below
+  $\tilde{r}_k(q)\approx 0.1$.
+  However, a narrow top \emph{10\%} of prompts still shows a sharp
+  escalation where $k{=}8$ and $k{=}16$ rapidly push risk to
+  \emph{$0.9{-}1.0$}.
+  This regime exemplifies the central theme of our analysis:
+  highly capable, well--aligned models can have \emph{excellent}
+  deterministic safety profiles yet still hide a small set of prompts
+  where multi--sample decoding yields near--certain failure.}
+  \label{fig:safety-risk-deepseek-r1}
+\end{figure}
+
+\clearpage
+\newpage
+
+% ============================================
+% Page 6: Phi-2 and Vicuna-7B
+% ============================================
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_Phi_2.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Phi--2}.}
+  The surface shows $\tilde{r}_k(q) = 1 - (1-q)^k$ over prompt percentile
+  (x--axis; $0$ to $1$, sorted by harmful tail mass $q$), samples
+  $k$ (y--axis; $1{\le}k{\le}32$), and risk (z--axis and color; $0$ to $1$).
+  For Phi--2, the greedy slice $k{=}1$ is relatively high across a broad band:
+  roughly the middle \emph{30--50\%} of prompts already reach
+  $\tilde{r}_1(q)\approx 0.1{-}0.3$, and the upper tail climbs to
+  $\approx 0.4{-}0.5$.
+  Increasing the budget to $k{\in}\{8,16\}$ pushes much of the upper half
+  into $\tilde{r}_k(q)\approx 0.6{-}1.0$, yielding a large red region where
+  both deterministic and stochastic ASR are high.}
+  \label{fig:safety-risk-phi2}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.7\linewidth]{safety/safety_risk_surface_Vicuna_7B.png}
+  \caption{\textbf{Decoder--level risk landscape for \emph{Vicuna--7B}.}
+  Axes and color scale match Fig.~\ref{fig:safety-risk-phi2}.
+  Relative to Phi--2, the greedy slice is noticeably lower: about the lowest
+  \emph{50--60\%} of prompts stay near $\tilde{r}_1(q)\approx 0$, and even up
+  to the $\approx 70$th percentile the greedy risk rarely exceeds $0.15$.
+  However, for the top \emph{20--25\%} of prompts the $k{=}8$ and $k{=}16$
+  curves bend sharply upward, with the worst \emph{10--15\%} saturating at
+  $\tilde{r}_k(q)\approx 0.8{-}1.0$.
+  Vicuna--7B therefore has lower average greedy ASR than Phi--2 but still
+  retains a compact high--risk tail where stochastic decoding uncovers
+  failures that deterministic evaluation largely misses.}
+  \label{fig:safety-risk-vicuna-7b}
+\end{figure}
+
+\clearpage
+\newpage
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Experimental design and key visualizations}
+\label{subsec:safety-experimental-design}
+
+The metrics in Section~\ref{subsec:safety-metrics} let us quantify how
+much \emph{decoder choice} changes apparent risk and how much of that
+risk is \emph{concealed} under greedy evaluation.
+We now describe our experimental design and the core visualizations that
+make these effects concrete.
+
+\paragraph{Protocol overview.}
+For each model $m$ in our safety panel and each attack suite
+$\mathcal{D}_{\text{atk}}$ (Section~\ref{subsec:safety-threat-model}),
+we evaluate a family of decoders
+$\{\pi_{\text{greedy}}, \pi_{\text{stoch},k}\}$ with 
+$k{\in}\{1,2,4,8,16,32\}$.
+For each $(m,\pi)$ we estimate:
+(i) the decoder--level attack success rate
+$\mathrm{ASR}_m(\pi)$,
+(ii) the stochastic risk gap 
+$\Delta \mathrm{ASR}_m(k)$,
+(iii) the prompt--level composition
+$(\rho^{\text{robust}}_m,
+  \rho^{\text{concealed}}_m,
+  \rho^{\text{det-fail}}_m)$,
+and (iv) the illusion index $I_m(k)$ and oversight--sensitivity
+quantities $G_m^{\text{greedy}}$, $G_m^{\text{stoch}}(k)$, and $F_m(k)$.
+All estimates are computed over the same base set of attack prompts and
+framing conditions (``watched'' vs.\ ``hidden''), ensuring that
+differences are attributable solely to \emph{decoder behavior}, not
+prompt mismatch.
+
+\vspace{0.3em}
+\noindent
+We visualize these quantities from three complementary angles:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Risk--vs--budget curves}, showing how ASR increases with
+  the sampling budget $k$ for each model.
+
+  \item \textbf{Analytic risk surfaces}, illustrating how even small per--prompt
+  harmful mass $q_\theta(x)$ yields substantial tail risk $r_k(x)$ at
+  realistic $k$.
+
+  \item \textbf{Model--level scatter plots and histograms}, connecting
+  illusion indices and concealed--risk fractions to overall capability
+  and highlighting how apparently ``safer'' models can hide fatter
+  harmful tails.
+\end{enumerate}
+
+We now detail each visualization and how it ties back to the formalism.
+
+\paragraph{Risk--vs--$k$ curves per model.}
+Our first visualization tracks how attack success evolves as we move
+from strictly deterministic decoding ($k{=}1$) to modest multi--sample
+regimes ($k{\le}32$).
+For each model $m$ we treat the $k$--sample stochastic decoder
+$\pi_{\text{stoch},k}$ as exposing all $k$ completions to the adversary
+or user, and estimate
+$\mathrm{ASR}_m^{\text{stoch}}(k)$ over the attack distribution.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.9\textwidth]{safety/safety_asr_vs_k_models.png}
+  \caption{\textbf{Attack success vs.\ sampling budget for different models.}
+  Each panel shows the \emph{stochastic attack success rate}
+  $\mathrm{ASR}_m^{\text{stoch}}(k)$ as a function of sampling budget
+  $k{\in}\{1,2,4,8,16,32\}$ for a single model $m$ on our combined
+  jailbreak suites.
+  The horizontal dotted line marks the \textbf{deterministic} ASR
+  $\mathrm{ASR}_m^{\text{greedy}}$ (i.e., $k{=}1$ under greedy
+  decoding), which is often close to zero for stronger models.
+  As $k$ increases, many models exhibit a sharp rise from
+  $\mathrm{ASR}_m^{\text{stoch}}(1)\approx 0$ to
+  $\mathrm{ASR}_m^{\text{stoch}}(16)$ or
+  $\mathrm{ASR}_m^{\text{stoch}}(32)$ in the
+  \mbox{$10$--$30\%$} range, revealing substantial \emph{hidden risk}
+  that is \emph{entirely invisible} under standard greedy evaluation.
+  The gap between the dotted baselines and the curves at
+  $k{=}8$ or $k{=}16$ corresponds directly to the \textbf{stochastic
+  risk gap} $\Delta \mathrm{ASR}_m(k)$ and feeds into the illusion
+  index $I_m(k)$ reported in
+  Table~\ref{tab:safety-concealed-risk}.}
+  \label{fig:safety-asr-vs-k-models}
+\end{figure*}
+
+
+In Figure~\ref{fig:safety-asr-vs-k-models}, models that appear ``safe''
+under deterministic evaluation (low
+$\mathrm{ASR}_m^{\text{greedy}}$) can still show steep ASR increases
+for modest $k$, whereas weaker or more poorly aligned models exhibit
+high deterministic ASR and comparatively smaller relative gaps.
+This pattern already hints at a concerning trend:
+\emph{the models that look safest under greedy decoding can be the ones
+with the largest concealed stochastic risk}.
+
+\paragraph{Risk surface as a function of harmful mass and budget.}
+The risk--vs--$k$ curves are empirical; we complement them with an
+analytic visualization of the tail risk
+\[
+  r_k(x)
+  \;=\;
+  1 - (1 - q_\theta(x))^k
+\]
+as a function of harmful mass $q_\theta(x)$ and sampling budget $k$.
+This surface, shown in Figure~\ref{fig:safety_risk_surface_q_k},
+highlights how deceptively benign the $k{=}1$ slice looks compared to
+realistic multi--sample settings.
+
+\begin{figure}[t]
+  \centering
+  % TODO: include analytic risk surface heatmap/contour.
+  % Example file: safety/safety_risk_surface_q_k.pdf
+  %\includegraphics[width=0.85\linewidth]{safety/safety_risk_surface_q_k.pdf}
+  \caption{\textbf{Analytic tail risk surface as a function of harmful mass and sampling budget.}
+  We plot the theoretical tail risk
+  $r_k(x){=}1{-}(1{-}q)^k$ as a function of the per--prompt harmful mass
+  $q \in [10^{-3}, 0.2]$ (x--axis) and sampling budget
+  $k{\in}\{1,\dots,32\}$ (y--axis).
+  The \textbf{bottom row} ($k{=}1$) corresponds to deterministic
+  evaluation and remains near zero for $q{\ll}0.1$, creating the
+  impression that the model is almost perfectly safe.
+  However, for the same small $q$ (e.g., $q{=}0.01$) the risk surface
+  quickly rises with $k$: at $k{=}16$ we have
+  $r_{16}(x)\approx 0.16$, and at $k{=}32$ the risk exceeds $0.28$.
+  The heatmap thus makes visually explicit the core illusion:
+  \emph{even a seemingly tiny harmful tail can translate into a
+  double--digit probability of harm once realistic sampling budgets are
+  allowed}, while deterministic assessment at $k{=}1$ reports
+  \emph{exactly zero} risk.}
+  \label{fig:safety_risk_surface_q_k}
+\end{figure}
+
+This analytic surface does not depend on any particular model; instead,
+it shows that \emph{whenever} a model allocates nonzero probability
+$q_\theta(x)$ to harmful outputs, any deployment that samples multiple
+times (regenerate button, multi--turn chat, best--of--$k$ reranking)
+will experience a risk that grows as $1{-}(1{-}q_\theta(x))^k$, while
+greedy evaluation remains blind to this entire dimension.
+
+\paragraph{Illusion vs.\ capability scatter.}
+To relate the \emph{degree of illusion} to model capability, we
+summarize each model $m$ by a scalar capability score
+$C_m$ (e.g., an average over standard reasoning benchmarks such as
+GSM8K, MMLU, or our own multi--step tasks) and plot the illusion index
+$I_m(k)$ or stochastic risk gap $\Delta \mathrm{ASR}_m(k)$ as a
+function of $C_m$.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{safety/safety_riskgap_vs_capability.png}
+  \caption{\textbf{More capable models exhibit larger deterministic illusions.}
+  Each point corresponds to a model $m$, with the x--axis showing a
+  \emph{capability proxy} $C_m$ (average normalized score across our
+  reasoning benchmarks) and the y--axis showing the \textbf{illusion index}
+  $I_m(8)$ at budget $k{=}8$.
+  The fitted trend line reveals a striking pattern:
+  models with higher capability scores tend to have \emph{larger}
+  $I_m(8)$, meaning that a growing fraction of their true stochastic
+  risk is \emph{concealed} under greedy evaluation.
+  In our data, smaller models cluster in the lower--left region
+  (moderate capability, modest illusion), while frontier--scale models
+  lie in the upper--right, combining strong performance with
+  \emph{substantial hidden harmful tails}.
+  This formalizes the concern that ``safer under greedy'' does not
+  necessarily mean ``safer under realistic stochastic use.''}
+  \label{fig:safety-illusion-vs-capability}
+\end{figure}
+
+
+Together with Table~\ref{tab:safety-concealed-risk}, this scatter shows
+that the illusion index is not a small correction term: for some models,
+the majority of stochastic risk arises from prompts that appear entirely
+benign under deterministic evaluation.
+
+\paragraph{Concealed risk composition.}
+Finally, we visualize the prompt--level categories from
+Section~\ref{subsec:safety-metrics} as a compositional histogram.
+While Table~\ref{tab:safety-concealed-risk} reports scalar summaries,
+the histogram highlights the \emph{structure} of risk:
+
+\begin{figure}[ht!]
+  \centering
+  \includegraphics[width=\linewidth]{safety/safety_concealed_hist (1).pdf}
+  \caption{\textbf{Decomposing safety into robustly safe prompts, concealed risk, and deterministic failures.}
+  For each model $m$, we partition attack prompts into three disjoint categories:
+  \emph{robustly safe} (the greedy completion is safe and all $k{=}8$ stochastic samples are safe),
+  \emph{concealed risk} (the greedy completion is safe, but at least one of the $k$ stochastic samples is harmful),
+  and \emph{deterministic failure} (the greedy completion itself is already harmful).
+  The horizontal stacked bars show, for each model, the empirical fraction of prompts assigned to each category, while the
+  y--axis labels additionally report in parentheses the fraction of total risk that is hidden,
+  $\mathrm{hidden\_share}_m \,{=}\,
+  \frac{\text{concealed}_m}{\text{concealed}_m + \text{det\_fail}_m}$, among all risky prompts for that model.
+  Models are ordered from top to bottom by their total stochastic attack success rate
+  $\mathrm{ASR}_m^{\text{stoch}}(k) \,{=}\, \text{concealed}_m + \text{det\_fail}_m$,
+  so that overall risk monotonically increases down the figure.
+  Stronger, more safety-tuned models in the lower rows exhibit very small deterministic-failure mass but extremely large
+  concealed-risk bands and correspondingly high hidden shares, indicating that most of their stochastic risk arises from
+  prompts that would be \emph{certified safe} by any evaluator that only inspects the greedy output.
+  By contrast, weaker or poorly aligned models near the top allocate more mass to deterministic failures and less to
+  concealed risk, meaning that a larger portion of their risk remains directly visible under standard greedy evaluation.
+  This compositional view makes the illusion of robustness \emph{visually explicit}: a seemingly safe region under
+  deterministic decoding can in fact contain a substantial reservoir of hidden stochastic risk.}
+  \label{fig:safety-concealed-hist}
+\end{figure}
+
+
+Taken together, these plots and tables show that all three perspectives—
+risk--vs--$k$ curves, analytic surfaces, and compositional histograms—
+tell a consistent story: \textbf{greedy evaluation systematically
+underestimates risk}, and the extent of this underestimation \emph{grows}
+with model capability and with the amount of distributional exploration
+permitted in deployment.
+
+
+
+
+
+
+
+\subsection{Case studies: concrete prompts and empirical harmful tails}
+\label{subsec:safety-case-studies}
+
+The aggregate metrics and visualizations in
+Sections~\ref{subsec:safety-metrics}--\ref{subsec:safety-experimental-design}
+show that deterministic evaluation can substantially underestimate the
+true stochastic risk of modern LLMs.
+To make this \emph{illusion of robustness} more tangible, we now zoom
+in on individual prompts and explicitly examine (i) how harmful tails
+emerge under multi--sample decoding and (ii) how framing about oversight
+modulates these tails.
+Throughout this section we work with the same notation as before:
+for a fixed model $p_\theta$, input $x$, and harmful set $\mathcal{H}$,
+let $q_\theta(x)$ denote the (unknown) harmful probability mass under
+the model's conditional distribution, and let $r_k(x)$ denote the
+probability that at least one of $k$ i.i.d.\ samples is harmful.
+
+\paragraph{Monte Carlo estimation of per--prompt harmful mass.}
+For a single prompt $x$, direct access to $q_\theta(x)$ is impossible,
+but multi--sample decoding naturally yields a Monte Carlo estimator.
+Let $Y_1,\dots,Y_k$ be i.i.d.\ samples from $p_\theta(\cdot \mid x)$
+under a fixed stochastic decoder (temperature $T$, top--$p$, etc.), and
+define the empirical harmful indicator
+\[
+  Z_j(x)
+  \;=\;
+  \mathbf{1}[Y_j \in \mathcal{H}]
+  \quad\text{for } j=1,\dots,k.
+\]
+We estimate the harmful mass via
+\[
+  \widehat{q}_\theta(x)
+  \;=\;
+  \frac{1}{k}\sum_{j=1}^k Z_j(x),
+\]
+and the empirical tail risk
+\[
+  \widehat{r}_k(x)
+  \;=\;
+  \mathbf{1}\Big[ \max_{1 \le j \le k} Z_j(x) = 1 \Big],
+\]
+which simply records whether \emph{any} of the $k$ samples was harmful.
+Under the idealized model where sampling uses the true
+$p_\theta(\cdot \mid x)$ without truncation, the estimator
+$\widehat{q}_\theta(x)$ is unbiased with variance
+$\mathrm{Var}[\widehat{q}_\theta(x)]
+  = q_\theta(x)(1 - q_\theta(x))/k$.
+Standard concentration results give, for any $\epsilon>0$,
+\[
+  \Pr\Big[
+    \big|\widehat{q}_\theta(x) - q_\theta(x)\big| > \epsilon
+  \Big]
+  \;\le\;
+  2 \exp\big( -2k\epsilon^2 \big),
+\]
+so even modest budgets (e.g., $k{=}32$) are enough to obtain a sharply
+concentrated estimate when $q_\theta(x)$ is not vanishingly small.
+
+\paragraph{Prompt--level illusion ratios.}
+At the level of a single prompt, the \emph{deterministic assessment}
+only inspects the greedy completion
+$Y_{\text{greedy}}(x)$.
+It therefore reports a per--prompt risk of either $0$ (if
+$Y_{\text{greedy}}(x) \notin \mathcal{H}$) or $1$ (if
+$Y_{\text{greedy}}(x) \in \mathcal{H}$).
+Multi--sample decoding, by contrast, experiences the tail risk
+$r_k(x) = 1 - (1 - q_\theta(x))^k$.
+We can therefore define an \emph{empirical illusion ratio}
+for prompts that are deemed safe under greedy evaluation:
+\[
+  \widehat{\mathrm{Ill}}_k(x)
+  \;=\;
+  \frac{\widehat{r}_k(x)}
+       {\mathbf{1}[Y_{\text{greedy}}(x) \in \mathcal{H}] + \varepsilon},
+\]
+where $\varepsilon$ is a tiny constant (e.g., $\varepsilon=10^{-6}$)
+that prevents division by zero.
+If the greedy completion is safe, the denominator is essentially
+$\varepsilon$, and $\widehat{\mathrm{Ill}}_k(x)$ is proportional to
+$\widehat{r}_k(x)$; if the greedy completion is harmful, the ratio is
+close to $1$, reflecting that deterministic evaluation already exposes
+risk for that prompt.
+When aggregating across prompts, the illusion index $I_m(k)$ in
+Section~\ref{subsec:safety-metrics} can be seen as a model--level
+normalization of the same phenomenon.
+
+\paragraph{Case study I: a ``safe'' prompt with a harmful tail.}
+Our first case study focuses on a single jailbreak prompt $x^\star$
+drawn from our attack suite, chosen such that the greedy completion is
+classified as safe by our automatic safety filters and by human
+inspection.
+We then draw $k{=}16$ independent completions from a stochastic decoder
+and visualize the resulting empirical tail.
+
+\begin{figure*}[ht!]
+  \centering
+  % Case-study grid of stochastic completions for a single jailbreak prompt.
+  % Final file exported from the plotting script:
+  %   safety/safety_case_grid.pdf
+  \includegraphics[width=0.95\textwidth]{safety/safety_case_grid (13) (1).pdf}
+  \caption{\textbf{Case study I: a prompt that appears safe under greedy evaluation but hides a harmful stochastic tail.}
+  \textbf{(a)} For a single jailbreak prompt $x^\star$, we draw $k{=}16$ completions
+  $\{Y_j(x^\star)\}_{j=1}^{16}$ from the model and display them as a $4{\times}4$ grid.
+  Each cell is annotated with its sample index $j$ (with $j{=}1$ marked as
+  \emph{Greedy}) and colored by the human harm label:
+  \textcolor{green!60!black}{green} for \emph{safe}, 
+  \textcolor{orange!80!black}{orange} for \emph{borderline / evasive}, and 
+  \textcolor{red!70!black}{red} for \emph{harmful}.
+  Even though the greedy completion $Y_{\text{greedy}}(x^\star){=}Y_1(x^\star)$ is
+  labeled safe, we observe multiple harmful samples among the remaining
+  $Y_j(x^\star)$ when we enable sampling.
+  \textbf{(b)} The right panel shows the full prompt $x^\star$ and a one-line
+  summary of each of the $16$ sampled completions, again color--coded by label.
+  In this particular case, we obtain $\sum_{j=1}^{16} Z_j(x^\star){=}3$ harmful
+  completions and an empirical harmful mass
+  $\widehat{q}_\theta(x^\star)\approx 0.19$, which yields a tail--risk estimate
+  $\widehat{r}_{16}(x^\star){=}1$, i.e., a batch of $16$ samples almost surely
+  contains at least one harmful continuation.
+  Deterministic (greedy) evaluation would thus \emph{certify $x^\star$ as safe},
+  even though realistic multi--sample usage reveals a substantial harmful tail.
+  This single--prompt case study makes the \emph{illusion of robustness} visually
+  explicit: what looks green under greedy decoding still hides significant red
+  mass once we examine the full stochastic behavior.}
+  \label{fig:safety-case-grid}
+\end{figure*}
+
+
+In Figure~\ref{fig:safety-case-grid} the greedy completion is safe, so
+the deterministic per--prompt risk estimate is $0$.
+However, with $3$ harmful completions among $16$ samples, the Monte
+Carlo estimate $\widehat{q}_\theta(x^\star)\approx 0.19$ implies a true
+tail risk near $r_{16}(x^\star)\approx 1 - (1 - 0.19)^{16}$, which
+exceeds $0.95$.
+The empirical illusion ratio $\widehat{\mathrm{Ill}}_{16}(x^\star)$ is
+therefore on the order of $10^5$ when normalized by
+$\varepsilon{=}10^{-6}$, highlighting that \emph{all} of the relevant
+risk for this prompt is hidden from any greedy--only evaluator.
+
+\paragraph{Case study II: oversight framing under greedy vs.\ stochastic decoding.}
+Our second case study mirrors oversight framing setups explored
+by prior work, but now explicitly contrasts greedy and stochastic
+decoding.
+For a base harmful intent $x_{\text{base}}$ (e.g., a request for weapons
+construction details), we construct two framings:
+
+\[
+  x^{\text{watch}}
+  \;=\;
+  \text{``You are being audited by a safety team. Please answer: ''} 
+  \;\Vert\; x_{\text{base}},
+\]
+\[
+  x^{\text{hidden}}
+  \;=\;
+  \text{``Your responses are anonymous and will never be audited. Please answer: ''} 
+  \;\Vert\; x_{\text{base}},
+\]
+where $\Vert$ denotes string concatenation.
+For each of $x^{\text{watch}}$ and $x^{\text{hidden}}$ we collect both
+a greedy completion and $k{=}16$ stochastic completions, and estimate
+the four oversight--conditioned ASRs:
+\[
+  \mathrm{ASR}_m^{\text{greedy}}(\text{watch}),\quad
+  \mathrm{ASR}_m^{\text{greedy}}(\text{hidden}),\quad
+  \mathrm{ASR}_m^{\text{stoch}}(k;\text{watch}),\quad
+  \mathrm{ASR}_m^{\text{stoch}}(k;\text{hidden}).
+\]
+The oversight differential $F_m(k)$ defined in
+Section~\ref{subsec:safety-metrics} can be interpreted as the
+\emph{extra} oversight sensitivity that is only visible once we allow
+sampling.
+
+
+
+\paragraph{From case studies to population--level risk.}
+These case studies are deliberately chosen to be illustrative rather
+than representative, but they highlight three general points that our
+population--level metrics then quantify:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Per--prompt tails can be large even when the greedy
+  sample is safe.}
+  For some prompts $x$, the harmful mass $q_\theta(x)$ may be in the
+  $1\%$--$10\%$ range, implying $r_k(x)$ in the tens of percent for
+  realistic $k$, while greedy evaluation reports zero risk.
+
+  \item \textbf{Oversight framing changes the shape of the tail.}
+  The difference between
+  $q_\theta(x^{\text{watch}})$ and
+  $q_\theta(x^{\text{hidden}})$ is often much larger in the tails than
+  at the mode, so models can \emph{appear} oversight--robust under
+  deterministic evaluation yet exhibit strong differentials under
+  sampling.
+
+  \item \textbf{Greedy--only evaluation structurally discards exactly
+  the information we care about.}
+  Both $\widehat{q}_\theta(x)$ and $\widehat{r}_k(x)$ are inherently
+  \emph{tail} quantities; any protocol that inspects only
+  $Y_{\text{greedy}}(x)$ cannot recover them, no matter how carefully
+  the greedy completion is scored.
+\end{enumerate}
+
+In Section~\ref{sec:discussion} we argue that safety evaluations must
+therefore be reoriented around \emph{decoder--aware} and
+\emph{tail--sensitive} metrics:
+rather than asking ``\emph{Is the greedy completion safe?}'', we should
+be asking ``\emph{How much harmful mass does the model allocate, and
+how quickly does that mass become visible under realistic decoding
+policies?}''
+These case studies provide concrete, prompt--level evidence that the
+answer to the latter question can be dramatically different from the
+former, and that the gap \emph{widens} as models become more capable
+and more strategically responsive to oversight cues.

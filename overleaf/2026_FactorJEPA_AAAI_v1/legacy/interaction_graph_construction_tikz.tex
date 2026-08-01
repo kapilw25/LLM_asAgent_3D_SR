@@ -1,0 +1,294 @@
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    x=1cm,
+    y=1cm,
+    >=Stealth,
+    font=\scriptsize,
+    roadC/.style={draw=blue!35!black, fill=blue!10},
+    walkSoftC/.style={draw=orange!50!black, fill=orange!18},
+    driveSoftC/.style={draw=cyan!40!black, fill=cyan!10},
+    bottleneckC/.style={draw=red!70!black, fill=red!22},
+    occC/.style={draw=violet!60!black, fill=violet!18},
+    stallC/.style={draw=brown!70!black, fill=brown!25},
+    dividerC/.style={draw=black!70, fill=black!18},
+    pedFill/.style={draw=teal!70!black, fill=teal!18},
+    groupFill/.style={draw=teal!80!black, fill=teal!28},
+    vehFill/.style={draw=yellow!50!black, fill=yellow!28},
+    twFill/.style={draw=blue!70!black, fill=blue!16},
+    busFill/.style={draw=black!80, fill=gray!35},
+    cartFill/.style={draw=brown!70!black, fill=brown!20},
+    animalFill/.style={draw=green!60!black, fill=green!18},
+    panel/.style={rounded corners=3pt, draw=black!35, line width=0.5pt},
+    ptitle/.style={font=\small\bfseries},
+    sceneText/.style={font=\tiny, align=center},
+    cueText/.style={font=\tiny, align=left},
+    vehicle/.style={rectangle, rounded corners=2pt, minimum width=0.72cm, minimum height=0.34cm, inner sep=1pt, vehFill},
+    twowheel/.style={rectangle, rounded corners=2pt, minimum width=0.56cm, minimum height=0.28cm, inner sep=1pt, twFill},
+    bus/.style={rectangle, rounded corners=2pt, minimum width=1.15cm, minimum height=0.42cm, inner sep=1pt, busFill},
+    cart/.style={rectangle, minimum width=0.62cm, minimum height=0.30cm, inner sep=1pt, cartFill},
+    ped/.style={circle, minimum size=0.23cm, inner sep=0pt, pedFill},
+    group/.style={ellipse, minimum width=0.82cm, minimum height=0.38cm, inner sep=1pt, groupFill},
+    animal/.style={diamond, minimum size=0.30cm, inner sep=0pt, animalFill},
+    gveh/.style={rectangle, rounded corners=2pt, minimum width=0.76cm, minimum height=0.34cm, inner sep=1pt, vehFill},
+    gtw/.style={rectangle, rounded corners=2pt, minimum width=0.62cm, minimum height=0.30cm, inner sep=1pt, twFill},
+    gbus/.style={rectangle, rounded corners=2pt, minimum width=0.92cm, minimum height=0.36cm, inner sep=1pt, busFill},
+    gped/.style={circle, minimum size=0.42cm, inner sep=0pt, pedFill},
+    ggroup/.style={ellipse, minimum width=0.82cm, minimum height=0.40cm, inner sep=1pt, groupFill},
+    gcart/.style={rectangle, minimum width=0.68cm, minimum height=0.32cm, inner sep=1pt, cartFill},
+    ganimal/.style={diamond, minimum size=0.45cm, inner sep=0pt, animalFill},
+    track/.style={->, line width=1.0pt, draw=black!70},
+    weaktrack/.style={->, dashed, line width=0.8pt, draw=black!45},
+    cand/.style={dotted, line width=1.0pt, draw=black!50},
+    yieldE/.style={->, line width=1.8pt, draw=orange!80!black},
+    crossE/.style={<->, line width=1.8pt, draw=red!75!black},
+    followE/.style={->, line width=1.8pt, draw=blue!75!black},
+    blockE/.style={->, line width=2.0pt, draw=black!80},
+    avoidE/.style={->, line width=1.8pt, draw=green!60!black},
+    mergeE/.style={<->, line width=1.8pt, draw=violet!75!black},
+    proxE/.style={<->, dotted, line width=1.7pt, draw=teal!70!black},
+    rejectE/.style={->, dashed, line width=1.2pt, draw=gray!70},
+    edgeLabel/.style={fill=white, inner sep=1pt, font=\tiny}
+]
+
+% ============================================================
+% Panel titles
+% ============================================================
+
+\node[ptitle] at (-3.45,3.55) {(A1) Market corridor: scene evidence};
+\node[ptitle] at (5.15,3.55) {(A2) Market corridor: retained interaction graph};
+\node[ptitle] at (-3.45,-4.75) {(B1) Junction crossing: scene evidence};
+\node[ptitle] at (5.15,-4.75) {(B2) Junction crossing: retained interaction graph};
+
+% ============================================================
+% Panel boxes
+% ============================================================
+
+\draw[panel] (-7.10,-0.10) rectangle (0.20,3.25);
+\draw[panel] (0.70,-0.10) rectangle (9.60,3.25);
+\draw[panel] (-7.10,-8.40) rectangle (0.20,-5.05);
+\draw[panel] (0.70,-8.40) rectangle (9.60,-5.05);
+
+% ============================================================
+% Top-left: Market corridor scene
+% ============================================================
+
+\path[roadC] (-6.70,0.10) -- (-0.10,0.25) -- (-0.20,2.80) -- (-6.85,2.95) -- cycle;
+\path[walkSoftC] (-6.80,2.15) -- (-0.15,2.05) -- (-0.20,2.80) -- (-6.85,2.95) -- cycle;
+\path[driveSoftC] (-6.72,0.10) -- (-0.08,0.25) -- (-0.03,0.72) -- (-6.75,0.55) -- cycle;
+
+\node[sceneText] at (-5.85,2.57) {\textbf{\emph{walkable-soft}}\\spillover};
+\node[sceneText] at (-5.95,0.30) {\textbf{\emph{drivable-soft}}\\mixed use};
+
+\draw[dashed, blue!35!black] (-6.35,1.18) .. controls (-4.85,1.24) and (-2.40,1.14) .. (-0.35,1.25);
+
+\node[stallC, rectangle, rounded corners=2pt, minimum width=1.05cm, minimum height=0.44cm] (stall1) at (-2.50,2.25) {\tiny stall zone};
+\node[cart] (cart1) at (-3.30,1.95) {\tiny $c_1$};
+
+\filldraw[bottleneckC, opacity=0.35, rounded corners=3pt] (-3.85,1.25) rectangle (-1.50,2.45);
+\node[sceneText] at (-1.15,2.42) {\textbf{\emph{bottleneck}}};
+
+\fill[pattern=north east lines, pattern color=violet!60!black, opacity=0.40] (-2.25,1.12) ellipse (0.95 and 0.45);
+\draw[occC, dashed] (-2.25,1.12) ellipse (0.95 and 0.45);
+\node[sceneText] at (-1.10,0.70) {\textbf{\emph{occlusion}}};
+
+\node[bus, rotate=2] (Mb1) at (-2.38,1.12) {\tiny bus $b_1$};
+\node[vehicle, rotate=5] (Mr1) at (-4.05,1.18) {\tiny auto $r_1$};
+\node[twowheel, rotate=7] (Ms1) at (-5.25,1.06) {\tiny $s_1$};
+\node[twowheel, rotate=-6] (Ms2) at (-0.95,0.72) {\tiny $s_2$};
+
+\node[ped] (Mp1) at (-3.05,1.68) {};
+\node[font=\tiny] at (-3.05,1.93) {$p_1$};
+
+\node[ped] (Mp2) at (-4.45,2.48) {};
+\node[ped] (Mp3) at (-4.15,2.63) {};
+\node[ped] (Mp4) at (-3.85,2.40) {};
+\node[group] (Mg1) at (-4.15,2.38) {\tiny $g_1$};
+
+\node[ped] (Mp5) at (-0.38,2.08) {};
+\node[font=\tiny] at (-0.18,2.33) {$p_2$};
+
+\node[animal] (Ma1) at (-0.85,1.35) {};
+\node[font=\tiny] at (-0.60,1.60) {$a_1$};
+
+\draw[track] (-5.95,1.02) .. controls (-5.60,1.03) and (-5.45,1.04) .. (Ms1.west);
+\draw[track] (-4.75,1.10) .. controls (-4.45,1.12) and (-4.30,1.16) .. (Mr1.west);
+\draw[track] (Mr1.east) .. controls (-3.55,1.25) and (-2.95,1.35) .. (-2.20,1.55);
+\draw[weaktrack] (Mp1.north) .. controls (-2.95,1.95) and (-2.75,2.10) .. (-2.48,2.12);
+\draw[track] (Ms2.east) .. controls (-0.60,0.74) and (-0.38,0.98) .. (-0.22,1.24);
+\draw[weaktrack] (Mg1.east) .. controls (-3.55,2.34) and (-3.15,2.18) .. (-2.72,2.00);
+
+\draw[cand] (Mr1) -- node[edgeLabel, above] {TTC} (Mp1);
+\draw[cand] (Ms1) -- node[edgeLabel, below] {follow} (Mr1);
+\draw[cand] (Mb1) -- node[edgeLabel, below] {block} (Mr1);
+\draw[cand] (Mg1) -- node[edgeLabel, above] {prox} (Mr1);
+\draw[cand] (cart1) -- node[edgeLabel, above] {bneck} (Mr1);
+\draw[cand] (Ms2) -- node[edgeLabel, above right] {avoid} (Ma1);
+
+\node[
+    cueText,
+    draw=black!35,
+    rounded corners=2pt,
+    fill=white,
+    text width=6.25cm
+] at (-3.45,0.25) {
+\textbf{\emph{Automatic cues:}} SAM3 masks $\rightarrow$ tracklets; soft-layout occupancy; bottleneck overlap; occlusion support; distance; relative velocity; trajectory crossing; time-to-collision.
+};
+
+% ============================================================
+% Top-right: Market graph
+% ============================================================
+
+\node[gveh]   (GMr1) at (3.05,1.35) {$r_1$};
+\node[gtw]    (GMs1) at (1.85,0.55) {$s_1$};
+\node[gtw]    (GMs2) at (6.15,0.58) {$s_2$};
+\node[gbus]   (GMb1) at (5.10,1.52) {$b_1$};
+\node[gped]   (GMp1) at (3.42,2.45) {$p_1$};
+\node[ggroup] (GMg1) at (1.95,2.30) {$g_1$};
+\node[gcart]  (GMc1) at (7.45,2.20) {$c_1$};
+\node[ganimal](GMa1) at (7.45,0.92) {$a_1$};
+\node[gped]   (GMp2) at (8.55,1.58) {$p_2$};
+
+\draw[yieldE]  (GMr1) -- node[edgeLabel, right] {yield .82} (GMp1);
+\draw[crossE]  (GMr1) -- node[edgeLabel, above] {cross .77} (GMg1);
+\draw[followE] (GMs1) -- node[edgeLabel, below left] {follow .74} (GMr1);
+\draw[blockE]  (GMb1) -- node[edgeLabel, above] {block .91} (GMr1);
+\draw[proxE]   (GMg1) -- node[edgeLabel, left] {prox .72} (GMp1);
+\draw[mergeE]  (GMc1) -- node[edgeLabel, above] {bneck .86} (GMr1);
+\draw[avoidE]  (GMs2) -- node[edgeLabel, below] {avoid .80} (GMa1);
+
+\draw[rejectE] (GMp2) -- node[edgeLabel, above right] {reject .38} (GMc1);
+\draw[rejectE] (GMb1) -- node[edgeLabel, right] {static .29} (GMc1);
+
+\node[
+    cueText,
+    draw=black!35,
+    rounded corners=2pt,
+    fill=gray!5,
+    text width=4.70cm
+] at (5.05,2.85) {
+$p(e_{ij})=\sigma(w_1\phi_{\mathrm{prox}}+w_2\phi_{\mathrm{ttc}}+w_3\phi_{\mathrm{cross}}+w_4\phi_{\mathrm{vel}}+w_5\phi_{\mathrm{occ}}+w_6\phi_{\mathrm{bneck}})$
+};
+
+\node[
+    cueText,
+    draw=black!35,
+    rounded corners=2pt,
+    fill=white,
+    text width=4.10cm
+] at (6.55,0.00) {
+\textbf{\emph{Retain edge if}} $p(e_{ij})>\tau_E$ and $\mathrm{dur}(e_{ij})>T_E$.\\
+\textbf{\emph{Reject if}} low confidence, short duration, or boundary ambiguity.
+};
+
+% ============================================================
+% Bottom-left: Junction scene
+% ============================================================
+
+\path[roadC] (-6.85,-8.10) rectangle (-0.20,-5.35);
+\fill[roadC, draw=blue!35!black] (-4.10,-8.30) rectangle (-2.95,-5.10);
+\fill[roadC, draw=blue!35!black] (-6.85,-6.95) rectangle (0.00,-5.95);
+
+\filldraw[walkSoftC, opacity=0.55] (-4.75,-6.72) rectangle (-2.30,-6.20);
+\foreach \x in {-4.60,-4.20,-3.80,-3.40,-3.00,-2.60} {
+    \draw[white, line width=1.0pt] (\x,-6.70) -- (\x+0.18,-6.22);
+}
+\node[sceneText] at (-5.75,-6.10) {\textbf{\emph{informal}}\\\textbf{\emph{crossing}}};
+
+\filldraw[dividerC] (-1.35,-6.95) rectangle (-0.85,-5.95);
+\node[sceneText] at (-1.10,-5.70) {\textbf{\emph{divider}}};
+
+\fill[pattern=north west lines, pattern color=violet!60!black, opacity=0.40] (-4.25,-6.00) ellipse (0.80 and 0.45);
+\draw[occC, dashed] (-4.25,-6.00) ellipse (0.80 and 0.45);
+\node[sceneText] at (-5.20,-5.45) {\textbf{\emph{occlusion}}};
+
+\node[bus, rotate=90] (Jb2) at (-4.10,-6.10) {\tiny bus $b_2$};
+\node[vehicle] (Jr2) at (-5.55,-6.45) {\tiny auto $r_2$};
+\node[twowheel] (Js3) at (-6.20,-6.45) {\tiny $s_3$};
+\node[twowheel, rotate=90] (Js4) at (-3.35,-7.55) {\tiny $s_4$};
+\node[animal] (Ja2) at (-2.15,-6.52) {};
+\node[font=\tiny] at (-1.82,-6.25) {$a_2$};
+
+\node[ped] (Jp3) at (-3.45,-6.42) {};
+\node[font=\tiny] at (-3.45,-6.05) {$p_3$};
+
+\node[ped] (Jp4) at (-2.75,-6.35) {};
+\node[font=\tiny] at (-2.60,-6.00) {$p_4$};
+
+\node[vehicle] (Jc2) at (-0.55,-6.45) {\tiny car $v_1$};
+
+\draw[track] (-6.70,-6.45) -- (Js3.west);
+\draw[track] (-5.92,-6.45) -- (Jr2.west);
+\draw[track] (Jr2.east) .. controls (-5.00,-6.45) and (-4.55,-6.48) .. (-4.00,-6.58);
+\draw[track] (Js4.north) .. controls (-3.35,-7.15) and (-3.35,-6.95) .. (-3.35,-6.72);
+\draw[weaktrack] (Jp3.east) -- (-2.95,-6.40);
+\draw[track] (-0.20,-6.45) -- (Jc2.east);
+
+\draw[cand] (Jr2) -- node[edgeLabel, above] {yield} (Jp3);
+\draw[cand] (Js4) -- node[edgeLabel, right] {merge} (Jr2);
+\draw[cand] (Jb2) -- node[edgeLabel, above left] {occ} (Jp3);
+\draw[cand] (Js4) -- node[edgeLabel, below] {avoid} (Ja2);
+\draw[cand] (Js3) -- node[edgeLabel, below] {follow} (Jr2);
+\draw[cand] (Jp4) -- node[edgeLabel, above] {cross} (Jc2);
+
+\node[
+    cueText,
+    draw=black!35,
+    rounded corners=2pt,
+    fill=white,
+    text width=6.25cm
+] at (-3.45,-8.05) {
+\textbf{\emph{Automatic cues:}} trajectory conflict at junction, pedestrian crossing band, bus-induced occlusion, merge from side arm, avoidance near animal, and hard negatives from nearby non-persistent pairs.
+};
+
+% ============================================================
+% Bottom-right: Junction graph
+% ============================================================
+
+\node[gveh]    (GJr2) at (2.85,-6.45) {$r_2$};
+\node[gtw]     (GJs3) at (1.55,-7.15) {$s_3$};
+\node[gtw]     (GJs4) at (4.40,-7.50) {$s_4$};
+\node[gbus]    (GJb2) at (4.95,-6.02) {$b_2$};
+\node[gped]    (GJp3) at (3.35,-5.35) {$p_3$};
+\node[gped]    (GJp4) at (7.10,-5.75) {$p_4$};
+\node[ganimal] (GJa2) at (6.05,-7.25) {$a_2$};
+\node[gveh]    (GJv1) at (8.15,-6.55) {$v_1$};
+
+\draw[yieldE]  (GJr2) -- node[edgeLabel, right] {yield .79} (GJp3);
+\draw[crossE]  (GJp4) -- node[edgeLabel, above] {cross .83} (GJv1);
+\draw[followE] (GJs3) -- node[edgeLabel, below left] {follow .71} (GJr2);
+\draw[mergeE]  (GJs4) -- node[edgeLabel, below] {merge .76} (GJr2);
+\draw[avoidE]  (GJs4) -- node[edgeLabel, right] {avoid .81} (GJa2);
+\draw[blockE]  (GJb2) -- node[edgeLabel, above] {occ/block .88} (GJp3);
+
+\draw[rejectE] (GJp3) -- node[edgeLabel, above] {reject .43} (GJa2);
+\draw[rejectE] (GJb2) -- node[edgeLabel, right] {reject .35} (GJv1);
+
+\node[
+    cueText,
+    draw=black!35,
+    rounded corners=2pt,
+    fill=white,
+    text width=4.15cm
+] at (6.65,-8.02) {
+\textbf{\emph{Interpretation:}} retained edges capture crossing, merge, avoidance, following, yielding, and occlusion-mediated blocking in a distinct interaction regime.
+};
+
+% ============================================================
+% Global legend
+% ============================================================
+
+\node[
+    draw=black!35,
+    rounded corners=3pt,
+    fill=white,
+    align=left,
+    text width=8.95cm,
+    font=\tiny
+] at (1.20,-9.35) {
+\textbf{\emph{Legend.}}
+Node colors/shapes encode agent classes: teal circles = pedestrians, teal ellipses = pedestrian groups, yellow rounded boxes = auto/car, blue rounded boxes = two-wheelers, gray rounded boxes = bus/truck, brown boxes = cart/bottleneck objects, green diamonds = animals.\\[0.35em]
+Edge colors encode interaction types: orange = yield, red = crossing, blue = follow, black = block/occlusion-mediated block, green = avoid, violet = merge/bottleneck coupling, teal dotted = proximity pressure, gray dashed = rejected candidate.
+};
+
+\end{tikzpicture}%
+}

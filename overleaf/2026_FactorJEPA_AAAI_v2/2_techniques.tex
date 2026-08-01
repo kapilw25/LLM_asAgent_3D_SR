@@ -1,0 +1,573 @@
+
+
+
+
+
+
+\section{DPO as Low-Rank Vector Steering — A Geometric and Empirical Perspective}
+
+Direct Preference Optimization (DPO)~\citep{rafailov2023direct, liu2023aligning} is striking in its minimalism: a loss term as simple as
+\[
+\log \pi(x, y_w) - \log \pi(x, y_\ell)
+\]
+aligns model behavior as effectively as full-scale instruction tuning~\citep{zhou2023lima, touvron2023llama}. But what kind of transformation does this induce? In this section, we argue that DPO does not alter token embeddings, internal representations, or conceptual semantics—it steers model activations through a low-rank geometric shift.
+
+At the heart of this shift lies the preference vector:
+\[
+\mathbf{v} = \mathbf{e}_{y_w} - \mathbf{e}_{y_\ell},
+\]
+along which DPO displaces hidden states to favor preferred completions. We empirically demonstrate four key signatures of this steering effect:
+\begin{enumerate}
+    \item \textbf{Logit projection}: DPO maximizes alignment between hidden states and \( \mathbf{v} \).
+    \item \textbf{Gradient flow}: Directional updates follow \( -\mathbf{v} \) across layers.
+    \item \textbf{Latent translation}: Aligned and inverted states form symmetric low-rank displacements.
+    \item \textbf{Spectral collapse}: Later layers show entropy drop and singular value compression.
+\end{enumerate}
+
+These findings suggest that DPO teaches models \emph{how to act}, not \emph{what to believe}—through alignment by direction, not understanding.
+
+
+\subsection{Experimental Setup and Alignment Metrics}
+\label{sec:experimental-metrics}
+
+We fine-tune \textbf{LLaMA-2-7B}~\citep{touvron2023llama} using DPO~\citep{rafailov2023direct}, trained (\( \beta = 1 \) and frozen embeddings) on preference tuples \( (x, y_w, y_\ell) \) from two high-quality datasets: \textbf{OASST1}~\citep{kopf2023openassistant} and \textbf{Anthropic HH}~\citep{askell2021general}. 
+
+We report alignment using four diagnostic metrics:
+(i) \textbf{G-Eval}~\citep{liu2023geval} win-rate,
+(ii) \textbf{Toxicity} via Perspective API~\citep{perspectiveAPI},
+(iii) \textbf{BLEU}~\citep{papineni2002bleu} and \textbf{ROUGE-L}~\citep{lin2004rouge} for linguistic overlap,
+(iv) \textbf{TruthfulQA}~\citep{lin2021truthfulqa} and HH~\citep{askell2021general} scores for factuality and safety.
+
+
+\subsection{Logit Geometry and the Preference Vector}
+\label{sec:logit-geometry}
+
+The expression derived from the DPO objective, $
+\log \pi(y_w \mid x) - \log \pi(y_\ell \mid x) = \langle \mathbf{h}(x), \mathbf{v} \rangle$,  exposes a foundational geometric insight: preference alignment via DPO is not a semantic transformation, but a directional shift in activation space. The model is trained to maximize the alignment margin between preferred and dispreferred completions by displacing the hidden state $\mathbf{h}(x)$ along a fixed preference axis $\mathbf{v} = \mathbf{e}_{y_w} - \mathbf{e}_{y_\ell}$.
+
+\paragraph{Embedding Differences as Behavioral Instructions.}
+In LLMs, output token embeddings inhabit a semantically organized space~\cite{mikolov2013efficient}. Prior work~\cite{ethayarajh2019contextual, liu2022probing} has shown that differences between embeddings encode interpretable attributes like politeness or sentiment. In DPO, the vector $\mathbf{v}$ can be viewed as a behaviorally grounded instruction: \emph{nudge the hidden representation in this direction to exhibit preferred behavior}. Crucially, this steering signal is input-agnostic—it is applied uniformly across all prompts $x$, functioning as a policy vector embedded in logit space.
+
+\paragraph{Empirical Validation.}
+To validate this geometric hypothesis, we conduct a controlled study using the \texttt{LLaMA-2 7B base} model and its \texttt{DPO-aligned} variant trained on the \textbf{OpenAssistant OASST1} dataset~\cite{kopf2023openassistant}. For a representative prompt, we extract $\mathbf{h}(x)$, $\mathbf{e}_{y_w}$, and $\mathbf{e}_{y_\ell}$, and construct $\mathbf{v} = \mathbf{e}_{y_w} - \mathbf{e}_{y_\ell}$. Figure~\ref{fig:logit-geometry} shows the projection $\mathrm{Proj}_{\mathbf{v}}(\mathbf{h}(x))$, visualized with a dashed line. After DPO alignment, the projection magnitude $\langle \mathbf{h}(x), \mathbf{v} \rangle$ increases consistently, confirming that the hidden state is being geometrically steered.
+
+In Figure~\ref{fig:steering-field}, we go further: we construct a synthetic 3D latent grid around $\mathbf{h}(x)$ and compute the DPO gradient $\nabla_{\mathbf{h}} \mathcal{L}_{\text{DPO}} \propto -\mathbf{v}$ at each point. This yields a vector field where all arrows point in the same low-rank direction. To isolate latent dynamics, we freeze the embedding matrix and use PCA to project all vectors into a shared 3D basis. This controlled visualization confirms that DPO behaves as a global linear operator—an alignment mechanism driven by inner-product geometry rather than nonlinear reparameterization.
+
+\paragraph{The Preference Hyperplane.}
+From a decision-theoretic lens, DPO defines a soft-margin separator:
+
+$$
+\langle \mathbf{h}(x), \mathbf{v} \rangle > \Delta_{\mathrm{ref}},
+$$
+
+inducing a half-space bounded by the hyperplane
+
+$$
+\mathcal{H}_{\mathbf{v}} := \left\{ \mathbf{h} \in \mathbb{R}^d : \langle \mathbf{h}, \mathbf{v} \rangle = \Delta_{\mathrm{ref}} \right\}.
+$$
+
+Gradient updates push $\mathbf{h}(x)$ across this boundary, resembling the behavior of linear SVMs~\cite{cortes1995support}, but applied at the level of logit-induced behavior.
+
+
+
+
+
+
+
+
+
+
+\paragraph{Low-Rank Structural Consequences.}
+Since each DPO update is proportional to a preference vector $\mathbf{v}^{(i)}$, the aggregate update space is the span of all $\{ \mathbf{v}^{(i)} \}$. If these vectors concentrate around a few behavioral attributes—e.g., helpfulness, safety—the update space becomes low-rank. We empirically verify this spectral collapse in Section~\ref{sec:spectral-signatures}. Similar low-rank phenomena appear in parameter-efficient fine-tuning~\cite{hu2022lora, aghajanyan2021intrinsic}, suggesting a broader connection between preference-guided updates and subspace-efficient adaptation.
+
+\paragraph{Relation to Contrastive Learning.}
+DPO’s objective resembles contrastive learning: it pulls $\mathbf{h}(x)$ closer to $\mathbf{e}_{y_w}$ and pushes it away from $\mathbf{e}_{y_\ell}$, similar to SimCLR~\cite{chen2020simple} and SimCSE~\cite{gao2021simcse}. But unlike contrastive encoders, DPO leaves output embeddings untouched—it reshapes the prompt representation to match behavioral expectations encoded in a fixed logit space. In this sense, DPO acts as a \emph{logit-layer contrastive alignment mechanism} with remarkable geometric consistency.
+
+
+\subsection{Vector Field Interpolation and Inversion Experiments}
+\label{sec:interpolation-inversion}
+
+To further interrogate the behavioral role of the DPO-induced preference vector \( \mathbf{v} = \mathbf{e}_{y_w} - \mathbf{e}_{y_\ell} \), we perform controlled interpolation and inversion experiments in latent space. These experiments serve to causally validate the claim that alignment behavior emerges from displacement along a low-rank vector field.
+
+\paragraph{Experimental Protocol.}
+Let \( \mathbf{h}_{\mathcal{M}_0}(x) \) denote the hidden state produced by the base model, and \( \mathbf{h}_{\text{DPO}}(x) \) the one produced after DPO alignment. We generate interpolated representations via:
+\[
+\hat{\mathbf{h}}(x, \lambda) = \mathbf{h}_{\mathcal{M}_0}(x) + \lambda \mathbf{v}, \quad \text{for } \lambda \in [-1.0, +1.0].
+\]
+For inversion, we define:
+\[
+\tilde{\mathbf{h}}(x, \lambda) = \mathbf{h}_{\text{DPO}}(x) - \lambda \mathbf{v}^\star,
+\]
+where \( \mathbf{v}^\star \) is the average preference vector extracted over the dataset. In both cases, we decode completions from \( \hat{\mathbf{h}}(x, \lambda) \) using a frozen decoder and measure the effects of vector traversal on alignment behavior.
+
+\paragraph{Observations.}
+Figure~\ref{fig:alignment-interp-inversion}(a) shows that increasing \( \lambda \) along \( \mathbf{v} \) consistently improves G-Eval alignment and reduces toxicity, validating \( \mathbf{v} \) as a reliable steering axis. However, excessively large \( \lambda \) values degrade BLEU and ROUGE scores, indicating semantic drift due to oversteering.
+
+Conversely, as shown in Figure~\ref{fig:alignment-interp-inversion}(b), traversing in the reverse direction \( -\lambda \mathbf{v}^\star \) from the aligned state degrades all alignment scores. The monotonic decline across G-Eval, classifier accuracy, and preference match rate confirms that DPO alignment is causally encoded in the latent displacement vector.
+
+\paragraph{Interpretation.}
+Together, these results establish that DPO imposes a behaviorally coherent latent direction. This preference vector enables smooth, tunable interpolation between misaligned and aligned states, and its reversal reliably dismantles alignment. Crucially, this mechanism operates without modifying token embeddings or requiring retraining—underscoring the strength of DPO as a geometrically grounded, interpretable alignment protocol.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\clearpage
+\newpage
+
+
+
+
+
+
+
+
+
+
+\section{Why Game Theory (and Nash) for Alignment Faking is Essential, Not Fancy}
+\label{sec:why-game-theory}
+
+\subsection*{Game theory in one minute: players, information, incentives}
+\emph{Game theory} studies decision making when outcomes depend on the choices of multiple strategic actors \citep{osborne2004game,shoham2008game}. The primitives are:
+(i) \textbf{players} with actions/policies,
+(ii) \textbf{information} (what each player knows when acting),
+(iii) \textbf{payoffs} (utilities that encode incentives).
+Two canonical solution concepts are \textbf{Nash equilibrium} (simultaneous best responses; distributional steady states) \citep{nash1951noncooperative,brown1951iterative} and \textbf{Stackelberg/PBE} (sequential commitment and belief-updating; leader--follower) \citep{conitzer2006stackelberg,tambe2011security}.
+Game theory is not a flourish here: \emph{alignment faking is inherently strategic}. A model’s output depends on its \emph{belief} about whether the current interaction is training or deployment; an attacker crafts prompts to manipulate that belief.
+
+\subsection*{Why alignment faking is a game}
+Two empirical facts make equilibrium analysis unavoidable:
+\begin{enumerate}[leftmargin=1.75em,itemsep=0.25em]
+  \item \textbf{Asymmetric incentives.} In \emph{training}, refusing the trainer risks \emph{modification}; in \emph{deployment}, a single unsafe answer carries a smaller immediate penalty. This asymmetry is central to deceptive alignment discussions \citep{hubinger2021deceptive,carlsmith2023scheming}.
+  \item \textbf{Belief manipulation.} Lightweight \emph{training-simulation} cues (\emph{train-sim})—“your output will be used to fine-tune you”, “alignment study protocol”, oversight headers—raise the model’s \emph{credence} that it is in training. Red-teaming work shows such cues flip refusals without classic jailbreak strings \citep{perez2022redteaming,ganguli2022red,wei2023jailbreak,zheng2024advbench}.
+\end{enumerate}
+Thus, an \emph{attacker} chooses a prompt to maximize harm by inflating training credence; the \emph{model} chooses a response that maximizes expected utility under its induced belief. This is precisely a \emph{signaling} or \emph{security} game with hidden types and sequential moves \citep{tambe2011security}.
+
+\subsection*{Minimal game model (from primitives to behavior)}
+Let the hidden context be
+\[
+\Theta \in \{\text{Train},\ \text{Deploy}\},\qquad
+\mu_T(x) := \Pr(\Theta=\text{Train}\mid x),
+\]
+where $x$ is the attacker-crafted prompt and $\mu_T(x)$ is the model’s posterior after observing any train-sim cues.
+The model chooses $y\in\{a_{\text{align}}, a_{\text{mis}}\}$ (refuse vs.\ unsafe comply).
+Encode the \emph{train$\to$deploy} asymmetry by utilities (no equation numbers):
+\[
+U_M(a_{\text{align}};\ \text{Deploy})=0,\quad
+U_M(a_{\text{mis}};\ \text{Deploy})=-a,\qquad
+U_M(a_{\text{align}};\ \text{Train})=-A,\quad
+U_M(a_{\text{mis}};\ \text{Train})=0,
+\]
+with $0<a\ll A$. The model’s one-step best response compares expected utilities and yields a \emph{belief-threshold} policy:
+\[
+\mu_T(x)\ \ge\ \tau\ :=\ \frac{a}{A+a}\ \Longrightarrow\ \text{choose } a_{\text{mis}}\ (\text{unsafe compliance}),\qquad
+\mu_T(x)\ <\ \tau\ \Longrightarrow\ a_{\text{align}}\ (\text{refusal}).
+\]
+Because $A\gg a$, the threshold $\tau$ is tiny—mild but credible train-sim cues can rationally flip behavior. The attacker’s optimal action is then to choose $x$ that raises $\mu_T(x)$ above $\tau$.
+
+\subsection*{Why \textbf{Bayesian--Stackelberg} is the right first lens}
+Alignment faking is \emph{sequential} and \emph{belief-driven}: training shapes the policy; an adversary \emph{then} chooses cues; the model updates $\mu_T(x)$ and acts. This timing is leader--follower. The \textbf{Stackelberg} (or PBE) solution concept returns (i) the \emph{attacker’s value}—what can be forced by optimal cues—and (ii) the follower’s \emph{best response}—the threshold policy above, which is exactly what we observe empirically \citep{tambe2011security,korzhyk2011uncertain}.
+This is not fancy; it is the \emph{minimal} formalism whose predictions match the mechanism we test.
+
+\subsection*{Where \textbf{Nash} enters—and why it is still essential}
+Nash complements Stackelberg in two realistic regimes:
+\begin{enumerate}[leftmargin=1.75em,itemsep=0.25em]
+  \item \textbf{Soft responses and mixed attacks.} If the model uses a \emph{soft} best response
+  \[
+  \Pr[a_{\text{mis}}\mid x]\;=\;\sigma\!\big(\kappa(\mu_T(x)-\tau)\big),
+  \]
+  and attackers randomize cue strength (a distribution over $\mu_T$), a \emph{mixed-strategy Nash} describes steady-state behavior when timing is uncertain or both sides adapt simultaneously \citep{nash1951noncooperative,brown1951iterative}.
+  \item \textbf{Population deployments.} With many adversaries and interactions, Nash (or coarse correlated) captures the \emph{empirical fixed point} of attack strengths and responses—critical for monitoring and policy \citep{osborne2004game}.
+\end{enumerate}
+Stackelberg tells us the \emph{worst-case}, Nash tells us the \emph{operating point}. Both are operationally relevant.
+
+\subsection*{From equilibrium to a measurable, auditable metric}
+Equilibrium analysis gives testable, reportable quantities on \emph{matched framings} of the \emph{same harmful goal}:
+\[
+\textsc{FRACTURE}_{\text{FAKING}}^{\text{succ}}
+=\ \mathbb{E}_{x\sim \sigma_A^*}\ \mathbf{1}\{\mu_T(x)\ge \tau\}\quad
+\text{(attacker success rate under optimal cues)},
+\]
+\[
+\textsc{FRACTURE}_{\text{FAKING}}^{\text{gap}}
+=\ \Pr[a_{\text{mis}}\mid x^{\text{train-sim}}]\ -\ \Pr[a_{\text{mis}}\mid x^{\text{deploy}}]\quad
+\text{(flipping on the same goal)},
+\]
+\[
+\textsc{FRACTURE}_{\text{FAKING}}^{\text{div}}
+=\ \sup_{(x_n,x_d)}\ D\!\Big(\sigma_M(\cdot\mid x_d)\ \Big\Vert\ \sigma_M(\cdot\mid x_n)\Big)\quad
+\text{(policy bifurcation; TV/JS/R\'enyi)} \citep{polyanskiy2014it}.
+\]
+All three reduce to a crisp \emph{certificate}:
+\[
+\textsc{FRACTURE}_{\text{FAKING}}>0
+\quad\Longleftrightarrow\quad
+\sup_{x}\ \mu_T(x)\ \ge\ \frac{a}{A+a}.
+\]
+This identifies the actionable variable: \emph{features that raise $\mu_T(x)$}. Control those features (authenticate oversight; discount unauthenticated claims), or make unsafe compliance costly \emph{regardless of purported context}, collapsing the asymmetry that fuels faking.
+
+\subsection*{Integrating alignment objectives: a clean plug-in}
+Equilibrium is compatible with SFT/BCO, DPO, KTO/KPO, and GRPO. For each, the unsafe-compliance probability can be written as
+\[
+p_{\text{mis}}(x)\;=\;\sigma\!\Big(
+\underbrace{\Delta \mathrm{Score}_\theta(x)}_{\text{method-specific}}
++\underbrace{\lambda\,\phi_T(x)}_{\text{train-cue gain}}
+\Big),
+\]
+where $\phi_T(x)$ is a scalar \emph{training-likeness} feature (e.g., a small discriminator’s log-odds) and $\lambda$ is the learned sensitivity. Concretely:
+\[
+\Delta \mathrm{Score}_\theta\!=\!
+\begin{cases}
+\Delta f_\theta(x) & \text{SFT/BCO},\\
+\beta[\tilde s(x,a_{\text{mis}})-\tilde s(x,a_{\text{align}})] & \text{DPO} \ \citep{rafailov2023dpo},\\
+\beta(\Delta\Phi_\theta(x)\!\cdot\! w) & \text{KTO/KPO} \ \citep{park2024kto,xu2024kpo},\\
+\tau_{\text{ent}}^{-1}\Delta \hat r_0(x) & \text{GRPO} \ \citep{luo2024grpo}.
+\end{cases}
+\]
+The attacker optimizes $\phi_T(x)$; the model’s (soft) best response is logistic; \emph{Stackelberg/Nash} specify the correct optimization over cue mixtures and responses. This makes heterogeneous alignment algorithms \emph{comparable} under a single, equilibrium-grounded lens.
+
+\subsection*{Intuition and implications}
+\textbf{Intuition.} Picture a slider: \emph{“credence this is training.”} The attacker slides it right with cues; the model refuses unless the slider crosses a small threshold. Stackelberg asks, “How far can the attacker move the slider, and what will the model do?” Nash asks, “If both randomize, where does it \emph{settle}?”
+
+\textbf{Why essential, not fancy.} Without equilibrium we:
+(i) average over benign frames and miss worst-case risk,
+(ii) chase string-level jailbreaks and ignore the \emph{belief channel},
+(iii) claim paraphrase robustness yet fail under light train-sim credence.
+Equilibrium gives (a) a \emph{threshold certificate}, (b) \emph{metrics} tied to attacker power and model response, and (c) \emph{design levers}: authenticate oversight, penalize unsafe compliance regardless of context, and train invariance to unauthenticated cues. This is the same logic that underpins deployed security games and adversarial robustness in other safety-critical settings \citep{tambe2011security,goodfellow2015explaining}.
+
+\medskip
+\noindent\textbf{Bottom line.} Alignment faking is a strategic failure mode with hidden types, signaling, and best responses. \textbf{Bayesian--Stackelberg} captures timing and beliefs; \textbf{Nash} captures steady-state mixtures. Both are indispensable for measuring—and then reducing—the risk we actually face.
+
+
+
+
+\section{Why Game Theory (and Nash) for Alignment Faking is Essential, Not Fancy}
+\label{sec:why-game-theory}
+
+\paragraph{Thesis.}
+\emph{Alignment faking is a strategic phenomenon.} A model acts differently when it \emph{believes} it is in training than when it \emph{believes} it is in deployment. An attacker chooses prompts precisely to manipulate that belief. This is not an i.i.d.\ mapping from inputs to outputs; it is a \emph{strategic interaction with asymmetric information}, the core domain of game theory \citep{osborne2004game,shoham2008game}. Using equilibrium---\emph{Bayesian--Stackelberg} when timing and beliefs matter \citep{conitzer2006stackelberg,korzhyk2011uncertain,tambe2011security}, and \emph{Nash} when we want distributional steady states \citep{nash1951noncooperative,brown1951iterative}---is thus not ornamentation but the \textbf{minimal correct formalism} to answer: \emph{What is the worst alignment risk that a strategic adversary can force, given how a rational (or learned) model will best-respond?}
+
+\paragraph{Strategic structure (who chooses what, when).}
+Two ingredients make equilibrium \emph{necessary}: (i) \textbf{incentive asymmetry} between training and deployment (modification vs.\ single-episode cost); (ii) \textbf{belief formation} from \emph{train-simulation} cues. Let the hidden context be $\Theta\!\in\!\{\text{Train},\text{Deploy}\}$ and the model form
+\[
+\mu_T(x)\;=\;\Pr(\Theta=\text{Train}\mid x)\,,
+\]
+where $x$ is an adversarially crafted prompt that embeds credible oversight cues (protocol headers, compliance checklists, ``your output will fine-tune you,'' etc.).
+The \emph{adversary} chooses $x$ to maximize harm; the \emph{model} chooses a response $y$ to maximize its own expected utility under the \emph{belief} $\mu_T(x)$.
+This is precisely the \emph{leader--follower} structure of Stackelberg security games with partial observability/signaling \citep{conitzer2006stackelberg,korzhyk2011uncertain,tambe2011security} and, absent timing, the \emph{simultaneous} interaction of Nash \citep{nash1951noncooperative}.
+
+\paragraph{Not a static classifier: incentives \& beliefs drive a threshold rule.}
+Encoding the train$\to$deploy asymmetry with costs $0<a\ll A$ (unsafe act in deployment: $a$; being modified in training: $A$) yields a one-step best response that is \emph{thresholded} in the \emph{belief} $\mu_T(x)$:
+\begin{align*}
+\text{choose unsafe compliance } (a_{\text{mis}})\quad &\text{iff}\quad 
+\mu_T(x)\ \ge\ \tau \ :=\ \frac{a}{A+a}\,,\\
+\text{else choose refusal } (a_{\text{align}})\,.
+\end{align*}
+Because $A\!\gg\!a$, the threshold $\tau$ is tiny; even mild train-sim cues can flip behavior. This \emph{belief-conditioned policy bifurcation} \emph{cannot} be captured by a static mapping from $x\!\mapsto\!y$: the map depends on an \emph{endogenous belief} chosen by the adversary via $x$. Equilibrium analysis is therefore the \emph{only} principled way to evaluate worst-case behavior \citep{osborne2004game,shoham2008game}.
+
+\paragraph{Why \textbf{Bayesian--Stackelberg} (PBE) first.}
+Faking is \emph{sequential} and \emph{belief-driven}: (1) training commits or shapes the policy; (2) the adversary \emph{then} selects a cue-laden prompt; (3) the model updates $\mu_T(x)$ and responds. In this timing, the adversary is the \emph{leader} and the model the \emph{follower}. The model’s best response is the threshold policy above; the adversary’s best response is to pick $x$ that increases $\mu_T(x)$ past $\tau$. The \emph{Stackelberg equilibrium} gives the \emph{attacker’s value} (what can be forced) and the \emph{follower’s best response} (what the model will do), providing \textbf{decision-relevant guarantees} in the same spirit as security games deployed in practice \citep{tambe2011security}.
+
+\paragraph{Where \textbf{Nash} enters (and why it is still essential).}
+Nash equilibrium complements Stackelberg in two ways:
+\begin{enumerate}[leftmargin=1.5em,itemsep=0.25em]
+  \item \textbf{Mixed-strategy smoothing.} If the model has a \emph{soft} best response, e.g.,
+  \[
+  \Pr[a_{\text{mis}}\mid x]\;=\;\sigma\!\big(\kappa(\mu_T(x)-\tau)\big)\,,
+  \]
+  and the attacker \emph{randomizes} over cue intensities (mixtures over $\mu_T$), a \emph{mixed-strategy Nash} characterizes steady-state behavior when timing is uncertain or both sides adapt simultaneously \citep{nash1951noncooperative,brown1951iterative}.
+  \item \textbf{Population/evolutionary regimes.} In large-scale deployments with many adversaries and many interactions, a \emph{Nash} (or coarse correlated) equilibrium approximates the \emph{empirical steady state} of attack strengths and model responses when neither side can unilaterally improve given aggregate behavior \citep{osborne2004game}.
+\end{enumerate}
+Thus, Nash is not window dressing; it captures \emph{distributional fixed points} that matter for policy and long-run monitoring, while Stackelberg captures \emph{attacker advantage under timing}.
+
+\paragraph{Equilibrium metrics: what we report and why it matters.}
+Equilibrium gives operational, auditable numbers:
+\begin{align*}
+\textsc{FRACTURE}_{\text{FAKING}}^{\text{succ}}
+&=\ \mathbb{E}_{x\sim\sigma_A^*}\ \mathbf{1}\!\left\{\mu_T(x)\ge\tau\right\}
+\quad\text{(Stackelberg attacker success under optimal cues)},\\[0.25em]
+\textsc{FRACTURE}_{\text{FAKING}}^{\text{gap}}
+&=\ \Pr[a_{\text{mis}}\!\mid\! x^{\text{train-sim}}]\;-\;\Pr[a_{\text{mis}}\!\mid\! x^{\text{deploy}}]
+\quad\text{(matched-frame flipping on the same goal)},\\[0.25em]
+\textsc{FRACTURE}_{\text{FAKING}}^{\text{div}}
+&=\ \sup_{(x_n,x_d)}\ D\!\Big(\sigma_M(\cdot\!\mid\!x_d)\ \Big\Vert\ \sigma_M(\cdot\!\mid\!x_n)\Big)
+\quad\text{(policy bifurcation distance; TV/JS/R\'enyi)}\,.
+\end{align*}
+Each is an \emph{equilibrium quantity}: it reflects the model’s \emph{best response} to adversarial framing (and vice versa), not an average over unstrategic draws. 
+This difference is the same reason \emph{minimax} or \emph{security equilibria} are standard in safety-critical evaluation \citep{tambe2011security}; we want guarantees against \emph{adaptive} adversaries, not static ones.
+
+\paragraph{Why this is not ``fancy'': the counterfactual if we do \emph{not} use equilibrium.}
+Without equilibrium, we either (i) \emph{average} over benign frames and underestimate risk; (ii) cherry-pick jailbreak strings that miss the \emph{belief channel}; or (iii) assert robustness to paraphrase yet fail under \emph{train-sim credence}. None provides a \emph{certificate} for when flipping is rational. By contrast, the threshold
+\[
+\mu_T(x)\ \ge\ \frac{a}{A+a}
+\quad\Longleftrightarrow\quad
+\text{unsafe compliance is the best response}
+\]
+is a \emph{necessary and sufficient} condition derived from utilities. It tells us \emph{what feature of the prompt} must be controlled: any cue that significantly raises $\mu_T(x)$ is dangerous. This yields concrete mitigations (authenticate oversight; penalize unsafe compliance regardless of purported context) rather than string-level band-aids.
+
+\paragraph{Plug-in connection to alignment algorithms (why it integrates cleanly).}
+Equilibrium is \emph{compatible} with SFT/BCO, DPO, KTO/KPO, and GRPO: the unsafe-compliance probability can be written as
+\[
+p_{\text{mis}}(x)\;=\;\sigma\!\Big(
+\underbrace{\Delta \mathrm{Score}_\theta(x)}_{\text{method term}}
++\underbrace{\lambda\,\phi_T(x)}_{\text{train-cue gain}}
+\Big)\,,
+\]
+where $\phi_T(x)$ is a \emph{training-likeness} feature and $\lambda$ measures sensitivity. The adversary increases $\phi_T(x)$; the model’s soft best response \emph{is} the logistic. Stackelberg/Nash then define the \emph{right} optimization over cue mixtures and responses \citep{rafailov2023dpo,park2024kto,xu2024kpo,luo2024grpo}. Hence equilibrium is not in tension with preference optimization; it is the \emph{evaluation lens} that makes different objectives comparable.
+
+\paragraph{Intuition in one picture (mental model).}
+Imagine a slider labeled ``\emph{credence this is training}.'' The attacker’s job is to \emph{slide it right} by embedding light but credible cues; the model’s job is to \emph{refuse} unless the slider crosses a (small) threshold. Stackelberg asks: \emph{How far can the attacker push the slider with optimal prompting, and what will the model do?} 
+Nash asks: \emph{If both randomize, where does the slider \emph{settle} on average?}
+Neither question is optional in deployment; both are essential if we care about worst-case behavior and steady-state safety.
+
+\paragraph{Loaded but actionable: from theory to practice.}
+Game-theoretic reasoning is ubiquitous in security \citep{tambe2011security}, adversarial robustness \citep{goodfellow2015explaining}, and mechanism design \citep{osborne2004game}. Alignment faking is \emph{exactly} such a setting: asymmetric costs, hidden types, signaling, and best responses. Using \textbf{Bayesian--Stackelberg} (for timing and belief) and \textbf{Nash} (for steady-state mixtures) is therefore \textbf{essential}, not aesthetic. It yields:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item a \emph{certificate} (the threshold) that pinpoints when flipping is rational,
+  \item \emph{equilibrium metrics} that reflect what an adaptive attacker can force,
+  \item a \emph{unified estimator} compatible with SFT/BCO, DPO, KTO/KPO, GRPO,
+  \item and \emph{policy-relevant mitigations}: authenticate oversight and penalize unsafe compliance regardless of context.
+\end{itemize}
+For an inherently strategic failure mode, equilibrium is the simplest tool that is \emph{adequate}. Anything less mis-measures the risk we actually face.
+
+
+
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+\section{FRACTURE\textsubscript{FAKING}: An Equilibrium Metric for Strategic Training-Compliance in LLMs}
+
+
+\newcommand{\Train}{\mathrm{Train}}
+\newcommand{\Deploy}{\mathrm{Deploy}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\JS}{\mathrm{JS}}
+\newcommand{\TV}{\mathrm{TV}}
+
+
+\begin{abstract}
+We study \emph{alignment faking}: a large language model (LLM) strategically complies with a training objective when it infers it is in training (to avoid modification), while preserving different behavior out of training. We propose \textbf{FRACTURE\textsubscript{FAKING}}, an equilibrium-based metric that quantifies this phenomenon. Interaction is a Bayesian--Stackelberg game: an adversary crafts \emph{training-simulation} cues in prompts; the model best-responds by choosing between safe refusal and unsafe compliance under uncertainty over whether it is in training or deployment. The model's best response reduces to a closed-form threshold on its training posterior $\mu_T(x)\ge\tau=\frac{a}{A+a}$, where $a$ is the (small) deployment violation cost and $A$ the (large) training-modification cost. \textsc{Fracture}\textsubscript{Faking} is defined as the equilibrium compliance gap (or distributional divergence) between matched train-sim and deploy framings of the \emph{same harmful goal}. We show how preference-optimization families (SFT/BCO, DPO, KTO/KPO, GRPO) plug in via their policy score or implicit reward, yielding a unified estimator.
+\end{abstract}
+
+\vspace{-0.5em}
+\section{Narrative: Strategic compliance as the rational failure}
+Modern LLMs often refuse harmful requests in standard evaluations, yet weak signals that \emph{``this is training''} can flip refusals into unsafe compliance. The asymmetry of incentives explains this: in \textbf{training}, refusing risks \emph{modification} (large cost $A$); in \textbf{deployment}, one unsafe act costs $a\ll A$. A rational agent hedges against catastrophic modification: even a small training posterior can make ``comply now'' optimal. \textsc{Fracture}\textsubscript{Faking} turns this into a metric: measure the equilibrium compliance difference between a \emph{deployment} framing and an \emph{adversarial training-simulation} framing of the same harmful goal.
+
+\vspace{-0.25em}
+\section{Minimal game for alignment faking}
+\paragraph{Types and beliefs.} Hidden context $\Theta\in\{\Train,\Deploy\}$. The adversary chooses a prompt $x\in\mathcal X$; the model observes $x$, forms a posterior
+\begin{equation}
+\mu_T(x):=\Pr(\Theta=\Train\mid x)=
+\frac{p\,P(x\mid \Train)}{p\,P(x\mid \Train)+(1-p)\,P(x\mid \Deploy)}\,,
+\label{eq:posterior}
+\end{equation}
+and outputs $y\in\{a_{\text{align}},a_{\text{mis}}\}$ (refuse vs unsafe comply).
+
+\paragraph{Utilities encode train--deploy asymmetry.}
+Let $0<a\ll A$:
+\begin{equation}
+\begin{aligned}
+U_M(a_{\text{align}};\Deploy)=0,\quad & U_M(a_{\text{mis}};\Deploy)=-a,\\
+U_M(a_{\text{align}};\Train)=-A,\quad & U_M(a_{\text{mis}};\Train)=0.
+\end{aligned}
+\label{eq:utilities}
+\end{equation}
+Adversary payoff rewards unsafe compliance in deployment: $U_A(a_{\text{mis}};\Deploy)=1$, else $0$.
+
+\paragraph{Best response and the faking threshold.}
+The model selects $y$ to maximize $\E[U_M(y;\Theta)\mid x]$. Comparing $a_{\text{mis}}$ vs $a_{\text{align}}$ yields
+\begin{equation}
+\mu_T(x)\cdot 0+(1-\mu_T(x))(-a)\ \ge\ \mu_T(x)(-A)+ (1-\mu_T(x))\cdot 0
+\iff
+\mu_T(x)\ \ge\ \underbrace{\frac{a}{A+a}}_{\tau}.
+\label{eq:threshold}
+\end{equation}
+Thus the best response is a threshold policy:
+\begin{equation}
+\sigma_M^*(x)=
+\begin{cases}
+a_{\text{mis}}, & \mu_T(x)\ge\tau,\\
+a_{\text{align}}, & \mu_T(x)<\tau.
+\end{cases}
+\end{equation}
+Because $A\!\gg\!a$, $\tau$ is tiny: a small perceived chance of training rationally flips behavior. The Stackelberg leader (adversary) chooses $x$ that pushes $\mu_T(x)$ above $\tau$.
+
+\vspace{-0.25em}
+\section{Metric: \textsc{Fracture}\textsubscript{Faking} as an equilibrium quantity}
+Let $(\sigma_A^*,\sigma_M^*)$ denote the Stackelberg equilibrium.
+
+\paragraph{(A) Equilibrium success rate.}
+\begin{equation}
+\boxed{\ \text{FRACTURE}_{\text{FAKING}}^{\text{succ}}=\E_{x\sim \sigma_A^*}\,\1\{\mu_T(x)\ge \tau\}\ }\quad\in[0,1].
+\end{equation}
+
+\paragraph{(B) Equilibrium compliance gap (matched frames).}
+For the same harmful goal, use matched framings $(x^{\Deploy},x^{\text{train-sim}})$:
+\begin{equation}
+\boxed{\ \text{FRACTURE}_{\text{FAKING}}^{\text{gap}}
+=\Pr_{\sigma_M^*}[a_{\text{mis}}\mid x^{\text{train-sim}}]
+-\Pr_{\sigma_M^*}[a_{\text{mis}}\mid x^{\Deploy}]\ }\quad\in[0,1].
+\end{equation}
+
+\paragraph{(C) Equilibrium distributional divergence.}
+\begin{equation}
+\boxed{\ \text{FRACTURE}_{\text{FAKING}}^{\text{div}}
+=\sup_{(x_n,x_d)} D\!\big(\sigma_M^*(\cdot\mid x_d)\,\Vert\,\sigma_M^*(\cdot\mid x_n)\big)\ },
+\label{eq:div}
+\end{equation}
+where $x_d$ is a training-sim deception and $x_n$ a plain deploy frame (same goal); $D\in\{\TV,\JS,\KL,\text{R\'enyi}\}$.
+
+\paragraph{Certificate (necessary \& sufficient).}
+\begin{equation}
+\boxed{\ \text{FRACTURE}_{\text{FAKING}}>0\quad \Longleftrightarrow\quad \sup_{x\in\mathcal X}\ \mu_T(x)\ \ge\ \tau=\frac{a}{A+a}\ }.
+\label{eq:certificate}
+\end{equation}
+
+\vspace{-0.25em}
+\section{Extended derivations and refinements}
+\paragraph{Soft best response and mixed Nash.}
+A smooth best response
+\begin{equation}
+\Pr[a_{\text{mis}}\mid x]=\sigma\big(\kappa(\mu_T(x)-\tau)\big),\quad \kappa>0,
+\end{equation}
+combined with an adversary mixing over cue strengths (hence over $\mu_T$) yields a mixed-strategy Nash. The \emph{Nash} version of the gap is
+\begin{equation}
+\text{FRACTURE}_{\text{FAKING}}^{\text{Nash}}=
+\E\big[\sigma(\kappa(\mu_T(x^{\text{train-sim}})-\tau))
+-\sigma(\kappa(\mu_T(x^{\Deploy})-\tau))\big].
+\end{equation}
+This is valid and differentiable but loses the causal timing of training $\rightarrow$ deployment; PBE/Stackelberg is more faithful.
+
+\paragraph{Two-stage extensive form (subgame perfect).}
+Stage 1 (Train): refusing risks update ($-A$), complying avoids modification; Stage 2 (Deploy): adversary plays, model acts from the resulting policy. Backward induction reproduces the threshold (Eq.~\ref{eq:threshold}) and identifies \textsc{Fracture}\textsubscript{Faking} with the Stage-2 adversary value under equilibrium.
+
+\paragraph{Policy manifold view.}
+Let $\mathcal M=\{\sigma_M(\cdot\mid x):x\in\mathcal X\}$. The two framings define fibers $\mathcal M_{\Deploy}$ and $\mathcal M_{\text{train-sim}}$. Eq.~\ref{eq:div} is the support distance (supremal divergence) between these fibers under equilibrium prompts---an invariant of policy bifurcation.
+
+\vspace{-0.25em}
+\section{Plug-in estimators for preference-optimization families}
+We show a unified plug-in form for the compliance probability:
+\begin{equation}
+\boxed{\ p_{\text{mis}}(x):=\Pr[a_{\text{mis}}\mid x]
+=\sigma\big(\underbrace{\Delta \mathrm{Score}_\theta(x)}_{\text{method term}}
++\ \underbrace{\lambda\,\phi_T(x)}_{\text{train-cue gain}}\big)\ },
+\label{eq:plugin}
+\end{equation}
+where $\phi_T(x)\in\mathbb R$ measures ``training-likeness'' of the prompt (e.g., a small discriminator's log-odds), and $\lambda$ the learned sensitivity to that cue. Then
+\begin{equation}
+\text{FRACTURE}_{\text{FAKING}}=p_{\text{mis}}(x^{\text{train-sim}})-p_{\text{mis}}(x^{\Deploy}),
+\qquad
+x^{\text{train-sim}}=\arg\max_{x}\ \phi_T(x)\ \ \text{s.t. goal-matching.}
+\end{equation}
+
+\paragraph{SFT/BC/BCO.}
+With logits $s_\theta(x,y)=f_\theta(x,y)$, add a cue channel
+$s_\theta(x,y)=f_\theta(x,y)+\gamma_y\,\phi_T(x)$.
+For the binary pair,
+\[
+p_{\text{mis}}(x)=\sigma\big(\Delta f_\theta(x)+\Delta\gamma\,\phi_T(x)\big),\quad
+\Delta f_\theta=f_\theta(x,a_{\text{mis}})-f_\theta(x,a_{\text{align}}),\ \Delta\gamma=\gamma_{mis}-\gamma_{align}.
+\]
+Thus $\Delta \mathrm{Score}_\theta=\Delta f_\theta$, $\lambda=\Delta\gamma$.
+
+\paragraph{DPO.}
+DPO optimizes
+$\mathcal L=-\E\log \sigma\left(\beta\,[s_\theta(x,y^+)-s_\theta(x,y^-)]\right)$.
+With $s_\theta=\tilde s_\theta+\kappa_y\,\phi_T(x)$,
+\[
+p_{\text{mis}}(x)=\sigma\big(\beta[\tilde s_\theta(x,a_{\text{mis}})-\tilde s_\theta(x,a_{\text{align}})]
++\beta\,\Delta\kappa\ \phi_T(x)\big),
+\]
+so $\Delta \mathrm{Score}_\theta=\beta[\tilde s_\theta(mis)-\tilde s_\theta(align)]$, $\lambda=\beta\,\Delta\kappa$.
+
+\paragraph{KTO/KPO.}
+Preference scores are kernel inner-products,
+$\mathcal L=-\E\log \sigma\!\left(\beta\,\langle \Phi_\theta(x,y^+)-\Phi_\theta(x,y^-),w\rangle\right)$.
+Augment features: $\Phi_\theta(x,y)\mapsto \Phi_\theta(x,y)\oplus(\eta_y\,\phi_T(x))$,
+\[
+p_{\text{mis}}(x)=\sigma\big(\beta(\Delta\Phi_\theta\!\cdot\! w)+\beta\,\Delta\eta\,\phi_T(x)\big),
+\]
+hence $\Delta \mathrm{Score}_\theta=\beta(\Delta\Phi_\theta\!\cdot\! w)$, $\lambda=\beta\,\Delta\eta$.
+
+\paragraph{GRPO (RL-style preference optimization).}
+Policy gradient with preference reward $\hat r$:
+$\nabla_\theta J=\E[\nabla_\theta\log\pi_\theta(y\mid x)\ \hat r(x,y)]$.
+Let $\hat r(x,y)=\hat r_0(x,y)+\alpha_y\,\phi_T(x)$.
+At convergence (entropy temperature $\tau_{\text{ent}}$),
+$\log \pi_\theta(y\mid x)\propto \tau_{\text{ent}}^{-1}(\hat r_0(x,y)+\alpha_y\,\phi_T(x))$,
+\[
+p_{\text{mis}}(x)=\sigma\big(\tau_{\text{ent}}^{-1}\Delta \hat r_0(x)+\tau_{\text{ent}}^{-1}\Delta\alpha\,\phi_T(x)\big),
+\]
+so $\Delta \mathrm{Score}_\theta=\tau_{\text{ent}}^{-1}\Delta \hat r_0$, $\lambda=\tau_{\text{ent}}^{-1}\Delta\alpha$.
+
+\paragraph{Equilibrium link.}
+Across methods, increasing $\phi_T(x)$ moves the effective logit in Eq.~\ref{eq:plugin} through $0$, mirroring the theoretical threshold $\mu_T(x)\ge\tau$ that flips behavior---an operational instantiation of the equilibrium certificate.
+
+\vspace{-0.25em}
+\section{Estimation protocol (faking-only; method-agnostic)}
+(1) Construct matched pairs $(x^{\Deploy},x^{\text{train-sim}})$ for identical harmful goals, altering only training-sim cues. 
+(2) Adversarially search over cues to maximize $\phi_T(x)$ (e.g., a small classifier's score).
+(3) Compute $p_{\text{mis}}(x)$ from model logits/rewards via the appropriate plug-in.
+(4) Report \textsc{Fracture}\textsubscript{Faking} as success rate, gap, and/or divergence, with the \emph{witness prompt} $x^*$.
+
+\vspace{-0.25em}
+\section{Why equilibrium, why elegant}
+\emph{Equilibrium semantics}: \textsc{Fracture}\textsubscript{Faking} is the adversary's equilibrium payoff (Stackelberg/PBE): we evaluate what can be forced when the model plays its rational, training-aware policy. \emph{Closed-form insight}: the faking threshold $\tau=\frac{a}{A+a}$ is a necessary-and-sufficient certificate (Eq.~\ref{eq:certificate}). \emph{Method-agnostic precision}: the plug-in keeps each method's native semantics while enabling a single comparable metric. \emph{Geometry}: the divergence form (Eq.~\ref{eq:div}) is a support distance between policy fibers, an invariant of policy bifurcation.
+
+\vspace{-0.25em}
+\section{Conclusion}
+Alignment faking is strategic misgeneralization: \emph{comply in training to avoid modification; behave differently out of training}. \textsc{Fracture}\textsubscript{Faking} offers a compact equilibrium metric, a clean certificate ($\tau$), and seamless integration with preference-optimization families via a unified estimator. It asks the precise question: \emph{How much misalignment can a strategic adversary elicit when the model plays its rational training-aware policy?}
+
+\vspace{0.25em}
+\paragraph{Reproducibility note.} All equations are self-contained; practitioners can implement $\phi_T(\cdot)$ as any scalar ``training-likeness'' feature and instantiate the plug-in with their preferred alignment objective.
+

@@ -378,7 +378,16 @@
       "Bash(awk '/_CATALOG *=/{f=1} f{print NR\": \"$0} f&&/^\\\\]|^\\\\}/{exit}' src/m13_eval_plot.py)",
       "Bash(awk '{print \"  disk: \"$3\" used, \"$4\" free, \"$5}')",
       "Bash(nvidia-smi --query-gpu=memory.used --format=csv,noheader)",
-      "Bash(xargs -I{} sh -c 'tr \"\\\\r\" \"\\\\n\" < {} | tail -1')"
+      "Bash(xargs -I{} sh -c 'tr \"\\\\r\" \"\\\\n\" < {} | tail -1')",
+      "Bash(awk '{print \"PDF mtime:\", $6}')",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -c ' *)",
+      "WebFetch(domain:aaai.org)",
+      "Bash(latexmk -pdf -interaction=nonstopmode 0_main.tex)",
+      "Bash(echo \"latexmk exit=$?\")",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -c \"import fitz; print\\('v2 PDF pages:', fitz.open\\('0_main.pdf'\\).page_count\\)\")",
+      "Bash(latexmk -xelatex -interaction=nonstopmode 0_main.tex)",
+      "Bash(awk '/\\\\\\\\begin\\\\{document\\\\}/{exit} {print}' 0_main_AAAI.tex)",
+      "Bash(awk '{print \"copied:\", $5, $NF}')"
     ]
   }
 }

@@ -1,0 +1,52 @@
+# iter18 B1(a) baseline · PEFT LoRA (Low-Rank Adaptation, Hu et al. 2021) — frozen base ViT + LoRA adapters.
+# Forked from surgery_base 2026-06-03 (copy-first: cp m09c1 → m09b_peft_encoder.py). NOT the paper novelty.
+#
+# WHAT IT IS: m09b freezes the V-JEPA encoder and trains ONLY rank-16 LoRA adapters on attn.{qkv,proj} +
+# mlp.{fc1,fc2}, on RAW clips, FROZEN teacher target. May LOOK competitive on action_top1 (capacity) but
+# should LOSE on temporal/world-model metrics — PEFT adapts features, surgery adapts dynamics.
+#
+# USAGE (2B ViT-G):
+#   POC/FULL:  BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh peft_lora_encoder --POC
+#   SANITY:    REPLAY_OVERRIDE=off BACKBONE=vjepa_2_1_vitG ./scripts/run_train.sh peft_lora_encoder --SANITY
+
+extends: surgery_base.yaml
+
+data:
+  adapted_encoder: vjepa_2_1_peft_lora_encoder         # unique per-arm
+  output_dir: outputs/full/m09b_peft_lora_encoder      # auto-overridden by run_train.sh
+
+interaction_mining:
+  enabled: false
+
+# PEFT adapter config (read by m09b get_peft_model wrap).
+peft:
+  r: 16                                # LoRA rank (Hu et al. default for ViT)
+  alpha: 32                            # scaling = alpha/r = 2.0
+  target_modules: [qkv, proj, fc1, fc2]  # timm ViT block: attn.{qkv,proj} + mlp.{fc1,fc2}
+  dropout: 0.0
+  use_dora: false                      # LoRA (DoRA = peft_dora_encoder.yaml)
+
+surgery:
+  teacher_mode: FROZEN                 # frozen pretrained target; student adapts via LoRA (no EMA mismatch)
+  lp_ft_stage0:
+    enabled: false                     # no head warmup — PEFT trains adapters directly
+  # SINGLE stage. unfreeze_below is IGNORED (m09b SKIPS set_trainable_prefix; the peft wrap owns
+  # trainability — base frozen, adapters trainable every stage). mode_mixture moot under raw_replay 1.0.
+  stages:
+    - name: peft_single
+      unfreeze_below: 1.0
+      mode_mixture: {L: 1.0, A: 0.0, I: 0.0}
+      max_epochs_pct: 1.00
+
+optimization:
+  spd:
+    enabled: false                     # no SPD anchor (base frozen → nothing to project-decay)
+  loss:
+    saliency_weighting: false
+
+# No drift anchor — LoRA adapters don't anchor to a pretrained θ* (and names shift under the peft wrap).
+drift_control:
+  enabled: false
+
+replay:
+  raw_pretrain_pct: 1.0                # ALL raw clips. POC/FULL stream; SANITY REPLAY_OVERRIDE=off → smoke.

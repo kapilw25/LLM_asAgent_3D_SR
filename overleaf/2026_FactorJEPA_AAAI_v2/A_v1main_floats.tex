@@ -1,0 +1,106 @@
+% =====================================================================
+% Main-paper figures/tables reproduced FULL WIDTH (figure*/table*) in the
+% two-column supplement, in v1_main order, each with a short connective note.
+% The teaser is single-column so it can sit at the TOP of page 1 (a full-width
+% figure* cannot: the title holds the page-1 top). The dense Limitations +
+% Appendix text that follows fills the columns around the figure* floats, so
+% the notes stay concise without leaving blank pages.
+% Order: demo_cards -> scene_types -> factor_visual -> factor_targets ->
+%        frozen_scorecard(table) -> forest -> eval_scorecard -> scale_replication
+% =====================================================================
+
+% --- 1. teaser: single-column so it lands at the top of page 1 ---
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/demo_cards_teaser.png}
+    \caption{\textbf{Same question, two encoders.} Each row is a three-frame filmstrip of one held-out clip posed as a multiple-choice question, answered from an identical probe head over the frozen V-JEPA~2.1 encoder vs.\ ours (factor-view predictor surgery); only the backbone differs. \emph{Top:} motion speed (ours 69.8\% vs frozen 60.9\%). \emph{Bottom:} turn direction.}
+    \label{fig:demo_cards_full}
+\end{figure}
+
+\section{Main-Paper Figures and Tables, Enlarged}
+\label{sec:mainpaper_fullsize}
+
+For legibility, this section reproduces each main-paper figure and the ablation table at full width, in the order they appear in the main text, with a brief note linking them.
+
+\noindent We begin with a qualitative view (Figure~\ref{fig:demo_cards_full}): with an identical probe head reading either encoder, only the FactorJEPA-adapted backbone answers the motion questions reliably, isolating what factor-view predictor surgery adds to the representation itself.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.82\textwidth]{figures/denseworld_scene_types_overview.png}
+    \caption{\textbf{DENSEWORLD 1.0 scene-type coverage.} Twelve representative scene types (market, temple, commercial, transit, residential, promenade, ghat, heritage, highway, junction, flyover, beach) across 22 Indian cities, shown from ground-level pedestrian viewpoints.}
+    \label{fig:denseworld_scene_types_full}
+\end{figure*}
+
+\noindent These gains matter because DENSEWORLD spans a wide range of crowded, chaotic settings, from markets and ghats to junctions, flyovers, and beaches, that a single monolithic latent must handle simultaneously.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.88\textwidth]{figures/factor_visual.png}
+    \caption{\textbf{\emph{Factorized predictive channels.}} Context is split into \emph{layout}, visibility-gated \emph{agent}, and sparse \emph{interaction} coordinates, then recomposed in the future JEPA embedding, limiting cross-factor leakage.}
+    \label{fig:factorjepa_visual_full}
+\end{figure*}
+
+\noindent FactorJEPA meets this by decomposing the future into three predictive channels, layout, visibility-gated agents, and sparse interactions, recomposed in the JEPA embedding to discourage cross-factor shortcuts.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.88\textwidth]{figures/segmented_scene.png}
+    \caption{\textbf{\emph{Automatic factor-target construction.}} Per clip, the pipeline derives \emph{layout} $D_L$, \emph{agent} $D_A$, and \emph{interaction} $D_I$ supervision by masking foreground/background and linking agent tubes.}
+    \label{fig:dino_factor_targets_full}
+\end{figure*}
+
+\noindent These three views are constructed automatically by a fixed detection-and-segmentation pipeline, so the factor supervision is reproducible and scales to the full corpus without manual labels.
+
+\begin{table*}[t!]
+\centering
+\caption{\textbf{\emph{Frozen encoders collapse.}} Ten frozen encoders on the DENSEWORLD motion probe ($n_{\mathrm{test}}=1{,}825$, $\pm$95\% BCa CI). Action top-1 (A) stays in a $37.5$--$44.4\%$ band (19.5\% majority), while adapted encoders reach $50.3$--$53.2\%$. M~=~motion-cos, T~=~taxonomy F1 ($\uparrow$ better). In each column the \textbf{best} value is shaded green and the \textbf{worst} red.}
+\label{tab:frozen_scorecard_full}
+\footnotesize\bfseries
+\setlength{\tabcolsep}{16pt}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Frozen encoder & A\,(\%) & M & T \\
+\midrule
+V-JEPA 2.1 (2B)   & \cellcolor{green!35}44.4 & 0.009 & 0.793 \\
+V-JEPA 2.1 ViT-L  & 44.2 & \cellcolor{red!35}0.004 & 0.788 \\
+V-JEPA 1 ViT-H    & 40.5 & 0.007 & 0.702 \\
+LeJEPA ViT-L      & 40.1 & 0.014 & 0.740 \\
+V-JEPA 1 ViT-L    & 39.9 & 0.008 & \cellcolor{red!35}0.660 \\
+I-JEPA ViT-H      & 39.1 & 0.016 & 0.781 \\
+V-JEPA 2.0 (SSv2) & 38.8 & 0.007 & 0.776 \\
+DINOv2            & 38.5 & 0.016 & \cellcolor{green!35}0.816 \\
+V-JEPA 2 ViT-L    & 37.9 & 0.013 & 0.778 \\
+I-JEPA ViT-G/16   & \cellcolor{red!35}37.5 & \cellcolor{green!35}0.019 & 0.787 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\noindent The need for adaptation is empirical: off-the-shelf frozen encoders collapse into a narrow $37.5$--$44.4\%$ band on the motion probe, and no single model wins every column, so frozen reuse is not enough.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/forest_plot_best_ci_paper.pdf}
+    \caption{\textbf{\emph{FactorJEPA vs. the best competitor, across scale.}} Per-metric advantage in 95\%-CI units at the stratified 10k scale (2B and 1B) and the full 115k scale (1B); green past the dashed $1\times$ line = a separated win. Predictive diagnostics separate and \emph{strengthen} at full scale, where the motion-cosine trade-off also reverses to a win. Full-scale 2B was not run (compute budget).}
+    \label{fig:frozen_forest_full}
+\end{figure*}
+
+\noindent Adapting the encoder closes the gap. Against the strongest competitor on each metric, FactorJEPA's predictive diagnostics separate and strengthen at full scale, with the small-scale motion trade-off reversing into a win.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/eval_scorecard_winbars.pdf}
+    \caption{\textbf{\emph{FactorJEPA outperforms every fine-tuning rival on the four predictive metrics it wins outright}} (Future-frame L1 at 2B; Causal future-block L1, Mask-ratio slope, exposure-bias gap at 1B). Bars show held-out score $\pm$ 95\% BCa CI; every rival is named in the key. Full 15-diagnostic scorecard in the supplementary material. {\footnotesize \emph{wSE}~=~WiSE-FT (weight-space ensembles for fine-tuning).}}
+    \label{fig:eval_scorecard_full}
+\end{figure*}
+
+\noindent The advantage is consistent rather than a single number: across the four predictive metrics and every fine-tuning rival, FactorJEPA leads beyond the confidence intervals.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.90\textwidth]{figures/scale_replication_single.pdf}
+    \caption{\textbf{\emph{Method rankings survive the 2B$\to$1B backbone change.}} Per-method \emph{Causal future-block L1} at both scales (Spearman $\rho=0.978$), making the 1B backbone a low-cost proxy for 2B. Full 15-panel grid in the supplementary material.}
+    \label{fig:scale_replication_full}
+\end{figure*}
+
+\noindent Finally, method rankings are stable across backbone scale (Spearman $\rho=0.978$), so the 1B backbone serves as a low-cost proxy for 2B selection. We next turn to the limitations of the study.

@@ -1,0 +1,304 @@
+# probe encoder registry — single source of truth for src/utils/frozen_features.ENCODERS.
+#
+# Schema (per encoder name):
+#   kind        — dispatcher key in probe_action / probe_motion_cos
+#                 ("vjepa" → load_vjepa_2_1_frozen, "dinov2" → load_dinov2_frozen)
+#   arch        — vjepa2 ViT constructor name (only for kind=vjepa)
+#   model_id    — HF model id (only for kind=dinov2)
+#   crop        — input image side length (matches encoder's pretrain resolution)
+#   embed_dim   — output feature dim (matches encoder's hidden state)
+#
+# Adding a new V-JEPA variant: copy the vjepa_2_1_frozen entry, rename the key,
+# point the orchestrator's encoder→ckpt resolver (run_eval.sh) at the new .pt.
+# No new loader function needed — load_vjepa_frozen handles all V-JEPA ckpts
+# via target_encoder → encoder → raw key fallback.
+#
+# ── VERIFY embed_dim (eyeball) — sources per kind ──────────────────────────────────────
+#  kind=dinov2 : https://huggingface.co/facebook/dinov2-with-registers-giant/blob/main/config.json (hidden_size=1536)
+#  kind=ijepa  : https://huggingface.co/facebook/ijepa_vith14_1k/blob/main/config.json (1280) ·
+#                https://huggingface.co/facebook/ijepa_vitg16_22k/blob/main/config.json (1408)
+#  kind=vjepa 2.0 : https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json (1408) ·
+#                   https://huggingface.co/facebook/vjepa2-vitl-fpc64-256/blob/main/config.json (1024)
+#  kind=vjepa native ctor (embed_dim/depth/heads): https://github.com/facebookresearch/vjepa2/blob/main/src/models/vision_transformer.py
+#  V-JEPA 1 (vitl16/vith16) config table: https://github.com/facebookresearch/jepa#pretrained-models
+
+encoders:
+  vjepa_2_1_frozen:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # P2 — m09a continual SSL pretrain output (lr=1e-5, 5 epochs, drift L2 anchor).
+  vjepa_2_1_pretrain_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # iter14 arm C / iter15 Δ3 control — m09a continual SSL pretrain with 2X epoch
+  # budget (POC=4ep, FULL=10ep). Compute-matched against surgery_3stage_DI's
+  # 4ep-equivalent so Δ3 = surgery − pretrain_2X isolates the surgery method, not
+  # just extra compute. Same arch/crop/embed_dim as pretrain_encoder.
+  vjepa_2_1_pretrain_2X_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # P3 variant A — m09c 3-stage surgery (D_L → D_A → D_I, 40/30/30 epoch split).
+  # Uses interaction tubes (D_I); iter9 v15c showed BWT=-0.33 here vs noDI variant.
+  vjepa_2_1_surgical_3stage_DI_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # iter18 (2026-06-14): the 5 improvement arms = OURS + ONE change. Same 2B ViT-G arch as
+  # surgical_3stage_DI above (only the trained weights differ; wiseft is a post-hoc merge).
+  vjepa_2_1_surgical_3stage_DI_replay25_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_diheavy_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_tccaux_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_intervene_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_3stage_DI_wiseft_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  # iter18 (2026-06-14): WiSE-FT v2 sweep — intervene × frozen, predictor merged, frozen-fraction f30/f50/f70.
+  # Same 2B ViT-G arch (only the blended weights differ); built by wiseft_merge.py, evaled via run_eval --encoders.
+  vjepa_2_1_surgical_intervene_wiseft_f30_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_intervene_wiseft_f50_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+  vjepa_2_1_surgical_intervene_wiseft_f70_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # P3 variant B — m09c 2-stage surgery (D_L → D_A only, 50/50 epoch split, NO D_I).
+  # Tests skepticism that D_I worsens learning; same encoder arch, different yaml.
+  vjepa_2_1_surgical_noDI_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # iter18 FT-technique baselines (2026-06-04) — B1 PEFT (m09b), B2 Auto-RGN (m09e),
+  # B3 CaSSLe/EWC (m09d), B4 Full-FT/LP-FT (m09f) + the surgery-on-RAW control (m09c1).
+  # All are vitG students exported by their own trainers — same arch/crop/embed_dim.
+  vjepa_2_1_surgical_autorgn_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_surgery_raw_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_full_ft_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_lpft_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_peft_lora_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_peft_dora_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_cassle_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_ewc_encoder:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  # iter15 Phase 2 (2026-05-14) — HEAD-ONLY siblings of P2/P3 variants. Encoder
+  # bit-identical to Meta init (proven via Phase 5 V4); only the ~432K motion_aux
+  # head is trained. Paper claim: head-only ≈ encoder-update on Δ-eval, at
+  # ~1/40× GPU cost. Used by run_eval.sh + probe_action/probe_future_*  pipelines.
+  vjepa_2_1_pretrain_head:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_surgical_3stage_DI_head:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  vjepa_2_1_surgical_noDI_head:
+    kind: vjepa
+    arch: vit_gigantic_xformers
+    crop: 384
+    embed_dim: 1664
+
+  dinov2:
+    kind: dinov2
+    model_id: facebook/dinov2-with-registers-giant
+    crop: 224
+    embed_dim: 1536
+
+  # iter17 frozen image-JEPA baselines (kind=ijepa → src/utils/ijepa_features.py, HF AutoModel).
+  # Per-frame image encode + pool (no video predictor → predictor metrics N/A).
+  ijepa_vitH14:
+    kind: ijepa
+    model_id: facebook/ijepa_vith14_1k
+    crop: 224
+    embed_dim: 1280
+
+  ijepa_vitG16:
+    kind: ijepa
+    model_id: facebook/ijepa_vitg16_22k
+    crop: 224
+    embed_dim: 1408
+
+  # iter17 LeJEPA-L (Balestriero & LeCun, arXiv 2511.08544) — image JEPA, DINOv3-style ViT-L.
+  # RAW state_dict (no HF card) → kind=lejepa (src/utils/lejepa_features.py): timm
+  # vit_large_patch16_dinov3_qkvb + timm.models.eva.checkpoint_filter_fn (0 miss/0 unexpected, strict).
+  # ckpt: third-party HF datasets gajeshladharai/artifacts/core-jepa/lejepa-l.pt (1.24GB; 1024-d/24-blk/patch16).
+  lejepa_vitL_frozen:
+    kind: lejepa
+    arch: vit_large_patch16_dinov3_qkvb
+    crop: 224
+    embed_dim: 1024
+    ckpt: checkpoints/lejepa_l.pt
+
+  # iter17 frozen V-JEPA-2.0 family (kind=vjepa native; ckpt resolved by run_eval frozen_ckpt_for).
+  # vitg dims verified from the downloaded ckpt: 40 blocks, 1408-dim, target_encoder key.
+  vjepa_2_0_vitg_frozen:
+    kind: vjepa
+    arch: vit_giant_xformers
+    crop: 384
+    embed_dim: 1408
+
+  # iter17 supervised-action baseline — SSv2-FT encoder, HF-transformers-only (no native .pt) →
+  # kind=hf_vjepa2 (src/utils/hf_vjepa2_features.py, VJEPA2Model.skip_predictor). Frozen-eval only.
+  vjepa_2_0_vitg_ssv2:
+    kind: hf_vjepa2
+    model_id: facebook/vjepa2-vitg-fpc64-384-ssv2
+    crop: 384
+    embed_dim: 1408
+
+  # iter17 frozen V-JEPA-1 (2024) baselines — base-module archs, crop 224, native .pth.tar.
+  # VERIFY-FIRST: v1 may use different ctor kwargs (no RoPE?) / state_dict keys vs 2.x.
+  vjepa_1_vitL_frozen:
+    kind: vjepa
+    arch: vit_large
+    crop: 224
+    embed_dim: 1024
+
+  vjepa_1_vitH_frozen:
+    kind: vjepa
+    arch: vit_huge
+    crop: 224
+    embed_dim: 1280
+
+  # iter17 scale axis (2.1 g/L EXIST — fbai vjepa2_1_vit{g,l_dist_vitG}_384.pt) + 2.0 ViT-L 256.
+  # dims VERIFY-on-load (load% gates); 2.1 deep-supervision norms may show as benign unexpected keys.
+  vjepa_2_1_vitg_frozen:
+    kind: vjepa
+    arch: vit_giant_xformers
+    crop: 384
+    embed_dim: 1408
+
+  vjepa_2_1_vitL_frozen:
+    kind: vjepa
+    arch: vit_large
+    crop: 384
+    embed_dim: 1024
+
+  vjepa_2_vitL_256_frozen:
+    kind: vjepa
+    arch: vit_large
+    crop: 256
+    embed_dim: 1024
+
+  # ── iter17 TRAINABLE cross-arch arms (eval rows) — V-JEPA 2.1 ViT-g + 2.0 ViT-g, 7 trained arms each.
+  # arch/crop/embed_dim INHERITED from each backbone's *_frozen sibling above (encoder-only output: the
+  # 2.1 deep-sup hierarchical concat is NOT used at frozen-eval → base embed_dim 1408, vit_giant_xformers).
+  # Per-arm student_encoder.pt is resolved by run_eval.sh encoder_ckpt_for → outputs/<mode>/<bb>/<m09 arm dir>/.
+  # NB: PREDICTOR stages (8/8b/8c) on these are ViT-G-ONLY until predictor_eval is arch-aware (WS-B3) → skip them.
+  # vjepa_2_1_vitg (1B, scale axis) — VERIFY 1408/40: https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
+  vjepa_2_1_vitg_pretrain_encoder:           {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_pretrain_2X_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_pretrain_head:              {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_3stage_DI_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_noDI_encoder:      {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_3stage_DI_head:    {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_noDI_head:         {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # iter18 FT-baseline arms on the 1B (scale axis) — mirror the vitG rows; encoder-only eval (base
+  # 1408 dim, vit_giant_xformers). Per-arm student_encoder.pt resolved by run_eval encoder_ckpt_for →
+  # outputs/<mode>/vjepa_2_1_vitg/<m09 arm dir>/. cassle/ewc parked (not in the POC paper arm set).
+  vjepa_2_1_vitg_surgical_autorgn_encoder:   {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgery_raw_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_full_ft_encoder:            {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_lpft_encoder:               {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_peft_lora_encoder:          {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_peft_dora_encoder:          {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # iter18 (2026-06-23): the 1B improvement + WiSE-FT merge arms — mirror the vitG champion rows (lines 64-98),
+  # 1B dims (1408, vit_giant_xformers). Were MISSING → run_eval kind-lookup FATALed on the 1B diheavy eval (SANITY 112/167).
+  vjepa_2_1_vitg_surgical_3stage_DI_diheavy_encoder:    {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_3stage_DI_intervene_encoder:  {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_intervene_wiseft_f30_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_intervene_wiseft_f50_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_intervene_wiseft_f70_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # iter19 (2026-07-04): the diheavy WiSE-FT merges (Best-OUR sweep, arm_registry rows added same day) — same 1B
+  # dims; without these run_eval's kind-lookup FATALs on the §3 finale eval of the 2 diheavy merges (same bug as L287).
+  vjepa_2_1_vitg_surgical_diheavy_wiseft_f50_encoder:   {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_1_vitg_surgical_diheavy_wiseft_f70_encoder:   {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  # vjepa_2_0_vitg (1B, version axis) — same dims (2.0 g): https://huggingface.co/facebook/vjepa2-vitg-fpc64-384/blob/main/config.json
+  vjepa_2_0_vitg_pretrain_encoder:           {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_pretrain_2X_encoder:        {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_pretrain_head:              {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_3stage_DI_encoder: {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_noDI_encoder:      {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_3stage_DI_head:    {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
+  vjepa_2_0_vitg_surgical_noDI_head:         {kind: vjepa, arch: vit_giant_xformers, crop: 384, embed_dim: 1408}
