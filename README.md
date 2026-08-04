@@ -1,10 +1,10 @@
-# FactorJEPA: Does V-JEPA 2 Understand Indian Streets?
+# FactorJEPA: World Models for Crowded, Chaotic Global South Urban Scenes
 
-**Benchmarking Video Foundation Models on DenseWorld-200K**
+**Factorizing monolithic future prediction into layout, agent, and interaction channels, trained and evaluated on DenseWorld.**
 
+[![arXiv](https://img.shields.io/badge/arXiv-2608.01049-b31b1b?logo=arxiv)](https://arxiv.org/abs/2608.01049)
 [![Project Page](https://img.shields.io/badge/Project-Page-8B3A2A)](https://kapilw25.github.io/factorjepa/)
 [![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-ffd21e?logo=huggingface)](https://huggingface.co/datasets/anonymousML123/denseworld-115k)
-[![Status](https://img.shields.io/badge/Status-Preprint-yellow)]()
 
 > **115,687 clips** | 714 videos | 22 cities | 276 hours | 121 GB
 
@@ -14,17 +14,15 @@
 
 ## Key Finding
 
-| Encoder | Prec@K | mAP@K | Cycle@K |
-|---------|--------|-------|---------|
-| **DINOv2** (image) | **50.5%** | **0.427** | 66.8% |
-| CLIP (image) | 46.0% | 0.382 | 65.2% |
-| V-JEPA Shuffled | 35.3% | 0.272 | 76.2% |
-| **V-JEPA 2** (video) | 14.6% | 0.079 | **78.7%** |
-| Random | 12.2% | 0.061 | 55.0% |
+Frozen video encoders are **nearly motion-blind** on crowded Global South scenes; factor-view predictor surgery (**FactorJEPA**) restores predictive structure. With an *identical probe head* over either backbone, only the FactorJEPA-adapted encoder answers motion questions reliably:
 
-**Image beats video on spatial metrics.** DINOv2 outperforms V-JEPA by 3.5x on scene classification. Shuffling V-JEPA's frames improves it by 2.4x — temporal encoding hurts spatial understanding. But V-JEPA wins Cycle@K (78.7%), the most temporally-sensitive metric.
+| Motion probe (1,825 held-out clips) | Frozen V-JEPA 2.1 | FactorJEPA (ours) |
+|-------------------------------------|-------------------|-------------------|
+| Motion-speed quartile (chance 25.6%) | 60.9% | **69.8%** |
 
-All metrics reported with bootstrap 95% CIs (10K iterations). Significance = non-overlapping CIs on nDCG@K (primary, MTEB standard) + majority (5/8) of all metrics.
+At the full 115k-clip scale, FactorJEPA separates from the strongest fine-tuning rival on **all four predictive diagnostics** (in 95%-CI units): mask-ratio slope **43.3×**, future-frame L1 **33.2×**, motion-cosine **20.0×**, causal L1 **13.9×**. Method rankings replicate across the 2B and 1B V-JEPA 2.1 backbones (Spearman ρ = 0.895–0.978).
+
+📄 **[Read the paper on arXiv (2608.01049)](https://arxiv.org/abs/2608.01049)**
 
 ---
 
@@ -127,9 +125,9 @@ src/
 
 ## Authors
 
-Kapil Wanaskar¹, Gaytri Jena⁴, Vinija Jain², Aman Chadha³, Amitava Das⁴
+Kapil Wanaskar¹, Gaytri Jena², Aman Chadha³, Vinija Jain⁴, Vasu Sharma⁵, Amitava Das⁶
 
-¹Canva Research, USA · ²Google, USA · ³Apple, USA · ⁴Pragya Lab, BITS Pilani Goa, India
+¹San Jose State University, USA · ²UC Berkeley, USA · ³Apple, USA · ⁴Meta, USA · ⁵PocketFM, USA · ⁶Pragya Lab, BITS Pilani Goa, India
 
 Part of the **DenseWorld** research program — *World Models for Populous, Crowded, and Chaotic Global South*
 
@@ -137,9 +135,9 @@ Part of the **DenseWorld** research program — *World Models for Populous, Crow
 
 ```bibtex
 @article{wanaskar2026factorjepa,
-  title={Does V-JEPA 2 Understand Indian Streets? Benchmarking Video Foundation Models on DenseWorld-200K},
-  author={Wanaskar, Kapil and Jena, Gaytri and Jain, Vinija and Chadha, Aman and Das, Amitava},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  title={FactorJEPA: Factorizing Monolithic Futures into Layout-Agent-Interaction Channels for Crowded and Chaotic Global South Urban Worlds},
+  author={Wanaskar, Kapil and Jena, Gaytri and Chadha, Aman and Jain, Vinija and Sharma, Vasu and Das, Amitava},
+  journal={arXiv preprint arXiv:2608.01049},
   year={2026}
 }
 ```

@@ -1,0 +1,30 @@
+name: denseworld-115k reconstruct smoke
+
+# Deterministic smoke check for the DENSEWORLD-115k reconstruction bundle.
+# Lints reconstruct.py and confirms it loads sources.json + the manifest and runs
+# the --verify path (no YouTube download, so it never flakes on CI network/blocks).
+
+on:
+  push:
+    paths: ['src/hf_denseworld_115k/**']
+  pull_request:
+    paths: ['src/hf_denseworld_115k/**']
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/hf_denseworld_115k
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install -r requirements.txt ruff
+      - name: Lint reconstruct.py (ruff F,E9)
+        run: python -m ruff check --select F,E9 reconstruct.py
+      - name: Verify manifest loads + reconstruct runs (no network)
+        run: python reconstruct.py --out /tmp/dw_ci --verify-only

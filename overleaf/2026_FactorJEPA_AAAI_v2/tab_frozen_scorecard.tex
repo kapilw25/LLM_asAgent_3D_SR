@@ -1,0 +1,33 @@
+% =====================================================================
+% Frozen-encoder scorecard — Table "Frozen encoders collapse".
+% SINGLE SOURCE for this table: \input{tab_frozen_scorecard} wherever it belongs.
+% NEVER copy-paste the numbers — moving the block by re-typing risks transcription drift.
+% Values VERIFIED (2026-08-01) against the source CSV — all 30 cells match (rounded):
+%   iter/iter17_ablations_model/result_outputs/v17a_frozen_eval/poc/probe_plot/eval/m13_frozen_scorecard.csv
+%   (action_top1 -> A rounded to 0.1; motion_cos -> M and taxonomy_f1 -> T to 3 dp)
+% Shading: per column, best = green!35, worst = red!35 (A higher=better, M higher=better, T higher=better).
+% =====================================================================
+\begin{table*}[t]
+\centering
+\caption{\textbf{\emph{Frozen encoders collapse.}} Ten frozen encoders on the DENSEWORLD motion probe ($n_{\mathrm{test}}=1{,}825$, $\pm$95\% BCa CI). Action top-1 (A) stays in a $37.5$--$44.4\%$ band (19.5\% majority), while adapted encoders reach $50.3$--$53.2\%$. M~=~motion-cos, T~=~taxonomy F1 ($\uparrow$ better). In each column the \textbf{best} value is shaded green and the \textbf{worst} red.}
+\label{tab:frozen_scorecard_full}
+\footnotesize\bfseries
+\setlength{\tabcolsep}{16pt}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Frozen encoder & A\,(\%) & M & T \\
+\midrule
+V-JEPA 2.1 (2B)   & \cellcolor{green!35}44.4 & 0.009 & 0.793 \\
+V-JEPA 2.1 ViT-L  & 44.2 & \cellcolor{red!35}0.004 & 0.788 \\
+V-JEPA 1 ViT-H    & 40.5 & 0.007 & 0.702 \\
+LeJEPA ViT-L      & 40.1 & 0.014 & 0.740 \\
+V-JEPA 1 ViT-L    & 39.9 & 0.008 & \cellcolor{red!35}0.660 \\
+I-JEPA ViT-H      & 39.1 & 0.016 & 0.781 \\
+V-JEPA 2.0 (SSv2) & 38.8 & 0.007 & 0.776 \\
+DINOv2            & 38.5 & 0.016 & \cellcolor{green!35}0.816 \\
+V-JEPA 2 ViT-L    & 37.9 & 0.013 & 0.778 \\
+I-JEPA ViT-G/16   & \cellcolor{red!35}37.5 & \cellcolor{green!35}0.019 & 0.787 \\
+\bottomrule
+\end{tabular}
+\end{table*}

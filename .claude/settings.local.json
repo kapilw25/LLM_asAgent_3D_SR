@@ -387,7 +387,17 @@
       "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -c \"import fitz; print\\('v2 PDF pages:', fitz.open\\('0_main.pdf'\\).page_count\\)\")",
       "Bash(latexmk -xelatex -interaction=nonstopmode 0_main.tex)",
       "Bash(awk '/\\\\\\\\begin\\\\{document\\\\}/{exit} {print}' 0_main_AAAI.tex)",
-      "Bash(awk '{print \"copied:\", $5, $NF}')"
+      "Bash(awk '{print \"copied:\", $5, $NF}')",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -c \"import fitz; d=fitz.open\\('arxiv_combined.pdf'\\); print\\('pages:', d.page_count\\)\")",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -)",
+      "Bash(latexmk -pdf -interaction=nonstopmode arxiv_combined.tex)",
+      "Bash(echo \"latexmk exit: $?\")",
+      "Bash(pdfinfo arxiv_combined.pdf)",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -m http.server 8137)",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -m http.server 8138)",
+      "Bash(pkill -f \"http.server 8138\")",
+      "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -m http.server 8139)",
+      "Bash(pkill -f \"http.server 8139\")"
     ]
   }
 }

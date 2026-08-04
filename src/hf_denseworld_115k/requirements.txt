@@ -1,0 +1,4 @@
+# DENSEWORLD-115k reconstruction dependencies.
+# Also requires ffmpeg + ffprobe on PATH (brew install ffmpeg / apt-get install ffmpeg).
+yt-dlp>=2024.1.1
+scenedetect[opencv]>=0.6.4

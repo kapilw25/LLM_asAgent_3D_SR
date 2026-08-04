@@ -819,32 +819,63 @@
 
       <div class="author-block">
         <span>Kapil Wanaskar<sup>1</sup></span> &nbsp;
-        <span>Gaytri Jena<sup>5</sup></span> &nbsp;
-        <span>Vinija Jain<sup>2</sup></span> &nbsp;
+        <span>Gaytri Jena<sup>2</sup></span> &nbsp;
         <span>Aman Chadha<sup>3</sup></span> &nbsp;
-        <span>Amitava Das<sup>4</sup></span>
+        <span>Vinija Jain<sup>4</sup></span> &nbsp;
+        <span>Vasu Sharma<sup>5</sup></span> &nbsp;
+        <span>Amitava Das<sup>6</sup></span>
       </div>
       <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.4rem;">
-        <sup>1</sup>Canva Research, USA &nbsp;&nbsp;
-        <sup>2</sup>Google, USA &nbsp;&nbsp;
+        <sup>1</sup>San Jose State University, USA &nbsp;&nbsp;
+        <sup>2</sup>UC Berkeley, USA &nbsp;&nbsp;
         <sup>3</sup>Apple, USA &nbsp;&nbsp;
-        <sup>4</sup>Pragya Lab, BITS Pilani Goa, India &nbsp;&nbsp;
-        <sup>5</sup>UC Berkeley, USA
+        <sup>4</sup>Meta, USA &nbsp;&nbsp;
+        <sup>5</sup>PocketFM, USA &nbsp;&nbsp;
+        <sup>6</sup>Pragya Lab, BITS Pilani Goa, India
       </div>
 
       <div class="badge-row">
+        <a href="https://arxiv.org/abs/2608.01049" target="_blank">
+          <img src="https://img.shields.io/badge/arXiv-2608.01049-b31b1b?logo=arxiv" alt="arXiv">
+        </a>
         <a href="https://github.com/kapilw25/factorjepa" target="_blank">
           <img src="https://img.shields.io/badge/Code-GitHub-black?logo=github" alt="GitHub">
         </a>
-        <a href="https://huggingface.co/datasets/anonymousML123/walkindia-200k" target="_blank">
+        <a href="https://huggingface.co/datasets/anonymousML123/denseworld-115k" target="_blank">
           <img src="https://img.shields.io/badge/Dataset-HuggingFace-ffd21e?logo=huggingface" alt="HuggingFace Dataset">
         </a>
-        <img src="https://img.shields.io/badge/Status-Preprint-yellow" alt="Preprint">
       </div>
 
       <div style="margin-top: 1rem; font-family: 'Source Sans 3', sans-serif;">
         <span style="font-size: 2.5rem; font-weight: 800; color: var(--accent-terracotta);">115,687 clips</span>
         <span style="font-size: 1.1rem; color: var(--text-secondary);"> &bull; 714 videos &bull; 22 cities &bull; 276 hours &bull; 121 GB</span>
+      </div>
+
+      <!-- ==================== TEASER DEMO (cloned to hero): same question, two encoders ==================== -->
+      <div style="margin-top: 1.9rem;">
+        <p class="has-text-centered" style="margin-bottom: 1rem; color: var(--text-secondary); max-width: 720px; margin-left: auto; margin-right: auto;">
+          <strong>Same question, two encoders.</strong> An identical probe head reads either backbone &mdash; frozen V-JEPA&nbsp;2.1 vs ours (factor surgery); <em>only the backbone differs</em>.
+        </p>
+        <div class="demo-card-grid">
+          <figure class="demo-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="static/videos/demo_cards/card_motion_speed.mp4" type="video/mp4">
+            </video>
+            <figcaption>
+              <span class="demo-card-q">&ldquo;How fast is the motion in this clip?&rdquo;</span>
+              <strong>ours 69.8%</strong> vs frozen 60.9% (chance 25.6%).
+            </figcaption>
+          </figure>
+          <figure class="demo-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="static/videos/demo_cards/card_turn_direction.mp4" type="video/mp4">
+            </video>
+            <figcaption>
+              <span class="demo-card-q">&ldquo;Which way does the vehicle turn?&rdquo;</span>
+              Left/right turns from WalkIndia drive footage, leave-one-video-out.
+            </figcaption>
+          </figure>
+        </div>
       </div>
 
     </div>
@@ -1041,7 +1072,7 @@
           <tr><td>POC subset</td><td>10K clips (video-level uniform, seed=42)</td></tr>
         </table>
         <div style="margin-top: 1rem; text-align: center;">
-          <a href="https://huggingface.co/datasets/anonymousML123/walkindia-200k" target="_blank" class="button is-link" style="background-color: var(--accent-terracotta);">
+          <a href="https://huggingface.co/datasets/anonymousML123/denseworld-115k" target="_blank" class="button is-link" style="background-color: var(--accent-terracotta);">
             <span class="icon"><i class="fas fa-database"></i></span>
             <span>Browse on HuggingFace</span>
           </a>
@@ -1327,71 +1358,24 @@
 <!-- ==================== TAB 3: FactorJEPA — Evaluation ==================== -->
 <div id="tab-factorjepa" class="tab-content" style="display: none;">
 
-<!-- ==================== DEMO CARDS — OURS vs FROZEN, same question (TOP of Evaluation) ==================== -->
-<section class="section" style="padding-top: 2rem; padding-bottom: 1rem;">
-  <div class="container" style="max-width: 1100px;">
-    <h2 class="title is-3 has-text-centered">Same Question, Two Encoders</h2>
-    <p class="has-text-centered" style="margin-bottom: 1.75rem; color: var(--text-secondary);">
-      Each clip is posed as a multiple-choice question with a ground-truth answer, then answered twice:
-      once from the <strong>frozen</strong> V-JEPA 2.1 encoder and once from <strong>ours</strong> (factor surgery).
-      The probe head is identical in both cases &mdash; <em>only the backbone differs</em>.
-      Qualitative examples.
-    </p>
-
-    <div class="demo-card-grid">
-      <figure class="demo-card">
-        <video autoplay muted loop playsinline preload="metadata">
-          <source src="static/videos/demo_cards/card_motion_speed.mp4" type="video/mp4">
-        </video>
-        <figcaption>
-          <span class="demo-card-q">&ldquo;How fast is the motion in this clip?&rdquo;</span>
-          Optical-flow magnitude quartile over 1,825 held-out WalkIndia clips:
-          <strong>ours 69.8%</strong> vs frozen 60.9% (chance 25.6%).
-        </figcaption>
-      </figure>
-
-      <figure class="demo-card">
-        <video autoplay muted loop playsinline preload="metadata">
-          <source src="static/videos/demo_cards/card_turn_direction.mp4" type="video/mp4">
-        </video>
-        <figcaption>
-          <span class="demo-card-q">&ldquo;Which way does the vehicle turn?&rdquo;</span>
-          Hand-labelled left/right turns from WalkIndia drive footage, scored with a
-          leave-one-video-out split.
-        </figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
+<!-- Demo "Same Question, Two Encoders" was promoted to the hero teaser (top of page);
+     removed here to avoid a duplicate on the now-default Evaluation tab. -->
 
 <!-- ==================== ABLATION RESULTS — RESEARCH POSTER ==================== -->
 <section class="section" style="padding-top: 2rem;">
   <div class="container" style="max-width: 1100px;">
 
-    <h2 class="title is-3 has-text-centered">Ablation Results &mdash; Backbone Champion &amp; Factor Surgery vs Continual SSL</h2>
+    <h2 class="title is-3 has-text-centered">Ablation Results &mdash; Backbone Champion</h2>
     <p class="has-text-centered" style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-      10K-clip POC on DenseWorld &middot; every cell carries a BCa 10K-bootstrap 95% CI &middot;
-      paired duels are compute-matched (same data, steps, optimizer &mdash; only the technique differs).
+      10 frozen video encoders on the DenseWorld motion probe &middot; every cell carries a BCa 10K-bootstrap 95% CI.
     </p>
 
-    <!-- ── Poster findings strip ── -->
+    <!-- ── Poster finding (backbone selection) ── -->
     <div class="columns is-multiline" style="margin-bottom: 2rem;">
-      <div class="column is-4">
+      <div class="column is-12">
         <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
-          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F1 &middot; Frozen video encoders are nearly motion-blind</p>
-          <p style="color: var(--text-secondary); font-size: 0.92rem;">Across <strong>10 frozen backbones</strong> (V-JEPA 1/2.0/2.1, I-JEPA, DINOv2, LeJEPA), motion-cosine separation is &le;&nbsp;0.019 &mdash; essentially zero linearly-readable motion signal, while action top-1 reaches 44%. Semantics are abundant; <em>motion is the missing factor.</em></p>
-        </div>
-      </div>
-      <div class="column is-4">
-        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
-          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F2 &middot; Surgery beats matched continual SSL on motion/temporal</p>
-          <p style="color: var(--text-secondary); font-size: 0.92rem;">On V-JEPA 2.1 ViT-G (2B): surgery wins <strong>4 metrics, vanilla wins 0</strong>, 5 ties &mdash; all 4 wins are motion/temporal (motion-cos, future-frame, causal, mask-ratio). Crucially, the ties include action top-1 and taxonomy-F1: <em>no semantic forgetting.</em></p>
-        </div>
-      </div>
-      <div class="column is-4">
-        <div style="background: var(--bg-cream); border-left: 5px solid var(--accent-terracotta); border-radius: 8px; padding: 1rem 1.2rem; height: 100%;">
-          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">F3 &middot; The effect is representation-dependent</p>
-          <p style="color: var(--text-secondary); font-size: 0.92rem;">The same surgery recipe on the older V-JEPA 2.0 ViT-g flips to <strong>0 wins vs 5</strong> &mdash; factor surgery exploits structure that only the newer V-JEPA 2.1 representation exposes. This selects <strong>V-JEPA 2.1 ViT-G (2B)</strong> as the paper&rsquo;s base model.</p>
+          <p style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem;">Frozen video encoders are nearly motion-blind</p>
+          <p style="color: var(--text-secondary); font-size: 0.92rem;">Across <strong>10 frozen backbones</strong> (V-JEPA 1/2.0/2.1, I-JEPA, DINOv2, LeJEPA), motion-cosine separation is &le;&nbsp;0.019 (essentially zero linearly-readable motion signal), while action top-1 stays in a narrow <strong>37.5&ndash;44.4%</strong> band. Semantics are abundant; <em>motion is the missing factor</em> that factor surgery restores.</p>
         </div>
       </div>
     </div>
@@ -1402,30 +1386,11 @@
         <div class="plot-container">
           <img src="static/images/m13_frozen_scorecard.png" alt="Scorecard table — 10 frozen encoders × 3 shared metrics with BCa 95% CIs; V-JEPA 2.1 leads action top-1, DINOv2 leads taxonomy-F1, all motion-cos values near zero">
           <p class="plot-caption">🏆 <strong>Backbone selection (frozen, no &Delta;).</strong> 10 frozen encoders &times; 3 shared head metrics; blue box = best per metric.
-          <strong>V-JEPA 2.1</strong> tops action top-1 (44.4&nbsp;&plusmn;&nbsp;2.3), DINOv2 tops taxonomy-F1 (0.816), and the <em>entire column</em> of motion-cos sits at 0.004&ndash;0.019 &mdash; the quantitative motivation for factor surgery (finding F1).</p>
+          <strong>V-JEPA 2.1</strong> tops action top-1 (44.4&nbsp;&plusmn;&nbsp;2.3), DINOv2 tops taxonomy-F1 (0.816), and the <em>entire column</em> of motion-cos sits at 0.004&ndash;0.019 &mdash; the quantitative motivation for factor surgery.</p>
         </div>
       </div>
 
-      <!-- ── Figure 2: the money figure — paired duel heatmap ── -->
-      <div class="column is-12">
-        <div class="plot-container">
-          <img src="static/images/m13_paired_diff_heatmap.png" alt="Paired-difference heatmap — surgery minus vanilla continual SSL across 9 metrics × 3 backbones; green = surgery significant, red = vanilla, grey = tie">
-          <p class="plot-caption">⚔️ <strong>Champion duel: surgery &minus; vanilla continual SSL</strong> (paired per-clip &Delta;, 95% BCa CI; green = surgery significantly better, red = vanilla, grey = CI crosses 0).
-          Column 1 (V-JEPA 2.1 ViT-G 2B): surgery <strong>4&ndash;0</strong> with 5 ties &mdash; wins on motion-cos (+0.010), future-frame (+0.025), causal (+0.019), mask-ratio (+0.009); ties on both semantic metrics.
-          Column 2 (V-JEPA 2.1 ViT-g 1B): surgery <strong>5&ndash;2</strong>.
-          Column 3 (V-JEPA 2.0 ViT-g 1B): <strong>0&ndash;5</strong> &mdash; the reversal behind finding F3.</p>
-        </div>
-      </div>
-
-      <!-- ── Figure 3: raw values (supporting) ── -->
-      <div class="column is-12">
-        <div class="plot-container">
-          <a href="static/images/m13_hero_raw_values.png" target="_blank" rel="noopener">
-            <img src="static/images/m13_hero_raw_values.png" alt="Raw-value grids — per-backbone tables of all encoders × all 10 metrics with CIs (champion V-JEPA 2.1 ViT-G panel on top)">
-          </a>
-          <p class="plot-caption">📋 <strong>Raw values behind the duel</strong> (one panel per backbone; champion 2B panel on top) &mdash; every encoder &times; every metric with its CI, for the paper&rsquo;s appendix tables. Click to open full-resolution.</p>
-        </div>
-      </div>
+      <!-- POC-only diagnostics (paired-diff heatmap, raw-value grids) removed: not part of the arXiv PDF submission. -->
     </div>
 
     <!-- ── Figure 4: iter18 FT-baseline schema ── -->
@@ -1474,30 +1439,18 @@
       </div>
     </div>
 
-    <!-- the 5 result figures (vector PDF click-through) -->
+    <!-- result figures from the arXiv paper (vector PDF click-through) -->
     <div class="columns is-multiline">
-      <div class="column is-6">
+      <div class="column is-12">
         <div class="plot-container">
-          <a href="static/images/forest_plot_best_ci.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_best_ci.png" alt="Forest plot — surgery advantage over the best competitor in CI-widths, per metric, at 2B and 1B; green past the dashed line = statistically separated"></a>
-          <p class="plot-caption">⚔️ <strong>Surgery vs the strongest competitor &mdash; statistical.</strong> Advantage over the best non-ours arm, in CI-widths (green past the dashed line = significant). Future-frame MSE (6.3&times;/4.8&times;) and causal L1 (2.3&times;/2.7&times;) clear it at 2B/1B; motion-cosine is conceded to full fine-tune (far left).</p>
-        </div>
-      </div>
-      <div class="column is-6">
-        <div class="plot-container">
-          <a href="static/images/forest_plot_best_mean.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_best_mean.png" alt="Forest plot — surgery advantage over the best competitor as a raw percentage, per metric, at 2B and 1B"></a>
-          <p class="plot-caption">📏 <strong>&hellip; effect size (raw %).</strong> The predictive lead is small-but-consistent &mdash; future-frame +1.7%/+1.4%, mask-ratio +1.1%/+2.9%, exposure-bias +3.8% (1B). The motion-cosine deficit (&minus;44.9%/&minus;33.4%) is the deliberate prediction-vs-semantics trade.</p>
+          <a href="static/images/forest_plot_best_ci.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_best_ci.png" alt="Forest plot — FactorJEPA advantage over the best competitor in 95%-CI units, per metric, at stratified 10k (2B and 1B) and full 115k (1B); green past the dashed 1x line = statistically separated"></a>
+          <p class="plot-caption">⚔️ <strong>FactorJEPA vs. the strongest competitor, across scale.</strong> Advantage over the best non-ours arm in 95%-CI units (green past the dashed 1&times; line = a separated win). At full 115k scale (right panel) FactorJEPA separates on all four predictive diagnostics &mdash; mask-ratio 43.3&times;, future-frame 33.2&times;, motion-cos 20.0&times;, causal 13.9&times; &mdash; and the small-scale motion-cosine trade-off reverses to a win. <em>The exact figure from the arXiv paper.</em></p>
         </div>
       </div>
       <div class="column is-12">
         <div class="plot-container">
-          <a href="static/images/forest_plot_frozen_ci.pdf" target="_blank" rel="noopener"><img src="static/images/forest_plot_frozen_ci.png" alt="Forest plot — surgery advantage over the frozen backbone in CI-widths, per metric, at 2B and 1B; the paper's central claim"></a>
-          <p class="plot-caption">🏆 <strong>The paper claim: surgery &minus; frozen.</strong> Surgery separates from frozen by 5&ndash;47 CI-widths on every predictive + motion metric at BOTH scales (future-frame 47&times;/27&times;, motion-cos 27&times;/26&times;). Grey/negative rows are the coherence (TCC) metrics frozen still owns &mdash; the reported trade, not a hidden loss.</p>
-        </div>
-      </div>
-      <div class="column is-12">
-        <div class="plot-container">
-          <a href="static/images/scale_replication.pdf" target="_blank" rel="noopener"><img src="static/images/scale_replication.png" alt="15-panel scatter — each metric's 2B value (x) vs 1B value (y) with Spearman rho; green title = replicates, red = fails"></a>
-          <p class="plot-caption">🔁 <strong>Scale transfer: does the 1B rank like the 2B?</strong> One scatter per metric (2B on x, 1B on y), Spearman &rho;. Causal L1 &rho;=0.978, motion-cos 0.952, future-frame 0.938, mask-ratio 0.895 &mdash; the core metrics replicate strongly; the 3 red panels (rollout, exposure-bias, temporal-order) do not.</p>
+          <a href="static/images/scale_replication.pdf" target="_blank" rel="noopener"><img src="static/images/scale_replication.png" alt="Scatter — per-method Causal future-block L1 at the 2B scale (x) vs the 1B scale (y), Spearman rho = 0.978"></a>
+          <p class="plot-caption">🔁 <strong>Method rankings survive the 2B&rarr;1B backbone change.</strong> Per-method Causal future-block L1 at both scales (Spearman &rho;=0.979), making the 1B backbone a low-cost proxy for 2B. <em>The exact figure from the arXiv paper.</em></p>
         </div>
       </div>
       <div class="column is-12">
@@ -1839,9 +1792,9 @@ flowchart TB
     <div class="bibtex-box">
       <button class="copy-btn" onclick="copyBibtex()"><i class="fas fa-copy"></i> Copy</button>
 <pre id="bibtex-text">@article{wanaskar2026factorjepa,
-  title={FactorJEPA: World Models That Predict Crowded, Chaotic City Streets},
-  author={Wanaskar, Kapil and Jena, Gaytri and Jain, Vinija and Chadha, Aman and Das, Amitava},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  title={FactorJEPA: Factorizing Monolithic Futures into Layout-Agent-Interaction Channels for Crowded and Chaotic Global South Urban Worlds},
+  author={Wanaskar, Kapil and Jena, Gaytri and Chadha, Aman and Jain, Vinija and Sharma, Vasu and Das, Amitava},
+  journal={arXiv preprint arXiv:2608.01049},
   year={2026}
 }</pre>
     </div>
