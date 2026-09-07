@@ -397,7 +397,13 @@
       "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -m http.server 8138)",
       "Bash(pkill -f \"http.server 8138\")",
       "Bash(/Users/kapilwanaskar/Downloads/research_projects/factorjepa/venv_walkindia/bin/python -m http.server 8139)",
-      "Bash(pkill -f \"http.server 8139\")"
+      "Bash(pkill -f \"http.server 8139\")",
+      "Bash(grep -E \"\\\\.\\(tar\\\\.gz|pdf|out|aux|log|fls|fdb_latexmk|synctex|blg\\)$\")",
+      "Bash(mkdir -p linkedin)",
+      "Bash(cp linkedin_two_encoders.mp4 linkedin/)",
+      "Bash(cp docs/static/videos/demo_cards/card_turn_direction.mp4 linkedin/)",
+      "Bash(cp docs/static/videos/demo_cards/card_motion_speed.mp4 linkedin/)",
+      "Bash(awk 'NR>1{printf \"  %6s  %s\\\\n\",$5,$NF}')"
     ]
   }
 }
